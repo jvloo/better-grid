@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CoreOnly } from './pages/CoreOnly';
 import { LargeDataset } from './pages/LargeDataset';
 import { MultiHeader } from './pages/MultiHeader';
+import { PluginToggle } from './pages/PluginToggle';
 import { FormatEdit } from './pages/FormatEdit';
 import { SortFilter } from './pages/SortFilter';
 import { ValidationDemo } from './pages/ValidationDemo';
@@ -10,7 +11,7 @@ import { ProPreview } from './pages/ProPreview';
 import { ComplexGrid } from './pages/ComplexGrid';
 import { TaskTracker } from './pages/TaskTracker';
 
-type Page = 'core' | 'large' | 'multi-header' | 'format-edit' | 'sort-filter' | 'validation' | 'editor-ref' | 'pro' | 'financial' | 'task-tracker';
+type Page = 'core' | 'large' | 'multi-header' | 'toggle' | 'format-edit' | 'sort-filter' | 'validation' | 'editor-ref' | 'pro' | 'financial' | 'task-tracker';
 
 export function App() {
   const [page, setPage] = useState<Page>('core');
@@ -44,6 +45,9 @@ export function App() {
         </NavButton>
 
         <SectionLabel>Free Plugins</SectionLabel>
+        <NavButton active={page === 'toggle'} onClick={() => setPage('toggle')}>
+          Plugin Toggle ✨
+        </NavButton>
         <NavButton active={page === 'format-edit'} onClick={() => setPage('format-edit')}>
           Format & Edit
         </NavButton>
@@ -76,6 +80,7 @@ export function App() {
         {page === 'core' && <CoreOnly />}
         {page === 'large' && <LargeDataset />}
         {page === 'multi-header' && <MultiHeader />}
+        {page === 'toggle' && <PluginToggle />}
         {page === 'format-edit' && <FormatEdit />}
         {page === 'sort-filter' && <SortFilter />}
         {page === 'validation' && <ValidationDemo />}

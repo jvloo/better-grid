@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef, Selection } from '@better-grid/core';
+import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
 
 interface SampleRow {
@@ -92,6 +93,23 @@ export function CoreOnly() {
       <div style={{ marginTop: 12, fontSize: 12, color: '#aaa' }}>
         Notice: salary shows "125000" not "$125,000.00" · dates show "2024-03-15" not "Mar 15, 2024" · active shows "true" not "Yes" — plugins add formatting.
       </div>
+
+      <CodeBlock code={`import { BetterGrid } from '@better-grid/react';
+import '@better-grid/core/styles.css';
+
+// No plugins — just core
+<BetterGrid
+  columns={[
+    { id: 'id', header: 'ID', width: 50 },
+    { id: 'name', header: 'Name', width: 160 },
+    { id: 'department', header: 'Department', width: 120 },
+    { id: 'salary', header: 'Salary', width: 120 },
+  ]}
+  data={employees}
+  frozenLeftColumns={2}
+  selection={{ mode: 'range' }}
+  height={440}
+/>`} />
     </div>
   );
 }
