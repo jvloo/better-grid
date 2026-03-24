@@ -38,7 +38,7 @@ const INPUT_CSS = `
   margin: 0;
   font: inherit;
   color: inherit;
-  background: var(--bg-edit-bg, #fff);
+  background: transparent;
   box-sizing: border-box;
 `;
 
@@ -47,18 +47,19 @@ const SELECT_CSS = `
   height: 100%;
   border: none;
   outline: none;
-  padding: 0 18px 0 12px;
+  padding: 0;
+  padding-right: 18px;
   margin: 0;
   font: inherit;
   color: var(--bg-text-color, #1a1a1a);
-  background: var(--bg-edit-bg, #fff);
+  background: transparent;
   box-sizing: border-box;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 6px center;
+  background-position: right 2px center;
 `;
 
 export function editing(options?: EditingOptions): GridPlugin<'editing'> {
@@ -161,17 +162,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         // Check if this should be a dropdown
         const dropdownOpts = getDropdownOptions(column, originalValue);
 
-        // Prepare cell for editing
+        // Prepare cell for editing — keep cell padding unchanged so text
+        // position matches between display and edit modes (no glitch)
         cellEl.textContent = '';
         cellEl.classList.add('bg-cell--editing');
 
         if (dropdownOpts) {
-          // Dropdown: keep cell padding so text aligns with non-editing cells
-          cellEl.style.padding = '0';
           activeEditor = createDropdown(cellEl, dropdownOpts, originalValue);
         } else {
-          // Text input: reduce cell padding, input has its own
-          cellEl.style.padding = '0 4px';
           const editValue = initialValue ?? (originalValue != null ? String(originalValue) : '');
           activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined);
         }
@@ -330,7 +328,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           const cellEl = getCellElement(editingCell);
           if (cellEl) {
             cellEl.classList.remove('bg-cell--editing');
-            cellEl.style.padding = '';
           }
         }
 
