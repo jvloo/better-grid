@@ -158,58 +158,68 @@ function generateHeaderRows(colCount: number, rich: boolean): HeaderRow[] | unde
 }
 
 const PRESETS = [
-  { label: '100K cells', rows: 1_000, cols: 100, cells: '100K', rich: false },
-  { label: '1M cells', rows: 10_000, cols: 100, cells: '1M', rich: false },
-  { label: '10M cells', rows: 100_000, cols: 100, cells: '10M', rich: false },
-  { label: '10M cells (rich)', rows: 100_000, cols: 100, cells: '10M', rich: true },
+  { label: '100 rows, 100 columns', rows: 100, cols: 100, emoji: '🔋' },
+  { label: '1,000 rows, 100 columns', rows: 1_000, cols: 100, emoji: '⚡' },
+  { label: '10,000 rows, 100 columns', rows: 10_000, cols: 100, emoji: '🏎️' },
+  { label: '100,000 rows, 100 columns', rows: 100_000, cols: 100, emoji: '🚀' },
+  { label: '200,000 rows, 100 columns', rows: 200_000, cols: 100, emoji: '💥' },
+  { label: '400,000 rows, 100 columns', rows: 400_000, cols: 100, emoji: '💥' },
 ];
 
 export function LargeDataset() {
-  const [rowCount, setRowCount] = useState(1_000);
+  const [rowCount, setRowCount] = useState(100);
   const [colCount, setColCount] = useState(100);
   const [generating, setGenerating] = useState(false);
   const [genTime, setGenTime] = useState(0);
+  const [renderTime, setRenderTime] = useState(0);
+  const [memoryMB, setMemoryMB] = useState<string>('N/A');
 
   const totalCells = rowCount * (colCount + 1);
 
-  const [data, setData] = useState<LargeRow[]>(() => createData(1_000, 100).data);
-  const [columns, setColumns] = useState<ColumnDef<LargeRow>[]>(() => generateColumns(100));
-  const [headerRows, setHeaderRows] = useState<HeaderRow[] | undefined>(undefined);
+  const [data, setData] = useState<LargeRow[]>(() => createData(100, 100, true).data);
+  const [columns, setColumns] = useState<ColumnDef<LargeRow>[]>(() => generateColumns(100, true));
+  const [headerRows, setHeaderRows] = useState<HeaderRow[] | undefined>(() => generateHeaderRows(100, true));
   const [gridKey, setGridKey] = useState(0);
-  const [richMode, setRichMode] = useState(false);
 
-  const plugins = useMemo<GridPlugin[]>(() => {
-    if (!richMode) return [];
-    return [
-      formatting({ locale: 'en-US', currencyCode: 'USD' }),
-      editing({ editTrigger: 'dblclick' }),
-      sorting(),
-      filtering(),
-      validation({ validateOn: 'commit' }),
-    ];
-  }, [richMode]);
+  const plugins = useMemo<GridPlugin[]>(() => [
+    formatting({ locale: 'en-US', currencyCode: 'USD' }),
+    editing({ editTrigger: 'dblclick' }),
+    sorting(),
+    filtering(),
+    validation({ validateOn: 'commit' }),
+  ], []);
 
-  function applyPreset(rows: number, cols: number, rich = false) {
+  // Memory measurement
+  useEffect(() => {
+    const id = setInterval(() => {
+      const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+      if (mem) setMemoryMB((mem.usedJSHeapSize / 1024 / 1024).toFixed(2));
+    }, 2000);
+    return () => clearInterval(id);
+  }, []);
+
+  function applyPreset(rows: number, cols: number) {
     setGenerating(true);
     setRowCount(rows);
     setColCount(cols);
-    setRichMode(rich);
 
     setTimeout(() => {
-      console.log(`[benchmark] Generating ${rows.toLocaleString()} × ${cols}${rich ? ' (rich)' : ''} ...`);
-      const result = createData(rows, cols, rich);
+      console.log(`[benchmark] Generating ${rows.toLocaleString()} × ${cols} ...`);
+      const result = createData(rows, cols, true);
       console.log(`[benchmark] Data generated in ${result.genTime}ms (${(rows * (cols + 1)).toLocaleString()} cells)`);
 
+      const renderStart = performance.now();
       setGenTime(result.genTime);
       setData(result.data);
-      setColumns(generateColumns(cols, rich));
-      setHeaderRows(generateHeaderRows(cols, rich));
+      setColumns(generateColumns(cols, true));
+      setHeaderRows(generateHeaderRows(cols, true));
       setGridKey((k) => k + 1);
       setGenerating(false);
 
-      // Log first render time
+      // Measure render time
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
+          setRenderTime(Math.round(performance.now() - renderStart));
           const domCells = document.querySelectorAll('.bg-cell').length;
           const heap = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
           const heapMB = heap ? Math.round(heap.usedJSHeapSize / 1024 / 1024) : null;
@@ -266,55 +276,47 @@ export function LargeDataset() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Virtual Scrolling — Performance Benchmark</h1>
+      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Performance</h1>
       <p style={{ marginBottom: 12, color: '#666', lineHeight: 1.5 }}>
-        Only visible cells exist in the DOM. Try different scales — stats update live as you scroll.
+        Rich content with all plugins enabled. Only visible cells exist in the DOM.
       </p>
 
-      {/* Preset buttons */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        {PRESETS.map((p) => {
-          const isActive = p.rows === rowCount && p.cols === colCount;
-          return (
-            <button
-              key={p.label}
-              onClick={() => applyPreset(p.rows, p.cols, p.rich)}
-              disabled={generating}
-              style={{
-                padding: '6px 14px',
-                border: `1px solid ${isActive ? '#1a73e8' : '#d0d0d0'}`,
-                borderRadius: 6,
-                background: isActive ? '#1a73e8' : '#fff',
-                color: isActive ? '#fff' : '#333',
-                cursor: generating ? 'wait' : 'pointer',
-                fontSize: 13,
-                fontWeight: isActive ? 600 : 400,
-                opacity: generating ? 0.6 : 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                lineHeight: 1.3,
-              }}
-            >
-              <span>{p.label}</span>
-              <span style={{ fontSize: 10, opacity: 0.7 }}>{p.rows.toLocaleString()} × {p.cols}</span>
-            </button>
-          );
-        })}
+      {/* Data source dropdown */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <span style={{ fontSize: 13, color: '#666' }}>Data source:</span>
+        <select
+          value={`${rowCount}-${colCount}`}
+          onChange={(e) => {
+            const [r, c] = e.target.value.split('-').map(Number);
+            applyPreset(r!, c!);
+          }}
+          disabled={generating}
+          style={{
+            padding: '6px 12px', fontSize: 13, borderRadius: 6,
+            border: '1px solid #d0d0d0', background: '#fff', cursor: 'pointer',
+            minWidth: 260,
+          }}
+        >
+          {PRESETS.map((p) => (
+            <option key={p.label} value={`${p.rows}-${p.cols}`}>
+              {p.label} {p.emoji}
+            </option>
+          ))}
+        </select>
         {generating && <span style={{ fontSize: 13, color: '#888' }}>Generating...</span>}
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-        <Stat label="Total Cells" value={formatNumber(totalCells)} />
-        <Stat label="In DOM" value={domCount.toLocaleString()} highlight />
-        <Stat
-          label="FPS"
-          value={fps > 0 ? String(fps) : '—'}
-          highlight={fps >= 55}
-          warn={fps > 0 && fps < 30}
-        />
-        {genTime > 0 && <Stat label="Data Gen" value={genTime < 1000 ? `${genTime}ms` : `${(genTime / 1000).toFixed(1)}s`} />}
+      {/* Performance Metrics */}
+      <div style={{
+        display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap',
+        padding: '10px 16px', background: '#f8f9fa', borderRadius: 8, border: '1px solid #e8e8e8',
+        fontSize: 13, color: '#555',
+      }}>
+        <div>Render Time: <code style={{ color: '#1a73e8' }}>{renderTime > 0 ? `${renderTime}ms` : 'N/A'}</code></div>
+        <div>Scroll FPS: <code style={{ color: fps >= 55 ? '#2e7d32' : fps > 0 ? '#e65100' : '#888' }}>{fps > 0 ? fps : 'N/A'}</code></div>
+        <div>Memory: <code style={{ color: '#1a73e8' }}>{memoryMB !== 'N/A' ? `${memoryMB} MB` : 'N/A'}</code></div>
+        <div>DOM Cells: <code style={{ color: '#1a73e8' }}>{domCount}</code></div>
+        <div>Total Cells: <code>{formatNumber(totalCells)}</code></div>
       </div>
 
       {/* Grid */}
@@ -323,15 +325,15 @@ export function LargeDataset() {
         columns={columns}
         data={data}
         headerRows={headerRows}
-        frozenLeftColumns={richMode ? 1 : 1}
+        frozenLeftColumns={1}
         selection={{ mode: 'range' }}
         plugins={plugins}
-        height={480}
+        height={600}
       />
 
       <div style={{ marginTop: 12, fontSize: 12, color: '#aaa', lineHeight: 1.5 }}>
-        All {formatNumber(rowCount)} rows × {colCount + 1} columns fully in memory. DOM stays constant (~{domCount} elements) regardless of dataset size.
-        {rowCount >= 100_000 && ' For comparison: AG Grid crashes at 400K rows.'}
+        {formatNumber(rowCount)} rows × {colCount + 1} columns. All plugins active.
+        DOM stays constant (~{domCount} elements) regardless of dataset size.
       </div>
 
       <CodeBlock title="Performance" code={`// Performance benchmark — real data in memory
