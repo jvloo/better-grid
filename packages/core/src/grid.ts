@@ -406,9 +406,14 @@ export function createGrid<
       headerCell.addEventListener('click', (e) => {
         // Don't trigger click if resize handle was dragged
         if ((e.target as HTMLElement).classList.contains('bg-resize-handle')) return;
-          for (const plugin of pluginRegistry.getAllPlugins()) {
+        for (const plugin of pluginRegistry.getAllPlugins()) {
           plugin.hooks?.onHeaderClick?.(column.id);
         }
+      });
+
+      headerCell.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showHeaderContextMenu(e, column.id);
       });
 
       // Resize handle
@@ -493,6 +498,100 @@ export function createGrid<
     document.addEventListener('pointerup', onPointerUp);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Header context menu
+  // ---------------------------------------------------------------------------
+
+  let activeContextMenu: HTMLElement | null = null;
+
+  function showHeaderContextMenu(event: MouseEvent, columnId: string): void {
+    dismissContextMenu();
+
+    const items: { label: string; action: () => void; disabled?: boolean }[] = [];
+
+    // Collect menu items from plugins
+    for (const plugin of pluginRegistry.getAllPlugins()) {
+      if (plugin.id === 'sorting') {
+        const api = pluginRegistry.getPlugin<{ getSortState: () => { columnId: string }[]; clearSort: () => void; toggleSort: (id: string) => void }>(plugin.id);
+        if (api) {
+          const sorted = api.getSortState();
+          const colSorted = sorted.find((s) => s.columnId === columnId);
+          items.push(
+            { label: 'Sort Ascending', action: () => { api.clearSort(); api.toggleSort(columnId); } },
+            { label: 'Sort Descending', action: () => { api.clearSort(); api.toggleSort(columnId); api.toggleSort(columnId); } },
+          );
+          if (colSorted) {
+            items.push({ label: 'Clear Sort', action: () => api.clearSort() });
+          }
+          if (sorted.length > 0) {
+            items.push({ label: 'Clear All Sorts', action: () => api.clearSort() });
+          }
+        }
+      }
+    }
+
+    if (items.length === 0) return;
+
+    // Create menu
+    const menu = document.createElement('div');
+    menu.className = 'bg-context-menu';
+    menu.style.cssText = `
+      position: fixed;
+      left: ${event.clientX}px;
+      top: ${event.clientY}px;
+      z-index: 100;
+      background: var(--bg-context-menu-bg, #fff);
+      border: 1px solid var(--bg-context-menu-border, #d0d0d0);
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 4px 0;
+      min-width: 160px;
+      font-size: 13px;
+    `;
+
+    for (const item of items) {
+      const menuItem = document.createElement('div');
+      menuItem.className = 'bg-context-menu__item';
+      menuItem.textContent = item.label;
+      menuItem.style.cssText = `
+        padding: 6px 12px;
+        cursor: pointer;
+        user-select: none;
+      `;
+      menuItem.addEventListener('mouseenter', () => {
+        menuItem.style.background = 'var(--bg-context-menu-hover, #f0f0f0)';
+      });
+      menuItem.addEventListener('mouseleave', () => {
+        menuItem.style.background = '';
+      });
+      menuItem.addEventListener('click', () => {
+        item.action();
+        dismissContextMenu();
+      });
+      menu.appendChild(menuItem);
+    }
+
+    document.body.appendChild(menu);
+    activeContextMenu = menu;
+
+    // Close on click outside
+    const closeHandler = (e: MouseEvent) => {
+      if (!menu.contains(e.target as Node)) {
+        dismissContextMenu();
+        document.removeEventListener('mousedown', closeHandler);
+      }
+    };
+    // Delay to avoid the contextmenu click itself dismissing
+    setTimeout(() => document.addEventListener('mousedown', closeHandler), 0);
+  }
+
+  function dismissContextMenu(): void {
+    if (activeContextMenu) {
+      activeContextMenu.remove();
+      activeContextMenu = null;
+    }
   }
 
   function invalidateHeaders(): void {
