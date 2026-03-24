@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, sorting, filtering, validation } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface SampleRow {
@@ -26,69 +25,39 @@ const sampleData: SampleRow[] = [
   { id: 10, name: 'Project Kappa', category: 'Cost', amount: -98000, date: '2026-10-30', active: true },
 ];
 
-export function BasicGrid() {
+export function CoreOnly() {
   const columns = useMemo<ColumnDef<SampleRow>[]>(
     () => [
-      { id: 'id', header: 'ID', width: 60, editable: false, sortable: true },
-      { id: 'name', header: 'Name', width: 200, required: true, sortable: true },
-      {
-        id: 'category',
-        header: 'Category',
-        width: 120,
-        options: ['Revenue', 'Cost', 'Expense', 'Other'],
-        sortable: true,
-      },
-      {
-        id: 'amount',
-        header: 'Amount',
-        width: 150,
-        cellType: 'currency',
-        sortable: true,
-        rules: [{ validate: (v) => typeof v === 'number' || 'Must be a number' }],
-      },
-      { id: 'date', header: 'Date', width: 150, cellType: 'date', sortable: true },
-      {
-        id: 'active',
-        header: 'Active',
-        width: 80,
-        cellRenderer: (container, ctx) => {
-          container.textContent = ctx.value ? 'Yes' : 'No';
-          container.style.color = ctx.value ? '#2e7d32' : '#c62828';
-        },
-      },
-    ],
-    [],
-  );
-
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD', accountingFormat: true }),
-      editing({ editTrigger: 'dblclick' }),
-      sorting(),
-      filtering(),
-      validation({ validateOn: 'commit' }),
+      { id: 'id', header: 'ID', width: 60 },
+      { id: 'name', header: 'Name', width: 200 },
+      { id: 'category', header: 'Category', width: 120 },
+      { id: 'amount', header: 'Amount', width: 150 },
+      { id: 'date', header: 'Date', width: 150 },
+      { id: 'active', header: 'Active', width: 80 },
     ],
     [],
   );
 
   return (
     <div>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Free Plugins — All 5 Active</h1>
+      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Core Only — No Plugins</h1>
       <p style={{ marginBottom: 8, color: '#666', lineHeight: 1.5 }}>
-        All free plugins enabled: formatting, editing, sorting, filtering, validation.
+        Zero plugins. This is what the core engine provides out of the box.
       </p>
       <div style={{ marginBottom: 16, fontSize: 13, color: '#888', lineHeight: 1.6 }}>
-        <strong>Try:</strong> Double-click to edit &bull; Click header to sort &bull;
-        Right-click header for sort/filter menu &bull; Category has dropdown &bull;
-        Active has Yes/No toggle &bull; Name is required (clear it to see error) &bull;
-        Amount validates as number
+        <strong>What you get:</strong> Virtual scrolling &bull; Frozen columns &bull;
+        Cell selection (click) &bull; Range selection (Shift+click/arrows) &bull;
+        Keyboard navigation (Arrow/Tab/Enter/Escape) &bull; Column resizing (drag header border) &bull;
+        CSS theming (--bg-* custom properties)
+        <br />
+        <strong>What you don't get:</strong> No formatting (raw values) &bull; No editing &bull;
+        No sorting &bull; No filtering &bull; No validation &bull; No context menu
       </div>
       <BetterGrid<SampleRow>
         columns={columns}
         data={sampleData}
         frozenLeftColumns={2}
         selection={{ mode: 'range' }}
-        plugins={plugins}
         height={440}
       />
     </div>
