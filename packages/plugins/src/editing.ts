@@ -47,15 +47,18 @@ const SELECT_CSS = `
   height: 100%;
   border: none;
   outline: none;
-  padding: 0 2px;
+  padding: 0 18px 0 12px;
   margin: 0;
   font: inherit;
   color: var(--bg-text-color, #1a1a1a);
   background: var(--bg-edit-bg, #fff);
   box-sizing: border-box;
   cursor: pointer;
-  -webkit-appearance: menulist;
-  appearance: menulist;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
 `;
 
 export function editing(options?: EditingOptions): GridPlugin<'editing'> {
@@ -161,13 +164,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         // Prepare cell for editing
         cellEl.textContent = '';
         cellEl.classList.add('bg-cell--editing');
-        cellEl.style.padding = '0 4px';
 
         if (dropdownOpts) {
+          // Dropdown: keep cell padding so text aligns with non-editing cells
+          cellEl.style.padding = '0';
           activeEditor = createDropdown(cellEl, dropdownOpts, originalValue);
         } else {
-          // Use raw value for editing (not formatted display text)
-          // e.g. 99.9999 instead of "100.00", "2026-01-15" instead of "Jan 15, 2026"
+          // Text input: reduce cell padding, input has its own
+          cellEl.style.padding = '0 4px';
           const editValue = initialValue ?? (originalValue != null ? String(originalValue) : '');
           activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined);
         }
