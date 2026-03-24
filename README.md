@@ -1,6 +1,6 @@
 # Better Grid
 
-A framework-agnostic, TypeScript-first data grid & spreadsheet library — built for the AI era.
+A framework-agnostic, TypeScript-first, AI-native data grid & spreadsheet library — built for the AI era.
 
 > **Status**: Early development (v0.0.1). API is unstable.
 
@@ -8,18 +8,19 @@ A framework-agnostic, TypeScript-first data grid & spreadsheet library — built
 
 The data grid market has a gap:
 
-| Library | Free spreadsheet features? | Framework-agnostic? | AI-native? |
-|---------|---------------------------|--------------------|-----------:|
-| AG Grid | Paywalled ($999/dev/yr) | Yes | No |
-| Handsontable | Paywalled ($999/dev/yr) | Yes | No |
-| Glide Data Grid | Yes (MIT) | React only | No |
-| RevoGrid | Partially | Yes | No |
-| TanStack Table | Headless (build it yourself) | Yes | No |
-| **Better Grid** | **Yes (MIT core)** | **Yes** | **Yes** |
+| Library         | Free spreadsheet features?   | Framework-agnostic? | AI-native? |
+| --------------- | ---------------------------- | ------------------- | ---------: |
+| AG Grid         | Paywalled ($999/dev/yr)      | Yes                 |         No |
+| Handsontable    | Paywalled ($999/dev/yr)      | Yes                 |         No |
+| Glide Data Grid | Yes (MIT)                    | React only          |         No |
+| RevoGrid        | Partially                    | Yes                 |         No |
+| TanStack Table  | Headless (build it yourself) | Yes                 |         No |
+| **Better Grid** | **Yes (MIT core)**           | **Yes**             |    **Yes** |
 
 ## Features
 
 ### Core (MIT, free forever)
+
 - Virtual scrolling (10K+ rows, 100+ columns)
 - Frozen rows & columns (no visual lag)
 - Cell selection (single, range, multi-range)
@@ -30,6 +31,7 @@ The data grid market has a gap:
 - CSS custom properties for theming
 
 ### Free Plugins (MIT)
+
 - **Editing** — type-to-edit, double-click, commit/cancel
 - **Sorting** — single/multi-column, custom comparators
 - **Filtering** — column filters, custom functions
@@ -37,12 +39,14 @@ The data grid market has a gap:
 - **Validation** — rules per column, error state
 
 ### Pro Plugins (Commercial, coming soon)
+
 - Clipboard (copy/cut/paste, fill-down)
 - Row grouping with collapse
 - Undo/redo history
 - CSV/Excel export
 
 ### AI-Native (coming soon)
+
 - **MCP Server** — AI-assisted column config generation, schema inference, migration from other grids
 - **AI Plugin** — natural language filtering, data summarization, smart suggestions
 
@@ -93,11 +97,11 @@ Inspired by [Better Auth](https://better-auth.com):
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| `@better-grid/core` | Framework-agnostic grid engine |
-| `@better-grid/react` | React adapter (`useGrid` hook + `BetterGrid` component) |
-| `@better-grid/plugins` | Official free plugins |
+| Package                | Description                                             |
+| ---------------------- | ------------------------------------------------------- |
+| `@better-grid/core`    | Framework-agnostic grid engine                          |
+| `@better-grid/react`   | React adapter (`useGrid` hook + `BetterGrid` component) |
+| `@better-grid/plugins` | Official free plugins                                   |
 
 ## Theming
 

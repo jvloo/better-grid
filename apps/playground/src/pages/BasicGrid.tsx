@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing } from '@better-grid/plugins';
+import { formatting, editing, sorting } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface SampleRow {
@@ -52,6 +52,7 @@ export function BasicGrid() {
     () => [
       formatting({ locale: 'en-US', currencyCode: 'USD', accountingFormat: true }),
       editing({ editTrigger: 'dblclick' }),
+      sorting(),
     ],
     [],
   );
@@ -60,7 +61,7 @@ export function BasicGrid() {
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 16 }}>Basic Grid</h1>
       <p style={{ marginBottom: 16, color: '#666' }}>
-        Formatting + editing plugins. Click to select, arrow keys to navigate, double-click or Enter to edit.
+        Formatting, editing, and sorting plugins. Double-click to edit, click headers to sort.
       </p>
       <BetterGrid<SampleRow>
         columns={columns}
