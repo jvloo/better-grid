@@ -208,6 +208,10 @@ export function createGrid<
       // Update frozen overlay width and clip scroll container
       const frozenWidth = measurements.colOffsets[frozenCols]!;
       frozenColOverlay!.style.width = `${frozenWidth}px`;
+      // Match content height so shadow doesn't extend past data
+      const contentHeight = measurements.totalHeight + headerHeight;
+      frozenColOverlay!.style.height = `${Math.min(contentHeight, scrollContainer!.clientHeight)}px`;
+      frozenColOverlay!.style.bottom = 'auto';
 
       // Clip the scroll container's left edge so scrolled cells don't
       // bleed behind the frozen overlay. Using clip-path preserves the
@@ -725,7 +729,7 @@ export function createGrid<
         frozenColOverlay.style.position = 'absolute';
         frozenColOverlay.style.top = '0';
         frozenColOverlay.style.left = '0';
-        frozenColOverlay.style.bottom = '0';
+        // height set dynamically in render() to match content
         frozenColOverlay.style.overflow = 'hidden';
         frozenColOverlay.style.zIndex = '8';
 
