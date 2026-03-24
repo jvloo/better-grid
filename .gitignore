@@ -29,3 +29,4 @@ coverage/
 # Logs
 *.log
 .playwright-mcp/
+.claude/settings.local.json
