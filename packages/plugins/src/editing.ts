@@ -138,7 +138,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           // For percent: show user-friendly value (5 instead of 0.05)
           let rawStr = originalValue != null ? String(originalValue) : '';
           if (column.cellType === 'percent' && typeof originalValue === 'number') {
-            rawStr = String(originalValue * 100);
+            // Avoid floating point: 0.0008 * 100 = 0.08 not 0.07999...
+            rawStr = String(parseFloat((originalValue * 100).toPrecision(12)));
           }
           const editValue = initialValue ?? rawStr;
           activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined);
@@ -378,7 +379,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         }
         if (cellType === 'percent') {
           const num = Number(newValue.replace(/[^0-9.\-]/g, ''));
-          return isNaN(num) ? prevValue : num / 100;
+          if (isNaN(num)) return prevValue;
+          // Avoid floating point errors: 0.08 / 100 = 0.0008 not 0.0007999...
+          const decimals = (newValue.split('.')[1] || '').length + 2;
+          return Number((num / 100).toFixed(decimals));
         }
         if (typeof prevValue === 'boolean') {
           const lower = newValue.toLowerCase().trim();
