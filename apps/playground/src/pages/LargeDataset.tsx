@@ -1,8 +1,9 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef, GridPlugin, HeaderRow } from '@better-grid/core';
 import { formatting, editing, sorting, filtering, validation } from '@better-grid/plugins';
 import { CodeBlock } from '../components/CodeBlock';
+import DataWorker from '../dataWorker?worker';
 import '@better-grid/core/styles.css';
 
 interface LargeRow {
@@ -158,16 +159,16 @@ function generateHeaderRows(colCount: number, rich: boolean): HeaderRow[] | unde
 }
 
 const PRESETS = [
-  { label: '100 rows, 100 columns', rows: 100, cols: 100, emoji: '🔋' },
-  { label: '1,000 rows, 100 columns', rows: 1_000, cols: 100, emoji: '⚡' },
-  { label: '10,000 rows, 100 columns', rows: 10_000, cols: 100, emoji: '🏎️' },
-  { label: '100,000 rows, 100 columns', rows: 100_000, cols: 100, emoji: '🚀' },
-  { label: '200,000 rows, 100 columns', rows: 200_000, cols: 100, emoji: '💥' },
-  { label: '400,000 rows, 100 columns', rows: 400_000, cols: 100, emoji: '💥' },
+  { label: '1,000 rows', rows: 1_000, cols: 100 },
+  { label: '10,000 rows', rows: 10_000, cols: 100 },
+  { label: '100,000 rows', rows: 100_000, cols: 100 },
+  { label: '200,000 rows', rows: 200_000, cols: 100 },
+  { label: '400,000 rows', rows: 400_000, cols: 100 },
+  { label: '1,000,000 rows', rows: 1_000_000, cols: 100 },
 ];
 
 export function LargeDataset() {
-  const [rowCount, setRowCount] = useState(100);
+  const [rowCount, setRowCount] = useState(1_000);
   const [colCount, setColCount] = useState(100);
   const [generating, setGenerating] = useState(false);
   const [genTime, setGenTime] = useState(0);
@@ -176,7 +177,7 @@ export function LargeDataset() {
 
   const totalCells = rowCount * (colCount + 1);
 
-  const [data, setData] = useState<LargeRow[]>(() => createData(100, 100, true).data);
+  const [data, setData] = useState<LargeRow[]>(() => createData(1_000, 100, true).data);
   const [columns, setColumns] = useState<ColumnDef<LargeRow>[]>(() => generateColumns(100, true));
   const [headerRows, setHeaderRows] = useState<HeaderRow[] | undefined>(() => generateHeaderRows(100, true));
   const [gridKey, setGridKey] = useState(0);
@@ -203,14 +204,17 @@ export function LargeDataset() {
     setRowCount(rows);
     setColCount(cols);
 
-    setTimeout(() => {
-      console.log(`[benchmark] Generating ${rows.toLocaleString()} × ${cols} ...`);
-      const result = createData(rows, cols, true);
-      console.log(`[benchmark] Data generated in ${result.genTime}ms (${(rows * (cols + 1)).toLocaleString()} cells)`);
+    // Generate data in a web worker to avoid blocking the main thread
+    const worker = new DataWorker();
+    worker.onmessage = (event) => {
+      const { rows: generatedRows, genTime: gt } = event.data;
+      worker.terminate();
+
+      console.log(`[benchmark] Data generated in ${gt}ms (${(rows * (cols + 1)).toLocaleString()} cells)`);
 
       const renderStart = performance.now();
-      setGenTime(result.genTime);
-      setData(result.data);
+      setGenTime(gt);
+      setData(generatedRows);
       setColumns(generateColumns(cols, true));
       setHeaderRows(generateHeaderRows(cols, true));
       setGridKey((k) => k + 1);
@@ -231,14 +235,15 @@ export function LargeDataset() {
             rows,
             cols,
             totalCells: rows * (cols + 1),
-            genTimeMs: result.genTime,
+            genTimeMs: gt,
             domCells,
             heapMB,
           };
           console.log(`[benchmark] Results:`, (window as unknown as Record<string, unknown>).__bgBenchmark);
         });
       });
-    }, 50);
+    };
+    worker.postMessage({ rowsNumber: rows, colsNumber: cols });
   }
 
   // Live DOM count and FPS
@@ -281,42 +286,40 @@ export function LargeDataset() {
         Rich content with all plugins enabled. Only visible cells exist in the DOM.
       </p>
 
-      {/* Data source dropdown */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <span style={{ fontSize: 13, color: '#666' }}>Data source:</span>
-        <select
-          value={`${rowCount}-${colCount}`}
-          onChange={(e) => {
-            const [r, c] = e.target.value.split('-').map(Number);
-            applyPreset(r!, c!);
-          }}
-          disabled={generating}
-          style={{
-            padding: '6px 12px', fontSize: 13, borderRadius: 6,
-            border: '1px solid #d0d0d0', background: '#fff', cursor: 'pointer',
-            minWidth: 260,
-          }}
-        >
-          {PRESETS.map((p) => (
-            <option key={p.label} value={`${p.rows}-${p.cols}`}>
-              {p.label} {p.emoji}
-            </option>
-          ))}
-        </select>
+      {/* Preset buttons */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        {PRESETS.map(p => {
+          const isActive = p.rows === rowCount;
+          return (
+            <button
+              key={p.label}
+              onClick={() => applyPreset(p.rows, p.cols)}
+              disabled={generating}
+              style={{
+                padding: '6px 14px', border: `1px solid ${isActive ? '#1a73e8' : '#d0d0d0'}`,
+                borderRadius: 6, background: isActive ? '#1a73e8' : '#fff',
+                color: isActive ? '#fff' : '#333', cursor: generating ? 'wait' : 'pointer',
+                fontSize: 13, fontWeight: isActive ? 600 : 400, opacity: generating ? 0.6 : 1,
+              }}
+            >
+              {p.label}
+              <span style={{ display: 'block', fontSize: 10, opacity: 0.7 }}>
+                {p.rows.toLocaleString()} × {p.cols}
+              </span>
+            </button>
+          );
+        })}
         {generating && <span style={{ fontSize: 13, color: '#888' }}>Generating...</span>}
       </div>
 
       {/* Performance Metrics */}
-      <div style={{
-        display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap',
-        padding: '10px 16px', background: '#f8f9fa', borderRadius: 8, border: '1px solid #e8e8e8',
-        fontSize: 13, color: '#555',
-      }}>
-        <div>Render Time: <code style={{ color: '#1a73e8' }}>{renderTime > 0 ? `${renderTime}ms` : 'N/A'}</code></div>
-        <div>Scroll FPS: <code style={{ color: fps >= 55 ? '#2e7d32' : fps > 0 ? '#e65100' : '#888' }}>{fps > 0 ? fps : 'N/A'}</code></div>
-        <div>Memory: <code style={{ color: '#1a73e8' }}>{memoryMB !== 'N/A' ? `${memoryMB} MB` : 'N/A'}</code></div>
-        <div>DOM Cells: <code style={{ color: '#1a73e8' }}>{domCount}</code></div>
-        <div>Total Cells: <code>{formatNumber(totalCells)}</code></div>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+        <Stat label="Render Time" value={renderTime > 0 ? `${renderTime}ms` : '—'} />
+        <Stat label="Scroll FPS" value={fps > 0 ? String(fps) : '—'} highlight={fps >= 55} warn={fps > 0 && fps < 30} />
+        <Stat label="Memory" value={memoryMB !== 'N/A' ? `${memoryMB} MB` : '—'} />
+        <Stat label="DOM Cells" value={String(domCount)} highlight />
+        <Stat label="Total Cells" value={formatNumber(totalCells)} />
+        {genTime > 0 && <Stat label="Data Gen" value={genTime < 1000 ? `${genTime}ms` : `${(genTime / 1000).toFixed(1)}s`} />}
       </div>
 
       {/* Grid */}
