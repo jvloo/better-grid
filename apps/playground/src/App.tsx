@@ -76,24 +76,6 @@ export function App() {
           Coming Soon
         </NavButton>
 
-        {/* Get Started */}
-        <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid #e0e0e0' }}>
-          <div style={{ fontSize: 11, color: '#999', marginBottom: 6, paddingLeft: 8 }}>GET STARTED</div>
-          <pre style={{
-            fontSize: 11,
-            background: '#1e1e1e',
-            color: '#d4d4d4',
-            padding: 8,
-            borderRadius: 6,
-            overflow: 'auto',
-            lineHeight: 1.4,
-            margin: 0,
-          }}>
-{`npm i @better-grid/core
-      @better-grid/react
-      @better-grid/plugins`}
-          </pre>
-        </div>
       </nav>
 
       {/* Content */}
