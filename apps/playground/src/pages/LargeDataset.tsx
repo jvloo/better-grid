@@ -39,7 +39,7 @@ const PRESETS = [
   { label: '1K × 100', rows: 1_000, cols: 100 },
   { label: '10K × 100', rows: 10_000, cols: 100 },
   { label: '100K × 100', rows: 100_000, cols: 100 },
-  { label: '1M × 100', rows: 1_000_000, cols: 100 },
+  { label: '500K × 20', rows: 500_000, cols: 20 },
 ];
 
 export function LargeDataset() {
@@ -60,12 +60,37 @@ export function LargeDataset() {
     setColCount(cols);
 
     setTimeout(() => {
+      console.log(`[benchmark] Generating ${rows.toLocaleString()} × ${cols} ...`);
       const result = createData(rows, cols);
+      console.log(`[benchmark] Data generated in ${result.genTime}ms (${(rows * (cols + 1)).toLocaleString()} cells)`);
+
       setGenTime(result.genTime);
       setData(result.data);
       setColumns(generateColumns(cols));
       setGridKey((k) => k + 1);
       setGenerating(false);
+
+      // Log first render time
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const domCells = document.querySelectorAll('.bg-cell').length;
+          const heap = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+          const heapMB = heap ? Math.round(heap.usedJSHeapSize / 1024 / 1024) : null;
+          console.log(`[benchmark] First render: ${domCells} DOM cells`);
+          if (heapMB) console.log(`[benchmark] JS Heap: ${heapMB} MB`);
+
+          // Expose for Playwright
+          (window as unknown as Record<string, unknown>).__bgBenchmark = {
+            rows,
+            cols,
+            totalCells: rows * (cols + 1),
+            genTimeMs: result.genTime,
+            domCells,
+            heapMB,
+          };
+          console.log(`[benchmark] Results:`, (window as unknown as Record<string, unknown>).__bgBenchmark);
+        });
+      });
     }, 50);
   }
 
@@ -87,9 +112,12 @@ export function LargeDataset() {
       const now = performance.now();
       const elapsed = now - fpsRef.current.lastTime;
       if (elapsed >= 1000) {
-        setFps(Math.round((fpsRef.current.frames * 1000) / elapsed));
+        const currentFps = Math.round((fpsRef.current.frames * 1000) / elapsed);
+        setFps(currentFps);
         fpsRef.current.frames = 0;
         fpsRef.current.lastTime = now;
+        // Expose live FPS for Playwright
+        (window as unknown as Record<string, unknown>).__bgFps = currentFps;
       }
 
       requestAnimationFrame(measure);
