@@ -71,10 +71,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         column: { cellType?: string; meta?: Record<string, unknown> },
         value: unknown,
       ): DropdownOption[] | null {
-        // Explicit options in column meta
+        // meta.editor: 'text' forces text input, skips all dropdown logic
+        if (column.meta?.editor === 'text') return null;
+
+        // Explicit options in column meta → always dropdown
         const metaOpts = column.meta?.options;
         if (Array.isArray(metaOpts) && metaOpts.length > 0) {
-          // Support both { label, value } and plain strings
           return metaOpts.map((opt) =>
             typeof opt === 'object' && opt !== null && 'label' in opt
               ? (opt as DropdownOption)
@@ -82,7 +84,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           );
         }
 
-        // Boolean values → Yes/No dropdown
+        // meta.editor: 'dropdown' forces dropdown even without options
+        // (useful with boolean values where you want explicit control)
+        if (column.meta?.editor === 'dropdown' && typeof value === 'boolean') {
+          return [
+            { label: config.booleanLabels[0], value: true },
+            { label: config.booleanLabels[1], value: false },
+          ];
+        }
+
+        // Auto-detect: boolean → Yes/No dropdown (unless editor is 'text')
         if (typeof value === 'boolean') {
           return [
             { label: config.booleanLabels[0], value: true },
