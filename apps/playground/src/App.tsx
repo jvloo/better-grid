@@ -44,14 +44,14 @@ export function App() {
           Editor Types
         </NavButton>
 
-        <SectionLabel>Showcase</SectionLabel>
-        <NavButton active={page === 'complex'} onClick={() => setPage('complex')}>
-          Financial Grid
-        </NavButton>
-
         <SectionLabel>Pro Plugins</SectionLabel>
         <NavButton active={page === 'pro'} onClick={() => setPage('pro')}>
           Coming Soon
+        </NavButton>
+
+        <SectionLabel>Showcase</SectionLabel>
+        <NavButton active={page === 'complex'} onClick={() => setPage('complex')}>
+          Financial Grid
         </NavButton>
       </nav>
 
