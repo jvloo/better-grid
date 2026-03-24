@@ -8,23 +8,68 @@ interface LargeRow {
   [key: string]: unknown;
 }
 
-function generateData(rowCount: number, colCount: number): LargeRow[] {
+/**
+ * For small datasets (≤1M), generate all data upfront.
+ * For large datasets (>1M), use a lazy proxy that generates rows on access.
+ * This avoids allocating gigabytes of memory for 10M/100M row arrays.
+ */
+function createData(rowCount: number, colCount: number): { data: LargeRow[]; genTime: number; lazy: boolean } {
   const start = performance.now();
-  const data: LargeRow[] = [];
-  for (let r = 0; r < rowCount; r++) {
-    const row: LargeRow = { id: r + 1 };
-    for (let c = 0; c < colCount; c++) {
-      row[`col${c}`] = Math.round(Math.random() * 10000) / 100;
+
+  if (rowCount <= 1_000_000) {
+    // Eager: generate all rows
+    const data: LargeRow[] = [];
+    for (let r = 0; r < rowCount; r++) {
+      const row: LargeRow = { id: r + 1 };
+      for (let c = 0; c < colCount; c++) {
+        row[`col${c}`] = Math.round(((r * 7 + c * 13 + 37) % 10000) / 100 * 100) / 100;
+      }
+      data.push(row);
     }
-    data.push(row);
+    return { data, genTime: Math.round(performance.now() - start), lazy: false };
   }
-  const elapsed = performance.now() - start;
-  return data;
+
+  // Lazy: use a Proxy-backed sparse array — rows generated on demand
+  const cache = new Map<number, LargeRow>();
+  const data = new Proxy([] as LargeRow[], {
+    get(target, prop) {
+      if (prop === 'length') return rowCount;
+      if (prop === Symbol.iterator) {
+        return function* () {
+          for (let i = 0; i < rowCount; i++) yield getRow(i);
+        };
+      }
+      const idx = Number(prop);
+      if (!isNaN(idx) && idx >= 0 && idx < rowCount) {
+        return getRow(idx);
+      }
+      return (target as Record<string | symbol, unknown>)[prop];
+    },
+  });
+
+  function getRow(idx: number): LargeRow {
+    let row = cache.get(idx);
+    if (!row) {
+      row = { id: idx + 1 } as LargeRow;
+      for (let c = 0; c < colCount; c++) {
+        row[`col${c}`] = Math.round(((idx * 7 + c * 13 + 37) % 10000) / 100 * 100) / 100;
+      }
+      cache.set(idx, row);
+      // Keep cache bounded to ~10K rows to avoid memory growth
+      if (cache.size > 10000) {
+        const first = cache.keys().next().value;
+        if (first !== undefined) cache.delete(first);
+      }
+    }
+    return row;
+  }
+
+  return { data, genTime: Math.round(performance.now() - start), lazy: true };
 }
 
 function generateColumns(colCount: number): ColumnDef<LargeRow>[] {
   const cols: ColumnDef<LargeRow>[] = [
-    { id: 'id', header: 'ID', width: 80 },
+    { id: 'id', header: 'ID', width: 90 },
   ];
   for (let c = 0; c < colCount; c++) {
     cols.push({
@@ -40,8 +85,9 @@ const PRESETS = [
   { label: '1K × 20', rows: 1_000, cols: 20 },
   { label: '10K × 50', rows: 10_000, cols: 50 },
   { label: '100K × 50', rows: 100_000, cols: 50 },
-  { label: '500K × 50', rows: 500_000, cols: 50 },
   { label: '1M × 50', rows: 1_000_000, cols: 50 },
+  { label: '10M × 20', rows: 10_000_000, cols: 20 },
+  { label: '100M × 10', rows: 100_000_000, cols: 10 },
 ];
 
 export function LargeDataset() {
@@ -49,10 +95,11 @@ export function LargeDataset() {
   const [colCount, setColCount] = useState(50);
   const [generating, setGenerating] = useState(false);
   const [genTime, setGenTime] = useState(0);
+  const [isLazy, setIsLazy] = useState(false);
 
   const totalCells = rowCount * (colCount + 1);
 
-  const [data, setData] = useState<LargeRow[]>(() => generateData(10_000, 50));
+  const [data, setData] = useState<LargeRow[]>(() => createData(10_000, 50).data);
   const [columns, setColumns] = useState<ColumnDef<LargeRow>[]>(() => generateColumns(50));
   const [gridKey, setGridKey] = useState(0);
 
@@ -61,13 +108,11 @@ export function LargeDataset() {
     setRowCount(rows);
     setColCount(cols);
 
-    // Use setTimeout to let the UI update before heavy computation
     setTimeout(() => {
-      const start = performance.now();
-      const newData = generateData(rows, cols);
-      const elapsed = performance.now() - start;
-      setGenTime(Math.round(elapsed));
-      setData(newData);
+      const result = createData(rows, cols);
+      setGenTime(result.genTime);
+      setIsLazy(result.lazy);
+      setData(result.data);
       setColumns(generateColumns(cols));
       setGridKey((k) => k + 1);
       setGenerating(false);
@@ -112,9 +157,10 @@ export function LargeDataset() {
       </p>
 
       {/* Preset buttons */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {PRESETS.map((p) => {
           const isActive = p.rows === rowCount && p.cols === colCount;
+          const isExtreme = p.rows >= 10_000_000;
           return (
             <button
               key={p.label}
@@ -122,39 +168,36 @@ export function LargeDataset() {
               disabled={generating}
               style={{
                 padding: '6px 14px',
-                border: `1px solid ${isActive ? '#1a73e8' : '#d0d0d0'}`,
+                border: `1px solid ${isActive ? '#1a73e8' : isExtreme ? '#c62828' : '#d0d0d0'}`,
                 borderRadius: 6,
                 background: isActive ? '#1a73e8' : '#fff',
-                color: isActive ? '#fff' : '#333',
+                color: isActive ? '#fff' : isExtreme ? '#c62828' : '#333',
                 cursor: generating ? 'wait' : 'pointer',
                 fontSize: 13,
-                fontWeight: isActive ? 600 : 400,
+                fontWeight: isActive ? 600 : isExtreme ? 500 : 400,
                 opacity: generating ? 0.6 : 1,
               }}
             >
               {p.label}
-              {p.rows >= 1_000_000 && !isActive && ' 🔥'}
+              {isExtreme && !isActive && ' 🔥'}
             </button>
           );
         })}
-        {generating && <span style={{ fontSize: 13, color: '#888', alignSelf: 'center' }}>Generating data...</span>}
+        {generating && <span style={{ fontSize: 13, color: '#888' }}>Generating...</span>}
       </div>
 
       {/* Stats */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-        <Stat label="Total Cells" value={totalCells.toLocaleString()} />
+        <Stat label="Total Cells" value={formatNumber(totalCells)} />
         <Stat label="In DOM" value={domCount.toLocaleString()} highlight />
-        <Stat
-          label="DOM Reduction"
-          value={domCount > 0 ? `${((1 - domCount / totalCells) * 100).toFixed(2)}%` : '—'}
-        />
         <Stat
           label="FPS"
           value={fps > 0 ? String(fps) : '—'}
           highlight={fps >= 55}
           warn={fps > 0 && fps < 30}
         />
-        {genTime > 0 && <Stat label="Data Gen" value={`${genTime}ms`} />}
+        {genTime > 0 && <Stat label="Init Time" value={genTime < 1000 ? `${genTime}ms` : `${(genTime / 1000).toFixed(1)}s`} />}
+        {isLazy && <Stat label="Mode" value="Lazy" highlight />}
       </div>
 
       {/* Grid */}
@@ -168,11 +211,21 @@ export function LargeDataset() {
       />
 
       <div style={{ marginTop: 12, fontSize: 12, color: '#aaa' }}>
-        Scroll vertically and horizontally — DOM count and FPS update live.
-        {rowCount >= 100_000 && ' AG Grid crashes at 400K rows. RevoGrid claims 400K. Try 1M here.'}
+        {isLazy
+          ? 'Lazy mode: rows generated on-demand as you scroll. Only ~10K rows cached in memory.'
+          : 'All rows in memory. Scroll to see virtualization — DOM stays constant regardless of dataset size.'}
+        {rowCount >= 100_000 && ' AG Grid crashes at 400K rows. '}
+        {rowCount >= 10_000_000 && 'Canvas grids claim 100M — we do it with DOM virtualization + lazy data.'}
       </div>
     </div>
   );
+}
+
+function formatNumber(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(0)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return String(n);
 }
 
 function Stat({ label, value, highlight, warn }: { label: string; value: string; highlight?: boolean; warn?: boolean }) {
