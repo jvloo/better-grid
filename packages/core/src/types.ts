@@ -233,6 +233,10 @@ export interface GridEvents<TData = unknown> {
   mount: () => void;
   unmount: () => void;
   render: (visibleRange: VirtualRange) => void;
+
+  // Plugin custom events (extensible)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: (...args: any[]) => void;
 }
 
 // ---------------------------------------------------------------------------

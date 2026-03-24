@@ -1,5 +1,7 @@
 // ============================================================================
-// Selection Layer — Renders selection overlay without re-rendering cells
+// Selection Layer — Renders range selection overlay
+// Active cell indicator is handled by CSS (.bg-cell--active outline).
+// This layer only renders the range highlight rectangles.
 // ============================================================================
 
 import type { Selection } from '../types';
@@ -7,7 +9,6 @@ import type { LayoutMeasurements } from '../virtualization/engine';
 
 export class SelectionLayer {
   private overlay: HTMLElement;
-  private activeIndicator: HTMLElement;
   private rangeBorders: HTMLElement[] = [];
 
   constructor(container: HTMLElement) {
@@ -18,41 +19,25 @@ export class SelectionLayer {
     this.overlay.style.pointerEvents = 'none';
     this.overlay.style.zIndex = '2';
     container.appendChild(this.overlay);
-
-    this.activeIndicator = document.createElement('div');
-    this.activeIndicator.className = 'bg-active-cell';
-    this.activeIndicator.style.position = 'absolute';
-    this.activeIndicator.style.display = 'none';
-    this.activeIndicator.style.pointerEvents = 'none';
-    this.activeIndicator.style.boxSizing = 'border-box';
-    this.overlay.appendChild(this.activeIndicator);
   }
 
   render(selection: Selection, measurements: LayoutMeasurements): void {
-    // Clear range borders
+    // Clear previous range borders
     for (const el of this.rangeBorders) {
       el.remove();
     }
     this.rangeBorders = [];
 
-    // Active cell indicator
-    if (selection.active) {
-      const { rowIndex, colIndex } = selection.active;
-      const top = measurements.rowOffsets[rowIndex]!;
-      const left = measurements.colOffsets[colIndex]!;
-      const height = measurements.rowOffsets[rowIndex + 1]! - top;
-      const width = measurements.colOffsets[colIndex + 1]! - left;
-
-      this.activeIndicator.style.transform = `translate3d(${left}px, ${top}px, 0)`;
-      this.activeIndicator.style.width = `${width}px`;
-      this.activeIndicator.style.height = `${height}px`;
-      this.activeIndicator.style.display = 'block';
-    } else {
-      this.activeIndicator.style.display = 'none';
-    }
-
     // Range selection highlights
     for (const range of selection.ranges) {
+      // Skip single-cell ranges (handled by .bg-cell--active CSS)
+      if (
+        range.startRow === range.endRow &&
+        range.startCol === range.endCol
+      ) {
+        continue;
+      }
+
       const border = document.createElement('div');
       border.className = 'bg-selection-range';
       const top = measurements.rowOffsets[range.startRow]!;

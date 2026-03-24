@@ -33,9 +33,15 @@ export function extendSelection(selection: Selection, to: CellPosition): Selecti
   if (!selection.active) return createCellSelection(to);
 
   const newRange = normalizeRange(selection.active, to);
+
+  // Preserve prior ranges (from Ctrl+click), only replace the last one
+  const priorRanges = selection.ranges.length > 1
+    ? selection.ranges.slice(0, -1)
+    : [];
+
   return {
     active: selection.active,
-    ranges: [newRange],
+    ranges: [...priorRanges, newRange],
   };
 }
 

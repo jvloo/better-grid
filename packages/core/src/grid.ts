@@ -5,6 +5,7 @@
 import type {
   GridOptions,
   GridInstance,
+  GridEvents,
   GridState,
   GridPlugin,
   Selection,
@@ -37,8 +38,7 @@ export function createGrid<
   // ---------------------------------------------------------------------------
   // Internal state
   // ---------------------------------------------------------------------------
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const emitter = new EventEmitter<any>();
+  const emitter = new EventEmitter<GridEvents<TData>>();
   const columnManager = new ColumnManager<TData>();
   const virtualization = new VirtualizationEngine(
     options.virtualization?.overscanRows ?? 5,
@@ -119,9 +119,14 @@ export function createGrid<
   // Rendering
   // ---------------------------------------------------------------------------
 
+  let renderPending = false;
   function scheduleRender(): void {
-    if (!scrollContainer || !cellContainer) return;
-    requestAnimationFrame(render);
+    if (!scrollContainer || !cellContainer || renderPending) return;
+    renderPending = true;
+    requestAnimationFrame(() => {
+      renderPending = false;
+      render();
+    });
   }
 
   function render(): void {
@@ -763,8 +768,9 @@ export function createGrid<
           if (idx >= 0) keyBindings.splice(idx, 1);
         };
       },
-      registerCellDecorator: (_decorator) => {
-        // TODO: implement decorator pipeline
+      registerCellDecorator: () => {
+        // Cell decorator pipeline not yet implemented.
+        // Use cellRenderer on ColumnDef for per-column custom rendering.
         return () => {};
       },
       registerCellType: (type, renderer) => {
