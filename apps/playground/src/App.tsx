@@ -43,8 +43,10 @@ export function App() {
         <NavButton active={page === 'editable'} onClick={() => setPage('editable')}>
           Editor Types
         </NavButton>
+
+        <SectionLabel>Showcase</SectionLabel>
         <NavButton active={page === 'complex'} onClick={() => setPage('complex')}>
-          Multi-Header
+          Financial Grid
         </NavButton>
 
         <SectionLabel>Pro Plugins</SectionLabel>
