@@ -96,7 +96,6 @@ export function LargeDataset() {
         <Stat label="In DOM" value={domCount.toLocaleString()} highlight />
         <Stat label="DOM Reduction" value={domCount > 0 ? `${memSaved.toFixed(1)}%` : '—'} />
         <Stat label="FPS" value={fps > 0 ? String(fps) : '—'} highlight={fps >= 55} warn={fps > 0 && fps < 30} />
-        <Stat label="Frozen" value="ID column" />
       </div>
 
       <BetterGrid<LargeRow>
