@@ -127,6 +127,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         // Check if this should be a dropdown
         const dropdownOpts = getDropdownOptions(column, originalValue);
 
+        // Check if text is clipped BEFORE clearing cell content
+        const wasClipped = cellEl.scrollWidth > cellEl.clientWidth;
+
         // Prepare cell for editing — keep cell padding unchanged so text
         // position matches between display and edit modes (no glitch)
         cellEl.textContent = '';
@@ -142,7 +145,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             rawStr = String(parseFloat((originalValue * 100).toPrecision(12)));
           }
           const editValue = initialValue ?? rawStr;
-          activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined);
+          activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, wasClipped);
         }
       }
 
@@ -154,6 +157,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         cellEl: HTMLElement,
         value: string,
         cursorAtEnd: boolean,
+        wasClipped = false,
       ): HTMLInputElement {
         const input = document.createElement('input');
         input.type = 'text';
@@ -161,15 +165,184 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         input.value = value;
         input.style.cssText = INPUT_CSS;
 
+        // If clipped, create a floating textarea on top of everything.
+        // Textarea handles both single-line and multi-line — no switching needed.
+        if (wasClipped) {
+          const cellRect = cellEl.getBoundingClientRect();
+          const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
+          const gridRect = gridEl?.getBoundingClientRect();
+          const cellPadding = getComputedStyle(cellEl).padding;
+          const cellFont = getComputedStyle(cellEl).font;
+          const maxRightWidth = gridRect ? gridRect.right - cellRect.left : cellRect.width;
+          const fullWidth = gridRect?.width ?? cellRect.width;
+          const gridLeft = gridRect?.left ?? cellRect.left;
+
+          // Measure span for auto-sizing
+          const measureSpan = document.createElement('span');
+          measureSpan.style.cssText = `position:fixed;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;font:${cellFont};padding:${cellPadding};`;
+          document.body.appendChild(measureSpan);
+
+          // Create float box
+          const floatBox = document.createElement('div');
+          floatBox.className = 'bg-cell-editor-float';
+          const borderW = 2;
+          floatBox.style.cssText = `
+            position: fixed; z-index: 200; box-sizing: border-box;
+            top: ${cellRect.top - borderW}px; left: ${cellRect.left - borderW}px;
+            min-width: ${cellRect.width + borderW * 2}px; max-width: ${fullWidth + borderW * 2}px;
+            background: #fff; border: ${borderW}px solid var(--bg-active-border, #1a73e8);
+            border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+          `;
+
+          // Use contenteditable div — naturally supports vertical centering
+          // (via flexbox) and word-wrap without textarea quirks
+          const ed = document.createElement('div');
+          ed.className = 'bg-cell-editor';
+          ed.contentEditable = 'true';
+          ed.textContent = value;
+          ed.style.cssText = `
+            outline:none; margin:0;
+            font:${cellFont}; line-height:1.5; color:inherit;
+            background:transparent; box-sizing:border-box;
+            padding:${cellPadding};
+            min-height:${cellRect.height}px;
+            max-height:${cellRect.height * 4}px;
+            overflow:auto;
+            white-space:pre-wrap; word-break:break-word;
+            display:flex; align-items:center;
+          `;
+
+          floatBox.appendChild(ed);
+          document.body.appendChild(floatBox);
+
+          function autoSize(): void {
+            measureSpan.textContent = ed.textContent || ' ';
+            const textWidth = measureSpan.offsetWidth + 16;
+            const bw2 = borderW * 2;
+
+            if (textWidth <= maxRightWidth) {
+              floatBox.style.left = `${cellRect.left - borderW}px`;
+              floatBox.style.width = `${Math.max(cellRect.width, textWidth) + bw2}px`;
+            } else {
+              floatBox.style.left = `${gridLeft - borderW}px`;
+              floatBox.style.width = `${fullWidth + bw2}px`;
+            }
+
+            // When content wraps, switch from flex centering to block flow
+            // Add vertical padding on multi-line to match horizontal padding
+            const horizPadVal = parseFloat(getComputedStyle(cellEl).paddingLeft) || 12;
+            if (ed.scrollHeight > cellRect.height) {
+              ed.style.display = 'block';
+              ed.style.lineHeight = '';
+              ed.style.padding = `${horizPadVal}px`;
+            } else {
+              ed.style.display = 'flex';
+              ed.style.alignItems = 'center';
+              ed.style.padding = cellPadding;
+            }
+          }
+
+          // Track scroll to reposition float box
+          const scrollEl = cellEl.closest('.bg-grid__scroll') as HTMLElement | null;
+
+          function syncPosition(): void {
+            const cr = cellEl.getBoundingClientRect();
+            const gr = gridEl?.getBoundingClientRect();
+
+            // Hide if cell scrolled out of the grid viewport
+            if (gr) {
+              const headerH = parseFloat(gridEl?.querySelector('.bg-grid__headers')?.getBoundingClientRect().height + '' || '0');
+              const cellVisible = cr.bottom > (gr.top + headerH) && cr.top < gr.bottom && cr.right > gr.left && cr.left < gr.right;
+              floatBox.style.display = cellVisible ? '' : 'none';
+              if (!cellVisible) return;
+            }
+
+            // Update position
+            measureSpan.textContent = ed.textContent || ' ';
+            const textWidth = measureSpan.offsetWidth + 16;
+            const bw2 = borderW * 2;
+            const curMaxRight = gr ? gr.right - cr.left : cr.width;
+            const curFullWidth = gr?.width ?? cr.width;
+            const curGridLeft = gr?.left ?? cr.left;
+
+            floatBox.style.top = `${cr.top - borderW}px`;
+            if (textWidth <= curMaxRight) {
+              floatBox.style.left = `${cr.left - borderW}px`;
+              floatBox.style.width = `${Math.max(cr.width, textWidth) + bw2}px`;
+            } else {
+              floatBox.style.left = `${curGridLeft - borderW}px`;
+              floatBox.style.width = `${curFullWidth + bw2}px`;
+            }
+          }
+
+          if (scrollEl) {
+            scrollEl.addEventListener('scroll', syncPosition);
+          }
+
+          autoSize();
+          ed.addEventListener('input', autoSize);
+          ed.focus();
+
+          // Select all text
+          const range = document.createRange();
+          range.selectNodeContents(ed);
+          if (cursorAtEnd) range.collapse(false);
+          const sel = window.getSelection();
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+
+          ed.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+            }
+            handleEditorKeydown(e);
+          });
+          ed.addEventListener('blur', () => {
+            measureSpan.remove();
+            floatBox.remove();
+            if (scrollEl) scrollEl.removeEventListener('scroll', syncPosition);
+          }, { once: true });
+          ed.addEventListener('blur', handleEditorBlur);
+
+          // Shim: make contenteditable act like an input for commit
+          const editorShim = {
+            get value() { return ed.textContent ?? ''; },
+            set value(v: string) { ed.textContent = v; },
+            focus() { ed.focus(); },
+            removeEventListener: ed.removeEventListener.bind(ed),
+            addEventListener: ed.addEventListener.bind(ed),
+            setSelectionRange() {},
+            dispatchEvent: ed.dispatchEvent.bind(ed),
+          } as unknown as HTMLInputElement;
+          activeEditor = editorShim;
+          return editorShim;
+        }
+
+        // Non-clipped: inline edit, but upgrade to float if typing overflows
         cellEl.appendChild(input);
         input.focus();
-
         if (cursorAtEnd) {
           input.setSelectionRange(value.length, value.length);
         } else {
           input.select();
         }
 
+        function checkOverflow(): void {
+          if (input.scrollWidth <= input.clientWidth) return;
+          // Text overflows — upgrade to floating textarea
+          const curValue = input.value;
+          const sel = [input.selectionStart, input.selectionEnd];
+          input.removeEventListener('input', checkOverflow);
+          input.removeEventListener('keydown', handleEditorKeydown);
+          input.removeEventListener('blur', handleEditorBlur);
+          input.remove();
+          // Create float directly (reuse the wasClipped=true path)
+          activeEditor = createTextInput(cellEl, curValue, true, true);
+          activeEditor.setSelectionRange(sel[0] ?? curValue.length, sel[1] ?? curValue.length);
+          activeEditor.dispatchEvent(new Event('input'));
+        }
+
+        input.addEventListener('input', checkOverflow);
         input.addEventListener('keydown', handleEditorKeydown);
         input.addEventListener('blur', handleEditorBlur);
         return input;
@@ -409,6 +582,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           activeDropdownOptions = null;
         }
 
+        // Remove floating edit box if present
+        document.querySelectorAll('.bg-cell-editor-float').forEach(el => el.remove());
+
         if (activeEditor) {
           activeEditor.removeEventListener('keydown', handleEditorKeydown);
           activeEditor.removeEventListener('blur', handleEditorBlur);
@@ -418,6 +594,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           const cellEl = getCellElement(editingCell);
           if (cellEl) {
             cellEl.classList.remove('bg-cell--editing');
+            cellEl.style.overflow = '';
+            cellEl.style.zIndex = '';
           }
         }
 
