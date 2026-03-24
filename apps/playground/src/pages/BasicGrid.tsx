@@ -29,7 +29,7 @@ const sampleData: SampleRow[] = [
 export function BasicGrid() {
   const columns = useMemo<ColumnDef<SampleRow>[]>(
     () => [
-      { id: 'id', header: 'ID', width: 60 },
+      { id: 'id', header: 'ID', width: 60, meta: { editable: false } },
       { id: 'name', header: 'Name', width: 200 },
       {
         id: 'category',
