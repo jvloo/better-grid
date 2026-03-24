@@ -512,7 +512,7 @@ export function createGrid<
   function showHeaderContextMenu(event: MouseEvent, columnId: string): void {
     dismissContextMenu();
 
-    const items: { label: string; action: () => void; disabled?: boolean }[] = [];
+    const items: { label: string; action: () => void; active?: boolean }[] = [];
 
     // Collect menu items from plugins
     for (const plugin of pluginRegistry.getAllPlugins()) {
@@ -522,8 +522,8 @@ export function createGrid<
           const sorted = api.getSortState();
           const colSorted = sorted.find((s) => s.columnId === columnId);
           items.push(
-            { label: 'Sort Ascending', action: () => { api.clearSort(); api.toggleSort(columnId); } },
-            { label: 'Sort Descending', action: () => { api.clearSort(); api.toggleSort(columnId); api.toggleSort(columnId); } },
+            { label: 'Sort Ascending', action: () => { api.clearSort(); api.toggleSort(columnId); }, active: colSorted?.direction === 'asc' },
+            { label: 'Sort Descending', action: () => { api.clearSort(); api.toggleSort(columnId); api.toggleSort(columnId); }, active: colSorted?.direction === 'desc' },
           );
           if (colSorted) {
             items.push({ label: 'Clear Sort', action: () => {
@@ -560,22 +560,25 @@ export function createGrid<
       padding: 4px 0;
       min-width: 160px;
       font: ${getComputedStyle(event.target as HTMLElement).font};
+      font-weight: normal;
     `;
 
     for (const item of items) {
       const menuItem = document.createElement('div');
-      menuItem.className = 'bg-context-menu__item';
+      menuItem.className = 'bg-context-menu__item' + (item.active ? ' bg-context-menu__item--active' : '');
       menuItem.textContent = item.label;
+      const activeBg = 'var(--bg-dropdown-selected-bg, #e8f0fe)';
       menuItem.style.cssText = `
         padding: 6px 12px;
         cursor: pointer;
         user-select: none;
+        ${item.active ? `background: ${activeBg}; font-weight: 500;` : ''}
       `;
       menuItem.addEventListener('mouseenter', () => {
         menuItem.style.background = 'var(--bg-context-menu-hover, #f0f0f0)';
       });
       menuItem.addEventListener('mouseleave', () => {
-        menuItem.style.background = '';
+        menuItem.style.background = item.active ? activeBg : '';
       });
       menuItem.addEventListener('click', () => {
         item.action();
