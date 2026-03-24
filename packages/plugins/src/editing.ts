@@ -318,19 +318,34 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       }
 
       function cleanupEdit(): void {
-        if (activeEditor) {
-          activeEditor.removeEventListener('keydown', handleEditorKeydown);
-          activeEditor.removeEventListener('blur', handleEditorBlur);
-          if (activeEditor instanceof HTMLSelectElement) {
-            activeEditor.removeEventListener('change', () => commitEdit());
-          }
+        const prevEditor = activeEditor;
+        const prevCell = editingCell;
+
+        if (prevEditor) {
+          prevEditor.removeEventListener('keydown', handleEditorKeydown);
+          prevEditor.removeEventListener('blur', handleEditorBlur);
         }
 
-        if (editingCell) {
-          const cellEl = getCellElement(editingCell);
+        if (prevCell) {
+          const cellEl = getCellElement(prevCell);
           if (cellEl) {
+            // Remove editor from DOM immediately
+            if (prevEditor && cellEl.contains(prevEditor)) {
+              prevEditor.remove();
+            }
             cellEl.classList.remove('bg-cell--editing');
             cellEl.style.padding = '';
+
+            // Immediately show a placeholder value to avoid blank flash.
+            // The next render() will overwrite this with the properly
+            // formatted value from the cell type renderer.
+            const state = ctx.grid.getState();
+            const col = state.columns[prevCell.colIndex];
+            const row = state.data[prevCell.rowIndex];
+            if (col?.accessorKey && row) {
+              const val = (row as Record<string, unknown>)[col.accessorKey];
+              cellEl.textContent = val != null ? String(val) : '';
+            }
           }
         }
 
