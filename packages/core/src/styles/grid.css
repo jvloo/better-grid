@@ -62,6 +62,13 @@
   background: var(--bg-header-hover-bg, #eef0f2);
 }
 
+/* Spanning header cells (colSpan > 1) — centered text */
+.bg-header-cell--span {
+  justify-content: center;
+  text-align: center;
+  border-bottom: 1px solid var(--bg-header-border-color, #e0e0e0);
+}
+
 /* Frozen header cells stay on top of frozen data cells */
 .bg-header-cell--frozen-left {
   z-index: 11;

@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { BasicGrid } from './pages/BasicGrid';
 import { LargeDataset } from './pages/LargeDataset';
 import { EditableGrid } from './pages/EditableGrid';
+import { ComplexGrid } from './pages/ComplexGrid';
 
-type Page = 'basic' | 'editable' | 'large';
+type Page = 'basic' | 'editable' | 'complex' | 'large';
 
 export function App() {
   const [page, setPage] = useState<Page>('basic');
@@ -29,6 +30,9 @@ export function App() {
         <NavButton active={page === 'editable'} onClick={() => setPage('editable')}>
           Editable Grid
         </NavButton>
+        <NavButton active={page === 'complex'} onClick={() => setPage('complex')}>
+          Complex Grid
+        </NavButton>
         <NavButton active={page === 'large'} onClick={() => setPage('large')}>
           Large Dataset
         </NavButton>
@@ -38,6 +42,7 @@ export function App() {
       <main style={{ flex: 1, padding: 24, overflow: 'auto' }}>
         {page === 'basic' && <BasicGrid />}
         {page === 'editable' && <EditableGrid />}
+        {page === 'complex' && <ComplexGrid />}
         {page === 'large' && <LargeDataset />}
       </main>
     </div>

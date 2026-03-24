@@ -62,7 +62,11 @@ export function createGrid<
   let resizeObserver: ResizeObserver | null = null;
   let mounted = false;
 
-  const headerHeight = options.headerHeight ?? DEFAULT_HEADER_HEIGHT;
+  const singleHeaderRowHeight = options.headerHeight ?? DEFAULT_HEADER_HEIGHT;
+  const headerRows = options.headerRows;
+  const headerHeight = headerRows
+    ? headerRows.reduce((sum, row) => sum + (row.height ?? singleHeaderRowHeight), 0)
+    : singleHeaderRowHeight;
 
   // Resolve row height function
   const getRowHeight =
@@ -381,67 +385,163 @@ export function createGrid<
     headerContainer.innerHTML = '';
     if (frozenHeaderOverlay) frozenHeaderOverlay.innerHTML = '';
 
+    if (headerRows && headerRows.length > 0) {
+      renderMultiHeaders(state, measurements);
+    } else {
+      renderSingleHeaders(state, measurements);
+    }
+  }
+
+  function renderSingleHeaders(
+    state: GridState<TData>,
+    measurements: LayoutMeasurements,
+  ): void {
     for (let col = 0; col < state.columns.length; col++) {
       const column = state.columns[col]!;
       const left = measurements.colOffsets[col]!;
       const width = measurements.colOffsets[col + 1]! - left;
       const isFrozen = col < state.frozenLeftColumns;
-
       const isLastFrozenCol = col === state.frozenLeftColumns - 1;
-      const headerCell = document.createElement('div');
-      let cls = 'bg-header-cell';
-      if (isFrozen) cls += ' bg-header-cell--frozen-left';
-      if (isLastFrozenCol) cls += ' bg-header-cell--frozen-col-last';
-      headerCell.className = cls;
-      headerCell.style.position = 'absolute';
-      headerCell.style.transform = `translate3d(${left}px, 0, 0)`;
-      headerCell.style.width = `${width}px`;
-      headerCell.style.height = `${headerHeight}px`;
-      headerCell.dataset.col = String(col);
-      headerCell.dataset.baseLeft = String(left);
 
-      if (typeof column.header === 'function') {
-        const content = column.header();
-        if (typeof content === 'string') {
-          headerCell.textContent = content;
-        } else {
-          headerCell.appendChild(content);
+      const cell = createHeaderCell({
+        left,
+        top: 0,
+        width,
+        height: headerHeight,
+        content: column.header,
+        colIndex: col,
+        isFrozen,
+        isLastFrozenCol,
+        columnId: column.id,
+        resizable: column.resizable !== false,
+      });
+
+      appendHeaderCell(cell, isFrozen);
+    }
+  }
+
+  function renderMultiHeaders(
+    state: GridState<TData>,
+    measurements: LayoutMeasurements,
+  ): void {
+    let topOffset = 0;
+
+    for (const row of headerRows!) {
+      const rowHeight = row.height ?? singleHeaderRowHeight;
+      let colIndex = 0;
+
+      for (const cell of row.cells) {
+        const span = cell.colSpan ?? 1;
+        const rSpan = cell.rowSpan ?? 1;
+
+        if (colIndex >= state.columns.length) break;
+
+        const left = measurements.colOffsets[colIndex]!;
+        const endCol = Math.min(colIndex + span, state.columns.length);
+        const width = measurements.colOffsets[endCol]! - left;
+        const height = rowHeight * rSpan;
+
+        // Determine if any spanned column is frozen
+        const isFrozen = colIndex < state.frozenLeftColumns;
+        const isLastFrozenCol = endCol - 1 === state.frozenLeftColumns - 1;
+
+        // Use the last column in the span for sorting/resize
+        const targetColumnId = cell.columnId ?? state.columns[endCol - 1]?.id;
+
+        const headerEl = createHeaderCell({
+          left,
+          top: topOffset,
+          width,
+          height,
+          content: cell.content,
+          colIndex,
+          isFrozen,
+          isLastFrozenCol,
+          columnId: targetColumnId,
+          resizable: span === 1 && state.columns[colIndex]?.resizable !== false,
+        });
+
+        // Add spanning class for visual distinction
+        if (span > 1) {
+          headerEl.classList.add('bg-header-cell--span');
         }
-      } else {
-        headerCell.textContent = column.header;
+
+        appendHeaderCell(headerEl, isFrozen);
+        colIndex += span;
       }
 
-      headerCell.addEventListener('click', (e) => {
-        // Don't trigger click if resize handle was dragged
+      topOffset += rowHeight;
+    }
+  }
+
+  function createHeaderCell(opts: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    content: string | (() => HTMLElement | string);
+    colIndex: number;
+    isFrozen: boolean;
+    isLastFrozenCol: boolean;
+    columnId?: string;
+    resizable: boolean;
+  }): HTMLElement {
+    const cell = document.createElement('div');
+    let cls = 'bg-header-cell';
+    if (opts.isFrozen) cls += ' bg-header-cell--frozen-left';
+    if (opts.isLastFrozenCol) cls += ' bg-header-cell--frozen-col-last';
+    cell.className = cls;
+    cell.style.position = 'absolute';
+    cell.style.transform = `translate3d(${opts.left}px, ${opts.top}px, 0)`;
+    cell.style.width = `${opts.width}px`;
+    cell.style.height = `${opts.height}px`;
+    cell.dataset.col = String(opts.colIndex);
+    cell.dataset.baseLeft = String(opts.left);
+
+    if (typeof opts.content === 'function') {
+      const content = opts.content();
+      if (typeof content === 'string') {
+        cell.textContent = content;
+      } else {
+        cell.appendChild(content);
+      }
+    } else {
+      cell.textContent = opts.content;
+    }
+
+    if (opts.columnId) {
+      cell.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).classList.contains('bg-resize-handle')) return;
         for (const plugin of pluginRegistry.getAllPlugins()) {
-          plugin.hooks?.onHeaderClick?.(column.id);
+          plugin.hooks?.onHeaderClick?.(opts.columnId!);
         }
       });
 
-      headerCell.addEventListener('contextmenu', (e) => {
+      cell.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        showHeaderContextMenu(e, column.id);
+        showHeaderContextMenu(e, opts.columnId!);
       });
+    }
 
-      // Resize handle
-      if (column.resizable !== false) {
-        const handle = document.createElement('div');
-        handle.className = 'bg-resize-handle';
-        handle.addEventListener('pointerdown', (e) => {
-          e.stopPropagation();
-          startColumnResize(col, e);
-        });
-        headerCell.appendChild(handle);
-      }
+    if (opts.resizable) {
+      const handle = document.createElement('div');
+      handle.className = 'bg-resize-handle';
+      handle.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        startColumnResize(opts.colIndex, e);
+      });
+      cell.appendChild(handle);
+    }
 
-      if (isFrozen && frozenHeaderOverlay) {
-        // Frozen headers go into the frozen overlay (outside scroll container)
-        headerCell.style.pointerEvents = 'auto';
-        frozenHeaderOverlay.appendChild(headerCell);
-      } else {
-        headerContainer.appendChild(headerCell);
-      }
+    return cell;
+  }
+
+  function appendHeaderCell(cell: HTMLElement, isFrozen: boolean): void {
+    if (isFrozen && frozenHeaderOverlay) {
+      cell.style.pointerEvents = 'auto';
+      frozenHeaderOverlay.appendChild(cell);
+    } else {
+      headerContainer!.appendChild(cell);
     }
   }
 
