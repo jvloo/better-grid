@@ -514,7 +514,7 @@ export function createGrid<
     // Collect menu items from plugins
     for (const plugin of pluginRegistry.getAllPlugins()) {
       if (plugin.id === 'sorting') {
-        const api = pluginRegistry.getPlugin<{ getSortState: () => { columnId: string }[]; clearSort: () => void; toggleSort: (id: string) => void }>(plugin.id);
+        const api = pluginRegistry.getPlugin<{ getSortState: () => { columnId: string }[]; clearSort: () => void; toggleSort: (id: string, multi?: boolean) => void }>(plugin.id);
         if (api) {
           const sorted = api.getSortState();
           const colSorted = sorted.find((s) => s.columnId === columnId);
@@ -522,8 +522,19 @@ export function createGrid<
             { label: 'Sort Ascending', action: () => { api.clearSort(); api.toggleSort(columnId); } },
             { label: 'Sort Descending', action: () => { api.clearSort(); api.toggleSort(columnId); api.toggleSort(columnId); } },
           );
-          if (sorted.length > 0) {
-            items.push({ label: 'Clear Sort', action: () => api.clearSort() });
+          if (colSorted) {
+            items.push({ label: 'Clear Sort', action: () => {
+              // Remove just this column's sort by re-applying without it
+              const remaining = sorted.filter((s) => s.columnId !== columnId);
+              api.clearSort();
+              for (const s of remaining) {
+                api.toggleSort(s.columnId, true);
+                if (s.direction === 'desc') api.toggleSort(s.columnId, true);
+              }
+            }});
+          }
+          if (sorted.length > 1) {
+            items.push({ label: 'Clear All Sorts', action: () => api.clearSort() });
           }
         }
       }
