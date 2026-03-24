@@ -559,7 +559,7 @@ export function createGrid<
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       padding: 4px 0;
       min-width: 160px;
-      font-size: 13px;
+      font: ${getComputedStyle(event.target as HTMLElement).font};
     `;
 
     for (const item of items) {

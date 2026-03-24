@@ -203,6 +203,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
         // Create the floating dropdown panel
         const rect = cellEl.getBoundingClientRect();
+        const cellFont = getComputedStyle(cellEl).font;
         const panel = document.createElement('div');
         panel.className = 'bg-dropdown-panel';
         panel.style.cssText = `
@@ -218,7 +219,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           padding: 4px 0;
           max-height: 200px;
           overflow-y: auto;
-          font: inherit;
+          font: ${cellFont};
         `;
 
         let selectedIndex = opts.findIndex((o) => o.value === currentValue || String(o.value) === String(currentValue));
