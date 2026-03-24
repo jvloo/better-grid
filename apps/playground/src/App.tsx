@@ -11,13 +11,14 @@ import { EditableGrid } from './pages/EditableGrid';
 import { CoreOnly } from './pages/CoreOnly';
 import { MultiHeader } from './pages/MultiHeader';
 import { MixedHeaderDemo } from './pages/MixedHeaderDemo';
+import { Benchmark } from './pages/Benchmark';
 import { ProPreview } from './pages/ProPreview';
 
 type View = 'landing' | 'demos';
-type Page = 'financial' | 'task-tracker' | 'toggle' | 'perf' | 'format-edit' | 'sort-filter' | 'validation' | 'editor-ref' | 'core' | 'multi-header' | 'mixed-header' | 'pro';
+type Page = 'financial' | 'task-tracker' | 'toggle' | 'perf' | 'benchmark' | 'format-edit' | 'sort-filter' | 'validation' | 'editor-ref' | 'core' | 'multi-header' | 'mixed-header' | 'pro';
 
 const VALID_PAGES = new Set<Page>([
-  'financial', 'task-tracker', 'toggle', 'perf', 'format-edit', 'sort-filter',
+  'financial', 'task-tracker', 'toggle', 'perf', 'benchmark', 'format-edit', 'sort-filter',
   'validation', 'editor-ref', 'core', 'multi-header', 'mixed-header', 'pro',
 ]);
 
@@ -98,6 +99,7 @@ export function App() {
           <SectionLabel>Interactive</SectionLabel>
           <NavButton active={page === 'toggle'} onClick={() => navigatePage('toggle')} icon="🔌">Plugin Toggle</NavButton>
           <NavButton active={page === 'perf'} onClick={() => navigatePage('perf')} icon="⚡">Performance</NavButton>
+          <NavButton active={page === 'benchmark'} onClick={() => navigatePage('benchmark')} icon="📏">Benchmark</NavButton>
 
           <SectionLabel>Features</SectionLabel>
           <NavButton active={page === 'format-edit'} onClick={() => navigatePage('format-edit')} icon="✏️">Format & Edit</NavButton>
@@ -126,6 +128,7 @@ export function App() {
           {page === 'task-tracker' && <TaskTracker />}
           {page === 'toggle' && <PluginToggle />}
           {page === 'perf' && <LargeDataset />}
+          {page === 'benchmark' && <Benchmark />}
           {page === 'format-edit' && <FormatEdit />}
           {page === 'sort-filter' && <SortFilter />}
           {page === 'validation' && <ValidationDemo />}
