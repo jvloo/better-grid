@@ -128,10 +128,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             const num = Number(newValue.replace(/[^0-9.\-]/g, ''));
             parsedValue = isNaN(num) ? prevValue : num / 100;
           } else if (typeof prevValue === 'boolean') {
-            // Boolean parsing: accept yes/no, true/false, 1/0
+            // Boolean parsing: accept yes/no, y/n, true/false, 1/0
             const lower = newValue.toLowerCase().trim();
-            if (['yes', 'true', '1'].includes(lower)) parsedValue = true;
-            else if (['no', 'false', '0'].includes(lower)) parsedValue = false;
+            if (['yes', 'y', 'true', '1'].includes(lower)) parsedValue = true;
+            else if (['no', 'n', 'false', '0'].includes(lower)) parsedValue = false;
             else parsedValue = prevValue;
           } else if (typeof prevValue === 'number') {
             // Numeric column without explicit cellType

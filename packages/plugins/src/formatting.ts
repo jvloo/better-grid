@@ -4,6 +4,17 @@
 
 import type { GridPlugin, PluginContext, CellTypeRenderer, CellRenderContext } from '@better-grid/core';
 
+export type DateFormatPreset =
+  | 'short'       // 1/15/26
+  | 'medium'      // Jan 15, 2026
+  | 'long'        // January 15, 2026
+  | 'full'        // Wednesday, January 15, 2026
+  | 'iso'         // 2026-01-15
+  | 'month-year'  // Jan 2026
+  | 'year'        // 2026
+  | 'time'        // 2:30 PM
+  | 'datetime'    // Jan 15, 2026, 2:30 PM
+
 export interface FormattingOptions {
   /** Locale for formatting. Default: navigator.language or 'en-US' */
   locale?: string;
@@ -13,6 +24,8 @@ export interface FormattingOptions {
   currencyCode?: string;
   /** Default decimal places for numbers. Default: 2 */
   decimalPlaces?: number;
+  /** Default date format preset. Default: 'medium' */
+  dateFormat?: DateFormatPreset;
 }
 
 export interface FormattingApi {
@@ -50,12 +63,49 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
         maximumFractionDigits: decimalPlaces,
       });
 
-      // Date formatter
-      const dateFmt = new Intl.DateTimeFormat(locale, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
+      // Date formatters — cached by preset name
+      const defaultDateFormat = options?.dateFormat ?? 'medium';
+      const dateFmtCache = new Map<string, Intl.DateTimeFormat>();
+
+      function getDateFormatter(preset: DateFormatPreset): Intl.DateTimeFormat {
+        if (dateFmtCache.has(preset)) return dateFmtCache.get(preset)!;
+
+        let opts: Intl.DateTimeFormatOptions;
+        switch (preset) {
+          case 'short':
+            opts = { year: '2-digit', month: 'numeric', day: 'numeric' };
+            break;
+          case 'medium':
+            opts = { year: 'numeric', month: 'short', day: 'numeric' };
+            break;
+          case 'long':
+            opts = { year: 'numeric', month: 'long', day: 'numeric' };
+            break;
+          case 'full':
+            opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            break;
+          case 'month-year':
+            opts = { year: 'numeric', month: 'short' };
+            break;
+          case 'year':
+            opts = { year: 'numeric' };
+            break;
+          case 'time':
+            opts = { hour: 'numeric', minute: '2-digit' };
+            break;
+          case 'datetime':
+            opts = { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
+            break;
+          case 'iso':
+          default:
+            opts = { year: 'numeric', month: 'short', day: 'numeric' };
+            break;
+        }
+
+        const fmt = new Intl.DateTimeFormat(locale, opts);
+        dateFmtCache.set(preset, fmt);
+        return fmt;
+      }
 
       function formatValue(value: unknown, type: string, meta?: Record<string, unknown>): string {
         if (value == null) return '';
@@ -74,10 +124,22 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
             return currencyFmt.format(value);
           case 'percent':
             return typeof value === 'number' ? percentFmt.format(value) : String(value);
-          case 'date':
-            if (value instanceof Date) return dateFmt.format(value);
-            if (typeof value === 'string') return dateFmt.format(new Date(value));
+          case 'date': {
+            const datePreset = (meta?.dateFormat as DateFormatPreset) ?? defaultDateFormat;
+            if (datePreset === 'iso') {
+              // ISO format: YYYY-MM-DD (no Intl needed)
+              const d = value instanceof Date ? value : new Date(value as string);
+              if (isNaN(d.getTime())) return String(value);
+              return d.toISOString().split('T')[0]!;
+            }
+            const fmt = getDateFormatter(datePreset);
+            if (value instanceof Date) return fmt.format(value);
+            if (typeof value === 'string' || typeof value === 'number') {
+              const d = new Date(value);
+              return isNaN(d.getTime()) ? String(value) : fmt.format(d);
+            }
             return String(value);
+          }
           default:
             return String(value);
         }
