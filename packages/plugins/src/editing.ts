@@ -135,7 +135,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         if (dropdownOpts) {
           activeEditor = createDropdown(cellEl, dropdownOpts, originalValue);
         } else {
-          const editValue = initialValue ?? (originalValue != null ? String(originalValue) : '');
+          // For percent: show user-friendly value (5 instead of 0.05)
+          let rawStr = originalValue != null ? String(originalValue) : '';
+          if (column.cellType === 'percent' && typeof originalValue === 'number') {
+            rawStr = String(originalValue * 100);
+          }
+          const editValue = initialValue ?? rawStr;
           activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined);
         }
       }
