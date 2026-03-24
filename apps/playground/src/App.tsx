@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Landing } from './pages/Landing';
 import { ComplexGrid } from './pages/ComplexGrid';
 import { TaskTracker } from './pages/TaskTracker';
 import { PluginToggle } from './pages/PluginToggle';
@@ -11,10 +12,16 @@ import { CoreOnly } from './pages/CoreOnly';
 import { MultiHeader } from './pages/MultiHeader';
 import { ProPreview } from './pages/ProPreview';
 
+type View = 'landing' | 'demos';
 type Page = 'financial' | 'task-tracker' | 'toggle' | 'perf' | 'format-edit' | 'sort-filter' | 'validation' | 'editor-ref' | 'core' | 'multi-header' | 'pro';
 
 export function App() {
+  const [view, setView] = useState<View>('landing');
   const [page, setPage] = useState<Page>('financial');
+
+  if (view === 'landing') {
+    return <Landing onExploreDemos={() => setView('demos')} />;
+  }
 
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
@@ -24,14 +31,32 @@ export function App() {
           width: 200,
           background: '#f8f9fa',
           borderRight: '1px solid #e0e0e0',
-          padding: '16px 12px',
+          padding: '12px 12px',
           display: 'flex',
           flexDirection: 'column',
           gap: 1,
           overflowY: 'auto',
         }}
       >
-        <h2 style={{ fontSize: 18, marginBottom: 16, paddingLeft: 8 }}>Better Grid</h2>
+        {/* Back to landing */}
+        <button
+          onClick={() => setView('landing')}
+          style={{
+            padding: '6px 8px',
+            border: 'none',
+            borderRadius: 6,
+            background: 'transparent',
+            color: '#1a73e8',
+            cursor: 'pointer',
+            textAlign: 'left',
+            fontSize: 13,
+            marginBottom: 8,
+          }}
+        >
+          ← Overview
+        </button>
+
+        <h2 style={{ fontSize: 16, margin: '0 0 12px', paddingLeft: 8 }}>Demos</h2>
 
         <SectionLabel>Showcase</SectionLabel>
         <NavButton active={page === 'financial'} onClick={() => setPage('financial')} sub="Multi-header P&L">
@@ -75,7 +100,6 @@ export function App() {
         <NavButton active={page === 'pro'} onClick={() => setPage('pro')} sub="8 plugins planned">
           Coming Soon
         </NavButton>
-
       </nav>
 
       {/* Content */}
@@ -98,57 +122,31 @@ export function App() {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        fontSize: 10,
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        color: '#aaa',
-        marginTop: 14,
-        marginBottom: 4,
-        paddingLeft: 8,
-        letterSpacing: '0.5px',
-      }}
-    >
+    <div style={{
+      fontSize: 10, fontWeight: 600, textTransform: 'uppercase', color: '#aaa',
+      marginTop: 14, marginBottom: 4, paddingLeft: 8, letterSpacing: '0.5px',
+    }}>
       {children}
     </div>
   );
 }
 
-function NavButton({
-  active,
-  onClick,
-  children,
-  sub,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  sub?: string;
+function NavButton({ active, onClick, children, sub }: {
+  active: boolean; onClick: () => void; children: React.ReactNode; sub?: string;
 }) {
   return (
     <button
       onClick={onClick}
       style={{
-        padding: '6px 8px',
-        border: 'none',
-        borderRadius: 6,
+        padding: '6px 8px', border: 'none', borderRadius: 6,
         background: active ? '#1a73e8' : 'transparent',
         color: active ? '#fff' : '#333',
-        cursor: 'pointer',
-        textAlign: 'left',
-        fontSize: 13,
-        lineHeight: 1.3,
-        display: 'flex',
-        flexDirection: 'column',
+        cursor: 'pointer', textAlign: 'left', fontSize: 13,
+        lineHeight: 1.3, display: 'flex', flexDirection: 'column',
       }}
     >
       <span style={{ fontWeight: active ? 500 : 400 }}>{children}</span>
-      {sub && (
-        <span style={{ fontSize: 10, color: active ? 'rgba(255,255,255,0.7)' : '#aaa', marginTop: 1 }}>
-          {sub}
-        </span>
-      )}
+      {sub && <span style={{ fontSize: 10, color: active ? 'rgba(255,255,255,0.7)' : '#aaa', marginTop: 1 }}>{sub}</span>}
     </button>
   );
 }
