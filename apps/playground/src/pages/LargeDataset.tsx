@@ -36,10 +36,10 @@ function generateColumns(colCount: number): ColumnDef<LargeRow>[] {
 }
 
 const PRESETS = [
-  { label: '1K × 100', rows: 1_000, cols: 100 },
-  { label: '10K × 100', rows: 10_000, cols: 100 },
-  { label: '100K × 100', rows: 100_000, cols: 100 },
-  { label: '500K × 20', rows: 500_000, cols: 20 },
+  { label: '100K cells', rows: 1_000, cols: 100, cells: '100K' },
+  { label: '1M cells', rows: 10_000, cols: 100, cells: '1M' },
+  { label: '10M cells', rows: 100_000, cols: 100, cells: '10M' },
+  { label: '10M cells (wide)', rows: 500_000, cols: 20, cells: '10M' },
 ];
 
 export function LargeDataset() {
@@ -138,7 +138,6 @@ export function LargeDataset() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {PRESETS.map((p) => {
           const isActive = p.rows === rowCount && p.cols === colCount;
-          const isMax = p.rows === 1_000_000;
           return (
             <button
               key={p.label}
@@ -152,11 +151,16 @@ export function LargeDataset() {
                 color: isActive ? '#fff' : '#333',
                 cursor: generating ? 'wait' : 'pointer',
                 fontSize: 13,
-                fontWeight: isActive ? 600 : isMax ? 500 : 400,
+                fontWeight: isActive ? 600 : 400,
                 opacity: generating ? 0.6 : 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                lineHeight: 1.3,
               }}
             >
-              {p.label}
+              <span>{p.label}</span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>{p.rows.toLocaleString()} × {p.cols}</span>
             </button>
           );
         })}
