@@ -13,6 +13,11 @@
   border: var(--bg-grid-border, 1px solid #e0e0e0);
 }
 
+.bg-grid:focus {
+  outline: 2px solid var(--bg-focus-outline, #1a73e8);
+  outline-offset: -2px;
+}
+
 /* Scroll container */
 .bg-grid__scroll {
   position: relative;
@@ -26,23 +31,58 @@
   position: relative;
 }
 
-/* Cell container */
-.bg-grid__cells {
-  position: absolute;
-  inset: 0;
+/* ---------------------------------------------------------------------------
+   Headers
+   --------------------------------------------------------------------------- */
+
+.bg-grid__headers {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-header-bg, #f8f9fa);
+}
+
+.bg-header-cell {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: var(--bg-cell-padding, 0 8px);
+  font-weight: var(--bg-header-font-weight, 600);
+  border-right: 1px solid var(--bg-header-border-color, #e0e0e0);
+  border-bottom: 2px solid var(--bg-header-border-color, #d0d0d0);
+  background: var(--bg-header-bg, #f8f9fa);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+  cursor: default;
+}
+
+.bg-header-cell:hover {
+  background: var(--bg-header-hover-bg, #eef0f2);
+}
+
+/* Frozen header cells stay on top of frozen data cells */
+.bg-header-cell--frozen-left {
+  z-index: 11;
 }
 
 /* ---------------------------------------------------------------------------
    Cells
    --------------------------------------------------------------------------- */
 
+.bg-grid__cells {
+  position: relative;
+}
+
 .bg-cell {
   box-sizing: border-box;
   display: flex;
   align-items: center;
   padding: var(--bg-cell-padding, 0 8px);
-  border-right: var(--bg-cell-border, 1px solid #e8e8e8);
-  border-bottom: var(--bg-cell-border, 1px solid #e8e8e8);
+  border-right: 1px solid var(--bg-cell-border-color, #e8e8e8);
+  border-bottom: 1px solid var(--bg-cell-border-color, #e8e8e8);
+  background: var(--bg-cell-bg, #fff);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -58,6 +98,16 @@
   background: var(--bg-active-bg, #fff);
 }
 
+/* Frozen left columns — position adjusted via JS on scroll */
+.bg-cell--frozen-left {
+  z-index: 5;
+  background: var(--bg-cell-bg, #fff);
+}
+
+.bg-cell--frozen-left.bg-cell--selected {
+  background: var(--bg-selection-bg, rgba(33, 133, 208, 0.08));
+}
+
 /* ---------------------------------------------------------------------------
    Selection Overlay
    --------------------------------------------------------------------------- */
@@ -66,12 +116,12 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 2;
+  z-index: 6;
 }
 
 .bg-active-cell {
   border: 2px solid var(--bg-active-border, #1a73e8);
-  z-index: 3;
+  z-index: 7;
 }
 
 .bg-selection-range {
@@ -80,17 +130,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Header
-   --------------------------------------------------------------------------- */
-
-.bg-header {
-  background: var(--bg-header-bg, #f8f9fa);
-  font-weight: var(--bg-header-font-weight, 600);
-  border-bottom: var(--bg-header-border, 2px solid #e0e0e0);
-}
-
-/* ---------------------------------------------------------------------------
-   Scrollbar (optional custom styling)
+   Scrollbar
    --------------------------------------------------------------------------- */
 
 .bg-grid__scroll::-webkit-scrollbar {

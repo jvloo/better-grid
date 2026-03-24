@@ -40,6 +40,8 @@ export class RenderingPipeline<TData = unknown> {
     columns: ColumnDef<TData>[],
     measurements: LayoutMeasurements,
     selection: Selection,
+    frozenLeftColumns = 0,
+    scrollLeft = 0,
   ): void {
     const visibleKeys = new Set<string>();
 
@@ -68,6 +70,14 @@ export class RenderingPipeline<TData = unknown> {
         cell.style.transform = `translate3d(${left}px, ${top}px, 0)`;
         cell.style.width = `${width}px`;
         cell.style.height = `${height}px`;
+
+        // Frozen left columns: offset by scrollLeft to keep them visible
+        if (col < frozenLeftColumns) {
+          cell.classList.add('bg-cell--frozen-left');
+          cell.style.transform = `translate3d(${left + scrollLeft}px, ${top}px, 0)`;
+        } else {
+          cell.classList.remove('bg-cell--frozen-left');
+        }
 
         // Selection classes
         const selected = isCellInSelection(row, col, selection);

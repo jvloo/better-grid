@@ -20,6 +20,7 @@ import { StateStore } from './state/store';
 import { PluginRegistry } from './plugin/registry';
 import { ColumnManager } from './columns/manager';
 import { VirtualizationEngine } from './virtualization/engine';
+import type { LayoutMeasurements } from './virtualization/engine';
 import { RenderingPipeline } from './rendering/pipeline';
 import { SelectionLayer } from './rendering/layers';
 import { createEmptySelection, createCellSelection, extendSelection } from './selection/model';
@@ -27,6 +28,7 @@ import { navigateCell, navigateTab, getNavigationDirection } from './keyboard/na
 import { computeZoneDimensions } from './virtualization/layout';
 
 const DEFAULT_ROW_HEIGHT = 40;
+const DEFAULT_HEADER_HEIGHT = 40;
 
 export function createGrid<
   TData = unknown,
@@ -50,10 +52,13 @@ export function createGrid<
   let container: HTMLElement | null = null;
   let scrollContainer: HTMLElement | null = null;
   let contentSizer: HTMLElement | null = null;
+  let headerContainer: HTMLElement | null = null;
   let cellContainer: HTMLElement | null = null;
   let selectionLayer: SelectionLayer | null = null;
   let resizeObserver: ResizeObserver | null = null;
   let mounted = false;
+
+  const headerHeight = options.headerHeight ?? DEFAULT_HEADER_HEIGHT;
 
   // Resolve row height function
   const getRowHeight =
@@ -119,9 +124,15 @@ export function createGrid<
     const state = store.getState();
     const measurements = virtualization.getMeasurements();
 
-    // Update content sizer
+    // Update content sizer (header is sticky inside, cells below)
     contentSizer.style.width = `${measurements.totalWidth}px`;
-    contentSizer.style.height = `${measurements.totalHeight}px`;
+    contentSizer.style.height = `${measurements.totalHeight + headerHeight}px`;
+
+    // Cell container height must match data height exactly
+    cellContainer.style.height = `${measurements.totalHeight}px`;
+
+    // Render headers
+    renderHeaders(state, measurements);
 
     // Compute frozen dimensions
     const zoneDims = computeZoneDimensions(
@@ -139,11 +150,14 @@ export function createGrid<
     const viewportWidth = scrollContainer.clientWidth;
     const viewportHeight = scrollContainer.clientHeight;
 
+    // Adjust scrollTop for header — data rows start after the sticky header
+    const dataScrollTop = Math.max(0, state.scrollTop - headerHeight);
+
     const visibleRange = virtualization.computeVisibleRange(
-      state.scrollTop,
+      dataScrollTop,
       state.scrollLeft,
       viewportWidth,
-      viewportHeight,
+      viewportHeight - headerHeight,
       zoneDims.frozenTopHeight,
       zoneDims.frozenBottomHeight,
       zoneDims.frozenLeftWidth,
@@ -152,17 +166,22 @@ export function createGrid<
 
     store.update('visibleRange', () => ({ visibleRange }));
 
+    // Ensure frozen columns are always in visible range
+    const renderStartCol = Math.min(visibleRange.startCol, state.frozenLeftColumns > 0 ? 0 : visibleRange.startCol);
+
     // Render cells
     rendering.renderCells(
       cellContainer,
       visibleRange.startRow,
       visibleRange.endRow,
-      visibleRange.startCol,
+      renderStartCol,
       visibleRange.endCol,
       state.data,
       state.columns,
       measurements,
       state.selection,
+      state.frozenLeftColumns,
+      state.scrollLeft,
     );
 
     // Render selection layer
@@ -286,6 +305,72 @@ export function createGrid<
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Header rendering
+  // ---------------------------------------------------------------------------
+
+  let headersRendered = false;
+
+  function renderHeaders(
+    state: GridState<TData>,
+    measurements: LayoutMeasurements,
+  ): void {
+    if (!headerContainer || headersRendered) return;
+    headersRendered = true;
+
+    headerContainer.innerHTML = '';
+
+    for (let col = 0; col < state.columns.length; col++) {
+      const column = state.columns[col]!;
+      const left = measurements.colOffsets[col]!;
+      const width = measurements.colOffsets[col + 1]! - left;
+
+      const headerCell = document.createElement('div');
+      headerCell.className = 'bg-header-cell';
+      headerCell.style.position = 'absolute';
+      headerCell.style.transform = `translate3d(${left}px, 0, 0)`;
+      headerCell.style.width = `${width}px`;
+      headerCell.style.height = `${headerHeight}px`;
+      headerCell.style.boxSizing = 'border-box';
+      headerCell.style.display = 'flex';
+      headerCell.style.alignItems = 'center';
+      headerCell.style.padding = '0 8px';
+      headerCell.style.fontWeight = '600';
+      headerCell.style.borderRight = '1px solid #e0e0e0';
+      headerCell.style.borderBottom = '2px solid #d0d0d0';
+      headerCell.style.background = '#f8f9fa';
+      headerCell.style.userSelect = 'none';
+      headerCell.style.whiteSpace = 'nowrap';
+      headerCell.style.overflow = 'hidden';
+      headerCell.style.textOverflow = 'ellipsis';
+
+      if (typeof column.header === 'function') {
+        const content = column.header();
+        if (typeof content === 'string') {
+          headerCell.textContent = content;
+        } else {
+          headerCell.appendChild(content);
+        }
+      } else {
+        headerCell.textContent = column.header;
+      }
+
+      headerCell.dataset.col = String(col);
+      headerCell.addEventListener('click', () => {
+        // Notify plugins (sorting can hook into this)
+        for (const plugin of pluginRegistry.getAllPlugins()) {
+          plugin.hooks?.onHeaderClick?.(column.id);
+        }
+      });
+
+      headerContainer.appendChild(headerCell);
+    }
+  }
+
+  function invalidateHeaders(): void {
+    headersRendered = false;
+  }
+
   function getCellFromEvent(event: Event): CellPosition | null {
     const target = event.target as HTMLElement;
     const cell = target.closest('.bg-cell') as HTMLElement | null;
@@ -307,7 +392,7 @@ export function createGrid<
   const gridProxy = new Proxy({} as GridInstance<TData, TPlugins>, {
     get(_target, prop) {
       if (!instanceRef) throw new Error('Grid instance not yet initialized');
-      return (instanceRef as Record<string | symbol, unknown>)[prop];
+      return (instanceRef as unknown as Record<string | symbol, unknown>)[prop];
     },
   });
 
@@ -365,18 +450,27 @@ export function createGrid<
       contentSizer.className = 'bg-grid__sizer';
       contentSizer.style.position = 'relative';
 
-      // Cell container
+      // Header container (sticky at top)
+      headerContainer = document.createElement('div');
+      headerContainer.className = 'bg-grid__headers';
+      headerContainer.style.position = 'sticky';
+      headerContainer.style.top = '0';
+      headerContainer.style.height = `${headerHeight}px`;
+      headerContainer.style.zIndex = '10';
+      headerContainer.style.background = '#f8f9fa';
+
+      // Cell container (offset by header height)
       cellContainer = document.createElement('div');
       cellContainer.className = 'bg-grid__cells';
-      cellContainer.style.position = 'absolute';
-      cellContainer.style.inset = '0';
+      cellContainer.style.position = 'relative';
 
+      contentSizer.appendChild(headerContainer);
       contentSizer.appendChild(cellContainer);
       scrollContainer.appendChild(contentSizer);
       container.appendChild(scrollContainer);
 
-      // Selection layer
-      selectionLayer = new SelectionLayer(contentSizer);
+      // Selection layer (inside cell container so offsets align with cells)
+      selectionLayer = new SelectionLayer(cellContainer);
 
       // Events
       scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
@@ -471,6 +565,7 @@ export function createGrid<
         columns,
         columnWidths: columnManager.getWidths(),
       }));
+      invalidateHeaders();
       recomputeMeasurements();
       scheduleRender();
     },
