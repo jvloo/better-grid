@@ -11,6 +11,7 @@
   color: var(--bg-text-color, #1a1a1a);
   background: var(--bg-grid-bg, #fff);
   border: var(--bg-grid-border, 1px solid #e0e0e0);
+  contain: layout style paint;
 }
 
 .bg-grid:focus {
@@ -56,6 +57,8 @@
   white-space: nowrap;
   user-select: none;
   cursor: default;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .bg-header-cell:hover {
@@ -68,7 +71,7 @@
   text-align: center;
 }
 
-/* Group row header cells (not the last row) — bottom border to separate from column row */
+/* Group row header cells (not the last row) */
 .bg-header-cell--group {
   border-bottom: 1px solid var(--bg-header-border-color, #e0e0e0);
   justify-content: center;
@@ -117,6 +120,8 @@
   white-space: nowrap;
   cursor: default;
   user-select: none;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .bg-cell--selected {
@@ -162,24 +167,23 @@
    Frozen Rows & Columns
    --------------------------------------------------------------------------- */
 
-/* Frozen column overlay — right edge */
+/* Frozen column overlay */
 .bg-grid__frozen-overlay {
-  box-shadow: var(--bg-frozen-col-shadow, 4px 0 8px -2px rgba(0, 0, 0, 0.1));
+  box-shadow: var(--bg-frozen-col-shadow, none);
 }
 
-/* Last frozen column cell — right border emphasis */
+/* Frozen column separator */
 .bg-cell--frozen-col-last {
   border-right: var(--bg-frozen-col-border, 2px solid #d0d0d0);
 }
 
-/* Last frozen top row — bottom border emphasis */
-.bg-cell--frozen-row-last {
-  border-bottom: var(--bg-frozen-row-border, 2px solid #d0d0d0);
-}
-
-/* Frozen header last column */
 .bg-header-cell--frozen-col-last {
   border-right: var(--bg-frozen-col-border, 2px solid #d0d0d0);
+}
+
+/* Frozen row separator */
+.bg-cell--frozen-row-last {
+  border-bottom: var(--bg-frozen-row-border, 2px solid #d0d0d0);
 }
 
 /* ---------------------------------------------------------------------------

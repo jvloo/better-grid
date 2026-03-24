@@ -28,6 +28,8 @@ import { createEmptySelection, createCellSelection, extendSelection } from './se
 import { navigateCell, navigateTab, getNavigationDirection } from './keyboard/navigation';
 import { computeZoneDimensions } from './virtualization/layout';
 
+import { snapToDevicePixel } from './utils';
+
 const DEFAULT_ROW_HEIGHT = 40;
 const DEFAULT_HEADER_HEIGHT = 40;
 
@@ -251,7 +253,7 @@ export function createGrid<
     // Header stays at top (no vertical translate needed).
     if (frozenCellOverlay) {
       const dataScrollTop = Math.max(0, scrollTop - headerHeight);
-      frozenCellOverlay.style.transform = `translate3d(0, ${-dataScrollTop}px, 0)`;
+      frozenCellOverlay.style.transform = `translate3d(0, ${-snapToDevicePixel(dataScrollTop)}px, 0)`;
     }
 
     emitter.emit('scroll', { scrollTop, scrollLeft });
@@ -431,55 +433,120 @@ export function createGrid<
   ): void {
     let topOffset = 0;
     const totalRows = headerRows!.length;
+    // Track cells occupied by rowSpan from previous rows: "rowIdx:colIdx"
+    const occupied = new Set<string>();
 
     for (let rowIdx = 0; rowIdx < totalRows; rowIdx++) {
       const row = headerRows![rowIdx]!;
       const rowHeight = row.height ?? singleHeaderRowHeight;
-      const isLastRow = rowIdx === totalRows - 1;
       let colIndex = 0;
+      let cellIdx = 0;
 
-      for (const cell of row.cells) {
+      while (cellIdx < row.cells.length && colIndex < state.columns.length) {
+        // Skip columns occupied by rowSpan from previous rows
+        while (colIndex < state.columns.length && occupied.has(`${rowIdx}:${colIndex}`)) {
+          colIndex++;
+        }
+        if (colIndex >= state.columns.length) break;
+
+        const cell = row.cells[cellIdx]!;
+        cellIdx++;
+
         const span = cell.colSpan ?? 1;
         const rSpan = cell.rowSpan ?? 1;
 
-        if (colIndex >= state.columns.length) break;
-
         const left = measurements.colOffsets[colIndex]!;
         const endCol = Math.min(colIndex + span, state.columns.length);
-        const width = measurements.colOffsets[endCol]! - left;
         const height = rowHeight * rSpan;
 
-        // Determine if any spanned column is frozen
-        const isFrozen = colIndex < state.frozenLeftColumns;
-        const isLastFrozenCol = endCol - 1 === state.frozenLeftColumns - 1;
+        // Mark positions occupied by this cell's rowSpan for subsequent rows
+        if (rSpan > 1) {
+          for (let r = rowIdx + 1; r < rowIdx + rSpan && r < totalRows; r++) {
+            for (let c = colIndex; c < endCol; c++) {
+              occupied.add(`${r}:${c}`);
+            }
+          }
+        }
 
-        // Only last-row headers get sort/context menu (group headers don't sort)
-        const targetColumnId = isLastRow
+        // A cell that spans to the last row acts as a last-row header
+        const reachesLastRow = rowIdx + rSpan - 1 === totalRows - 1;
+
+        const frozenCols = state.frozenLeftColumns;
+        const startsInFrozen = colIndex < frozenCols;
+        const endsInScrollable = endCol > frozenCols;
+        const crossesBoundary = startsInFrozen && endsInScrollable && span > 1;
+
+        // Only headers reaching the last row get sort/context menu
+        const targetColumnId = reachesLastRow
           ? (cell.columnId ?? state.columns[colIndex]?.id)
           : undefined;
 
-        const headerEl = createHeaderCell({
-          left,
-          top: topOffset,
-          width,
-          height,
-          content: cell.content,
-          colIndex,
-          isFrozen,
-          isLastFrozenCol,
-          columnId: targetColumnId,
-          resizable: isLastRow && span === 1 && state.columns[colIndex]?.resizable !== false,
-        });
+        if (crossesBoundary) {
+          // Split: frozen portion (cols colIndex..frozenCols-1)
+          const frozenWidth = measurements.colOffsets[frozenCols]! - left;
+          const frozenEl = createHeaderCell({
+            left,
+            top: topOffset,
+            width: frozenWidth,
+            height,
+            content: cell.content,
+            colIndex,
+            isFrozen: true,
+            isLastFrozenCol: true,
+            columnId: undefined,
+            resizable: false,
+          });
+          if (span > 1) frozenEl.classList.add('bg-header-cell--span');
+          if (!reachesLastRow) frozenEl.classList.add('bg-header-cell--group');
+          appendHeaderCell(frozenEl, true);
 
-        // Add classes for multi-header styling
-        if (span > 1) {
-          headerEl.classList.add('bg-header-cell--span');
-        }
-        if (!isLastRow) {
-          headerEl.classList.add('bg-header-cell--group');
-        }
+          // Split: scrollable continuation (no text — visually extends frozen header)
+          const scrollLeft = measurements.colOffsets[frozenCols]!;
+          const scrollWidth = measurements.colOffsets[endCol]! - scrollLeft;
+          const scrollEl = createHeaderCell({
+            left: scrollLeft,
+            top: topOffset,
+            width: scrollWidth,
+            height,
+            content: '',
+            colIndex: frozenCols,
+            isFrozen: false,
+            isLastFrozenCol: false,
+            columnId: undefined,
+            resizable: false,
+          });
+          scrollEl.style.borderLeft = 'none';
+          if (span > 1) scrollEl.classList.add('bg-header-cell--span');
+          if (!reachesLastRow) scrollEl.classList.add('bg-header-cell--group');
+          appendHeaderCell(scrollEl, false);
+        } else {
+          const isFrozen = startsInFrozen;
+          const isLastFrozenCol = endCol - 1 === frozenCols - 1;
+          const width = measurements.colOffsets[endCol]! - left;
 
-        appendHeaderCell(headerEl, isFrozen);
+          const headerEl = createHeaderCell({
+            left,
+            top: topOffset,
+            width,
+            height,
+            content: cell.content,
+            colIndex,
+            isFrozen,
+            isLastFrozenCol,
+            columnId: targetColumnId,
+            resizable: reachesLastRow && span === 1 && state.columns[colIndex]?.resizable !== false,
+          });
+
+          // Add classes for multi-header styling
+          if (span > 1) {
+            headerEl.classList.add('bg-header-cell--span');
+          }
+          if (!reachesLastRow) {
+            headerEl.classList.add('bg-header-cell--group');
+          }
+
+          appendHeaderCell(headerEl, isFrozen);
+        }
         colIndex += span;
       }
 
@@ -505,9 +572,9 @@ export function createGrid<
     if (opts.isLastFrozenCol) cls += ' bg-header-cell--frozen-col-last';
     cell.className = cls;
     cell.style.position = 'absolute';
-    cell.style.transform = `translate3d(${opts.left}px, ${opts.top}px, 0)`;
-    cell.style.width = `${opts.width}px`;
-    cell.style.height = `${opts.height}px`;
+    cell.style.transform = `translate3d(${snapToDevicePixel(opts.left)}px, ${snapToDevicePixel(opts.top)}px, 0)`;
+    cell.style.width = `${snapToDevicePixel(opts.width)}px`;
+    cell.style.height = `${snapToDevicePixel(opts.height)}px`;
     cell.dataset.col = String(opts.colIndex);
     cell.dataset.baseLeft = String(opts.left);
 
