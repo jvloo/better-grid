@@ -425,9 +425,12 @@ export function createGrid<
     measurements: LayoutMeasurements,
   ): void {
     let topOffset = 0;
+    const totalRows = headerRows!.length;
 
-    for (const row of headerRows!) {
+    for (let rowIdx = 0; rowIdx < totalRows; rowIdx++) {
+      const row = headerRows![rowIdx]!;
       const rowHeight = row.height ?? singleHeaderRowHeight;
+      const isLastRow = rowIdx === totalRows - 1;
       let colIndex = 0;
 
       for (const cell of row.cells) {
@@ -458,12 +461,15 @@ export function createGrid<
           isFrozen,
           isLastFrozenCol,
           columnId: targetColumnId,
-          resizable: span === 1 && state.columns[colIndex]?.resizable !== false,
+          resizable: isLastRow && span === 1 && state.columns[colIndex]?.resizable !== false,
         });
 
-        // Add spanning class for visual distinction
+        // Add classes for multi-header styling
         if (span > 1) {
           headerEl.classList.add('bg-header-cell--span');
+        }
+        if (!isLastRow) {
+          headerEl.classList.add('bg-header-cell--group');
         }
 
         appendHeaderCell(headerEl, isFrozen);
