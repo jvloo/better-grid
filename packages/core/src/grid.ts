@@ -45,6 +45,7 @@ export function createGrid<
     options.virtualization?.overscanColumns ?? 3,
   );
   const rendering = new RenderingPipeline<TData>();
+  const frozenRendering = new RenderingPipeline<TData>();
   const pluginRegistry = new PluginRegistry();
   const keyBindings: KeyBinding[] = [];
   const commands = new Map<string, Command>();
@@ -54,6 +55,9 @@ export function createGrid<
   let contentSizer: HTMLElement | null = null;
   let headerContainer: HTMLElement | null = null;
   let cellContainer: HTMLElement | null = null;
+  let frozenColOverlay: HTMLElement | null = null;
+  let frozenHeaderOverlay: HTMLElement | null = null;
+  let frozenCellOverlay: HTMLElement | null = null;
   let selectionLayer: SelectionLayer | null = null;
   let resizeObserver: ResizeObserver | null = null;
   let mounted = false;
@@ -166,23 +170,45 @@ export function createGrid<
 
     store.update('visibleRange', () => ({ visibleRange }));
 
-    // Ensure frozen columns are always in visible range
-    const renderStartCol = Math.min(visibleRange.startCol, state.frozenLeftColumns > 0 ? 0 : visibleRange.startCol);
+    // Render non-frozen cells into main cell container
+    const frozenCols = state.frozenLeftColumns;
+    const mainStartCol = Math.max(visibleRange.startCol, frozenCols);
 
-    // Render cells
     rendering.renderCells(
       cellContainer,
       visibleRange.startRow,
       visibleRange.endRow,
-      renderStartCol,
+      mainStartCol,
       visibleRange.endCol,
       state.data,
       state.columns,
       measurements,
       state.selection,
-      state.frozenLeftColumns,
-      state.scrollLeft,
+      0, // no frozen handling in main pipeline
+      0,
     );
+
+    // Render frozen columns into separate overlay (outside scroll container)
+    if (frozenCellOverlay && frozenCols > 0) {
+      frozenCellOverlay.style.height = `${measurements.totalHeight}px`;
+      frozenRendering.renderCells(
+        frozenCellOverlay,
+        visibleRange.startRow,
+        visibleRange.endRow,
+        0,
+        frozenCols,
+        state.data,
+        state.columns,
+        measurements,
+        state.selection,
+        0,
+        0,
+      );
+
+      // Update frozen overlay width
+      const frozenWidth = measurements.colOffsets[frozenCols]!;
+      frozenColOverlay!.style.width = `${frozenWidth}px`;
+    }
 
     // Render selection layer
     selectionLayer?.render(state.selection, measurements);
@@ -199,6 +225,16 @@ export function createGrid<
     const scrollTop = scrollContainer.scrollTop;
     const scrollLeft = scrollContainer.scrollLeft;
     store.setScroll(scrollTop, scrollLeft);
+
+    // Sync frozen cell overlay vertical position.
+    // The frozen overlay is outside the scroll container, so it doesn't
+    // scroll. We translate the data cells portion to match scrollTop.
+    // Header stays at top (no vertical translate needed).
+    if (frozenCellOverlay) {
+      const dataScrollTop = Math.max(0, scrollTop - headerHeight);
+      frozenCellOverlay.style.transform = `translate3d(0, ${-dataScrollTop}px, 0)`;
+    }
+
     emitter.emit('scroll', { scrollTop, scrollLeft });
     scheduleRender();
   }
@@ -312,23 +348,17 @@ export function createGrid<
   // ---------------------------------------------------------------------------
 
   let headersRendered = false;
-  const frozenHeaderCells: HTMLElement[] = [];
 
   function renderHeaders(
     state: GridState<TData>,
     measurements: LayoutMeasurements,
   ): void {
     if (!headerContainer) return;
-
-    // On scroll, just update frozen header positions
-    if (headersRendered) {
-      updateFrozenHeaders(state.scrollLeft);
-      return;
-    }
+    if (headersRendered) return;
 
     headersRendered = true;
     headerContainer.innerHTML = '';
-    frozenHeaderCells.length = 0;
+    if (frozenHeaderOverlay) frozenHeaderOverlay.innerHTML = '';
 
     for (let col = 0; col < state.columns.length; col++) {
       const column = state.columns[col]!;
@@ -375,18 +405,13 @@ export function createGrid<
         headerCell.appendChild(handle);
       }
 
-      if (isFrozen) {
-        frozenHeaderCells.push(headerCell);
+      if (isFrozen && frozenHeaderOverlay) {
+        // Frozen headers go into the frozen overlay (outside scroll container)
+        headerCell.style.pointerEvents = 'auto';
+        frozenHeaderOverlay.appendChild(headerCell);
+      } else {
+        headerContainer.appendChild(headerCell);
       }
-
-      headerContainer.appendChild(headerCell);
-    }
-  }
-
-  function updateFrozenHeaders(scrollLeft: number): void {
-    for (const cell of frozenHeaderCells) {
-      const baseLeft = Number(cell.dataset.baseLeft);
-      cell.style.transform = `translate3d(${baseLeft + scrollLeft}px, 0, 0)`;
     }
   }
 
@@ -455,7 +480,6 @@ export function createGrid<
 
   function invalidateHeaders(): void {
     headersRendered = false;
-    frozenHeaderCells.length = 0;
   }
 
   function getCellFromEvent(event: Event): CellPosition | null {
@@ -500,7 +524,11 @@ export function createGrid<
         // TODO: implement decorator pipeline
         return () => {};
       },
-      registerCellType: (type, renderer) => rendering.registerCellType(type, renderer),
+      registerCellType: (type, renderer) => {
+        const unreg1 = rendering.registerCellType(type, renderer);
+        const unreg2 = frozenRendering.registerCellType(type, renderer);
+        return () => { unreg1(); unreg2(); };
+      },
       registerCommand: (command) => {
         commands.set(command.id, command);
       },
@@ -554,6 +582,40 @@ export function createGrid<
       contentSizer.appendChild(headerContainer);
       contentSizer.appendChild(cellContainer);
       scrollContainer.appendChild(contentSizer);
+
+      // Frozen column overlay — positioned absolutely over the grid,
+      // doesn't participate in horizontal scroll. Syncs vertical scroll
+      // via transform in the scroll handler (no lag since it never
+      // moves horizontally with the scrollbar).
+      const frozenLeftCols = options.frozenLeftColumns ?? 0;
+      if (frozenLeftCols > 0) {
+        frozenColOverlay = document.createElement('div');
+        frozenColOverlay.className = 'bg-grid__frozen-overlay';
+        frozenColOverlay.style.position = 'absolute';
+        frozenColOverlay.style.top = '0';
+        frozenColOverlay.style.left = '0';
+        frozenColOverlay.style.bottom = '0';
+        frozenColOverlay.style.overflow = 'hidden';
+        frozenColOverlay.style.zIndex = '8';
+
+        // Frozen header row
+        frozenHeaderOverlay = document.createElement('div');
+        frozenHeaderOverlay.className = 'bg-grid__frozen-headers';
+        frozenHeaderOverlay.style.position = 'relative';
+        frozenHeaderOverlay.style.height = `${headerHeight}px`;
+        frozenHeaderOverlay.style.zIndex = '12';
+        frozenHeaderOverlay.style.background = 'var(--bg-header-bg, #f8f9fa)';
+
+        // Frozen data cells
+        frozenCellOverlay = document.createElement('div');
+        frozenCellOverlay.className = 'bg-grid__frozen-cells';
+        frozenCellOverlay.style.position = 'relative';
+
+        frozenColOverlay.appendChild(frozenHeaderOverlay);
+        frozenColOverlay.appendChild(frozenCellOverlay);
+        container.appendChild(frozenColOverlay);
+      }
+
       container.appendChild(scrollContainer);
 
       // Selection layer (inside cell container so offsets align with cells)
@@ -563,6 +625,10 @@ export function createGrid<
       scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
       cellContainer.addEventListener('pointerdown', handlePointerDown);
       cellContainer.addEventListener('dblclick', handleDblClick);
+      if (frozenCellOverlay) {
+        frozenCellOverlay.addEventListener('pointerdown', handlePointerDown);
+        frozenCellOverlay.addEventListener('dblclick', handleDblClick);
+      }
       container.addEventListener('keydown', handleKeyDown);
 
       // Resize observer
@@ -586,6 +652,7 @@ export function createGrid<
 
       selectionLayer?.destroy();
       rendering.clear();
+      frozenRendering.clear();
 
       if (container) {
         container.innerHTML = '';
@@ -597,6 +664,9 @@ export function createGrid<
       contentSizer = null;
       headerContainer = null;
       cellContainer = null;
+      frozenColOverlay = null;
+      frozenHeaderOverlay = null;
+      frozenCellOverlay = null;
       selectionLayer = null;
       resizeObserver = null;
       mounted = false;

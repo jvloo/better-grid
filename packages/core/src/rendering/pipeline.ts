@@ -13,6 +13,8 @@ export class RenderingPipeline<TData = unknown> {
   private cleanupFns = new Map<string, () => void>();
   private cellTypes = new Map<string, CellTypeRenderer>();
   private globalCellRenderer: CellRenderer<TData> | null = null;
+  /** Frozen cells keyed by "row:col" with their base left offset */
+  private frozenCells = new Map<string, { element: HTMLElement; baseLeft: number; top: number }>();
 
   setGlobalCellRenderer(renderer: CellRenderer<TData> | null): void {
     this.globalCellRenderer = renderer;
@@ -75,8 +77,10 @@ export class RenderingPipeline<TData = unknown> {
         if (col < frozenLeftColumns) {
           cell.classList.add('bg-cell--frozen-left');
           cell.style.transform = `translate3d(${left + scrollLeft}px, ${top}px, 0)`;
+          this.frozenCells.set(key, { element: cell, baseLeft: left, top });
         } else {
           cell.classList.remove('bg-cell--frozen-left');
+          this.frozenCells.delete(key);
         }
 
         // Selection classes
@@ -137,12 +141,20 @@ export class RenderingPipeline<TData = unknown> {
     }
   }
 
+  /** Synchronously update frozen cell positions — call from scroll handler to avoid lag */
+  updateFrozenPositions(scrollLeft: number): void {
+    for (const { element, baseLeft, top } of this.frozenCells.values()) {
+      element.style.transform = `translate3d(${baseLeft + scrollLeft}px, ${top}px, 0)`;
+    }
+  }
+
   /** Clear all rendered cells */
   clear(): void {
     for (const [key, element] of this.cellPool) {
       this.cleanupFns.get(key)?.();
       element.remove();
     }
+    this.frozenCells.clear();
     this.cellPool.clear();
     this.cleanupFns.clear();
   }
