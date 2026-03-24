@@ -87,7 +87,14 @@ export class StateStore<TData = unknown> {
   }
 
   setScroll(scrollTop: number, scrollLeft: number): void {
-    this.update('scroll', () => ({ scrollTop, scrollLeft }));
+    // Mutate in place — scroll is the hottest path, avoid object spread
+    this.state.scrollTop = scrollTop;
+    this.state.scrollLeft = scrollLeft;
+    if (this.batchDepth > 0) {
+      this.pendingNotifications.add('scroll');
+    } else {
+      this.notify('scroll');
+    }
   }
 
   private notify(key: string): void {

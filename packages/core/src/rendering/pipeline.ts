@@ -9,13 +9,19 @@ import type { LayoutMeasurements } from '../virtualization/engine';
 import { isCellActive, isCellInSelection } from '../selection/model';
 import { snapToDevicePixel } from '../utils';
 
+// Encode row:col into a single number to avoid string allocation per cell
+const MAX_COLS = 16384; // 2^14 — supports up to 16K columns
+function cellKey(row: number, col: number): number {
+  return row * MAX_COLS + col;
+}
+
 export class RenderingPipeline<TData = unknown> {
-  private cellPool = new Map<string, HTMLElement>();
-  private cleanupFns = new Map<string, () => void>();
+  private cellPool = new Map<number, HTMLElement>();
+  private cleanupFns = new Map<number, () => void>();
   private cellTypes = new Map<string, CellTypeRenderer>();
   private globalCellRenderer: CellRenderer<TData> | null = null;
-  /** Frozen cells keyed by "row:col" with their base left offset */
-  private frozenCells = new Map<string, { element: HTMLElement; baseLeft: number; top: number }>();
+  /** Frozen cells keyed by numeric key with their base left offset */
+  private frozenCells = new Map<number, { element: HTMLElement; baseLeft: number; top: number }>();
 
   setGlobalCellRenderer(renderer: CellRenderer<TData> | null): void {
     this.globalCellRenderer = renderer;
@@ -47,11 +53,11 @@ export class RenderingPipeline<TData = unknown> {
     scrollLeft = 0,
     frozenTopRows = 0,
   ): void {
-    const visibleKeys = new Set<string>();
+    const visibleKeys = new Set<number>();
 
     for (let row = startRow; row < endRow; row++) {
       for (let col = startCol; col < endCol; col++) {
-        const key = `${row}:${col}`;
+        const key = cellKey(row, col);
         visibleKeys.add(key);
 
         let cell = this.cellPool.get(key);

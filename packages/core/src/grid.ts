@@ -84,7 +84,9 @@ export function createGrid<
     data: options.data,
     columns: columnManager.getColumns(),
     columnWidths: columnManager.getWidths(),
-    rowHeights: options.data.map((_, i) => getRowHeight(i)),
+    rowHeights: typeof options.rowHeight === 'function'
+      ? options.data.map((_, i) => getRowHeight(i))
+      : [], // uniform height — no per-row array needed
     scrollTop: 0,
     scrollLeft: 0,
     visibleRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
@@ -112,7 +114,7 @@ export function createGrid<
     virtualization.recompute(
       state.data.length,
       state.columns.length,
-      (i) => state.rowHeights[i] ?? DEFAULT_ROW_HEIGHT,
+      (i) => state.rowHeights.length > 0 ? (state.rowHeights[i] ?? DEFAULT_ROW_HEIGHT) : getRowHeight(i),
       (i) => columnManager.getWidth(i),
     );
   }
@@ -155,7 +157,7 @@ export function createGrid<
         frozenLeftColumns: state.frozenLeftColumns,
         frozenRightColumns: 0,
       },
-      (i) => state.rowHeights[i] ?? DEFAULT_ROW_HEIGHT,
+      (i) => state.rowHeights.length > 0 ? (state.rowHeights[i] ?? DEFAULT_ROW_HEIGHT) : getRowHeight(i),
       (i) => columnManager.getWidth(i),
     );
 

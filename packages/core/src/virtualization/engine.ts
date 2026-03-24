@@ -5,8 +5,8 @@
 import type { VirtualRange } from '../types';
 
 export interface LayoutMeasurements {
-  rowOffsets: Float64Array;
-  colOffsets: Float64Array;
+  rowOffsets: Float32Array;
+  colOffsets: Float32Array;
   totalHeight: number;
   totalWidth: number;
 }
@@ -20,8 +20,8 @@ export class VirtualizationEngine {
     this.overscanRows = overscanRows;
     this.overscanCols = overscanCols;
     this.measurements = {
-      rowOffsets: new Float64Array(1),
-      colOffsets: new Float64Array(1),
+      rowOffsets: new Float32Array(1),
+      colOffsets: new Float32Array(1),
       totalHeight: 0,
       totalWidth: 0,
     };
@@ -38,12 +38,19 @@ export class VirtualizationEngine {
     getRowHeight: (index: number) => number,
     getColWidth: (index: number) => number,
   ): void {
-    const rowOffsets = new Float64Array(rowCount + 1);
+    // Reuse existing arrays if size matches to reduce GC pressure
+    let rowOffsets = this.measurements.rowOffsets;
+    if (rowOffsets.length !== rowCount + 1) {
+      rowOffsets = new Float32Array(rowCount + 1);
+    }
     for (let i = 0; i < rowCount; i++) {
       rowOffsets[i + 1] = rowOffsets[i]! + getRowHeight(i);
     }
 
-    const colOffsets = new Float64Array(colCount + 1);
+    let colOffsets = this.measurements.colOffsets;
+    if (colOffsets.length !== colCount + 1) {
+      colOffsets = new Float32Array(colCount + 1);
+    }
     for (let i = 0; i < colCount; i++) {
       colOffsets[i + 1] = colOffsets[i]! + getColWidth(i);
     }
@@ -107,7 +114,7 @@ export class VirtualizationEngine {
   }
 
   /** Binary search on prefix-sum array to find the index at a given offset */
-  private binarySearch(offsets: Float64Array, target: number): number {
+  private binarySearch(offsets: Float32Array, target: number): number {
     let lo = 0;
     let hi = offsets.length - 1;
     while (lo < hi) {
