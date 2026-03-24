@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { BetterGrid } from '@better-grid/react';
-import type { ColumnDef } from '@better-grid/core';
+import type { ColumnDef, GridPlugin, HeaderRow } from '@better-grid/core';
+import { formatting, editing, sorting, filtering, validation } from '@better-grid/plugins';
 import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
 
@@ -9,38 +10,158 @@ interface LargeRow {
   [key: string]: unknown;
 }
 
-function createData(rowCount: number, colCount: number): { data: LargeRow[]; genTime: number } {
+const NAMES = ['Alice','Bob','Carol','David','Emma','Frank','Grace','Henry','Ivy','Jack','Karen','Leo','Mia','Noah','Olivia'];
+const DEPTS = ['Engineering','Sales','Marketing','Product','HR','Finance','Operations','Design'];
+const STATUSES = ['Active','Pending','On Hold','Done'];
+
+function createData(rowCount: number, colCount: number, rich = false): { data: LargeRow[]; genTime: number } {
   const start = performance.now();
   const data: LargeRow[] = new Array(rowCount);
   for (let r = 0; r < rowCount; r++) {
     const row: LargeRow = { id: r + 1 };
-    for (let c = 0; c < colCount; c++) {
-      row[`col${c}`] = Math.round(((r * 7 + c * 13 + 37) % 10000) / 100 * 100) / 100;
+    if (rich) {
+      const TYPES = ['currency', 'percent', 'number', 'text', 'date', 'status', 'boolean', 'rating'];
+      for (let c = 0; c < colCount; c++) {
+        const type = TYPES[c % TYPES.length];
+        const seed = (r * 7 + c * 13 + 37);
+        switch (type) {
+          case 'currency': row[`col${c}`] = Math.round((seed % 500000) + 10000); break;
+          case 'percent': row[`col${c}`] = Math.round((seed % 95) + 1) / 100; break;
+          case 'number': row[`col${c}`] = (seed % 9999) + 1; break;
+          case 'text': row[`col${c}`] = NAMES[seed % NAMES.length] + ' ' + DEPTS[seed % DEPTS.length]; break;
+          case 'date': row[`col${c}`] = `2026-${String((seed % 12) + 1).padStart(2, '0')}-${String((seed % 28) + 1).padStart(2, '0')}`; break;
+          case 'status': row[`col${c}`] = STATUSES[seed % STATUSES.length]; break;
+          case 'boolean': row[`col${c}`] = seed % 3 !== 0; break;
+          case 'rating': row[`col${c}`] = Math.round(((seed % 50) / 10 + 1) * 10) / 10; break;
+        }
+      }
+    } else {
+      for (let c = 0; c < colCount; c++) {
+        row[`col${c}`] = Math.round(((r * 7 + c * 13 + 37) % 10000) / 100 * 100) / 100;
+      }
     }
     data[r] = row;
   }
   return { data, genTime: Math.round(performance.now() - start) };
 }
 
-function generateColumns(colCount: number): ColumnDef<LargeRow>[] {
+function generateColumns(colCount: number, rich = false): ColumnDef<LargeRow>[] {
   const cols: ColumnDef<LargeRow>[] = [
     { id: 'id', header: 'ID', width: 90 },
   ];
-  for (let c = 0; c < colCount; c++) {
-    cols.push({
-      id: `col${c}`,
-      header: `Col ${c + 1}`,
-      width: 90,
-    });
+  if (rich) {
+    // Generate 100 meaningful columns with varied types
+    const TYPES = ['currency', 'percent', 'number', 'text', 'date', 'status', 'boolean', 'rating'] as const;
+    for (let c = 0; c < colCount; c++) {
+      const type = TYPES[c % TYPES.length];
+      const colId = `col${c}`;
+      const group = Math.floor(c / TYPES.length) + 1;
+      switch (type) {
+        case 'currency':
+          cols.push({ id: colId, header: `Rev G${group}`, width: 110, cellType: 'currency', sortable: true });
+          break;
+        case 'percent':
+          cols.push({ id: colId, header: `Rate G${group}`, width: 80, cellType: 'percent', sortable: true });
+          break;
+        case 'number':
+          cols.push({ id: colId, header: `Qty G${group}`, width: 80, sortable: true });
+          break;
+        case 'text':
+          cols.push({ id: colId, header: `Note G${group}`, width: 120, sortable: true });
+          break;
+        case 'date':
+          cols.push({ id: colId, header: `Date G${group}`, width: 100, cellType: 'date', sortable: true });
+          break;
+        case 'status':
+          cols.push({
+            id: colId, header: `Status G${group}`, width: 90, sortable: true,
+            options: STATUSES,
+            cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
+              const v = ctx.value as string;
+              const colors: Record<string, { bg: string; fg: string }> = {
+                Active: { bg: '#e8f5e9', fg: '#2e7d32' }, Pending: { bg: '#fff3e0', fg: '#e65100' },
+                'On Hold': { bg: '#ffebee', fg: '#c62828' }, Done: { bg: '#e3f2fd', fg: '#1565c0' },
+              };
+              const clr = colors[v] ?? { bg: '#f5f5f5', fg: '#666' };
+              el.innerHTML = `<span style="padding:2px 6px;border-radius:10px;font-size:11px;background:${clr.bg};color:${clr.fg}">${v}</span>`;
+            },
+          });
+          break;
+        case 'boolean':
+          cols.push({
+            id: colId, header: `Flag G${group}`, width: 60, sortable: true,
+            cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
+              el.textContent = ctx.value ? '✓' : '✗';
+              el.style.color = ctx.value ? '#2e7d32' : '#c62828';
+              el.style.textAlign = 'center';
+            },
+          });
+          break;
+        case 'rating':
+          cols.push({
+            id: colId, header: `Score G${group}`, width: 70, sortable: true,
+            cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
+              const v = ctx.value as number;
+              el.textContent = v.toFixed(1);
+              el.style.color = v >= 4 ? '#2e7d32' : v >= 3 ? '#f57f17' : '#c62828';
+              el.style.textAlign = 'center';
+            },
+          });
+          break;
+      }
+    }
+  } else {
+    for (let c = 0; c < colCount; c++) {
+      cols.push({ id: `col${c}`, header: `Col ${c + 1}`, width: 90 });
+    }
   }
   return cols;
 }
 
+function generateHeaderRows(colCount: number, rich: boolean): HeaderRow[] | undefined {
+  if (!rich) return undefined;
+
+  const TYPES_PER_GROUP = 8;
+  const groupCount = Math.ceil(colCount / TYPES_PER_GROUP);
+
+  // Row 1: ID (rowSpan:2) + groups spanning 8 cols each
+  const groupCells: HeaderRow['cells'] = [
+    { id: 'g-id', content: '#', rowSpan: 2 },
+  ];
+  for (let g = 0; g < groupCount; g++) {
+    const remaining = colCount - g * TYPES_PER_GROUP;
+    const span = Math.min(TYPES_PER_GROUP, remaining);
+    groupCells.push({
+      id: `g-${g}`,
+      content: `Group ${g + 1}`,
+      colSpan: span,
+    });
+  }
+
+  // Row 2: column headers (ID is skipped — rowSpan from above)
+  const colCells: HeaderRow['cells'] = [];
+  const LABELS = ['Rev', 'Rate', 'Qty', 'Note', 'Date', 'Status', 'Flag', 'Score'];
+  for (let c = 0; c < colCount; c++) {
+    const label = LABELS[c % LABELS.length];
+    const group = Math.floor(c / TYPES_PER_GROUP) + 1;
+    colCells.push({
+      id: `h-col${c}`,
+      content: `${label} G${group}`,
+      columnId: `col${c}`,
+    });
+  }
+
+  return [
+    { id: 'groups', height: 30, cells: groupCells },
+    { id: 'columns', height: 30, cells: colCells },
+  ];
+}
+
 const PRESETS = [
-  { label: '100K cells', rows: 1_000, cols: 100, cells: '100K' },
-  { label: '1M cells', rows: 10_000, cols: 100, cells: '1M' },
-  { label: '10M cells', rows: 100_000, cols: 100, cells: '10M' },
-  { label: '10M cells (wide)', rows: 500_000, cols: 20, cells: '10M' },
+  { label: '100K cells', rows: 1_000, cols: 100, cells: '100K', rich: false },
+  { label: '1M cells', rows: 10_000, cols: 100, cells: '1M', rich: false },
+  { label: '10M cells', rows: 100_000, cols: 100, cells: '10M', rich: false },
+  { label: '10M cells (rich)', rows: 100_000, cols: 100, cells: '10M', rich: true },
 ];
 
 export function LargeDataset() {
@@ -53,21 +174,36 @@ export function LargeDataset() {
 
   const [data, setData] = useState<LargeRow[]>(() => createData(1_000, 100).data);
   const [columns, setColumns] = useState<ColumnDef<LargeRow>[]>(() => generateColumns(100));
+  const [headerRows, setHeaderRows] = useState<HeaderRow[] | undefined>(undefined);
   const [gridKey, setGridKey] = useState(0);
+  const [richMode, setRichMode] = useState(false);
 
-  function applyPreset(rows: number, cols: number) {
+  const plugins = useMemo<GridPlugin[]>(() => {
+    if (!richMode) return [];
+    return [
+      formatting({ locale: 'en-US', currencyCode: 'USD' }),
+      editing({ editTrigger: 'dblclick' }),
+      sorting(),
+      filtering(),
+      validation({ validateOn: 'commit' }),
+    ];
+  }, [richMode]);
+
+  function applyPreset(rows: number, cols: number, rich = false) {
     setGenerating(true);
     setRowCount(rows);
     setColCount(cols);
+    setRichMode(rich);
 
     setTimeout(() => {
-      console.log(`[benchmark] Generating ${rows.toLocaleString()} × ${cols} ...`);
-      const result = createData(rows, cols);
+      console.log(`[benchmark] Generating ${rows.toLocaleString()} × ${cols}${rich ? ' (rich)' : ''} ...`);
+      const result = createData(rows, cols, rich);
       console.log(`[benchmark] Data generated in ${result.genTime}ms (${(rows * (cols + 1)).toLocaleString()} cells)`);
 
       setGenTime(result.genTime);
       setData(result.data);
-      setColumns(generateColumns(cols));
+      setColumns(generateColumns(cols, rich));
+      setHeaderRows(generateHeaderRows(cols, rich));
       setGridKey((k) => k + 1);
       setGenerating(false);
 
@@ -142,7 +278,7 @@ export function LargeDataset() {
           return (
             <button
               key={p.label}
-              onClick={() => applyPreset(p.rows, p.cols)}
+              onClick={() => applyPreset(p.rows, p.cols, p.rich)}
               disabled={generating}
               style={{
                 padding: '6px 14px',
@@ -186,8 +322,10 @@ export function LargeDataset() {
         key={gridKey}
         columns={columns}
         data={data}
-        frozenLeftColumns={1}
+        headerRows={headerRows}
+        frozenLeftColumns={richMode ? 1 : 1}
         selection={{ mode: 'range' }}
+        plugins={plugins}
         height={480}
       />
 
