@@ -108,6 +108,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
         const newValue = editInput.value;
         const position = editingCell;
+        const prevValue = originalValue;
 
         // Parse the value based on cell type
         const state = ctx.grid.getState();
@@ -118,20 +119,21 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           const cellType = column.cellType;
           if (cellType === 'number' || cellType === 'currency') {
             const num = Number(newValue.replace(/[^0-9.\-]/g, ''));
-            parsedValue = isNaN(num) ? originalValue : num;
+            parsedValue = isNaN(num) ? prevValue : num;
           } else if (cellType === 'percent') {
             const num = Number(newValue.replace(/[^0-9.\-]/g, ''));
-            parsedValue = isNaN(num) ? originalValue : num / 100;
+            parsedValue = isNaN(num) ? prevValue : num / 100;
           }
         }
 
-        // Clean up the input
-        cleanupEdit();
-
-        // Update grid data
-        if (column?.accessorKey && parsedValue !== originalValue) {
+        // Update grid data BEFORE cleanup — cleanup triggers re-render
+        // which needs to show the new value
+        if (column?.accessorKey && parsedValue !== prevValue) {
           ctx.grid.updateCell(position.rowIndex, column.id, parsedValue);
         }
+
+        // Clean up the input (re-render will show updated formatted value)
+        cleanupEdit();
 
         return true;
       }
