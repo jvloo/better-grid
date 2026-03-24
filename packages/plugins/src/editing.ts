@@ -42,25 +42,8 @@ const INPUT_CSS = `
   box-sizing: border-box;
 `;
 
-const SELECT_CSS = `
-  width: 100%;
-  height: 100%;
-  border: none;
-  outline: none;
-  padding: 0;
-  padding-right: 18px;
-  margin: 0;
-  font: inherit;
-  color: var(--bg-text-color, #1a1a1a);
-  background: transparent;
-  box-sizing: border-box;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 2px center;
-`;
+// Chevron SVG for dropdown trigger
+const CHEVRON_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E")`;
 
 export function editing(options?: EditingOptions): GridPlugin<'editing'> {
   const config = {
@@ -75,9 +58,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
     init(ctx: PluginContext) {
       let editingCell: CellPosition | null = null;
-      let activeEditor: HTMLInputElement | HTMLSelectElement | null = null;
+      let activeEditor: HTMLInputElement | null = null;
+      let activeDropdownPanel: HTMLElement | null = null;
+      let activeDropdownOptions: DropdownOption[] | null = null;
       let originalValue: unknown = null;
-      const selectOptionsMap = new WeakMap<HTMLSelectElement, DropdownOption[]>();
 
       function getCellElement(pos: CellPosition): HTMLElement | null {
         const selector = `.bg-cell[data-row="${pos.rowIndex}"][data-col="${pos.colIndex}"]`;
@@ -193,36 +177,150 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         cellEl: HTMLElement,
         opts: DropdownOption[],
         currentValue: unknown,
-      ): HTMLSelectElement {
-        const select = document.createElement('select');
-        select.className = 'bg-cell-editor bg-cell-editor--select';
-        select.style.cssText = SELECT_CSS;
+      ): HTMLInputElement {
+        activeDropdownOptions = opts;
 
-        for (const opt of opts) {
-          const option = document.createElement('option');
-          option.value = String(opt.value);
-          option.textContent = opt.label;
-          // Match by strict equality on value, or by string comparison
-          if (opt.value === currentValue || String(opt.value) === String(currentValue)) {
-            option.selected = true;
-          }
-          select.appendChild(option);
+        // Hidden input for focus and keyboard handling
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'bg-cell-editor bg-cell-editor--dropdown-trigger';
+        input.readOnly = true;
+        input.style.cssText = INPUT_CSS + `
+          cursor: pointer;
+          background: transparent;
+          background-image: ${CHEVRON_SVG};
+          background-repeat: no-repeat;
+          background-position: right 2px center;
+          padding-right: 18px;
+        `;
+
+        // Show the current label
+        const currentOpt = opts.find((o) => o.value === currentValue || String(o.value) === String(currentValue));
+        input.value = currentOpt?.label ?? String(currentValue ?? '');
+
+        cellEl.appendChild(input);
+        input.focus();
+
+        // Create the floating dropdown panel
+        const rect = cellEl.getBoundingClientRect();
+        const panel = document.createElement('div');
+        panel.className = 'bg-dropdown-panel';
+        panel.style.cssText = `
+          position: fixed;
+          left: ${rect.left}px;
+          top: ${rect.bottom}px;
+          min-width: ${rect.width}px;
+          z-index: 100;
+          background: var(--bg-dropdown-bg, #fff);
+          border: 1px solid var(--bg-dropdown-border, #d0d0d0);
+          border-radius: 6px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          padding: 4px 0;
+          max-height: 200px;
+          overflow-y: auto;
+          font: inherit;
+        `;
+
+        let selectedIndex = opts.findIndex((o) => o.value === currentValue || String(o.value) === String(currentValue));
+
+        for (let i = 0; i < opts.length; i++) {
+          const opt = opts[i]!;
+          const item = document.createElement('div');
+          item.className = 'bg-dropdown-item' + (i === selectedIndex ? ' bg-dropdown-item--selected' : '');
+          item.textContent = opt.label;
+          item.style.cssText = `
+            padding: 6px 12px;
+            cursor: pointer;
+            user-select: none;
+            font: inherit;
+            ${i === selectedIndex ? 'background: var(--bg-dropdown-selected-bg, #e8f0fe); font-weight: 500;' : ''}
+          `;
+          item.addEventListener('mouseenter', () => {
+            item.style.background = 'var(--bg-dropdown-hover-bg, #f0f0f0)';
+          });
+          item.addEventListener('mouseleave', () => {
+            item.style.background = i === selectedIndex ? 'var(--bg-dropdown-selected-bg, #e8f0fe)' : '';
+          });
+          item.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // Prevent blur from firing
+            selectedIndex = i;
+            input.value = opt.label;
+            commitDropdown(i);
+          });
+          panel.appendChild(item);
         }
 
-        // Store options for value lookup on commit
-        selectOptionsMap.set(select, opts);
+        document.body.appendChild(panel);
+        activeDropdownPanel = panel;
 
-        cellEl.appendChild(select);
-        select.focus();
-
-        // Commit on change (user picks a different option)
-        select.addEventListener('change', () => {
-          commitEdit();
+        // Keyboard navigation in dropdown
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, opts.length - 1);
+            highlightDropdownItem(panel, selectedIndex);
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, 0);
+            highlightDropdownItem(panel, selectedIndex);
+          } else if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            commitDropdown(selectedIndex);
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            cancelEdit();
+          } else if (e.key === 'Tab') {
+            e.preventDefault();
+            e.stopPropagation();
+            commitDropdown(selectedIndex);
+          }
         });
-        select.addEventListener('keydown', handleEditorKeydown);
-        select.addEventListener('blur', handleEditorBlur);
 
-        return select;
+        input.addEventListener('blur', () => {
+          setTimeout(() => {
+            if (editingCell && activeDropdownPanel) {
+              commitDropdown(selectedIndex);
+            }
+          }, 100);
+        });
+
+        return input;
+      }
+
+      function commitDropdown(selectedIndex: number): void {
+        if (!activeDropdownOptions || !editingCell) return;
+        const opt = activeDropdownOptions[selectedIndex];
+        if (!opt) { cancelEdit(); return; }
+
+        const position = editingCell;
+        const prevValue = originalValue;
+        const state = ctx.grid.getState();
+        const column = state.columns[position.colIndex];
+
+        if (column?.accessorKey && opt.value !== prevValue) {
+          ctx.grid.updateCell(position.rowIndex, column.id, opt.value);
+        }
+
+        cleanupEdit();
+      }
+
+      function highlightDropdownItem(panel: HTMLElement, index: number): void {
+        const items = panel.querySelectorAll('.bg-dropdown-item');
+        items.forEach((item, i) => {
+          const el = item as HTMLElement;
+          if (i === index) {
+            el.classList.add('bg-dropdown-item--selected');
+            el.style.background = 'var(--bg-dropdown-selected-bg, #e8f0fe)';
+            el.style.fontWeight = '500';
+            el.scrollIntoView({ block: 'nearest' });
+          } else {
+            el.classList.remove('bg-dropdown-item--selected');
+            el.style.background = '';
+            el.style.fontWeight = '';
+          }
+        });
       }
 
       // -----------------------------------------------------------------------
@@ -232,27 +330,24 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       function commitEdit(): boolean {
         if (!editingCell || !activeEditor) return false;
 
+        // If dropdown is active, delegate to commitDropdown
+        if (activeDropdownPanel) {
+          const selectedItem = activeDropdownPanel.querySelector('.bg-dropdown-item--selected');
+          const items = activeDropdownPanel.querySelectorAll('.bg-dropdown-item');
+          let idx = 0;
+          items.forEach((item, i) => { if (item === selectedItem) idx = i; });
+          commitDropdown(idx);
+          return true;
+        }
+
         const position = editingCell;
         const prevValue = originalValue;
         const state = ctx.grid.getState();
         const column = state.columns[position.colIndex];
 
-        let parsedValue: unknown;
-
-        if (activeEditor instanceof HTMLSelectElement) {
-          // Dropdown: look up the actual value from the stored options
-          const storedOpts = selectOptionsMap.get(activeEditor);
-          const selectedIdx = activeEditor.selectedIndex;
-          if (storedOpts && selectedIdx >= 0) {
-            parsedValue = storedOpts[selectedIdx]!.value;
-          } else {
-            parsedValue = activeEditor.value;
-          }
-        } else {
-          // Text input: parse based on cell type
-          const newValue = activeEditor.value;
-          parsedValue = parseTextValue(newValue, column, prevValue);
-        }
+        // Text input: parse based on cell type
+        const newValue = activeEditor.value;
+        const parsedValue = parseTextValue(newValue, column, prevValue);
 
         // Update grid data BEFORE cleanup
         if (column?.accessorKey && parsedValue !== prevValue) {
@@ -297,12 +392,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       }
 
       function cleanupEdit(): void {
+        // Remove dropdown panel if present
+        if (activeDropdownPanel) {
+          activeDropdownPanel.remove();
+          activeDropdownPanel = null;
+          activeDropdownOptions = null;
+        }
+
         if (activeEditor) {
           activeEditor.removeEventListener('keydown', handleEditorKeydown);
           activeEditor.removeEventListener('blur', handleEditorBlur);
-          if (activeEditor instanceof HTMLSelectElement) {
-            activeEditor.removeEventListener('change', () => commitEdit());
-          }
         }
 
         if (editingCell) {
