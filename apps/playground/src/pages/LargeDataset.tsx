@@ -61,8 +61,7 @@ export function LargeDataset() {
         fontSize: 13,
       }}>
         <Stat label="Total Cells" value={totalCells.toLocaleString()} />
-        <Stat label="Rendered DOM" value={`~${renderedCells}`} highlight />
-        <Stat label="Virtualized" value={`${((1 - renderedCells / totalCells) * 100).toFixed(2)}%`} />
+        <Stat label="DOM Elements" value={`~${renderedCells} cells`} highlight />
         <Stat label="Frozen Column" value="ID" />
       </div>
 
