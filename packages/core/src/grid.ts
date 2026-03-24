@@ -448,8 +448,10 @@ export function createGrid<
         const isFrozen = colIndex < state.frozenLeftColumns;
         const isLastFrozenCol = endCol - 1 === state.frozenLeftColumns - 1;
 
-        // Use the last column in the span for sorting/resize
-        const targetColumnId = cell.columnId ?? state.columns[endCol - 1]?.id;
+        // Only last-row headers get sort/context menu (group headers don't sort)
+        const targetColumnId = isLastRow
+          ? (cell.columnId ?? state.columns[colIndex]?.id)
+          : undefined;
 
         const headerEl = createHeaderCell({
           left,

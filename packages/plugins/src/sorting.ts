@@ -162,9 +162,9 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting'> {
           const col = ctx.grid.getState().columns.findIndex((c) => c.id === columnId);
           if (col === -1) continue;
 
-          // Find header cell in both main and frozen headers
+          // Find column-level header cells (not group headers)
           const headerCells = document.querySelectorAll(
-            `.bg-header-cell[data-col="${col}"]`,
+            `.bg-header-cell[data-col="${col}"]:not(.bg-header-cell--group)`,
           );
           for (const headerCell of headerCells) {
             const indicator = document.createElement('span');
