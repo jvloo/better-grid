@@ -71,6 +71,14 @@
   text-align: center;
 }
 
+/* Header text wrapper — clips text while allowing resize handles to overflow */
+.bg-header-cell__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 /* Group row header cells (not the last row) */
 .bg-header-cell--group {
   border-bottom: 1px solid var(--bg-header-border-color, #e0e0e0);
