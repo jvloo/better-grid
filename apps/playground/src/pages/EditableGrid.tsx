@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing } from '@better-grid/plugins';
+import { formatting, editing, validation } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface TestRow {
@@ -36,14 +36,25 @@ export function EditableGrid() {
       // 1. Non-editable
       { id: 'id', header: 'ID', width: 50, editable: false },
 
-      // 2. Default string → text input
-      { id: 'name', header: 'Name (text)', width: 130 },
+      // 2. Default string → text input (required)
+      { id: 'name', header: 'Name (text)', width: 130, required: true },
 
-      // 3. Default number → text input, auto-parses to number
-      { id: 'quantity', header: 'Qty (number)', width: 100 },
+      // 3. Default number → text input with validation
+      {
+        id: 'quantity',
+        header: 'Qty (number)',
+        width: 100,
+        rules: [{ validate: (v) => (v as number) > 0 || 'Must be positive', message: 'Qty must be > 0' }],
+      },
 
-      // 4. cellType: 'currency' → text input, parses $1,234 → 1234
-      { id: 'price', header: 'Price (currency)', width: 140, cellType: 'currency' },
+      // 4. cellType: 'currency' → text input with min/max validation
+      {
+        id: 'price',
+        header: 'Price (currency)',
+        width: 140,
+        cellType: 'currency',
+        rules: [{ validate: (v) => (v as number) >= 0 || 'Cannot be negative' }],
+      },
 
       // 5. cellType: 'percent' → text input, parses 50 → 0.5
       { id: 'rate', header: 'Rate (percent)', width: 110, cellType: 'percent' },
@@ -113,6 +124,7 @@ export function EditableGrid() {
     () => [
       formatting({ locale: 'en-US', currencyCode: 'USD', accountingFormat: true }),
       editing({ editTrigger: 'dblclick' }),
+      validation({ validateOn: 'commit' }),
     ],
     [],
   );

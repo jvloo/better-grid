@@ -15,4 +15,4 @@ export { formatting } from './formatting';
 export type { FormattingOptions, FormattingApi, DateFormatPreset } from './formatting';
 
 export { validation } from './validation';
-export type { ValidationOptions, ValidationApi, ValidationRule, ValidationError } from './validation';
+export type { ValidationOptions, ValidationApi, ValidationError } from './validation';

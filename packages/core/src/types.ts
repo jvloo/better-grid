@@ -142,8 +142,20 @@ export interface ColumnDef<TData = unknown> {
   dateFormat?: 'short' | 'medium' | 'long' | 'full' | 'iso' | 'month-year' | 'year' | 'time' | 'datetime';
   hideZero?: boolean;
 
+  // Validation
+  required?: boolean;
+  rules?: ColumnValidationRule[];
+
   // Extensibility (for third-party plugins)
   meta?: Record<string, unknown>;
+}
+
+/** Validation rule for a column */
+export interface ColumnValidationRule {
+  /** Return true if valid, or an error message string if invalid */
+  validate: (value: unknown, row: unknown) => boolean | string;
+  /** Fallback error message when validate returns false */
+  message?: string;
 }
 
 // ---------------------------------------------------------------------------

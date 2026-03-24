@@ -139,6 +139,13 @@
   z-index: 3;
 }
 
+/* Validation error */
+.bg-cell--error {
+  outline: 2px solid var(--bg-error-border, #c62828);
+  outline-offset: -2px;
+  background: var(--bg-error-bg, rgba(198, 40, 40, 0.06));
+}
+
 .bg-cell--editing {
   background: var(--bg-edit-bg, #fff);
   outline: 2px solid var(--bg-active-border, #1a73e8);

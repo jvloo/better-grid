@@ -16,6 +16,7 @@ export type {
   CellType,
   EditorType,
   ColumnOption,
+  ColumnValidationRule,
   HeaderRow,
   HeaderCell,
   FooterRow,
