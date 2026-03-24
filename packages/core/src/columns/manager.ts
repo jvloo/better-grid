@@ -12,12 +12,19 @@ export class ColumnManager<TData = unknown> {
   private widths: number[] = [];
 
   setColumns(columns: ColumnDef<TData>[]): void {
-    // Default accessorKey to id when not provided (and no accessorFn)
-    this.columns = columns.map((col) =>
-      !col.accessorKey && !col.accessorFn
+    // Normalize columns: default accessorKey, validate widths
+    this.columns = columns.map((col) => {
+      const normalized = !col.accessorKey && !col.accessorFn
         ? { ...col, accessorKey: col.id as keyof TData & string }
-        : col,
-    );
+        : col;
+
+      // Validate width constraints
+      if (normalized.minWidth && normalized.maxWidth && normalized.minWidth > normalized.maxWidth) {
+        console.warn(`[better-grid] Column "${col.id}": minWidth (${normalized.minWidth}) > maxWidth (${normalized.maxWidth})`);
+      }
+
+      return normalized;
+    });
     this.widths = this.columns.map((col) => col.width ?? DEFAULT_WIDTH);
   }
 

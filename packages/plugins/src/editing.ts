@@ -2,7 +2,7 @@
 // Editing Plugin — Cell editing with text input & dropdown support
 // ============================================================================
 
-import type { GridPlugin, PluginContext, CellPosition } from '@better-grid/core';
+import type { GridPlugin, PluginContext, CellPosition, ColumnDef } from '@better-grid/core';
 
 export interface EditingOptions {
   /** How to trigger edit mode. Default: 'dblclick' */
@@ -77,6 +77,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       let editingCell: CellPosition | null = null;
       let activeEditor: HTMLInputElement | HTMLSelectElement | null = null;
       let originalValue: unknown = null;
+      const selectOptionsMap = new WeakMap<HTMLSelectElement, DropdownOption[]>();
 
       function getCellElement(pos: CellPosition): HTMLElement | null {
         const selector = `.bg-cell[data-row="${pos.rowIndex}"][data-col="${pos.colIndex}"]`;
@@ -88,47 +89,27 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       // -----------------------------------------------------------------------
 
       function getDropdownOptions(
-        column: { cellType?: string; meta?: Record<string, unknown> },
+        column: ColumnDef,
         value: unknown,
       ): DropdownOption[] | null {
-        // meta.editor: 'text' forces text input, skips all dropdown logic
-        if (column.meta?.editor === 'text') return null;
+        // column.editor: 'text' forces text input, skips all dropdown logic
+        if (column.editor === 'text') return null;
 
-        // Explicit options in column meta → always dropdown
-        const metaOpts = column.meta?.options;
-        if (Array.isArray(metaOpts) && metaOpts.length > 0) {
-          return metaOpts.map((opt) =>
+        // Explicit column.options → always dropdown
+        if (Array.isArray(column.options) && column.options.length > 0) {
+          return column.options.map((opt) =>
             typeof opt === 'object' && opt !== null && 'label' in opt
-              ? (opt as DropdownOption)
+              ? { label: opt.label, value: opt.value }
               : { label: String(opt), value: opt },
           );
         }
 
-        // meta.editor: 'dropdown' forces dropdown even without options
-        // (useful with boolean values where you want explicit control)
-        if (column.meta?.editor === 'dropdown' && typeof value === 'boolean') {
-          return [
-            { label: config.booleanLabels[0], value: true },
-            { label: config.booleanLabels[1], value: false },
-          ];
-        }
-
-        // Auto-detect: boolean → Yes/No dropdown (unless editor is 'text')
+        // Auto-detect: boolean value → Yes/No dropdown
         if (typeof value === 'boolean') {
           return [
             { label: config.booleanLabels[0], value: true },
             { label: config.booleanLabels[1], value: false },
           ];
-        }
-
-        // select/toggle cell types
-        if (column.cellType === 'select' || column.cellType === 'toggle') {
-          if (typeof value === 'boolean') {
-            return [
-              { label: config.booleanLabels[0], value: true },
-              { label: config.booleanLabels[1], value: false },
-            ];
-          }
         }
 
         return null;
@@ -147,7 +128,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         const state = ctx.grid.getState();
         const column = state.columns[position.colIndex];
         if (!column) return;
-        if (column.meta?.editable === false) return;
+        if (column.editable === false) return;
 
         editingCell = position;
 
@@ -229,7 +210,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         }
 
         // Store options for value lookup on commit
-        (select as HTMLSelectElement & { _options: DropdownOption[] })._options = opts;
+        selectOptionsMap.set(select, opts);
 
         cellEl.appendChild(select);
         select.focus();
@@ -260,7 +241,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
         if (activeEditor instanceof HTMLSelectElement) {
           // Dropdown: look up the actual value from the stored options
-          const storedOpts = (activeEditor as HTMLSelectElement & { _options?: DropdownOption[] })._options;
+          const storedOpts = selectOptionsMap.get(activeEditor);
           const selectedIdx = activeEditor.selectedIndex;
           if (storedOpts && selectedIdx >= 0) {
             parsedValue = storedOpts[selectedIdx]!.value;

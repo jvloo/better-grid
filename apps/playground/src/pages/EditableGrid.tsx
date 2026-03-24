@@ -33,7 +33,8 @@ export function EditableGrid() {
   const columns = useMemo<ColumnDef<TestRow>[]>(
     () => [
       // 1. Non-editable (meta.editable: false)
-      { id: 'id', header: 'ID', width: 50, meta: { editable: false } },
+      // 1. Non-editable
+      { id: 'id', header: 'ID', width: 50, editable: false },
 
       // 2. Default string → text input
       { id: 'name', header: 'Name (text)', width: 130 },
@@ -47,26 +48,24 @@ export function EditableGrid() {
       // 5. cellType: 'percent' → text input, parses 50 → 0.5
       { id: 'rate', header: 'Rate (percent)', width: 110, cellType: 'percent' },
 
-      // 6. meta.options (strings) → dropdown
+      // 6. options (strings) → dropdown
       {
         id: 'status',
         header: 'Status (dropdown)',
         width: 140,
-        meta: { options: ['Open', 'Pending', 'Closed'] },
+        options: ['Open', 'Pending', 'Closed'],
       },
 
-      // 7. meta.options ({ label, value }) → dropdown with label/value
+      // 7. options ({ label, value }) → dropdown with label/value
       {
         id: 'priority',
         header: 'Priority (l/v)',
         width: 120,
-        meta: {
-          options: [
-            { label: 'High', value: 1 },
-            { label: 'Medium', value: 2 },
-            { label: 'Low', value: 3 },
-          ],
-        },
+        options: [
+          { label: 'High', value: 1 },
+          { label: 'Medium', value: 2 },
+          { label: 'Low', value: 3 },
+        ],
         cellRenderer: (container, ctx) => {
           const labels: Record<number, string> = { 1: 'High', 2: 'Medium', 3: 'Low' };
           const colors: Record<number, string> = { 1: '#c62828', 2: '#f57f17', 3: '#2e7d32' };
@@ -87,12 +86,12 @@ export function EditableGrid() {
         },
       },
 
-      // 9. Boolean with meta.editor: 'text' → force text input
+      // 9. Boolean with editor: 'text' → force text input
       {
         id: 'activeForcedText',
         header: 'Bool (text)',
         width: 100,
-        meta: { editor: 'text' },
+        editor: 'text',
         cellRenderer: (container, ctx) => {
           container.textContent = ctx.value ? 'Yes' : 'No';
         },
@@ -105,7 +104,7 @@ export function EditableGrid() {
       { id: 'notes', header: 'Notes', width: 140 },
 
       // 12. Read-only column
-      { id: 'readonly', header: 'Read-only', width: 110, meta: { editable: false } },
+      { id: 'readonly', header: 'Read-only', width: 110, editable: false },
     ],
     [],
   );

@@ -29,7 +29,7 @@ export interface FormattingOptions {
 }
 
 export interface FormattingApi {
-  formatValue(value: unknown, type: string, meta?: Record<string, unknown>): string;
+  formatValue(value: unknown, type: string, column?: { hideZero?: boolean; dateFormat?: string }): string;
   parseValue(displayValue: string, type: string): unknown;
 }
 
@@ -107,11 +107,10 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
         return fmt;
       }
 
-      function formatValue(value: unknown, type: string, meta?: Record<string, unknown>): string {
+      function formatValue(value: unknown, type: string, column?: { hideZero?: boolean; dateFormat?: string }): string {
         if (value == null) return '';
 
-        const hideZero = meta?.hideZero as boolean | undefined;
-        if (hideZero && value === 0) return '';
+        if (column?.hideZero && value === 0) return '';
 
         switch (type) {
           case 'number':
@@ -125,7 +124,7 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
           case 'percent':
             return typeof value === 'number' ? percentFmt.format(value) : String(value);
           case 'date': {
-            const datePreset = (meta?.dateFormat as DateFormatPreset) ?? defaultDateFormat;
+            const datePreset = (column?.dateFormat as DateFormatPreset) ?? defaultDateFormat;
             if (datePreset === 'iso') {
               // ISO format: YYYY-MM-DD (no Intl needed)
               const d = value instanceof Date ? value : new Date(value as string);
@@ -166,13 +165,13 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
       for (const type of cellTypes) {
         const renderer: CellTypeRenderer = {
           render(container: HTMLElement, context: CellRenderContext) {
-            container.textContent = formatValue(context.value, type, context.column.meta);
+            container.textContent = formatValue(context.value, type, context.column);
             if (type === 'number' || type === 'currency') {
               container.style.textAlign = 'right';
             }
           },
           getStringValue(context: CellRenderContext) {
-            return formatValue(context.value, type, context.column.meta);
+            return formatValue(context.value, type, context.column);
           },
           parseStringValue(value: string) {
             return parseValue(value, type);

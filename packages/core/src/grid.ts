@@ -84,9 +84,7 @@ export function createGrid<
     visibleRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
     selection: createEmptySelection(),
     frozenTopRows: options.frozenTopRows ?? 0,
-    frozenBottomRows: options.frozenBottomRows ?? 0,
     frozenLeftColumns: options.frozenLeftColumns ?? 0,
-    frozenRightColumns: options.frozenRightColumns ?? 0,
     pluginState: {},
   };
 
@@ -142,9 +140,9 @@ export function createGrid<
     const zoneDims = computeZoneDimensions(
       {
         frozenTopRows: state.frozenTopRows,
-        frozenBottomRows: state.frozenBottomRows,
+        frozenBottomRows: 0,
         frozenLeftColumns: state.frozenLeftColumns,
-        frozenRightColumns: state.frozenRightColumns,
+        frozenRightColumns: 0,
       },
       (i) => state.rowHeights[i] ?? DEFAULT_ROW_HEIGHT,
       (i) => columnManager.getWidth(i),
@@ -519,7 +517,7 @@ export function createGrid<
     // Collect menu items from plugins
     for (const plugin of pluginRegistry.getAllPlugins()) {
       if (plugin.id === 'sorting') {
-        const api = pluginRegistry.getPlugin<{ getSortState: () => { columnId: string }[]; clearSort: () => void; toggleSort: (id: string, multi?: boolean) => void }>(plugin.id);
+        const api = pluginRegistry.getPlugin<{ getSortState: () => { columnId: string; direction: string }[]; clearSort: () => void; toggleSort: (id: string, multi?: boolean) => void }>(plugin.id);
         if (api) {
           const sorted = api.getSortState();
           const colSorted = sorted.find((s) => s.columnId === columnId);

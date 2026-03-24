@@ -2,7 +2,7 @@
 // Keyboard Navigation — Arrow, Tab, Enter, Escape handling
 // ============================================================================
 
-import type { CellPosition, Selection, KeyBinding } from '../types';
+import type { CellPosition } from '../types';
 
 export interface NavigationBounds {
   rowCount: number;
@@ -91,52 +91,3 @@ export function getNavigationDirection(
   }
 }
 
-/** Create the default keyboard bindings for grid navigation */
-export function createDefaultKeyBindings(
-  getSelection: () => Selection,
-  setSelection: (selection: Selection) => void,
-  bounds: () => NavigationBounds,
-): KeyBinding[] {
-  return [
-    {
-      key: 'ArrowUp',
-      handler: () => handleArrow('up', getSelection, setSelection, bounds),
-    },
-    {
-      key: 'ArrowDown',
-      handler: () => handleArrow('down', getSelection, setSelection, bounds),
-    },
-    {
-      key: 'ArrowLeft',
-      handler: () => handleArrow('left', getSelection, setSelection, bounds),
-    },
-    {
-      key: 'ArrowRight',
-      handler: () => handleArrow('right', getSelection, setSelection, bounds),
-    },
-  ];
-}
-
-function handleArrow(
-  direction: 'up' | 'down' | 'left' | 'right',
-  getSelection: () => Selection,
-  setSelection: (selection: Selection) => void,
-  bounds: () => NavigationBounds,
-): boolean {
-  const selection = getSelection();
-  if (!selection.active) return false;
-
-  const newActive = navigateCell(selection.active, direction, bounds());
-  setSelection({
-    active: newActive,
-    ranges: [
-      {
-        startRow: newActive.rowIndex,
-        endRow: newActive.rowIndex,
-        startCol: newActive.colIndex,
-        endCol: newActive.colIndex,
-      },
-    ],
-  });
-  return true;
-}

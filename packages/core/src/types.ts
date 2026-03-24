@@ -101,18 +101,48 @@ export interface CellTypeRenderer {
 // Column Definitions
 // ---------------------------------------------------------------------------
 
+/** Built-in cell types for formatting and editing */
+export type CellType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'select' | 'toggle' | (string & {});
+
+/** Editor mode override */
+export type EditorType = 'text' | 'dropdown';
+
+/** Dropdown option for select/autocomplete columns */
+export interface ColumnOption {
+  label: string;
+  value: string | number | boolean;
+}
+
 export interface ColumnDef<TData = unknown> {
   id: string;
   accessorKey?: keyof TData & string;
   accessorFn?: (row: TData, rowIndex: number) => unknown;
   header: string | (() => HTMLElement | string);
+
+  // Layout
   width?: number;
   minWidth?: number;
   maxWidth?: number;
   resizable?: boolean;
-  colSpan?: number;
-  cellType?: string;
+
+  // Cell rendering
+  cellType?: CellType;
   cellRenderer?: CellRenderer<TData>;
+
+  // Editing
+  editable?: boolean;
+  editor?: EditorType;
+  options?: (string | ColumnOption)[];
+
+  // Sorting
+  sortable?: boolean;
+  comparator?: (a: unknown, b: unknown) => number;
+
+  // Formatting
+  dateFormat?: 'short' | 'medium' | 'long' | 'full' | 'iso' | 'month-year' | 'year' | 'time' | 'datetime';
+  hideZero?: boolean;
+
+  // Extensibility (for third-party plugins)
   meta?: Record<string, unknown>;
 }
 
@@ -161,8 +191,9 @@ export interface SelectionOptions {
 // ---------------------------------------------------------------------------
 
 export interface VirtualizationOptions {
-  enabled?: boolean;
+  /** Extra rows rendered outside viewport for smooth scroll. Default: 5 */
   overscanRows?: number;
+  /** Extra columns rendered outside viewport. Default: 3 */
   overscanColumns?: number;
 }
 
@@ -217,9 +248,7 @@ export interface GridOptions<
   rowHeight?: number | ((rowIndex: number) => number);
   headerHeight?: number;
   frozenTopRows?: number;
-  frozenBottomRows?: number;
   frozenLeftColumns?: number;
-  frozenRightColumns?: number;
   headerRows?: HeaderRow[];
   footerRows?: FooterRow[];
   selection?: SelectionOptions;
@@ -244,9 +273,7 @@ export interface GridState<TData = unknown> {
   visibleRange: VirtualRange;
   selection: Selection;
   frozenTopRows: number;
-  frozenBottomRows: number;
   frozenLeftColumns: number;
-  frozenRightColumns: number;
   pluginState: Record<string, unknown>;
 }
 

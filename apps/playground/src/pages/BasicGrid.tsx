@@ -29,13 +29,13 @@ const sampleData: SampleRow[] = [
 export function BasicGrid() {
   const columns = useMemo<ColumnDef<SampleRow>[]>(
     () => [
-      { id: 'id', header: 'ID', width: 60, meta: { editable: false } },
+      { id: 'id', header: 'ID', width: 60, editable: false },
       { id: 'name', header: 'Name', width: 200 },
       {
         id: 'category',
         header: 'Category',
         width: 120,
-        meta: { options: ['Revenue', 'Cost', 'Expense', 'Other'] },
+        options: ['Revenue', 'Cost', 'Expense', 'Other'],
       },
       { id: 'amount', header: 'Amount', width: 150, cellType: 'currency' },
       { id: 'date', header: 'Date', width: 150, cellType: 'date' },

@@ -13,6 +13,9 @@ export type {
   GridEvents,
   // Columns
   ColumnDef,
+  CellType,
+  EditorType,
+  ColumnOption,
   HeaderRow,
   HeaderCell,
   FooterRow,

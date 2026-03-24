@@ -56,7 +56,7 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting'> {
 
       function toggleSort(columnId: string, multi = false): void {
         const column = ctx.grid.getState().columns.find((c) => c.id === columnId);
-        if (!column || column.meta?.sortable === false) return;
+        if (!column || column.sortable === false) return;
 
         const existing = sortState.find((s) => s.columnId === columnId);
 
@@ -118,14 +118,9 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting'> {
               valB = (b as Record<string, unknown>)[col.accessorKey];
             }
 
-            // Use custom comparator from column meta if available
-            const comparator = col.meta?.comparator as
-              | ((a: unknown, b: unknown) => number)
-              | undefined;
             let cmp: number;
-
-            if (comparator) {
-              cmp = comparator(valA, valB);
+            if (col.comparator) {
+              cmp = col.comparator(valA, valB);
             } else {
               cmp = defaultCompare(valA, valB);
             }
