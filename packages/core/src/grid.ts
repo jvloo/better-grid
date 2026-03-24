@@ -508,16 +508,19 @@ export function createGrid<
       container = null;
       scrollContainer = null;
       contentSizer = null;
+      headerContainer = null;
       cellContainer = null;
       selectionLayer = null;
       resizeObserver = null;
       mounted = false;
+      headersRendered = false;
 
       emitter.emit('unmount');
     },
 
     destroy(): void {
-      instance.unmount();
+      // Skip if grid was re-mounted (StrictMode compatibility)
+      if (mounted) return;
       pluginRegistry.destroyAll();
       emitter.removeAllListeners();
     },

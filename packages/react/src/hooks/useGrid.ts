@@ -54,10 +54,17 @@ export function useGrid<
     [grid],
   );
 
-  // Cleanup on unmount
+  // Cleanup: only destroy when the grid instance itself changes (which is never
+  // since useMemo deps are []), effectively running only on true unmount.
+  // StrictMode double-invokes effects but the ref callback handles mount/unmount.
   useEffect(() => {
     return () => {
-      grid.destroy();
+      // Delay destroy to next frame — if StrictMode re-mounts,
+      // the mount() call will happen synchronously in the same tick,
+      // setting mounted=true before this timeout fires.
+      setTimeout(() => {
+        grid.destroy();
+      }, 0);
     };
   }, [grid]);
 
