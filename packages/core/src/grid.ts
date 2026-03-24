@@ -207,9 +207,14 @@ export function createGrid<
         state.frozenTopRows,
       );
 
-      // Update frozen overlay width
+      // Update frozen overlay width and clip scroll container
       const frozenWidth = measurements.colOffsets[frozenCols]!;
       frozenColOverlay!.style.width = `${frozenWidth}px`;
+
+      // Clip the scroll container's left edge so scrolled cells don't
+      // bleed behind the frozen overlay. Using clip-path preserves the
+      // full-width scroll area while hiding the frozen-width region.
+      scrollContainer!.style.clipPath = `inset(0 0 0 ${frozenWidth}px)`;
     }
 
     // Render selection layer
