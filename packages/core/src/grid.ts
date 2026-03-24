@@ -435,6 +435,28 @@ export function createGrid<
     const totalRows = headerRows!.length;
     // Track cells occupied by rowSpan from previous rows: "rowIdx:colIdx"
     const occupied = new Set<string>();
+    // Track which column indices are the right edge of a group span (not last row).
+    // Only these columns get extended resize handles that span upward.
+    const groupSpanEndCols = new Set<number>();
+
+    // Pre-scan: find columns that are the last column in a group span
+    {
+      let preColIndex = 0;
+      let preCellIdx = 0;
+      const firstRow = headerRows![0]!;
+      if (totalRows > 1) {
+        while (preCellIdx < firstRow.cells.length && preColIndex < state.columns.length) {
+          const c = firstRow.cells[preCellIdx]!;
+          preCellIdx++;
+          const s = c.colSpan ?? 1;
+          const endC = Math.min(preColIndex + s, state.columns.length);
+          if (s > 1) {
+            groupSpanEndCols.add(endC - 1);
+          }
+          preColIndex += s;
+        }
+      }
+    }
 
     for (let rowIdx = 0; rowIdx < totalRows; rowIdx++) {
       const row = headerRows![rowIdx]!;
@@ -481,9 +503,17 @@ export function createGrid<
           ? (cell.columnId ?? state.columns[colIndex]?.id)
           : undefined;
 
+        // Determine if the last column in this span is resizable
+        const lastColInSpan = endCol - 1;
+        const lastColResizable = state.columns[lastColInSpan]?.resizable !== false;
+        // Only last-row headers get resize handles (extended upward to cover group rows)
+        const canResize = reachesLastRow && lastColResizable;
+
         if (crossesBoundary) {
           // Split: frozen portion (cols colIndex..frozenCols-1)
           const frozenWidth = measurements.colOffsets[frozenCols]! - left;
+          const frozenLastCol = frozenCols - 1;
+          const frozenCanResize = reachesLastRow && state.columns[frozenLastCol]?.resizable !== false;
           const frozenEl = createHeaderCell({
             left,
             top: topOffset,
@@ -494,7 +524,9 @@ export function createGrid<
             isFrozen: true,
             isLastFrozenCol: true,
             columnId: undefined,
-            resizable: false,
+            resizable: frozenCanResize,
+            resizeColIndex: frozenLastCol,
+            resizeHandleTop: groupSpanEndCols.has(frozenLastCol) ? -topOffset : undefined,
           });
           if (span > 1) frozenEl.classList.add('bg-header-cell--span');
           if (!reachesLastRow) frozenEl.classList.add('bg-header-cell--group');
@@ -513,7 +545,9 @@ export function createGrid<
             isFrozen: false,
             isLastFrozenCol: false,
             columnId: undefined,
-            resizable: false,
+            resizable: canResize,
+            resizeColIndex: lastColInSpan,
+            resizeHandleTop: groupSpanEndCols.has(lastColInSpan) ? -topOffset : undefined,
           });
           scrollEl.style.borderLeft = 'none';
           if (span > 1) scrollEl.classList.add('bg-header-cell--span');
@@ -534,7 +568,9 @@ export function createGrid<
             isFrozen,
             isLastFrozenCol,
             columnId: targetColumnId,
-            resizable: reachesLastRow && span === 1 && state.columns[colIndex]?.resizable !== false,
+            resizable: canResize,
+            resizeColIndex: lastColInSpan,
+            resizeHandleTop: reachesLastRow && groupSpanEndCols.has(lastColInSpan) ? -topOffset : undefined,
           });
 
           // Add classes for multi-header styling
@@ -565,6 +601,8 @@ export function createGrid<
     isLastFrozenCol: boolean;
     columnId?: string;
     resizable: boolean;
+    resizeColIndex?: number; // column index to resize (defaults to colIndex)
+    resizeHandleTop?: number; // extend resize handle upward (negative value to cover group rows)
   }): HTMLElement {
     const cell = document.createElement('div');
     let cls = 'bg-header-cell';
@@ -604,11 +642,17 @@ export function createGrid<
     }
 
     if (opts.resizable) {
+      const resizeCol = opts.resizeColIndex ?? opts.colIndex;
       const handle = document.createElement('div');
       handle.className = 'bg-resize-handle';
+      if (opts.resizeHandleTop != null && opts.resizeHandleTop < 0) {
+        handle.style.top = `${opts.resizeHandleTop}px`;
+        // Allow handle to extend above the cell without clipping
+        cell.style.overflow = 'visible';
+      }
       handle.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
-        startColumnResize(opts.colIndex, e);
+        startColumnResize(resizeCol, e);
       });
       cell.appendChild(handle);
     }
