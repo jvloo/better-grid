@@ -71,9 +71,9 @@ function MyGrid({ data }: { data: Row[] }) {
   return (
     <BetterGrid<Row>
       columns={[
-        { id: 'id', accessorKey: 'id', header: 'ID', width: 60 },
-        { id: 'name', accessorKey: 'name', header: 'Name', width: 200 },
-        { id: 'amount', accessorKey: 'amount', header: 'Amount', width: 150, cellType: 'currency' },
+        { id: 'id', header: 'ID', width: 60 },
+        { id: 'name', header: 'Name', width: 200 },
+        { id: 'amount', header: 'Amount', width: 150, cellType: 'currency' },
       ]}
       data={data}
       frozenLeftColumns={1}

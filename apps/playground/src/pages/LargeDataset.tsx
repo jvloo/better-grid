@@ -22,12 +22,11 @@ function generateData(rowCount: number, colCount: number): LargeRow[] {
 
 function generateColumns(colCount: number): ColumnDef<LargeRow>[] {
   const cols: ColumnDef<LargeRow>[] = [
-    { id: 'id', accessorKey: 'id', header: 'ID', width: 70 },
+    { id: 'id', header: 'ID', width: 70 },
   ];
   for (let c = 0; c < colCount; c++) {
     cols.push({
       id: `col${c}`,
-      accessorKey: `col${c}` as keyof LargeRow & string,
       header: `Column ${c + 1}`,
       width: 100,
     });

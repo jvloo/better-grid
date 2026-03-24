@@ -29,20 +29,18 @@ const sampleData: SampleRow[] = [
 export function BasicGrid() {
   const columns = useMemo<ColumnDef<SampleRow>[]>(
     () => [
-      { id: 'id', accessorKey: 'id', header: 'ID', width: 60 },
-      { id: 'name', accessorKey: 'name', header: 'Name', width: 200 },
+      { id: 'id', header: 'ID', width: 60 },
+      { id: 'name', header: 'Name', width: 200 },
       {
         id: 'category',
-        accessorKey: 'category',
         header: 'Category',
         width: 120,
         meta: { options: ['Revenue', 'Cost', 'Expense', 'Other'] },
       },
-      { id: 'amount', accessorKey: 'amount', header: 'Amount', width: 150, cellType: 'currency' },
-      { id: 'date', accessorKey: 'date', header: 'Date', width: 150, cellType: 'date' },
+      { id: 'amount', header: 'Amount', width: 150, cellType: 'currency' },
+      { id: 'date', header: 'Date', width: 150, cellType: 'date' },
       {
         id: 'active',
-        accessorKey: 'active',
         header: 'Active',
         width: 80,
         cellRenderer: (container, ctx) => {

@@ -12,8 +12,13 @@ export class ColumnManager<TData = unknown> {
   private widths: number[] = [];
 
   setColumns(columns: ColumnDef<TData>[]): void {
-    this.columns = columns;
-    this.widths = columns.map((col) => col.width ?? DEFAULT_WIDTH);
+    // Default accessorKey to id when not provided (and no accessorFn)
+    this.columns = columns.map((col) =>
+      !col.accessorKey && !col.accessorFn
+        ? { ...col, accessorKey: col.id as keyof TData & string }
+        : col,
+    );
+    this.widths = this.columns.map((col) => col.width ?? DEFAULT_WIDTH);
   }
 
   getColumns(): ColumnDef<TData>[] {
