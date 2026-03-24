@@ -522,11 +522,8 @@ export function createGrid<
             { label: 'Sort Ascending', action: () => { api.clearSort(); api.toggleSort(columnId); } },
             { label: 'Sort Descending', action: () => { api.clearSort(); api.toggleSort(columnId); api.toggleSort(columnId); } },
           );
-          if (colSorted) {
-            items.push({ label: 'Clear Sort', action: () => api.clearSort() });
-          }
           if (sorted.length > 0) {
-            items.push({ label: 'Clear All Sorts', action: () => api.clearSort() });
+            items.push({ label: 'Clear Sort', action: () => api.clearSort() });
           }
         }
       }
