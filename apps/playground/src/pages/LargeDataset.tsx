@@ -82,12 +82,12 @@ function generateColumns(colCount: number): ColumnDef<LargeRow>[] {
 }
 
 const PRESETS = [
-  { label: '1K × 20', rows: 1_000, cols: 20 },
-  { label: '10K × 50', rows: 10_000, cols: 50 },
-  { label: '100K × 50', rows: 100_000, cols: 50 },
-  { label: '1M × 50', rows: 1_000_000, cols: 50 },
-  { label: '10M × 20', rows: 10_000_000, cols: 20 },
-  { label: '100M × 10', rows: 100_000_000, cols: 10 },
+  { label: '1K × 20', rows: 1_000, cols: 20, note: 'Typical form' },
+  { label: '10K × 50', rows: 10_000, cols: 50, note: 'Large report' },
+  { label: '100K × 50', rows: 100_000, cols: 50, note: 'Analytics' },
+  { label: '1M × 50', rows: 1_000_000, cols: 50, note: 'Stress test' },
+  { label: '10M × 20', rows: 10_000_000, cols: 20, note: 'Synthetic', lazy: true },
+  { label: '100M × 10', rows: 100_000_000, cols: 10, note: 'Synthetic', lazy: true },
 ];
 
 export function LargeDataset() {
@@ -210,12 +210,11 @@ export function LargeDataset() {
         height={480}
       />
 
-      <div style={{ marginTop: 12, fontSize: 12, color: '#aaa' }}>
+      <div style={{ marginTop: 12, fontSize: 12, color: '#aaa', lineHeight: 1.5 }}>
         {isLazy
-          ? 'Lazy mode: rows generated on-demand as you scroll. Only ~10K rows cached in memory.'
-          : 'All rows in memory. Scroll to see virtualization — DOM stays constant regardless of dataset size.'}
-        {rowCount >= 100_000 && ' AG Grid crashes at 400K rows. '}
-        {rowCount >= 10_000_000 && 'Canvas grids claim 100M — we do it with DOM virtualization + lazy data.'}
+          ? '⚠️ Synthetic test: rows generated on-demand (lazy proxy). Real-world datasets >1M should use server-side pagination.'
+          : `All ${formatNumber(rowCount)} rows in memory. DOM stays constant (~${domCount} elements) regardless of dataset size.`}
+        {rowCount >= 100_000 && rowCount <= 1_000_000 && ' For comparison: AG Grid crashes at 400K rows.'}
       </div>
     </div>
   );
