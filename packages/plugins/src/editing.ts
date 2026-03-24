@@ -155,8 +155,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           originalValue = cellEl.textContent;
         }
 
-        const displayText = cellEl.textContent?.trim() ?? '';
-
         // Check if this should be a dropdown
         const dropdownOpts = getDropdownOptions(column, originalValue);
 
@@ -168,7 +166,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         if (dropdownOpts) {
           activeEditor = createDropdown(cellEl, dropdownOpts, originalValue);
         } else {
-          activeEditor = createTextInput(cellEl, initialValue ?? displayText, initialValue !== undefined);
+          // Use raw value for editing (not formatted display text)
+          // e.g. 99.9999 instead of "100.00", "2026-01-15" instead of "Jan 15, 2026"
+          const editValue = initialValue ?? (originalValue != null ? String(originalValue) : '');
+          activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined);
         }
       }
 
