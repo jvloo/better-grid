@@ -114,6 +114,13 @@
   background: var(--bg-active-bg, #fff);
 }
 
+.bg-cell--editing {
+  background: var(--bg-edit-bg, #fff);
+  outline: 2px solid var(--bg-active-border, #1a73e8);
+  outline-offset: -2px;
+  z-index: 4;
+}
+
 /* ---------------------------------------------------------------------------
    Frozen Rows & Columns
    --------------------------------------------------------------------------- */

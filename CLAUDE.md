@@ -1,6 +1,6 @@
 # Better Grid
 
-Framework-agnostic, TypeScript-first data grid & spreadsheet library with plugin architecture.
+Framework-agnostic, TypeScript-first, AI-native data grid & spreadsheet library with plugin architecture.
 
 ## Architecture
 
