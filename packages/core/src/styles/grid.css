@@ -1,0 +1,112 @@
+/* ============================================================================
+   Better Grid — Base Styles
+   ============================================================================ */
+
+.bg-grid {
+  position: relative;
+  overflow: hidden;
+  outline: none;
+  font-family: var(--bg-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-size: var(--bg-font-size, 14px);
+  color: var(--bg-text-color, #1a1a1a);
+  background: var(--bg-grid-bg, #fff);
+  border: var(--bg-grid-border, 1px solid #e0e0e0);
+}
+
+/* Scroll container */
+.bg-grid__scroll {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+/* Content sizer — sets scroll dimensions */
+.bg-grid__sizer {
+  position: relative;
+}
+
+/* Cell container */
+.bg-grid__cells {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Cells
+   --------------------------------------------------------------------------- */
+
+.bg-cell {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: var(--bg-cell-padding, 0 8px);
+  border-right: var(--bg-cell-border, 1px solid #e8e8e8);
+  border-bottom: var(--bg-cell-border, 1px solid #e8e8e8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+
+.bg-cell--selected {
+  background: var(--bg-selection-bg, rgba(33, 133, 208, 0.08));
+}
+
+.bg-cell--active {
+  background: var(--bg-active-bg, #fff);
+}
+
+/* ---------------------------------------------------------------------------
+   Selection Overlay
+   --------------------------------------------------------------------------- */
+
+.bg-selection-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.bg-active-cell {
+  border: 2px solid var(--bg-active-border, #1a73e8);
+  z-index: 3;
+}
+
+.bg-selection-range {
+  background: var(--bg-selection-range-bg, rgba(33, 133, 208, 0.1));
+  border: 1px solid var(--bg-selection-range-border, rgba(33, 133, 208, 0.4));
+}
+
+/* ---------------------------------------------------------------------------
+   Header
+   --------------------------------------------------------------------------- */
+
+.bg-header {
+  background: var(--bg-header-bg, #f8f9fa);
+  font-weight: var(--bg-header-font-weight, 600);
+  border-bottom: var(--bg-header-border, 2px solid #e0e0e0);
+}
+
+/* ---------------------------------------------------------------------------
+   Scrollbar (optional custom styling)
+   --------------------------------------------------------------------------- */
+
+.bg-grid__scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.bg-grid__scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bg-grid__scroll::-webkit-scrollbar-thumb {
+  background: var(--bg-scrollbar-thumb, #c1c1c1);
+  border-radius: 4px;
+}
+
+.bg-grid__scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--bg-scrollbar-thumb-hover, #a0a0a0);
+}

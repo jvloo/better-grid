@@ -1,0 +1,358 @@
+// ============================================================================
+// Core Types — @better-grid/core
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// Utility Types
+// ---------------------------------------------------------------------------
+
+/** Merge a union of object types into a single intersection */
+export type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (
+  k: infer I,
+) => void
+  ? I
+  : never;
+
+// ---------------------------------------------------------------------------
+// Cell Position & Selection
+// ---------------------------------------------------------------------------
+
+export interface CellPosition {
+  rowIndex: number;
+  colIndex: number;
+}
+
+export interface CellRange {
+  startRow: number;
+  endRow: number;
+  startCol: number;
+  endCol: number;
+}
+
+export interface Selection {
+  /** The active (anchor) cell */
+  active: CellPosition | null;
+  /** Selected ranges (supports multi-range via Ctrl+click) */
+  ranges: CellRange[];
+}
+
+// ---------------------------------------------------------------------------
+// Scroll & Viewport
+// ---------------------------------------------------------------------------
+
+export interface ScrollState {
+  scrollTop: number;
+  scrollLeft: number;
+}
+
+export interface VirtualRange {
+  startRow: number;
+  endRow: number;
+  startCol: number;
+  endCol: number;
+}
+
+// ---------------------------------------------------------------------------
+// Cell Change
+// ---------------------------------------------------------------------------
+
+export interface CellChange<TData = unknown> {
+  rowIndex: number;
+  columnId: string;
+  oldValue: unknown;
+  newValue: unknown;
+  row: TData;
+}
+
+// ---------------------------------------------------------------------------
+// Cell Rendering
+// ---------------------------------------------------------------------------
+
+export interface CellStyle {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+export interface CellRenderContext<TData = unknown> {
+  rowIndex: number;
+  colIndex: number;
+  row: TData;
+  column: ColumnDef<TData>;
+  value: unknown;
+  isSelected: boolean;
+  isActive: boolean;
+  style: CellStyle;
+}
+
+export type CellRenderer<TData = unknown> = (
+  container: HTMLElement,
+  context: CellRenderContext<TData>,
+) => void | (() => void);
+
+export interface CellTypeRenderer {
+  render(container: HTMLElement, context: CellRenderContext): void | (() => void);
+  getStringValue?(context: CellRenderContext): string;
+  parseStringValue?(value: string, context: CellRenderContext): unknown;
+}
+
+// ---------------------------------------------------------------------------
+// Column Definitions
+// ---------------------------------------------------------------------------
+
+export interface ColumnDef<TData = unknown> {
+  id: string;
+  accessorKey?: keyof TData & string;
+  accessorFn?: (row: TData, rowIndex: number) => unknown;
+  header: string | (() => HTMLElement | string);
+  width?: number;
+  minWidth?: number;
+  maxWidth?: number;
+  resizable?: boolean;
+  colSpan?: number;
+  cellType?: string;
+  cellRenderer?: CellRenderer<TData>;
+  meta?: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
+// Header & Footer Rows (multi-level)
+// ---------------------------------------------------------------------------
+
+export interface HeaderCell {
+  id: string;
+  columnId?: string;
+  content: string | (() => HTMLElement | string);
+  colSpan?: number;
+  rowSpan?: number;
+}
+
+export interface HeaderRow {
+  id: string;
+  height?: number;
+  cells: HeaderCell[];
+}
+
+export interface FooterCell {
+  id: string;
+  columnId?: string;
+  content: string | (() => HTMLElement | string);
+  colSpan?: number;
+}
+
+export interface FooterRow {
+  id: string;
+  height?: number;
+  cells: FooterCell[];
+}
+
+// ---------------------------------------------------------------------------
+// Selection Options
+// ---------------------------------------------------------------------------
+
+export interface SelectionOptions {
+  mode: 'cell' | 'row' | 'range' | 'none';
+  multiRange?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Virtualization Options
+// ---------------------------------------------------------------------------
+
+export interface VirtualizationOptions {
+  enabled?: boolean;
+  overscanRows?: number;
+  overscanColumns?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Grid Events
+// ---------------------------------------------------------------------------
+
+export interface GridEvents<TData = unknown> {
+  // Selection
+  'selection:change': (selection: Selection) => void;
+  'selection:start': (cell: CellPosition) => void;
+  'selection:extend': (range: CellRange) => void;
+
+  // Scroll
+  scroll: (state: ScrollState) => void;
+
+  // Data
+  'data:change': (changes: CellChange<TData>[]) => void;
+  'data:set': (data: TData[]) => void;
+
+  // Column
+  'column:resize': (columnId: string, width: number) => void;
+
+  // Keyboard
+  'key:down': (event: KeyboardEvent, cell: CellPosition | null) => void;
+  'key:enter': (cell: CellPosition) => void;
+  'key:escape': (cell: CellPosition) => void;
+  'key:tab': (cell: CellPosition, direction: 'forward' | 'backward') => void;
+
+  // Cell
+  'cell:click': (cell: CellPosition, event: MouseEvent) => void;
+  'cell:dblclick': (cell: CellPosition, event: MouseEvent) => void;
+  'cell:focus': (cell: CellPosition) => void;
+  'cell:blur': (cell: CellPosition) => void;
+
+  // Lifecycle
+  mount: () => void;
+  unmount: () => void;
+  render: (visibleRange: VirtualRange) => void;
+}
+
+// ---------------------------------------------------------------------------
+// Grid Options
+// ---------------------------------------------------------------------------
+
+export interface GridOptions<
+  TData = unknown,
+  TPlugins extends GridPlugin[] = GridPlugin[],
+> {
+  columns: ColumnDef<TData>[];
+  data: TData[];
+  rowHeight?: number | ((rowIndex: number) => number);
+  headerHeight?: number;
+  frozenTopRows?: number;
+  frozenBottomRows?: number;
+  frozenLeftColumns?: number;
+  frozenRightColumns?: number;
+  headerRows?: HeaderRow[];
+  footerRows?: FooterRow[];
+  selection?: SelectionOptions;
+  virtualization?: VirtualizationOptions;
+  plugins?: TPlugins;
+  onSelectionChange?: (selection: Selection) => void;
+  onDataChange?: (changes: CellChange<TData>[]) => void;
+  onColumnResize?: (columnId: string, width: number) => void;
+}
+
+// ---------------------------------------------------------------------------
+// Grid State
+// ---------------------------------------------------------------------------
+
+export interface GridState<TData = unknown> {
+  data: TData[];
+  columns: ColumnDef<TData>[];
+  columnWidths: number[];
+  rowHeights: number[];
+  scrollTop: number;
+  scrollLeft: number;
+  visibleRange: VirtualRange;
+  selection: Selection;
+  frozenTopRows: number;
+  frozenBottomRows: number;
+  frozenLeftColumns: number;
+  frozenRightColumns: number;
+  pluginState: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
+// Plugin System
+// ---------------------------------------------------------------------------
+
+export interface KeyBinding {
+  key: string;
+  handler: (event: KeyboardEvent, cell: CellPosition | null) => boolean | void;
+  priority?: number;
+}
+
+export interface CellDecorator {
+  id: string;
+  priority?: number;
+  decorate(cell: HTMLElement, context: CellRenderContext): void;
+  cleanup?(cell: HTMLElement): void;
+}
+
+export interface Command {
+  id: string;
+  execute(payload: unknown): void;
+  undo?(payload: unknown): void;
+}
+
+export interface PluginContext<TData = unknown> {
+  grid: GridInstance<TData>;
+  store: import('./state/store').StateStore<TData>;
+  on<E extends keyof GridEvents<TData>>(event: E, handler: GridEvents<TData>[E]): () => void;
+  emit<E extends keyof GridEvents<TData>>(event: E, ...args: Parameters<GridEvents<TData>[E]>): void;
+  registerKeyBinding(binding: KeyBinding): () => void;
+  registerCellDecorator(decorator: CellDecorator): () => void;
+  registerCellType(type: string, renderer: CellTypeRenderer): () => void;
+  registerCommand(command: Command): void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expose(api: Record<string, any>): void;
+  getPluginApi<T>(pluginId: string): T | undefined;
+}
+
+export interface GridPlugin<TId extends string = string> {
+  id: TId;
+  dependencies?: string[];
+  $types?: {
+    columnDef?: Record<string, unknown>;
+    cellState?: Record<string, unknown>;
+    gridOptions?: Record<string, unknown>;
+    gridState?: Record<string, unknown>;
+    events?: Record<string, unknown>;
+  };
+  init?(ctx: PluginContext): (() => void) | void;
+  hooks?: {
+    beforeCellCommit?(event: { rowIndex: number; colIndex: number; oldValue: unknown; newValue: unknown }):
+      | { rowIndex: number; colIndex: number; oldValue: unknown; newValue: unknown }
+      | false;
+    afterCellCommit?(event: { rowIndex: number; colIndex: number; oldValue: unknown; newValue: unknown }): void;
+    beforeRender?(rows: unknown[]): unknown[];
+    onKeyDown?(event: KeyboardEvent, cell: CellPosition | null): boolean | void;
+    onHeaderClick?(columnId: string): void;
+    onSelectionChange?(selection: Selection): void;
+  };
+  cellRenderers?: Record<string, CellTypeRenderer>;
+}
+
+// ---------------------------------------------------------------------------
+// Grid Instance
+// ---------------------------------------------------------------------------
+
+export interface GridInstance<
+  TData = unknown,
+  TPlugins extends GridPlugin[] = GridPlugin[],
+> {
+  /** Type inference — use as `typeof grid.$Infer.Row` */
+  $Infer: {
+    Row: TData;
+    CellState: unknown;
+    GridState: GridState<TData>;
+    Plugins: TPlugins;
+  };
+
+  mount(container: HTMLElement): void;
+  unmount(): void;
+  destroy(): void;
+
+  getData(): TData[];
+  setData(data: TData[]): void;
+  updateRow(rowIndex: number, data: Partial<TData>): void;
+  updateCell(rowIndex: number, columnId: string, value: unknown): void;
+
+  getColumns(): ColumnDef<TData>[];
+  setColumns(columns: ColumnDef<TData>[]): void;
+  setColumnWidth(columnId: string, width: number): void;
+
+  getSelection(): Selection;
+  setSelection(selection: Selection): void;
+  clearSelection(): void;
+
+  scrollTo(row: number, column?: number): void;
+  getScrollState(): ScrollState;
+
+  on<E extends keyof GridEvents<TData>>(event: E, handler: GridEvents<TData>[E]): () => void;
+  off<E extends keyof GridEvents<TData>>(event: E, handler: GridEvents<TData>[E]): void;
+
+  getPlugin<T>(pluginId: string): T | undefined;
+  getState(): GridState<TData>;
+
+  batch(fn: () => void): void;
+  refresh(): void;
+}
