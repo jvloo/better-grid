@@ -7,6 +7,7 @@ import type { CellRenderContext, CellRenderer, CellTypeRenderer, ColumnDef, Sele
 type AnyCellRenderContext = CellRenderContext<any>;
 import type { LayoutMeasurements } from '../virtualization/engine';
 import { isCellActive, isCellInSelection } from '../selection/model';
+import { snapToDevicePixel } from '../utils';
 
 export class RenderingPipeline<TData = unknown> {
   private cellPool = new Map<string, HTMLElement>();
@@ -63,11 +64,11 @@ export class RenderingPipeline<TData = unknown> {
           this.cellPool.set(key, cell);
         }
 
-        // Position
-        const top = measurements.rowOffsets[row]!;
-        const left = measurements.colOffsets[col]!;
-        const height = measurements.rowOffsets[row + 1]! - top;
-        const width = measurements.colOffsets[col + 1]! - left;
+        // Position — snap to device pixel boundaries for crisp rendering at all zoom levels
+        const top = snapToDevicePixel(measurements.rowOffsets[row]!);
+        const left = snapToDevicePixel(measurements.colOffsets[col]!);
+        const height = snapToDevicePixel(measurements.rowOffsets[row + 1]!) - top;
+        const width = snapToDevicePixel(measurements.colOffsets[col + 1]!) - left;
 
         cell.style.position = 'absolute';
         cell.style.transform = `translate3d(${left}px, ${top}px, 0)`;
@@ -77,7 +78,7 @@ export class RenderingPipeline<TData = unknown> {
         // Frozen left columns: offset by scrollLeft to keep them visible
         if (col < frozenLeftColumns) {
           cell.classList.add('bg-cell--frozen-left');
-          cell.style.transform = `translate3d(${left + scrollLeft}px, ${top}px, 0)`;
+          cell.style.transform = `translate3d(${snapToDevicePixel(left + scrollLeft)}px, ${top}px, 0)`;
           this.frozenCells.set(key, { element: cell, baseLeft: left, top });
         } else {
           cell.classList.remove('bg-cell--frozen-left');
@@ -149,7 +150,7 @@ export class RenderingPipeline<TData = unknown> {
   /** Synchronously update frozen cell positions — call from scroll handler to avoid lag */
   updateFrozenPositions(scrollLeft: number): void {
     for (const { element, baseLeft, top } of this.frozenCells.values()) {
-      element.style.transform = `translate3d(${baseLeft + scrollLeft}px, ${top}px, 0)`;
+      element.style.transform = `translate3d(${snapToDevicePixel(baseLeft + scrollLeft)}px, ${top}px, 0)`;
     }
   }
 
