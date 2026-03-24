@@ -67,6 +67,22 @@
   z-index: 11;
 }
 
+/* Column resize handle */
+.bg-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 1;
+}
+
+.bg-resize-handle:hover,
+.bg-resize-handle:active {
+  background: var(--bg-resize-handle-active, rgba(33, 133, 208, 0.3));
+}
+
 /* ---------------------------------------------------------------------------
    Cells
    --------------------------------------------------------------------------- */

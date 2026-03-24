@@ -275,6 +275,7 @@ export function createGrid<
       } else {
         const newActive = navigateCell(state.selection.active, direction, bounds);
         store.setSelection(createCellSelection(newActive));
+        scrollCellIntoView(newActive);
       }
       emitter.emit('selection:change', store.getState().selection);
       scheduleRender();
@@ -286,6 +287,7 @@ export function createGrid<
       event.preventDefault();
       const newActive = navigateTab(state.selection.active, !event.shiftKey, bounds);
       store.setSelection(createCellSelection(newActive));
+      scrollCellIntoView(newActive);
       emitter.emit('key:tab', state.selection.active, event.shiftKey ? 'backward' : 'forward');
       emitter.emit('selection:change', store.getState().selection);
       scheduleRender();
@@ -310,39 +312,38 @@ export function createGrid<
   // ---------------------------------------------------------------------------
 
   let headersRendered = false;
+  const frozenHeaderCells: HTMLElement[] = [];
 
   function renderHeaders(
     state: GridState<TData>,
     measurements: LayoutMeasurements,
   ): void {
-    if (!headerContainer || headersRendered) return;
-    headersRendered = true;
+    if (!headerContainer) return;
 
+    // On scroll, just update frozen header positions
+    if (headersRendered) {
+      updateFrozenHeaders(state.scrollLeft);
+      return;
+    }
+
+    headersRendered = true;
     headerContainer.innerHTML = '';
+    frozenHeaderCells.length = 0;
 
     for (let col = 0; col < state.columns.length; col++) {
       const column = state.columns[col]!;
       const left = measurements.colOffsets[col]!;
       const width = measurements.colOffsets[col + 1]! - left;
+      const isFrozen = col < state.frozenLeftColumns;
 
       const headerCell = document.createElement('div');
-      headerCell.className = 'bg-header-cell';
+      headerCell.className = 'bg-header-cell' + (isFrozen ? ' bg-header-cell--frozen-left' : '');
       headerCell.style.position = 'absolute';
       headerCell.style.transform = `translate3d(${left}px, 0, 0)`;
       headerCell.style.width = `${width}px`;
       headerCell.style.height = `${headerHeight}px`;
-      headerCell.style.boxSizing = 'border-box';
-      headerCell.style.display = 'flex';
-      headerCell.style.alignItems = 'center';
-      headerCell.style.padding = '0 8px';
-      headerCell.style.fontWeight = '600';
-      headerCell.style.borderRight = '1px solid #e0e0e0';
-      headerCell.style.borderBottom = '2px solid #d0d0d0';
-      headerCell.style.background = '#f8f9fa';
-      headerCell.style.userSelect = 'none';
-      headerCell.style.whiteSpace = 'nowrap';
-      headerCell.style.overflow = 'hidden';
-      headerCell.style.textOverflow = 'ellipsis';
+      headerCell.dataset.col = String(col);
+      headerCell.dataset.baseLeft = String(left);
 
       if (typeof column.header === 'function') {
         const content = column.header();
@@ -355,20 +356,106 @@ export function createGrid<
         headerCell.textContent = column.header;
       }
 
-      headerCell.dataset.col = String(col);
-      headerCell.addEventListener('click', () => {
-        // Notify plugins (sorting can hook into this)
+      headerCell.addEventListener('click', (e) => {
+        // Don't trigger click if resize handle was dragged
+        if ((e.target as HTMLElement).classList.contains('bg-resize-handle')) return;
         for (const plugin of pluginRegistry.getAllPlugins()) {
           plugin.hooks?.onHeaderClick?.(column.id);
         }
       });
 
+      // Resize handle
+      if (column.resizable !== false) {
+        const handle = document.createElement('div');
+        handle.className = 'bg-resize-handle';
+        handle.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          startColumnResize(col, e);
+        });
+        headerCell.appendChild(handle);
+      }
+
+      if (isFrozen) {
+        frozenHeaderCells.push(headerCell);
+      }
+
       headerContainer.appendChild(headerCell);
     }
   }
 
+  function updateFrozenHeaders(scrollLeft: number): void {
+    for (const cell of frozenHeaderCells) {
+      const baseLeft = Number(cell.dataset.baseLeft);
+      cell.style.transform = `translate3d(${baseLeft + scrollLeft}px, 0, 0)`;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scroll cell into view
+  // ---------------------------------------------------------------------------
+
+  function scrollCellIntoView(cell: CellPosition): void {
+    if (!scrollContainer) return;
+
+    const measurements = virtualization.getMeasurements();
+    const rowTop = measurements.rowOffsets[cell.rowIndex]!;
+    const rowBottom = measurements.rowOffsets[cell.rowIndex + 1]!;
+    const colLeft = measurements.colOffsets[cell.colIndex]!;
+    const colRight = measurements.colOffsets[cell.colIndex + 1]!;
+
+    const viewTop = scrollContainer.scrollTop - headerHeight;
+    const viewBottom = viewTop + scrollContainer.clientHeight - headerHeight;
+    const viewLeft = scrollContainer.scrollLeft;
+    const viewRight = viewLeft + scrollContainer.clientWidth;
+
+    // Vertical scroll
+    if (rowTop < viewTop) {
+      scrollContainer.scrollTop = rowTop + headerHeight;
+    } else if (rowBottom > viewBottom) {
+      scrollContainer.scrollTop = rowBottom - scrollContainer.clientHeight + headerHeight * 2;
+    }
+
+    // Horizontal scroll (skip if frozen column)
+    const state = store.getState();
+    if (cell.colIndex >= state.frozenLeftColumns) {
+      if (colLeft < viewLeft) {
+        scrollContainer.scrollLeft = colLeft;
+      } else if (colRight > viewRight) {
+        scrollContainer.scrollLeft = colRight - scrollContainer.clientWidth;
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Column resize
+  // ---------------------------------------------------------------------------
+
+  function startColumnResize(colIndex: number, startEvent: PointerEvent): void {
+    const startX = startEvent.clientX;
+    const startWidth = columnManager.getWidth(colIndex);
+
+    const onPointerMove = (e: PointerEvent) => {
+      const delta = e.clientX - startX;
+      const newWidth = Math.max(columnManager.getColumns()[colIndex]?.minWidth ?? 50, startWidth + delta);
+      instance.setColumnWidth(columnManager.getColumns()[colIndex]!.id, newWidth);
+    };
+
+    const onPointerUp = () => {
+      document.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerup', onPointerUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('pointermove', onPointerMove);
+    document.addEventListener('pointerup', onPointerUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }
+
   function invalidateHeaders(): void {
     headersRendered = false;
+    frozenHeaderCells.length = 0;
   }
 
   function getCellFromEvent(event: Event): CellPosition | null {
@@ -578,6 +665,7 @@ export function createGrid<
       if (idx === -1) return;
       columnManager.setWidth(idx, width);
       store.setColumnWidth(idx, columnManager.getWidth(idx));
+      invalidateHeaders();
       recomputeMeasurements();
       emitter.emit('column:resize', columnId, width);
       options.onColumnResize?.(columnId, width);
