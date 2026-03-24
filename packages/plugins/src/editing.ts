@@ -50,7 +50,7 @@ const SELECT_CSS = `
   padding: 0 2px;
   margin: 0;
   font: inherit;
-  color: inherit;
+  color: var(--bg-text-color, #1a1a1a);
   background: var(--bg-edit-bg, #fff);
   box-sizing: border-box;
   cursor: pointer;
