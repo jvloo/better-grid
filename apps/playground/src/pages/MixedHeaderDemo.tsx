@@ -28,6 +28,16 @@ const data: SalesRow[] = [
   { id: 8, product: 'Sensor Pack', region: 'Europe', q1Rev: 210000, q1Units: 420, q2Rev: 255000, q2Units: 510, ytdTotal: 465000, margin: 0.41 },
   { id: 9, product: 'IoT Hub', region: 'North America', q1Rev: 128000, q1Units: 320, q2Rev: 165000, q2Units: 412, ytdTotal: 293000, margin: 0.48 },
   { id: 10, product: 'IoT Hub', region: 'Asia Pacific', q1Rev: 185000, q1Units: 462, q2Rev: 220000, q2Units: 550, ytdTotal: 405000, margin: 0.44 },
+  { id: 11, product: 'Sensor Pack', region: 'Asia Pacific', q1Rev: 275000, q1Units: 550, q2Rev: 310000, q2Units: 620, ytdTotal: 585000, margin: 0.39 },
+  { id: 12, product: 'IoT Hub', region: 'Europe', q1Rev: 142000, q1Units: 355, q2Rev: 178000, q2Units: 445, ytdTotal: 320000, margin: 0.46 },
+  { id: 13, product: 'Cable Kit', region: 'North America', q1Rev: 52000, q1Units: 1300, q2Rev: 68000, q2Units: 1700, ytdTotal: 120000, margin: 0.33 },
+  { id: 14, product: 'Cable Kit', region: 'Europe', q1Rev: 38000, q1Units: 950, q2Rev: 45000, q2Units: 1125, ytdTotal: 83000, margin: 0.31 },
+  { id: 15, product: 'Cable Kit', region: 'Asia Pacific', q1Rev: 61000, q1Units: 1525, q2Rev: 74000, q2Units: 1850, ytdTotal: 135000, margin: 0.34 },
+  { id: 16, product: 'Widget Pro', region: 'Latin America', q1Rev: 98000, q1Units: 327, q2Rev: 125000, q2Units: 417, ytdTotal: 223000, margin: 0.36 },
+  { id: 17, product: 'Gadget X', region: 'Latin America', q1Rev: 54000, q1Units: 270, q2Rev: 72000, q2Units: 360, ytdTotal: 126000, margin: 0.38 },
+  { id: 18, product: 'Sensor Pack', region: 'Latin America', q1Rev: 192000, q1Units: 384, q2Rev: 228000, q2Units: 456, ytdTotal: 420000, margin: 0.43 },
+  { id: 19, product: 'IoT Hub', region: 'Latin America', q1Rev: 105000, q1Units: 262, q2Rev: 138000, q2Units: 345, ytdTotal: 243000, margin: 0.47 },
+  { id: 20, product: 'Cable Kit', region: 'Latin America', q1Rev: 42000, q1Units: 1050, q2Rev: 56000, q2Units: 1400, ytdTotal: 98000, margin: 0.32 },
 ];
 
 export function MixedHeaderDemo() {

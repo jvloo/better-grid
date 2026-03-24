@@ -25,6 +25,18 @@ const data: ProductRow[] = [
   { id: 6, name: 'Display 4K', category: 'Electronics', price: 599, cost: 420, margin: 0.299, launchDate: '2026-02-28', inStock: false },
   { id: 7, name: 'Mount Arm', category: 'Accessories', price: 45, cost: 18, margin: 0.6, launchDate: '2025-04-15', inStock: true },
   { id: 8, name: 'IoT Hub', category: 'IoT', price: 199, cost: 130, margin: 0.3467, launchDate: '2025-12-01', inStock: true },
+  { id: 9, name: 'Mesh Router', category: 'Networking', price: 179.99, cost: 105, margin: 0.4167, launchDate: '2025-08-12', inStock: true },
+  { id: 10, name: 'USB-C Dock', category: 'Accessories', price: 69.99, cost: 32, margin: 0.5429, launchDate: '2026-01-22', inStock: true },
+  { id: 11, name: 'Dev Board v3', category: 'Hardware', price: 54.95, cost: 28, margin: 0.4904, launchDate: '2025-10-08', inStock: false },
+  { id: 12, name: 'License Server', category: 'Software', price: 999, cost: 120, margin: 0.8799, launchDate: '2026-03-01', inStock: true },
+  { id: 13, name: 'PoE Switch 8-Port', category: 'Networking', price: 249, cost: 165, margin: 0.3373, launchDate: '2025-07-18', inStock: true },
+  { id: 14, name: 'Thermal Camera', category: 'Electronics', price: 849, cost: 580, margin: 0.3168, launchDate: '2025-11-30', inStock: false },
+  { id: 15, name: 'Edge Gateway', category: 'IoT', price: 349, cost: 215, margin: 0.384, launchDate: '2026-02-14', inStock: true },
+  { id: 16, name: 'Torque Driver Set', category: 'Hardware', price: 39.99, cost: 16, margin: 0.5999, launchDate: '2025-03-25', inStock: true },
+  { id: 17, name: 'Analytics Suite', category: 'Software', price: 499, cost: 60, margin: 0.8797, launchDate: '2025-05-10', inStock: true },
+  { id: 18, name: 'Wireless Charger', category: 'Accessories', price: 34.99, cost: 14, margin: 0.5999, launchDate: '2026-01-05', inStock: false },
+  { id: 19, name: 'Fiber Patch Panel', category: 'Networking', price: 129, cost: 72, margin: 0.4419, launchDate: '2025-09-20', inStock: true },
+  { id: 20, name: 'Smart Relay', category: 'IoT', price: 89, cost: 48, margin: 0.4607, launchDate: '2026-03-18', inStock: true },
 ];
 
 export function FormatEdit() {
@@ -36,7 +48,7 @@ export function FormatEdit() {
         id: 'category',
         header: 'Category',
         width: 110,
-        options: ['Electronics', 'Hardware', 'IoT', 'Accessories'],
+        options: ['Electronics', 'Hardware', 'IoT', 'Accessories', 'Software', 'Networking'],
       },
       { id: 'price', header: 'Price', width: 100, cellType: 'currency' },
       { id: 'cost', header: 'Cost', width: 100, cellType: 'currency' },
@@ -92,7 +104,7 @@ const columns = [
   { id: 'id', header: 'ID', width: 45, editable: false },
   { id: 'name', header: 'Product', width: 140 },
   { id: 'category', header: 'Category', width: 110,
-    options: ['Electronics', 'Hardware', 'IoT', 'Accessories'] },
+    options: ['Electronics', 'Hardware', 'IoT', 'Accessories', 'Software', 'Networking'] },
   { id: 'price', header: 'Price', width: 100,
     cellType: 'currency' },             // → $299.99
   { id: 'cost', header: 'Cost', width: 100,

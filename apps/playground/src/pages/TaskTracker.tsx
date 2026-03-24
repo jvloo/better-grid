@@ -30,6 +30,14 @@ const data: TaskRow[] = [
   { id: 10, task: 'Security review', assignee: 'Emma', priority: 1, status: 'Todo', dueDate: '2026-03-22', estimate: 8, progress: 0, tags: 'security' },
   { id: 11, task: 'Analytics dashboard', assignee: 'Alice', priority: 2, status: 'Todo', dueDate: '2026-04-05', estimate: 40, progress: 0, tags: 'frontend' },
   { id: 12, task: 'Email notifications', assignee: 'Carol', priority: 3, status: 'Done', dueDate: '2026-02-28', estimate: 12, progress: 1, tags: 'backend' },
+  { id: 13, task: 'Container orchestration setup', assignee: 'Alice', priority: 1, status: 'In Progress', dueDate: '2026-04-10', estimate: 20, progress: 0.3, tags: 'devops' },
+  { id: 14, task: 'Accessibility audit', assignee: 'Bob', priority: 2, status: 'Todo', dueDate: '2026-04-15', estimate: 14, progress: 0, tags: 'qa' },
+  { id: 15, task: 'Rate limiter middleware', assignee: 'Carol', priority: 1, status: 'In Review', dueDate: '2026-03-28', estimate: 10, progress: 0.85, tags: 'security' },
+  { id: 16, task: 'Component library docs', assignee: 'David', priority: 3, status: 'In Progress', dueDate: '2026-04-20', estimate: 18, progress: 0.15, tags: 'docs' },
+  { id: 17, task: 'Dark mode theme', assignee: 'Bob', priority: 2, status: 'In Progress', dueDate: '2026-04-08', estimate: 12, progress: 0.5, tags: 'design' },
+  { id: 18, task: 'GraphQL API layer', assignee: 'Emma', priority: 1, status: 'Todo', dueDate: '2026-04-12', estimate: 28, progress: 0, tags: 'backend' },
+  { id: 19, task: 'E2E test suite', assignee: 'Alice', priority: 2, status: 'In Progress', dueDate: '2026-04-18', estimate: 24, progress: 0.4, tags: 'qa' },
+  { id: 20, task: 'Log aggregation pipeline', assignee: 'David', priority: 3, status: 'Todo', dueDate: '2026-04-25', estimate: 16, progress: 0, tags: 'devops' },
 ];
 
 export function TaskTracker() {

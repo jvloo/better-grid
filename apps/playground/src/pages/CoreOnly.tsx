@@ -24,6 +24,16 @@ const sampleData: SampleRow[] = [
   { id: 8, name: 'Henry Taylor', department: 'Marketing', salary: 78000, startDate: '2025-02-15', active: false },
   { id: 9, name: 'Ivy Zhang', department: 'Engineering', salary: 155000, startDate: '2021-04-20', active: true },
   { id: 10, name: 'Jack Brown', department: 'Sales', salary: 97000, startDate: '2024-08-30', active: true },
+  { id: 11, name: 'Karen Patel', department: 'HR', salary: 89000, startDate: '2023-02-14', active: true },
+  { id: 12, name: 'Leo Nguyen', department: 'Finance', salary: 112000, startDate: '2022-06-01', active: true },
+  { id: 13, name: 'Maria Santos', department: 'Engineering', salary: 140000, startDate: '2021-09-15', active: true },
+  { id: 14, name: 'Nathan Clark', department: 'Marketing', salary: 82000, startDate: '2025-03-01', active: false },
+  { id: 15, name: 'Olivia Ross', department: 'Design', salary: 99000, startDate: '2023-05-22', active: true },
+  { id: 16, name: 'Paul Rivera', department: 'Finance', salary: 118000, startDate: '2022-11-10', active: true },
+  { id: 17, name: 'Quinn Foster', department: 'HR', salary: 94000, startDate: '2024-01-08', active: true },
+  { id: 18, name: 'Rachel Adams', department: 'Sales', salary: 86000, startDate: '2024-10-14', active: false },
+  { id: 19, name: 'Sam Okonkwo', department: 'Engineering', salary: 130000, startDate: '2023-08-19', active: true },
+  { id: 20, name: 'Tina Hoffman', department: 'Finance', salary: 105000, startDate: '2022-03-28', active: true },
 ];
 
 export function CoreOnly() {

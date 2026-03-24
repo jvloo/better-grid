@@ -22,6 +22,20 @@ const data: DemoRow[] = [
   { id: 4, name: 'Delta', category: 'Cost', amount: -23000, rate: 0.08, date: '2026-04-22', active: true },
   { id: 5, name: 'Epsilon', category: 'Revenue', amount: 210000, rate: 0.15, date: '2026-05-05', active: true },
   { id: 6, name: 'Zeta', category: 'Cost', amount: -67000, rate: 0.02, date: '2026-06-18', active: false },
+  { id: 7, name: 'Eta', category: 'Expense', amount: -15200, rate: 0.04, date: '2026-01-28', active: true },
+  { id: 8, name: 'Theta', category: 'Revenue', amount: 340000, rate: 0.11, date: '2026-02-14', active: true },
+  { id: 9, name: 'Iota', category: 'Cost', amount: -89500, rate: 0.07, date: '2026-03-03', active: false },
+  { id: 10, name: 'Kappa', category: 'Revenue', amount: 56000, rate: 0.09, date: '2026-04-11', active: true },
+  { id: 11, name: 'Lambda', category: 'Expense', amount: -31400, rate: 0.06, date: '2026-05-19', active: true },
+  { id: 12, name: 'Mu', category: 'Revenue', amount: 178000, rate: 0.14, date: '2026-06-02', active: false },
+  { id: 13, name: 'Nu', category: 'Cost', amount: -52300, rate: 0.03, date: '2026-07-08', active: true },
+  { id: 14, name: 'Xi', category: 'Expense', amount: -8700, rate: 0.01, date: '2026-07-25', active: true },
+  { id: 15, name: 'Omicron', category: 'Revenue', amount: 415000, rate: 0.18, date: '2026-08-12', active: true },
+  { id: 16, name: 'Pi', category: 'Cost', amount: -120000, rate: 0.10, date: '2026-08-30', active: false },
+  { id: 17, name: 'Rho', category: 'Expense', amount: -19800, rate: 0.05, date: '2026-09-14', active: true },
+  { id: 18, name: 'Sigma', category: 'Revenue', amount: 93000, rate: 0.08, date: '2026-10-01', active: true },
+  { id: 19, name: 'Tau', category: 'Cost', amount: -41600, rate: 0.13, date: '2026-10-20', active: false },
+  { id: 20, name: 'Upsilon', category: 'Expense', amount: -27500, rate: 0.02, date: '2026-11-05', active: true },
 ];
 
 export function PluginToggle() {

@@ -26,6 +26,21 @@ const initialData: TestRow[] = [
   { id: 3, name: 'Widget C', quantity: 50, price: 8900, rate: 0.03, status: 'Pending', priority: 3, active: true, activeForcedText: true, date: '2026-03-10', notes: '', readonly: 'Cannot edit' },
   { id: 4, name: 'Widget D', quantity: 500, price: 120000, rate: 0.08, status: 'Open', priority: 1, active: false, activeForcedText: false, date: '2026-04-05', notes: 'Rush order', readonly: 'Cannot edit' },
   { id: 5, name: 'Widget E', quantity: 75, price: 33000, rate: 0.15, status: 'Closed', priority: 2, active: true, activeForcedText: true, date: '2026-05-18', notes: 'Discount applied', readonly: 'Cannot edit' },
+  { id: 6, name: 'Sensor Module', quantity: 320, price: 18500, rate: 0.07, status: 'Open', priority: 1, active: true, activeForcedText: false, date: '2026-01-22', notes: 'Bulk shipment', readonly: 'Cannot edit' },
+  { id: 7, name: 'Power Supply', quantity: 60, price: 72000, rate: 0.10, status: 'Pending', priority: 2, active: false, activeForcedText: true, date: '2026-02-14', notes: '', readonly: 'Cannot edit' },
+  { id: 8, name: 'Display Panel', quantity: 150, price: 95000, rate: 0.04, status: 'Open', priority: 1, active: true, activeForcedText: true, date: '2026-03-01', notes: 'OLED variant', readonly: 'Cannot edit' },
+  { id: 9, name: 'Battery Pack', quantity: 400, price: 31000, rate: 0.09, status: 'Closed', priority: 3, active: false, activeForcedText: false, date: '2026-04-12', notes: 'Lithium-ion', readonly: 'Cannot edit' },
+  { id: 10, name: 'Control Board', quantity: 85, price: 54000, rate: 0.06, status: 'Pending', priority: 2, active: true, activeForcedText: true, date: '2026-05-30', notes: 'Rev 3.1', readonly: 'Cannot edit' },
+  { id: 11, name: 'Motor Assembly', quantity: 200, price: 128000, rate: 0.11, status: 'Open', priority: 1, active: true, activeForcedText: false, date: '2026-06-08', notes: 'Brushless DC', readonly: 'Cannot edit' },
+  { id: 12, name: 'Heat Sink', quantity: 550, price: 4200, rate: 0.02, status: 'Closed', priority: 3, active: false, activeForcedText: true, date: '2026-07-19', notes: 'Aluminum alloy', readonly: 'Cannot edit' },
+  { id: 13, name: 'LED Module', quantity: 1000, price: 2800, rate: 0.14, status: 'Open', priority: 2, active: true, activeForcedText: true, date: '2026-08-25', notes: 'RGB variant', readonly: 'Cannot edit' },
+  { id: 14, name: 'Connector Kit', quantity: 300, price: 6500, rate: 0.05, status: 'Pending', priority: 3, active: false, activeForcedText: false, date: '2026-09-03', notes: '', readonly: 'Cannot edit' },
+  { id: 15, name: 'Gear Assembly', quantity: 120, price: 41000, rate: 0.08, status: 'Closed', priority: 1, active: true, activeForcedText: true, date: '2026-10-11', notes: 'Stainless steel', readonly: 'Cannot edit' },
+  { id: 16, name: 'Relay Switch', quantity: 800, price: 3900, rate: 0.03, status: 'Open', priority: 2, active: false, activeForcedText: false, date: '2026-11-07', notes: '12V rated', readonly: 'Cannot edit' },
+  { id: 17, name: 'Capacitor Bank', quantity: 45, price: 87000, rate: 0.13, status: 'Pending', priority: 1, active: true, activeForcedText: true, date: '2026-12-01', notes: 'High voltage', readonly: 'Cannot edit' },
+  { id: 18, name: 'Cooling Fan', quantity: 230, price: 15600, rate: 0.06, status: 'Closed', priority: 3, active: false, activeForcedText: false, date: '2026-01-30', notes: '80mm', readonly: 'Cannot edit' },
+  { id: 19, name: 'Transformer', quantity: 90, price: 63000, rate: 0.10, status: 'Open', priority: 2, active: true, activeForcedText: true, date: '2026-02-28', notes: 'Step-down 240V', readonly: 'Cannot edit' },
+  { id: 20, name: 'Fiber Optic Cable', quantity: 170, price: 22000, rate: 0.07, status: 'Pending', priority: 1, active: false, activeForcedText: false, date: '2026-03-15', notes: 'Multi-mode', readonly: 'Cannot edit' },
 ];
 
 export function EditableGrid() {

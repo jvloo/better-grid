@@ -28,6 +28,16 @@ const data: RegionRow[] = [
   { id: 8, region: 'Asia', country: 'China', city: 'Shanghai', population: 24870, area: 6341, gdp: 1100, growth: 5.2, unemployment: 4.5, inflation: 1.8 },
   { id: 9, region: 'Asia', country: 'Singapore', city: 'Singapore', population: 5686, area: 729, gdp: 550, growth: 3.8, unemployment: 2.1, inflation: 2.5 },
   { id: 10, region: 'Oceania', country: 'Australia', city: 'Sydney', population: 5312, area: 12368, gdp: 480, growth: 2.5, unemployment: 3.5, inflation: 3.8 },
+  { id: 11, region: 'South America', country: 'Brazil', city: 'São Paulo', population: 12330, area: 1521, gdp: 700, growth: 1.4, unemployment: 8.9, inflation: 4.6 },
+  { id: 12, region: 'South America', country: 'Argentina', city: 'Buenos Aires', population: 3076, area: 203, gdp: 320, growth: -1.2, unemployment: 7.1, inflation: 72.4 },
+  { id: 13, region: 'Africa', country: 'South Africa', city: 'Johannesburg', population: 5783, area: 1645, gdp: 180, growth: 1.9, unemployment: 29.8, inflation: 5.4 },
+  { id: 14, region: 'Africa', country: 'Nigeria', city: 'Lagos', population: 15388, area: 1171, gdp: 140, growth: 3.3, unemployment: 33.3, inflation: 18.6 },
+  { id: 15, region: 'Asia', country: 'India', city: 'Mumbai', population: 20411, area: 603, gdp: 370, growth: 6.8, unemployment: 6.9, inflation: 5.1 },
+  { id: 16, region: 'Asia', country: 'South Korea', city: 'Seoul', population: 9776, area: 605, gdp: 980, growth: 2.6, unemployment: 2.9, inflation: 3.3 },
+  { id: 17, region: 'Europe', country: 'Spain', city: 'Madrid', population: 3223, area: 604, gdp: 410, growth: 2.5, unemployment: 11.7, inflation: 3.1 },
+  { id: 18, region: 'Europe', country: 'Italy', city: 'Rome', population: 2873, area: 1285, gdp: 390, growth: 0.7, unemployment: 7.6, inflation: 5.9 },
+  { id: 19, region: 'North America', country: 'Mexico', city: 'Mexico City', population: 9209, area: 1485, gdp: 310, growth: 3.1, unemployment: 3.3, inflation: 4.7 },
+  { id: 20, region: 'Oceania', country: 'New Zealand', city: 'Auckland', population: 1657, area: 1086, gdp: 95, growth: 2.2, unemployment: 3.4, inflation: 4.1 },
 ];
 
 export function MultiHeader() {
