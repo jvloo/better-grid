@@ -250,10 +250,10 @@ export function createGrid<
     // Sync frozen cell overlay vertical position.
     // The frozen overlay is outside the scroll container, so it doesn't
     // scroll. We translate the data cells portion to match scrollTop.
-    // Header stays at top (no vertical translate needed).
+    // The frozenCellOverlay starts at offsetTop=headerHeight within the
+    // frozen overlay, so we use the full scrollTop (not dataScrollTop).
     if (frozenCellOverlay) {
-      const dataScrollTop = Math.max(0, scrollTop - headerHeight);
-      frozenCellOverlay.style.transform = `translate3d(0, ${-snapToDevicePixel(dataScrollTop)}px, 0)`;
+      frozenCellOverlay.style.transform = `translate3d(0, ${-snapToDevicePixel(scrollTop)}px, 0)`;
     }
 
     emitter.emit('scroll', { scrollTop, scrollLeft });
