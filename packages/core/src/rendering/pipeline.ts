@@ -74,6 +74,7 @@ export class RenderingPipeline<TData = unknown> {
         cell.style.transform = `translate3d(${left}px, ${top}px, 0)`;
         cell.style.width = `${width}px`;
         cell.style.height = `${height}px`;
+        cell.style.lineHeight = `${height}px`;
 
         // Frozen left columns: offset by scrollLeft to keep them visible
         if (col < frozenLeftColumns) {
@@ -133,6 +134,7 @@ export class RenderingPipeline<TData = unknown> {
         if (cleanup) {
           this.cleanupFns.set(key, cleanup);
         }
+
       }
     }
 

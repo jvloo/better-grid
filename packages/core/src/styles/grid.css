@@ -117,8 +117,7 @@
 
 .bg-cell {
   box-sizing: border-box;
-  display: flex;
-  align-items: center;
+  display: block;
   padding: var(--bg-cell-padding, 0 12px);
   border-right: 1px solid var(--bg-cell-border-color, #e8e8e8);
   border-bottom: 1px solid var(--bg-cell-border-color, #e8e8e8);
@@ -126,6 +125,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* line-height set inline to match cell height for vertical centering */
   cursor: default;
   user-select: none;
   will-change: transform;

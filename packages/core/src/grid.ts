@@ -299,6 +299,21 @@ export function createGrid<
     }
   }
 
+  function handleCellMouseOver(event: MouseEvent): void {
+    const cell = (event.target as HTMLElement).closest('.bg-cell') as HTMLElement | null;
+    if (cell && cell.scrollWidth > cell.clientWidth) {
+      showTooltip(cell, cell.textContent ?? '');
+    }
+  }
+
+  function handleCellMouseOut(event: MouseEvent): void {
+    const related = (event as MouseEvent).relatedTarget as HTMLElement | null;
+    const cell = (event.target as HTMLElement).closest('.bg-cell');
+    if (cell && !cell.contains(related)) {
+      dismissTooltip();
+    }
+  }
+
   function handleKeyDown(event: KeyboardEvent): void {
     const state = store.getState();
 
@@ -632,6 +647,14 @@ export function createGrid<
     }
     cell.appendChild(textSpan);
 
+    // Show tooltip on hover when text is clipped
+    cell.addEventListener('mouseenter', () => {
+      if (textSpan.scrollWidth > textSpan.clientWidth) {
+        showTooltip(cell, textSpan.textContent ?? '');
+      }
+    });
+    cell.addEventListener('mouseleave', dismissTooltip);
+
     if (opts.columnId) {
       cell.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).classList.contains('bg-resize-handle')) return;
@@ -888,6 +911,49 @@ export function createGrid<
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Cell tooltip (for clipped text)
+  // ---------------------------------------------------------------------------
+
+  let tooltipEl: HTMLElement | null = null;
+  let tooltipTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function showTooltip(target: HTMLElement, text: string): void {
+    dismissTooltip();
+    tooltipTimer = setTimeout(() => {
+      const rect = target.getBoundingClientRect();
+      tooltipEl = document.createElement('div');
+      tooltipEl.className = 'bg-tooltip';
+      tooltipEl.textContent = text;
+      tooltipEl.style.cssText = `
+        position: fixed;
+        left: ${rect.left}px;
+        top: ${rect.bottom + 4}px;
+        z-index: 100;
+        background: var(--bg-context-menu-bg, #fff);
+        border: 1px solid var(--bg-context-menu-border, #d0d0d0);
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 4px 10px;
+        font-size: 13px;
+        white-space: nowrap;
+        pointer-events: none;
+      `;
+      document.body.appendChild(tooltipEl);
+    }, 500);
+  }
+
+  function dismissTooltip(): void {
+    if (tooltipTimer) {
+      clearTimeout(tooltipTimer);
+      tooltipTimer = null;
+    }
+    if (tooltipEl) {
+      tooltipEl.remove();
+      tooltipEl = null;
+    }
+  }
+
   function invalidateHeaders(): void {
     headersRendered = false;
   }
@@ -1041,8 +1107,12 @@ export function createGrid<
       scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
       cellContainer.addEventListener('pointerdown', handlePointerDown);
       cellContainer.addEventListener('dblclick', handleDblClick);
+      cellContainer.addEventListener('mouseover', handleCellMouseOver);
+      cellContainer.addEventListener('mouseout', handleCellMouseOut);
       if (frozenCellOverlay) {
         frozenCellOverlay.addEventListener('pointerdown', handlePointerDown);
+        frozenCellOverlay.addEventListener('mouseover', handleCellMouseOver);
+        frozenCellOverlay.addEventListener('mouseout', handleCellMouseOut);
         frozenCellOverlay.addEventListener('dblclick', handleDblClick);
       }
       container.addEventListener('keydown', handleKeyDown);
@@ -1063,6 +1133,9 @@ export function createGrid<
       scrollContainer?.removeEventListener('scroll', handleScroll);
       cellContainer?.removeEventListener('pointerdown', handlePointerDown);
       cellContainer?.removeEventListener('dblclick', handleDblClick);
+      cellContainer?.removeEventListener('mouseover', handleCellMouseOver);
+      cellContainer?.removeEventListener('mouseout', handleCellMouseOut);
+      dismissTooltip();
       container?.removeEventListener('keydown', handleKeyDown);
       resizeObserver?.disconnect();
 
