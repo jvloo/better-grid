@@ -2,7 +2,7 @@
 // useGrid — React hook for Better Grid
 // ============================================================================
 
-import { useMemo, useRef, useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useRef, useCallback, useEffect, useSyncExternalStore } from 'react';
 import { createGrid } from '@better-grid/core';
 import type { GridOptions, GridInstance, GridPlugin } from '@better-grid/core';
 import { createReactAdapter } from '../adapters/react-adapter';
@@ -19,15 +19,16 @@ export function useGrid<
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
-  // Create grid instance once
-  const grid = useMemo(
-    () => createGrid<TData, TPlugins>(optionsRef.current),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
+  // Use useRef to create grid instance ONCE — survives StrictMode double-invoke
+  const gridRef = useRef<GridInstance<TData, TPlugins> | null>(null);
+  if (!gridRef.current) {
+    gridRef.current = createGrid<TData, TPlugins>(optionsRef.current);
+  }
+  const grid = gridRef.current;
 
   // Create adapter for React state sync
-  const adapter = useMemo(() => createReactAdapter(grid), [grid]);
+  const adapterRef = useRef(createReactAdapter(grid));
+  const adapter = adapterRef.current;
 
   // Subscribe to state changes for re-renders
   useSyncExternalStore(adapter.subscribe, adapter.getSnapshot, adapter.getSnapshot);
@@ -54,19 +55,13 @@ export function useGrid<
     [grid],
   );
 
-  // Cleanup: only destroy when the grid instance itself changes (which is never
-  // since useMemo deps are []), effectively running only on true unmount.
-  // StrictMode double-invokes effects but the ref callback handles mount/unmount.
+  // Cleanup on true unmount
   useEffect(() => {
     return () => {
-      // Delay destroy to next frame — if StrictMode re-mounts,
-      // the mount() call will happen synchronously in the same tick,
-      // setting mounted=true before this timeout fires.
-      setTimeout(() => {
-        grid.destroy();
-      }, 0);
+      gridRef.current?.destroy();
+      gridRef.current = null;
     };
-  }, [grid]);
+  }, []);
 
   return { grid, containerRef };
 }

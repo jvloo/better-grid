@@ -118,12 +118,12 @@ export function createGrid<
   // ---------------------------------------------------------------------------
 
   function scheduleRender(): void {
-    if (!mounted) return;
+    if (!scrollContainer || !cellContainer) return;
     requestAnimationFrame(render);
   }
 
   function render(): void {
-    if (!mounted || !scrollContainer || !contentSizer || !cellContainer) return;
+    if (!scrollContainer || !contentSizer || !cellContainer) return;
 
     const state = store.getState();
     const measurements = virtualization.getMeasurements();
@@ -406,7 +406,7 @@ export function createGrid<
       headerCell.addEventListener('click', (e) => {
         // Don't trigger click if resize handle was dragged
         if ((e.target as HTMLElement).classList.contains('bg-resize-handle')) return;
-        for (const plugin of pluginRegistry.getAllPlugins()) {
+          for (const plugin of pluginRegistry.getAllPlugins()) {
           plugin.hooks?.onHeaderClick?.(column.id);
         }
       });
