@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { formatting, editing, validation } from '@better-grid/plugins';
+import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
 
 interface TestRow {
@@ -157,6 +158,21 @@ export function EditableGrid() {
         Rate (percent) | Status (string dropdown) | Priority (label/value dropdown) |
         Active (auto boolean dropdown) | Bool-text (forced text) | Date | Notes (text) | Read-only
       </div>
+
+      <CodeBlock title="Editor Reference" code={`// All editor types configured via ColumnDef
+
+{ editable: false }           // readonly
+{ /* default string */ }      // text input
+{ cellType: 'currency' }      // text → parses $1,234
+{ cellType: 'percent' }       // text → shows 5, stores 0.05
+{ cellType: 'date' }          // text → date string
+{ options: ['A', 'B'] }       // dropdown (string)
+{ options: [                   // dropdown (label/value)
+    { label: 'High', value: 1 }
+  ]}
+{ /* boolean value */ }        // auto Yes/No dropdown
+{ editor: 'text' }            // force text for boolean
+{ required: true }             // validation required`} />
     </div>
   );
 }

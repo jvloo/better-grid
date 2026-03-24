@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
+import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
 
 interface RegionRow {
@@ -97,6 +98,50 @@ export function MultiHeader() {
         selection={{ mode: 'range' }}
         height={400}
       />
+
+      <CodeBlock title="Multi-Header" code={`// Multi-level headers — a core feature, no plugins needed
+
+const columns = [
+  { id: 'id', header: '#', width: 40 },
+  { id: 'region', header: 'Region', width: 130 },
+  { id: 'country', header: 'Country', width: 100 },
+  { id: 'city', header: 'City', width: 110 },
+  { id: 'population', header: 'Pop. (K)', width: 90 },
+  { id: 'area', header: 'Area (km²)', width: 100 },
+  { id: 'gdp', header: 'GDP ($B)', width: 90 },
+  { id: 'growth', header: 'Growth %', width: 90 },
+  { id: 'unemployment', header: 'Unemp. %', width: 90 },
+  { id: 'inflation', header: 'Inflation %', width: 100 },
+];
+
+const headerRows = [
+  { id: 'groups', height: 30, cells: [
+    { id: 'g-loc', content: 'Location', colSpan: 4 },
+    { id: 'g-demo', content: 'Demographics', colSpan: 2 },
+    { id: 'g-econ', content: 'Economic Indicators', colSpan: 4 },
+  ]},
+  { id: 'columns', height: 30, cells: [
+    { id: 'h-id', content: '#', columnId: 'id' },
+    { id: 'h-region', content: 'Region', columnId: 'region' },
+    { id: 'h-country', content: 'Country', columnId: 'country' },
+    { id: 'h-city', content: 'City', columnId: 'city' },
+    { id: 'h-pop', content: 'Pop. (K)', columnId: 'population' },
+    { id: 'h-area', content: 'Area (km²)', columnId: 'area' },
+    { id: 'h-gdp', content: 'GDP ($B)', columnId: 'gdp' },
+    { id: 'h-growth', content: 'Growth %', columnId: 'growth' },
+    { id: 'h-unemp', content: 'Unemp. %', columnId: 'unemployment' },
+    { id: 'h-infl', content: 'Inflation %', columnId: 'inflation' },
+  ]},
+];
+
+<BetterGrid
+  columns={columns}
+  data={data}
+  headerRows={headerRows}
+  frozenLeftColumns={3}
+  selection={{ mode: 'range' }}
+  height={400}
+/>`} />
     </div>
   );
 }

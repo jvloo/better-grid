@@ -94,20 +94,24 @@ export function CoreOnly() {
         Notice: salary shows "125000" not "$125,000.00" · dates show "2024-03-15" not "Mar 15, 2024" · active shows "true" not "Yes" — plugins add formatting.
       </div>
 
-      <CodeBlock code={`import { BetterGrid } from '@better-grid/react';
+      <CodeBlock title="Core Only" code={`import { BetterGrid } from '@better-grid/react';
 import '@better-grid/core/styles.css';
 
-// No plugins — just core
+// No plugins — just the core engine
+// Raw values: 125000 (not $125,000), "2024-03-15" (not Mar 15, 2024)
 <BetterGrid
   columns={[
     { id: 'id', header: 'ID', width: 50 },
     { id: 'name', header: 'Name', width: 160 },
     { id: 'department', header: 'Department', width: 120 },
     { id: 'salary', header: 'Salary', width: 120 },
+    { id: 'startDate', header: 'Start Date', width: 120 },
+    { id: 'active', header: 'Active', width: 80 },
   ]}
   data={employees}
   frozenLeftColumns={2}
   selection={{ mode: 'range' }}
+  onSelectionChange={handleSelectionChange}
   height={440}
 />`} />
     </div>

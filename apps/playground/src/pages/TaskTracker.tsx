@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { formatting, editing, sorting, filtering, validation } from '@better-grid/plugins';
+import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
 
 interface TaskRow {
@@ -140,6 +141,67 @@ export function TaskTracker() {
         plugins={plugins}
         height={520}
       />
+
+      <CodeBlock title="Task Tracker" code={`import { BetterGrid } from '@better-grid/react';
+import { formatting, editing, sorting, filtering, validation }
+  from '@better-grid/plugins';
+
+const columns = [
+  { id: 'task', header: 'Task', width: 200, required: true },
+  { id: 'assignee', header: 'Assignee', width: 100,
+    options: ['Alice', 'Bob', 'Carol'] },
+  { id: 'priority', header: 'Priority', width: 90,
+    options: [
+      { label: '🔴 High', value: 1 },
+      { label: '🟡 Medium', value: 2 },
+      { label: '🟢 Low', value: 3 },
+    ],
+    cellRenderer: (el, ctx) => {
+      const map = { 1: { label: 'High', color: '#c62828' },
+                    2: { label: 'Medium', color: '#f57f17' },
+                    3: { label: 'Low', color: '#2e7d32' } };
+      const p = map[ctx.value];
+      el.textContent = p?.label ?? ctx.value;
+      el.style.color = p?.color ?? '';
+    },
+  },
+  { id: 'status', header: 'Status', width: 110,
+    options: ['Todo', 'In Progress', 'In Review', 'Done'],
+    cellRenderer: (el, ctx) => {
+      // Render as colored badge pill
+      const colors = {
+        'Todo': { bg: '#f5f5f5', fg: '#666' },
+        'In Progress': { bg: '#e3f2fd', fg: '#1565c0' },
+        'Done': { bg: '#e8f5e9', fg: '#2e7d32' },
+      };
+      const c = colors[ctx.value] ?? { bg: '#f5f5f5', fg: '#666' };
+      el.innerHTML = \`<span style="padding:2px 8px;border-radius:12px;
+        font-size:12px;background:\${c.bg};color:\${c.fg}">\${ctx.value}</span>\`;
+    },
+  },
+  { id: 'dueDate', header: 'Due', cellType: 'date' },
+  { id: 'progress', header: 'Progress', width: 110,
+    cellRenderer: (el, ctx) => {
+      // Render as progress bar
+      const pct = Math.round(ctx.value * 100);
+      const color = pct === 100 ? '#2e7d32' : pct > 50 ? '#1565c0' : '#f57f17';
+      el.innerHTML = \`<div style="display:flex;align-items:center;gap:6px">
+        <div style="flex:1;height:6px;background:#eee;border-radius:3px">
+          <div style="width:\${pct}%;height:100%;background:\${color};
+            border-radius:3px"></div>
+        </div>
+        <span style="font-size:11px;color:#888">\${pct}%</span>
+      </div>\`;
+    },
+  },
+];
+
+<BetterGrid
+  columns={columns}
+  data={tasks}
+  plugins={[formatting(), editing(), sorting(),
+            filtering(), validation()]}
+/>`} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { formatting, editing, validation } from '@better-grid/plugins';
+import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
 
 interface OrderRow {
@@ -124,6 +125,47 @@ export function ValidationDemo() {
       <div style={{ marginTop: 12, fontSize: 12, color: '#aaa' }}>
         Red outline = validation error. Hover cell for error message tooltip.
       </div>
+
+      <CodeBlock title="Validation" code={`import { formatting, editing, validation } from '@better-grid/plugins';
+
+const columns = [
+  { id: 'id', header: '#', width: 40, editable: false },
+  { id: 'customer', header: 'Customer', width: 130,
+    required: true },
+  { id: 'product', header: 'Product', width: 110,
+    required: true },
+  { id: 'quantity', header: 'Qty', width: 70,
+    rules: [{
+      validate: (v) => v > 0 || 'Must be > 0'
+    }] },
+  { id: 'unitPrice', header: 'Unit Price', width: 100,
+    cellType: 'currency',
+    rules: [{
+      validate: (v) => v >= 0 || 'Cannot be negative'
+    }] },
+  { id: 'discount', header: 'Discount', width: 90,
+    cellType: 'percent',
+    rules: [{
+      validate: (v) => v >= 0 && v <= 0.5 || 'Max 50%'
+    }] },
+  { id: 'email', header: 'Email', width: 160,
+    required: true,
+    rules: [{
+      validate: (v) => /@/.test(v) || 'Invalid email'
+    }] },
+  { id: 'status', header: 'Status', width: 100,
+    options: ['Draft', 'Pending', 'Confirmed', 'Shipped'] },
+];
+
+<BetterGrid
+  columns={columns}
+  data={orders}
+  plugins={[
+    formatting({ locale: 'en-US', currencyCode: 'USD' }),
+    editing({ editTrigger: 'dblclick' }),
+    validation({ validateOn: 'all' }),
+  ]}
+/>`} />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 // Validation Plugin — Cell validation with visual error indicators
 // ============================================================================
 
-import type { GridPlugin, PluginContext, CellPosition, ColumnValidationRule } from '@better-grid/core';
+import type { GridPlugin, PluginContext, CellPosition } from '@better-grid/core';
 
 export interface ValidationOptions {
   /** When to validate: 'commit' (after edit), 'all' (validate everything on init). Default: 'commit' */

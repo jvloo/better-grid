@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { formatting, editing } from '@better-grid/plugins';
+import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
 
 interface ProductRow {
@@ -84,6 +85,41 @@ export function FormatEdit() {
         plugins={plugins}
         height={380}
       />
+
+      <CodeBlock title="Format & Edit" code={`import { formatting, editing } from '@better-grid/plugins';
+
+const columns = [
+  { id: 'id', header: 'ID', width: 45, editable: false },
+  { id: 'name', header: 'Product', width: 140 },
+  { id: 'category', header: 'Category', width: 110,
+    options: ['Electronics', 'Hardware', 'IoT', 'Accessories'] },
+  { id: 'price', header: 'Price', width: 100,
+    cellType: 'currency' },             // → $299.99
+  { id: 'cost', header: 'Cost', width: 100,
+    cellType: 'currency' },             // → $180.00
+  { id: 'margin', header: 'Margin', width: 90,
+    cellType: 'percent' },              // → 40%
+  { id: 'launchDate', header: 'Launch', width: 120,
+    cellType: 'date' },                 // → Jan 15, 2026
+  { id: 'inStock', header: 'In Stock', width: 80,
+    cellRenderer: (el, ctx) => {
+      el.textContent = ctx.value ? '✓' : '✗';
+      el.style.color = ctx.value ? '#2e7d32' : '#c62828';
+      el.style.textAlign = 'center';
+    },
+  },
+];
+
+<BetterGrid
+  columns={columns}
+  data={products}
+  frozenLeftColumns={2}
+  plugins={[
+    formatting({ locale: 'en-US', currencyCode: 'USD',
+                 accountingFormat: true }),
+    editing({ editTrigger: 'dblclick' }),
+  ]}
+/>`} />
     </div>
   );
 }

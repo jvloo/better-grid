@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { formatting, sorting, filtering } from '@better-grid/plugins';
+import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
 
 interface EmployeeRow {
@@ -96,6 +97,40 @@ export function SortFilter() {
         plugins={plugins}
         height={500}
       />
+
+      <CodeBlock title="Sort & Filter" code={`import { formatting, sorting, filtering } from '@better-grid/plugins';
+
+// Click header to sort (asc → desc → none)
+// Right-click header → Filter... / Clear Filter
+
+const columns = [
+  { id: 'id', header: '#', width: 40, editable: false, sortable: true },
+  { id: 'name', header: 'Name', width: 140, sortable: true },
+  { id: 'department', header: 'Dept', width: 110, sortable: true },
+  { id: 'role', header: 'Role', width: 90, sortable: true },
+  { id: 'salary', header: 'Salary', width: 110,
+    cellType: 'currency', sortable: true },
+  { id: 'experience', header: 'Exp (yrs)', width: 90, sortable: true },
+  { id: 'rating', header: 'Rating', width: 80, sortable: true,
+    cellRenderer: (el, ctx) => {
+      el.textContent = ctx.value.toFixed(1);
+      el.style.color = ctx.value >= 4.5 ? '#2e7d32'
+                      : ctx.value >= 4.0 ? '#f57f17' : '#c62828';
+    },
+  },
+  { id: 'location', header: 'Location', width: 120, sortable: true },
+];
+
+<BetterGrid
+  columns={columns}
+  data={employees}
+  frozenLeftColumns={2}
+  plugins={[
+    formatting({ locale: 'en-US', currencyCode: 'USD' }),
+    sorting(),
+    filtering(),
+  ]}
+/>`} />
     </div>
   );
 }
