@@ -29,7 +29,7 @@ export interface EditingApi {
   getEditingCell(): CellPosition | null;
 }
 
-const EDITOR_CSS = `
+const INPUT_CSS = `
   width: 100%;
   height: 100%;
   border: none;
@@ -40,6 +40,22 @@ const EDITOR_CSS = `
   color: inherit;
   background: var(--bg-edit-bg, #fff);
   box-sizing: border-box;
+`;
+
+const SELECT_CSS = `
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  padding: 0 2px;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  background: var(--bg-edit-bg, #fff);
+  box-sizing: border-box;
+  cursor: pointer;
+  -webkit-appearance: menulist;
+  appearance: menulist;
 `;
 
 export function editing(options?: EditingOptions): GridPlugin<'editing'> {
@@ -169,7 +185,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         input.type = 'text';
         input.className = 'bg-cell-editor';
         input.value = value;
-        input.style.cssText = EDITOR_CSS;
+        input.style.cssText = INPUT_CSS;
 
         cellEl.appendChild(input);
         input.focus();
@@ -196,7 +212,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       ): HTMLSelectElement {
         const select = document.createElement('select');
         select.className = 'bg-cell-editor bg-cell-editor--select';
-        select.style.cssText = EDITOR_CSS + 'cursor: pointer; appearance: auto;';
+        select.style.cssText = SELECT_CSS;
 
         for (const opt of opts) {
           const option = document.createElement('option');

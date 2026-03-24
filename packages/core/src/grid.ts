@@ -73,10 +73,10 @@ export function createGrid<
   // Initialize columns
   columnManager.setColumns(options.columns);
 
-  // Initialize state store
+  // Initialize state store (use normalized columns from manager)
   const initialState: GridState<TData> = {
     data: options.data,
-    columns: options.columns,
+    columns: columnManager.getColumns(),
     columnWidths: columnManager.getWidths(),
     rowHeights: options.data.map((_, i) => getRowHeight(i)),
     scrollTop: 0,
@@ -744,7 +744,7 @@ export function createGrid<
     setColumns(columns: ColumnDef<TData>[]): void {
       columnManager.setColumns(columns);
       store.update('columns', () => ({
-        columns,
+        columns: columnManager.getColumns(),
         columnWidths: columnManager.getWidths(),
       }));
       invalidateHeaders();
