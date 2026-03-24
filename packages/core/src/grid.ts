@@ -661,6 +661,44 @@ export function createGrid<
       }
     }
 
+    // Filtering items
+    for (const plugin of pluginRegistry.getAllPlugins()) {
+      if (plugin.id === 'filtering') {
+        const api = pluginRegistry.getPlugin<{ getFilters: () => { columnId: string }[]; setFilter: (id: string, value: unknown, op?: string) => void; removeFilter: (id: string) => void; clearFilters: () => void }>(plugin.id);
+        if (api) {
+          const filtered = api.getFilters();
+          const colFiltered = filtered.find((f) => f.columnId === columnId);
+
+          // Add a separator if sorting items exist
+          if (items.length > 0) {
+            items.push({ label: '─', action: () => {}, active: false });
+          }
+
+          items.push({
+            label: colFiltered ? 'Change Filter...' : 'Filter...',
+            action: () => {
+              const value = prompt(`Filter "${columnId}" (contains):`);
+              if (value !== null) {
+                if (value === '') {
+                  api.removeFilter(columnId);
+                } else {
+                  api.setFilter(columnId, value, 'contains');
+                }
+              }
+            },
+            active: !!colFiltered,
+          });
+
+          if (colFiltered) {
+            items.push({ label: 'Clear Filter', action: () => api.removeFilter(columnId) });
+          }
+          if (filtered.length > 0) {
+            items.push({ label: 'Clear All Filters', action: () => api.clearFilters() });
+          }
+        }
+      }
+    }
+
     if (items.length === 0) return;
 
     // Create menu
@@ -682,6 +720,14 @@ export function createGrid<
     `;
 
     for (const item of items) {
+      // Separator
+      if (item.label === '─') {
+        const sep = document.createElement('div');
+        sep.style.cssText = 'height: 1px; background: #e0e0e0; margin: 4px 0;';
+        menu.appendChild(sep);
+        continue;
+      }
+
       const menuItem = document.createElement('div');
       menuItem.className = 'bg-context-menu__item' + (item.active ? ' bg-context-menu__item--active' : '');
       menuItem.textContent = item.label;

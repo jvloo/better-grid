@@ -9,7 +9,7 @@ export { sorting } from './sorting';
 export type { SortingOptions, SortingApi, SortState, SortDirection } from './sorting';
 
 export { filtering } from './filtering';
-export type { FilteringOptions, FilteringApi, FilterState } from './filtering';
+export type { FilteringOptions, FilteringApi, FilterState, FilterOperator } from './filtering';
 
 export { formatting } from './formatting';
 export type { FormattingOptions, FormattingApi, DateFormatPreset } from './formatting';
