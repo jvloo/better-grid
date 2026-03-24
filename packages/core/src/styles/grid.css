@@ -112,6 +112,9 @@
 
 .bg-cell--active {
   background: var(--bg-active-bg, #fff);
+  outline: 2px solid var(--bg-active-border, #1a73e8);
+  outline-offset: -2px;
+  z-index: 3;
 }
 
 .bg-cell--editing {
