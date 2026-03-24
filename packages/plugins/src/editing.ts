@@ -1,5 +1,5 @@
 // ============================================================================
-// Editing Plugin — Cell editing with type-to-edit, dblclick, commit/cancel
+// Editing Plugin — Cell editing with text input & dropdown support
 // ============================================================================
 
 import type { GridPlugin, PluginContext, CellPosition } from '@better-grid/core';
@@ -11,6 +11,14 @@ export interface EditingOptions {
   commitOn?: ('enter' | 'tab')[];
   /** Cancel on Escape. Default: true */
   cancelOnEscape?: boolean;
+  /** Custom labels for boolean dropdown. Default: ['Yes', 'No'] */
+  booleanLabels?: [string, string];
+}
+
+/** Dropdown option for columns with meta.options */
+export interface DropdownOption {
+  label: string;
+  value: unknown;
 }
 
 export interface EditingApi {
@@ -21,11 +29,25 @@ export interface EditingApi {
   getEditingCell(): CellPosition | null;
 }
 
+const EDITOR_CSS = `
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  background: var(--bg-edit-bg, #fff);
+  box-sizing: border-box;
+`;
+
 export function editing(options?: EditingOptions): GridPlugin<'editing'> {
   const config = {
     editTrigger: options?.editTrigger ?? 'dblclick',
     commitOn: options?.commitOn ?? ['enter', 'tab'],
     cancelOnEscape: options?.cancelOnEscape ?? true,
+    booleanLabels: options?.booleanLabels ?? (['Yes', 'No'] as [string, string]),
   };
 
   return {
@@ -33,23 +55,64 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
     init(ctx: PluginContext) {
       let editingCell: CellPosition | null = null;
-      let editInput: HTMLInputElement | null = null;
+      let activeEditor: HTMLInputElement | HTMLSelectElement | null = null;
       let originalValue: unknown = null;
 
       function getCellElement(pos: CellPosition): HTMLElement | null {
-        // Search in both main and frozen containers
-        const selectors = `.bg-cell[data-row="${pos.rowIndex}"][data-col="${pos.colIndex}"]`;
-        return document.querySelector(selectors);
+        const selector = `.bg-cell[data-row="${pos.rowIndex}"][data-col="${pos.colIndex}"]`;
+        return document.querySelector(selector);
       }
 
+      // -----------------------------------------------------------------------
+      // Determine editor type
+      // -----------------------------------------------------------------------
+
+      function getDropdownOptions(
+        column: { cellType?: string; meta?: Record<string, unknown> },
+        value: unknown,
+      ): DropdownOption[] | null {
+        // Explicit options in column meta
+        const metaOpts = column.meta?.options;
+        if (Array.isArray(metaOpts) && metaOpts.length > 0) {
+          // Support both { label, value } and plain strings
+          return metaOpts.map((opt) =>
+            typeof opt === 'object' && opt !== null && 'label' in opt
+              ? (opt as DropdownOption)
+              : { label: String(opt), value: opt },
+          );
+        }
+
+        // Boolean values → Yes/No dropdown
+        if (typeof value === 'boolean') {
+          return [
+            { label: config.booleanLabels[0], value: true },
+            { label: config.booleanLabels[1], value: false },
+          ];
+        }
+
+        // select/toggle cell types
+        if (column.cellType === 'select' || column.cellType === 'toggle') {
+          if (typeof value === 'boolean') {
+            return [
+              { label: config.booleanLabels[0], value: true },
+              { label: config.booleanLabels[1], value: false },
+            ];
+          }
+        }
+
+        return null;
+      }
+
+      // -----------------------------------------------------------------------
+      // Start editing
+      // -----------------------------------------------------------------------
+
       function startEdit(position: CellPosition, initialValue?: string): void {
-        // Commit any active edit first
         if (editingCell) commitEdit();
 
         const cellEl = getCellElement(position);
         if (!cellEl) return;
 
-        // Check if column is editable
         const state = ctx.grid.getState();
         const column = state.columns[position.colIndex];
         if (!column) return;
@@ -57,7 +120,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
         editingCell = position;
 
-        // Get current raw value and display text
+        // Get current raw value
         const data = state.data[position.rowIndex];
         if (column.accessorKey && data) {
           originalValue = (data as Record<string, unknown>)[column.accessorKey];
@@ -65,91 +128,157 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           originalValue = cellEl.textContent;
         }
 
-        // Use the cell's rendered text as the display value for the input
-        // (handles custom renderers, formatting, booleans, etc.)
         const displayText = cellEl.textContent?.trim() ?? '';
 
-        // Create input element
-        editInput = document.createElement('input');
-        editInput.type = 'text';
-        editInput.className = 'bg-cell-editor';
-        editInput.value = initialValue ?? displayText;
-        editInput.style.cssText = `
-          width: 100%;
-          height: 100%;
-          border: none;
-          outline: none;
-          padding: 0;
-          margin: 0;
-          font: inherit;
-          color: inherit;
-          background: var(--bg-edit-bg, #fff);
-          box-sizing: border-box;
-        `;
+        // Check if this should be a dropdown
+        const dropdownOpts = getDropdownOptions(column, originalValue);
 
-        // Replace cell content with input
+        // Prepare cell for editing
         cellEl.textContent = '';
         cellEl.classList.add('bg-cell--editing');
         cellEl.style.padding = '0 4px';
-        cellEl.appendChild(editInput);
 
-        // Focus and select
-        editInput.focus();
-        if (initialValue !== undefined) {
-          // Type-to-edit: cursor at end
-          editInput.setSelectionRange(initialValue.length, initialValue.length);
+        if (dropdownOpts) {
+          activeEditor = createDropdown(cellEl, dropdownOpts, originalValue);
         } else {
-          editInput.select();
+          activeEditor = createTextInput(cellEl, initialValue ?? displayText, initialValue !== undefined);
         }
-
-        // Input event handlers
-        editInput.addEventListener('keydown', handleInputKeydown);
-        editInput.addEventListener('blur', handleInputBlur);
       }
 
-      function commitEdit(): boolean {
-        if (!editingCell || !editInput) return false;
+      // -----------------------------------------------------------------------
+      // Text input editor
+      // -----------------------------------------------------------------------
 
-        const newValue = editInput.value;
-        const position = editingCell;
-        const prevValue = originalValue;
+      function createTextInput(
+        cellEl: HTMLElement,
+        value: string,
+        cursorAtEnd: boolean,
+      ): HTMLInputElement {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'bg-cell-editor';
+        input.value = value;
+        input.style.cssText = EDITOR_CSS;
 
-        // Parse the value based on cell type
-        const state = ctx.grid.getState();
-        const column = state.columns[position.colIndex];
-        let parsedValue: unknown = newValue;
+        cellEl.appendChild(input);
+        input.focus();
 
-        if (column) {
-          const cellType = column.cellType;
-          if (cellType === 'number' || cellType === 'currency') {
-            const num = Number(newValue.replace(/[^0-9.\-]/g, ''));
-            parsedValue = isNaN(num) ? prevValue : num;
-          } else if (cellType === 'percent') {
-            const num = Number(newValue.replace(/[^0-9.\-]/g, ''));
-            parsedValue = isNaN(num) ? prevValue : num / 100;
-          } else if (typeof prevValue === 'boolean') {
-            // Boolean parsing: accept yes/no, y/n, true/false, 1/0
-            const lower = newValue.toLowerCase().trim();
-            if (['yes', 'y', 'true', '1'].includes(lower)) parsedValue = true;
-            else if (['no', 'n', 'false', '0'].includes(lower)) parsedValue = false;
-            else parsedValue = prevValue;
-          } else if (typeof prevValue === 'number') {
-            // Numeric column without explicit cellType
-            const num = Number(newValue);
-            parsedValue = isNaN(num) ? prevValue : num;
-          }
+        if (cursorAtEnd) {
+          input.setSelectionRange(value.length, value.length);
+        } else {
+          input.select();
         }
 
-        // Update grid data BEFORE cleanup — cleanup triggers re-render
-        // which needs to show the new value
+        input.addEventListener('keydown', handleEditorKeydown);
+        input.addEventListener('blur', handleEditorBlur);
+        return input;
+      }
+
+      // -----------------------------------------------------------------------
+      // Dropdown editor
+      // -----------------------------------------------------------------------
+
+      function createDropdown(
+        cellEl: HTMLElement,
+        opts: DropdownOption[],
+        currentValue: unknown,
+      ): HTMLSelectElement {
+        const select = document.createElement('select');
+        select.className = 'bg-cell-editor bg-cell-editor--select';
+        select.style.cssText = EDITOR_CSS + 'cursor: pointer; appearance: auto;';
+
+        for (const opt of opts) {
+          const option = document.createElement('option');
+          option.value = String(opt.value);
+          option.textContent = opt.label;
+          // Match by strict equality on value, or by string comparison
+          if (opt.value === currentValue || String(opt.value) === String(currentValue)) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        }
+
+        // Store options for value lookup on commit
+        (select as HTMLSelectElement & { _options: DropdownOption[] })._options = opts;
+
+        cellEl.appendChild(select);
+        select.focus();
+
+        // Commit on change (user picks a different option)
+        select.addEventListener('change', () => {
+          commitEdit();
+        });
+        select.addEventListener('keydown', handleEditorKeydown);
+        select.addEventListener('blur', handleEditorBlur);
+
+        return select;
+      }
+
+      // -----------------------------------------------------------------------
+      // Commit / Cancel
+      // -----------------------------------------------------------------------
+
+      function commitEdit(): boolean {
+        if (!editingCell || !activeEditor) return false;
+
+        const position = editingCell;
+        const prevValue = originalValue;
+        const state = ctx.grid.getState();
+        const column = state.columns[position.colIndex];
+
+        let parsedValue: unknown;
+
+        if (activeEditor instanceof HTMLSelectElement) {
+          // Dropdown: look up the actual value from the stored options
+          const storedOpts = (activeEditor as HTMLSelectElement & { _options?: DropdownOption[] })._options;
+          const selectedIdx = activeEditor.selectedIndex;
+          if (storedOpts && selectedIdx >= 0) {
+            parsedValue = storedOpts[selectedIdx]!.value;
+          } else {
+            parsedValue = activeEditor.value;
+          }
+        } else {
+          // Text input: parse based on cell type
+          const newValue = activeEditor.value;
+          parsedValue = parseTextValue(newValue, column, prevValue);
+        }
+
+        // Update grid data BEFORE cleanup
         if (column?.accessorKey && parsedValue !== prevValue) {
           ctx.grid.updateCell(position.rowIndex, column.id, parsedValue);
         }
 
-        // Clean up the input (re-render will show updated formatted value)
         cleanupEdit();
-
         return true;
+      }
+
+      function parseTextValue(
+        newValue: string,
+        column: { cellType?: string } | undefined,
+        prevValue: unknown,
+      ): unknown {
+        if (!column) return newValue;
+
+        const cellType = column.cellType;
+        if (cellType === 'number' || cellType === 'currency') {
+          const num = Number(newValue.replace(/[^0-9.\-]/g, ''));
+          return isNaN(num) ? prevValue : num;
+        }
+        if (cellType === 'percent') {
+          const num = Number(newValue.replace(/[^0-9.\-]/g, ''));
+          return isNaN(num) ? prevValue : num / 100;
+        }
+        if (typeof prevValue === 'boolean') {
+          const lower = newValue.toLowerCase().trim();
+          if (['yes', 'y', 'true', '1'].includes(lower)) return true;
+          if (['no', 'n', 'false', '0'].includes(lower)) return false;
+          return prevValue;
+        }
+        if (typeof prevValue === 'number') {
+          const num = Number(newValue);
+          return isNaN(num) ? prevValue : num;
+        }
+        return newValue;
       }
 
       function cancelEdit(): void {
@@ -157,9 +286,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       }
 
       function cleanupEdit(): void {
-        if (editInput) {
-          editInput.removeEventListener('keydown', handleInputKeydown);
-          editInput.removeEventListener('blur', handleInputBlur);
+        if (activeEditor) {
+          activeEditor.removeEventListener('keydown', handleEditorKeydown);
+          activeEditor.removeEventListener('blur', handleEditorBlur);
+          if (activeEditor instanceof HTMLSelectElement) {
+            activeEditor.removeEventListener('change', () => commitEdit());
+          }
         }
 
         if (editingCell) {
@@ -170,38 +302,36 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           }
         }
 
-        editInput = null;
+        activeEditor = null;
         editingCell = null;
         originalValue = null;
 
-        // Re-render to restore formatted cell content
         ctx.grid.refresh();
       }
 
-      function handleInputKeydown(e: KeyboardEvent): void {
-        e.stopPropagation(); // Don't let grid handle these keys
+      // -----------------------------------------------------------------------
+      // Event handlers
+      // -----------------------------------------------------------------------
+
+      function handleEditorKeydown(e: KeyboardEvent): void {
+        e.stopPropagation();
 
         if (e.key === 'Enter' && config.commitOn.includes('enter')) {
           e.preventDefault();
           const pos = editingCell;
           commitEdit();
-          // Move to next row
           if (pos) {
             const state = ctx.grid.getState();
             const nextRow = Math.min(pos.rowIndex + 1, state.data.length - 1);
             ctx.grid.setSelection({
               active: { rowIndex: nextRow, colIndex: pos.colIndex },
-              ranges: [{
-                startRow: nextRow, endRow: nextRow,
-                startCol: pos.colIndex, endCol: pos.colIndex,
-              }],
+              ranges: [{ startRow: nextRow, endRow: nextRow, startCol: pos.colIndex, endCol: pos.colIndex }],
             });
           }
         } else if (e.key === 'Tab' && config.commitOn.includes('tab')) {
           e.preventDefault();
           const pos = editingCell;
           commitEdit();
-          // Move to next/prev column
           if (pos) {
             const state = ctx.grid.getState();
             const nextCol = e.shiftKey
@@ -209,10 +339,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
               : Math.min(pos.colIndex + 1, state.columns.length - 1);
             ctx.grid.setSelection({
               active: { rowIndex: pos.rowIndex, colIndex: nextCol },
-              ranges: [{
-                startRow: pos.rowIndex, endRow: pos.rowIndex,
-                startCol: nextCol, endCol: nextCol,
-              }],
+              ranges: [{ startRow: pos.rowIndex, endRow: pos.rowIndex, startCol: nextCol, endCol: nextCol }],
             });
           }
         } else if (e.key === 'Escape' && config.cancelOnEscape) {
@@ -221,14 +348,15 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         }
       }
 
-      function handleInputBlur(): void {
-        // Small delay to allow click events to process first
+      function handleEditorBlur(): void {
         setTimeout(() => {
-          if (editingCell) {
-            commitEdit();
-          }
+          if (editingCell) commitEdit();
         }, 100);
       }
+
+      // -----------------------------------------------------------------------
+      // API & bindings
+      // -----------------------------------------------------------------------
 
       const api: EditingApi = {
         startEdit,
@@ -245,47 +373,33 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         ctx.on('cell:click', (cell) => startEdit(cell));
       }
 
-      // Enter key starts/commits editing
       const unbindEnter = ctx.registerKeyBinding({
         key: 'Enter',
         priority: 10,
         handler: (_event, cell) => {
-          if (editingCell) {
-            // Enter during edit is handled by the input's own keydown
-            return false;
-          }
-          if (cell) {
-            startEdit(cell);
-            return true;
-          }
+          if (editingCell) return false; // let the editor's own keydown handle it
+          if (cell) { startEdit(cell); return true; }
           return false;
         },
       });
 
-      // Escape cancels editing
       const unbindEscape = config.cancelOnEscape
         ? ctx.registerKeyBinding({
             key: 'Escape',
             priority: 10,
             handler: () => {
-              if (editingCell) {
-                cancelEdit();
-                return true;
-              }
+              if (editingCell) { cancelEdit(); return true; }
               return false;
             },
           })
         : undefined;
 
-      // Type-to-edit: any printable key starts editing with that character
       const unbindType = config.editTrigger === 'type'
         ? ctx.registerKeyBinding({
             key: '*',
-            priority: -1, // low priority, runs after other bindings
+            priority: -1,
             handler: (event, cell) => {
-              if (editingCell) return false;
-              if (!cell) return false;
-              // Only trigger on printable characters (single char, no modifier except shift)
+              if (editingCell || !cell) return false;
               if (event.key.length !== 1) return false;
               if (event.ctrlKey || event.altKey || event.metaKey) return false;
               startEdit(cell, event.key);
