@@ -243,6 +243,13 @@ export function createGrid<
 
   function handlePointerDown(event: PointerEvent): void {
     if (!cellContainer) return;
+
+    // Don't interfere with active editor inputs
+    const target = event.target as HTMLElement;
+    if (target.classList.contains('bg-cell-editor') || target.closest('.bg-cell--editing')) {
+      return;
+    }
+
     const cell = getCellFromEvent(event);
     if (!cell) return;
 
@@ -263,6 +270,10 @@ export function createGrid<
   }
 
   function handleDblClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (target.classList.contains('bg-cell-editor') || target.closest('.bg-cell--editing')) {
+      return;
+    }
     const cell = getCellFromEvent(event);
     if (cell) {
       emitter.emit('cell:dblclick', cell, event);

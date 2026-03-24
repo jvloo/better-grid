@@ -57,7 +57,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
         editingCell = position;
 
-        // Get current value
+        // Get current raw value and display text
         const data = state.data[position.rowIndex];
         if (column.accessorKey && data) {
           originalValue = (data as Record<string, unknown>)[column.accessorKey];
@@ -65,11 +65,15 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           originalValue = cellEl.textContent;
         }
 
+        // Use the cell's rendered text as the display value for the input
+        // (handles custom renderers, formatting, booleans, etc.)
+        const displayText = cellEl.textContent?.trim() ?? '';
+
         // Create input element
         editInput = document.createElement('input');
         editInput.type = 'text';
         editInput.className = 'bg-cell-editor';
-        editInput.value = initialValue ?? (originalValue != null ? String(originalValue) : '');
+        editInput.value = initialValue ?? displayText;
         editInput.style.cssText = `
           width: 100%;
           height: 100%;
@@ -123,6 +127,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           } else if (cellType === 'percent') {
             const num = Number(newValue.replace(/[^0-9.\-]/g, ''));
             parsedValue = isNaN(num) ? prevValue : num / 100;
+          } else if (typeof prevValue === 'boolean') {
+            // Boolean parsing: accept yes/no, true/false, 1/0
+            const lower = newValue.toLowerCase().trim();
+            if (['yes', 'true', '1'].includes(lower)) parsedValue = true;
+            else if (['no', 'false', '0'].includes(lower)) parsedValue = false;
+            else parsedValue = prevValue;
+          } else if (typeof prevValue === 'number') {
+            // Numeric column without explicit cellType
+            const num = Number(newValue);
+            parsedValue = isNaN(num) ? prevValue : num;
           }
         }
 
