@@ -559,6 +559,7 @@ export function createGrid<
       scrollContainer.style.width = '100%';
       scrollContainer.style.height = '100%';
       scrollContainer.style.overflow = 'auto';
+      scrollContainer.style.zIndex = '0'; // stacking context below frozen overlay
 
       // Content sizer (sets scroll dimensions)
       contentSizer = document.createElement('div');
@@ -613,10 +614,14 @@ export function createGrid<
 
         frozenColOverlay.appendChild(frozenHeaderOverlay);
         frozenColOverlay.appendChild(frozenCellOverlay);
-        container.appendChild(frozenColOverlay);
       }
 
       container.appendChild(scrollContainer);
+
+      // Append frozen overlay AFTER scroll container so it renders on top
+      if (frozenColOverlay) {
+        container.appendChild(frozenColOverlay);
+      }
 
       // Selection layer (inside cell container so offsets align with cells)
       selectionLayer = new SelectionLayer(cellContainer);
