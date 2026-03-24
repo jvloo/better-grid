@@ -213,10 +213,11 @@ export function createGrid<
       frozenColOverlay!.style.height = `${Math.min(contentHeight, scrollContainer!.clientHeight)}px`;
       frozenColOverlay!.style.bottom = 'auto';
 
-      // Clip the scroll container's left edge so scrolled cells don't
-      // bleed behind the frozen overlay. Using clip-path preserves the
-      // full-width scroll area while hiding the frozen-width region.
-      scrollContainer!.style.clipPath = `inset(0 0 0 ${frozenWidth}px)`;
+      // Offset scroll content so cells don't bleed behind frozen overlay.
+      // padding-left pushes content right, negative margin on sizer
+      // compensates so scroll dimensions stay correct.
+      scrollContainer!.style.paddingLeft = `${frozenWidth}px`;
+      contentSizer!.style.marginLeft = `-${frozenWidth}px`;
     }
 
     // Render selection layer
