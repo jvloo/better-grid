@@ -184,8 +184,9 @@ export function createGrid<
       state.columns,
       measurements,
       state.selection,
-      0, // no frozen handling in main pipeline
+      0, // no frozen col handling in main pipeline
       0,
+      state.frozenTopRows,
     );
 
     // Render frozen columns into separate overlay (outside scroll container)
@@ -201,8 +202,9 @@ export function createGrid<
         state.columns,
         measurements,
         state.selection,
+        frozenCols, // apply last-frozen-col class
         0,
-        0,
+        state.frozenTopRows,
       );
 
       // Update frozen overlay width
@@ -366,8 +368,12 @@ export function createGrid<
       const width = measurements.colOffsets[col + 1]! - left;
       const isFrozen = col < state.frozenLeftColumns;
 
+      const isLastFrozenCol = col === state.frozenLeftColumns - 1;
       const headerCell = document.createElement('div');
-      headerCell.className = 'bg-header-cell' + (isFrozen ? ' bg-header-cell--frozen-left' : '');
+      let cls = 'bg-header-cell';
+      if (isFrozen) cls += ' bg-header-cell--frozen-left';
+      if (isLastFrozenCol) cls += ' bg-header-cell--frozen-col-last';
+      headerCell.className = cls;
       headerCell.style.position = 'absolute';
       headerCell.style.transform = `translate3d(${left}px, 0, 0)`;
       headerCell.style.width = `${width}px`;

@@ -115,11 +115,27 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Frozen Column Overlay
+   Frozen Rows & Columns
    --------------------------------------------------------------------------- */
 
+/* Frozen column overlay — right edge */
 .bg-grid__frozen-overlay {
-  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--bg-frozen-col-shadow, 4px 0 8px -2px rgba(0, 0, 0, 0.1));
+}
+
+/* Last frozen column cell — right border emphasis */
+.bg-cell--frozen-col-last {
+  border-right: var(--bg-frozen-col-border, 2px solid #d0d0d0);
+}
+
+/* Last frozen top row — bottom border emphasis */
+.bg-cell--frozen-row-last {
+  border-bottom: var(--bg-frozen-row-border, 2px solid #d0d0d0);
+}
+
+/* Frozen header last column */
+.bg-header-cell--frozen-col-last {
+  border-right: var(--bg-frozen-col-border, 2px solid #d0d0d0);
 }
 
 /* ---------------------------------------------------------------------------

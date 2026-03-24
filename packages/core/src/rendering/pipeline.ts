@@ -44,6 +44,7 @@ export class RenderingPipeline<TData = unknown> {
     selection: Selection,
     frozenLeftColumns = 0,
     scrollLeft = 0,
+    frozenTopRows = 0,
   ): void {
     const visibleKeys = new Set<string>();
 
@@ -82,6 +83,10 @@ export class RenderingPipeline<TData = unknown> {
           cell.classList.remove('bg-cell--frozen-left');
           this.frozenCells.delete(key);
         }
+
+        // Last frozen column/row border emphasis
+        cell.classList.toggle('bg-cell--frozen-col-last', col === frozenLeftColumns - 1);
+        cell.classList.toggle('bg-cell--frozen-row-last', frozenTopRows > 0 && row === frozenTopRows - 1);
 
         // Selection classes
         const selected = isCellInSelection(row, col, selection);
