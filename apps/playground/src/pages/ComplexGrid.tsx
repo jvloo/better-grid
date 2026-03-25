@@ -184,7 +184,7 @@ export function ComplexGrid() {
   const plugins = useMemo(
     () => [
       formatting({ locale: 'en-US', currencyCode: 'USD', accountingFormat: true }),
-      editing({ editTrigger: 'dblclick' }),
+      editing({ editTrigger: 'dblclick', precision: 0 }),
       sorting(),
     ],
     [],
@@ -261,7 +261,7 @@ const headerRows = [
   selection={{ mode: 'range' }}
   plugins={[
     formatting({ currencyCode: 'USD', accountingFormat: true }),
-    editing({ editTrigger: 'dblclick' }),
+    editing({ editTrigger: 'dblclick', precision: 0 }),
     sorting(),
   ]}
   height={520}

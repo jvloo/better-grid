@@ -11,6 +11,8 @@ interface TestRow {
   quantity: number;
   price: number;
   rate: number;
+  serialNumber: bigint;
+  weight: number;
   status: string;
   priority: number;
   active: boolean;
@@ -21,26 +23,26 @@ interface TestRow {
 }
 
 const initialData: TestRow[] = [
-  { id: 1, name: 'Widget A', quantity: 100, price: 25000, rate: 0.05, status: 'Open', priority: 1, active: true, activeForcedText: true, date: '2026-01-15', notes: 'First batch', readonly: 'Cannot edit' },
-  { id: 2, name: 'Widget B', quantity: 250, price: 45000, rate: 0.12, status: 'Closed', priority: 2, active: false, activeForcedText: false, date: '2026-02-20', notes: 'Second batch', readonly: 'Cannot edit' },
-  { id: 3, name: 'Widget C', quantity: 50, price: 8900, rate: 0.03, status: 'Pending', priority: 3, active: true, activeForcedText: true, date: '2026-03-10', notes: '', readonly: 'Cannot edit' },
-  { id: 4, name: 'Widget D', quantity: 500, price: 120000, rate: 0.08, status: 'Open', priority: 1, active: false, activeForcedText: false, date: '2026-04-05', notes: 'Rush order', readonly: 'Cannot edit' },
-  { id: 5, name: 'Widget E', quantity: 75, price: 33000, rate: 0.15, status: 'Closed', priority: 2, active: true, activeForcedText: true, date: '2026-05-18', notes: 'Discount applied', readonly: 'Cannot edit' },
-  { id: 6, name: 'Sensor Module', quantity: 320, price: 18500, rate: 0.07, status: 'Open', priority: 1, active: true, activeForcedText: false, date: '2026-01-22', notes: 'Bulk shipment', readonly: 'Cannot edit' },
-  { id: 7, name: 'Power Supply', quantity: 60, price: 72000, rate: 0.10, status: 'Pending', priority: 2, active: false, activeForcedText: true, date: '2026-02-14', notes: '', readonly: 'Cannot edit' },
-  { id: 8, name: 'Display Panel', quantity: 150, price: 95000, rate: 0.04, status: 'Open', priority: 1, active: true, activeForcedText: true, date: '2026-03-01', notes: 'OLED variant', readonly: 'Cannot edit' },
-  { id: 9, name: 'Battery Pack', quantity: 400, price: 31000, rate: 0.09, status: 'Closed', priority: 3, active: false, activeForcedText: false, date: '2026-04-12', notes: 'Lithium-ion', readonly: 'Cannot edit' },
-  { id: 10, name: 'Control Board', quantity: 85, price: 54000, rate: 0.06, status: 'Pending', priority: 2, active: true, activeForcedText: true, date: '2026-05-30', notes: 'Rev 3.1', readonly: 'Cannot edit' },
-  { id: 11, name: 'Motor Assembly', quantity: 200, price: 128000, rate: 0.11, status: 'Open', priority: 1, active: true, activeForcedText: false, date: '2026-06-08', notes: 'Brushless DC', readonly: 'Cannot edit' },
-  { id: 12, name: 'Heat Sink', quantity: 550, price: 4200, rate: 0.02, status: 'Closed', priority: 3, active: false, activeForcedText: true, date: '2026-07-19', notes: 'Aluminum alloy', readonly: 'Cannot edit' },
-  { id: 13, name: 'LED Module', quantity: 1000, price: 2800, rate: 0.14, status: 'Open', priority: 2, active: true, activeForcedText: true, date: '2026-08-25', notes: 'RGB variant', readonly: 'Cannot edit' },
-  { id: 14, name: 'Connector Kit', quantity: 300, price: 6500, rate: 0.05, status: 'Pending', priority: 3, active: false, activeForcedText: false, date: '2026-09-03', notes: '', readonly: 'Cannot edit' },
-  { id: 15, name: 'Gear Assembly', quantity: 120, price: 41000, rate: 0.08, status: 'Closed', priority: 1, active: true, activeForcedText: true, date: '2026-10-11', notes: 'Stainless steel', readonly: 'Cannot edit' },
-  { id: 16, name: 'Relay Switch', quantity: 800, price: 3900, rate: 0.03, status: 'Open', priority: 2, active: false, activeForcedText: false, date: '2026-11-07', notes: '12V rated', readonly: 'Cannot edit' },
-  { id: 17, name: 'Capacitor Bank', quantity: 45, price: 87000, rate: 0.13, status: 'Pending', priority: 1, active: true, activeForcedText: true, date: '2026-12-01', notes: 'High voltage', readonly: 'Cannot edit' },
-  { id: 18, name: 'Cooling Fan', quantity: 230, price: 15600, rate: 0.06, status: 'Closed', priority: 3, active: false, activeForcedText: false, date: '2026-01-30', notes: '80mm', readonly: 'Cannot edit' },
-  { id: 19, name: 'Transformer', quantity: 90, price: 63000, rate: 0.10, status: 'Open', priority: 2, active: true, activeForcedText: true, date: '2026-02-28', notes: 'Step-down 240V', readonly: 'Cannot edit' },
-  { id: 20, name: 'Fiber Optic Cable', quantity: 170, price: 22000, rate: 0.07, status: 'Pending', priority: 1, active: false, activeForcedText: false, date: '2026-03-15', notes: 'Multi-mode', readonly: 'Cannot edit' },
+  { id: 1, name: 'Widget A', quantity: 100, price: 25000, rate: 0.05, serialNumber: 9876543210012345678n, weight: 2.5, status: 'Open', priority: 1, active: true, activeForcedText: true, date: '2026-01-15', notes: 'First batch', readonly: 'Cannot edit' },
+  { id: 2, name: 'Widget B', quantity: 250, price: 45000, rate: 0.12, serialNumber: 1234567890123456789n, weight: 0.75, status: 'Closed', priority: 2, active: false, activeForcedText: false, date: '2026-02-20', notes: 'Second batch', readonly: 'Cannot edit' },
+  { id: 3, name: 'Widget C', quantity: 50, price: 8900, rate: 0.03, serialNumber: 5678901234567890123n, weight: 1.2, status: 'Pending', priority: 3, active: true, activeForcedText: true, date: '2026-03-10', notes: '', readonly: 'Cannot edit' },
+  { id: 4, name: 'Widget D', quantity: 500, price: 120000, rate: 0.08, serialNumber: 3456789012345678901n, weight: 15.0, status: 'Open', priority: 1, active: false, activeForcedText: false, date: '2026-04-05', notes: 'Rush order', readonly: 'Cannot edit' },
+  { id: 5, name: 'Widget E', quantity: 75, price: 33000, rate: 0.15, serialNumber: 7890123456789012345n, weight: 0.35, status: 'Closed', priority: 2, active: true, activeForcedText: true, date: '2026-05-18', notes: 'Discount applied', readonly: 'Cannot edit' },
+  { id: 6, name: 'Sensor Module', quantity: 320, price: 18500, rate: 0.07, serialNumber: 2345678901234567890n, weight: 0.08, status: 'Open', priority: 1, active: true, activeForcedText: false, date: '2026-01-22', notes: 'Bulk shipment', readonly: 'Cannot edit' },
+  { id: 7, name: 'Power Supply', quantity: 60, price: 72000, rate: 0.10, serialNumber: 6789012345678901234n, weight: 3.4, status: 'Pending', priority: 2, active: false, activeForcedText: true, date: '2026-02-14', notes: '', readonly: 'Cannot edit' },
+  { id: 8, name: 'Display Panel', quantity: 150, price: 95000, rate: 0.04, serialNumber: 4567890123456789012n, weight: 4.8, status: 'Open', priority: 1, active: true, activeForcedText: true, date: '2026-03-01', notes: 'OLED variant', readonly: 'Cannot edit' },
+  { id: 9, name: 'Battery Pack', quantity: 400, price: 31000, rate: 0.09, serialNumber: 8901234567890123456n, weight: 1.6, status: 'Closed', priority: 3, active: false, activeForcedText: false, date: '2026-04-12', notes: 'Lithium-ion', readonly: 'Cannot edit' },
+  { id: 10, name: 'Control Board', quantity: 85, price: 54000, rate: 0.06, serialNumber: 1357924680135792468n, weight: 0.22, status: 'Pending', priority: 2, active: true, activeForcedText: true, date: '2026-05-30', notes: 'Rev 3.1', readonly: 'Cannot edit' },
+  { id: 11, name: 'Motor Assembly', quantity: 200, price: 128000, rate: 0.11, serialNumber: 2468013579246801357n, weight: 8.5, status: 'Open', priority: 1, active: true, activeForcedText: false, date: '2026-06-08', notes: 'Brushless DC', readonly: 'Cannot edit' },
+  { id: 12, name: 'Heat Sink', quantity: 550, price: 4200, rate: 0.02, serialNumber: 1122334455667788990n, weight: 0.45, status: 'Closed', priority: 3, active: false, activeForcedText: true, date: '2026-07-19', notes: 'Aluminum alloy', readonly: 'Cannot edit' },
+  { id: 13, name: 'LED Module', quantity: 1000, price: 2800, rate: 0.14, serialNumber: 9988776655443322110n, weight: 0.03, status: 'Open', priority: 2, active: true, activeForcedText: true, date: '2026-08-25', notes: 'RGB variant', readonly: 'Cannot edit' },
+  { id: 14, name: 'Connector Kit', quantity: 300, price: 6500, rate: 0.05, serialNumber: 5544332211009988776n, weight: 0.18, status: 'Pending', priority: 3, active: false, activeForcedText: false, date: '2026-09-03', notes: '', readonly: 'Cannot edit' },
+  { id: 15, name: 'Gear Assembly', quantity: 120, price: 41000, rate: 0.08, serialNumber: 6677889900112233445n, weight: 2.1, status: 'Closed', priority: 1, active: true, activeForcedText: true, date: '2026-10-11', notes: 'Stainless steel', readonly: 'Cannot edit' },
+  { id: 16, name: 'Relay Switch', quantity: 800, price: 3900, rate: 0.03, serialNumber: 3344556677889900112n, weight: 0.12, status: 'Open', priority: 2, active: false, activeForcedText: false, date: '2026-11-07', notes: '12V rated', readonly: 'Cannot edit' },
+  { id: 17, name: 'Capacitor Bank', quantity: 45, price: 87000, rate: 0.13, serialNumber: 7788990011223344556n, weight: 6.0, status: 'Pending', priority: 1, active: true, activeForcedText: true, date: '2026-12-01', notes: 'High voltage', readonly: 'Cannot edit' },
+  { id: 18, name: 'Cooling Fan', quantity: 230, price: 15600, rate: 0.06, serialNumber: 4455667788990011223n, weight: 0.28, status: 'Closed', priority: 3, active: false, activeForcedText: false, date: '2026-01-30', notes: '80mm', readonly: 'Cannot edit' },
+  { id: 19, name: 'Transformer', quantity: 90, price: 63000, rate: 0.10, serialNumber: 8899001122334455667n, weight: 12.5, status: 'Open', priority: 2, active: true, activeForcedText: true, date: '2026-02-28', notes: 'Step-down 240V', readonly: 'Cannot edit' },
+  { id: 20, name: 'Fiber Optic Cable', quantity: 170, price: 22000, rate: 0.07, serialNumber: 2233445566778899001n, weight: 0.55, status: 'Pending', priority: 1, active: false, activeForcedText: false, date: '2026-03-15', notes: 'Multi-mode', readonly: 'Cannot edit' },
 ];
 
 export function EditableGrid() {
@@ -63,19 +65,36 @@ export function EditableGrid() {
         rules: [{ validate: (v) => (v as number) > 0 || 'Must be positive', message: 'Qty must be > 0' }],
       },
 
-      // 4. cellType: 'currency' → text input with min/max validation
+      // 4. cellType: 'currency' → text input with precision: 2
       {
         id: 'price',
         header: 'Price (currency)',
         width: 150,
         cellType: 'currency',
+        meta: { precision: 2 },
         rules: [{ validate: (v) => (v as number) >= 0 || 'Cannot be negative' }],
       },
 
       // 5. cellType: 'percent' → text input, parses 50 → 0.5
       { id: 'rate', header: 'Rate (percent)', width: 130, cellType: 'percent' },
 
-      // 6. options (strings) → dropdown
+      // 6. cellType: 'bigint' → full-precision large integers
+      { id: 'serialNumber', header: 'Serial (bigint)', width: 185, cellType: 'bigint' },
+
+      // 7. valueParser/valueFormatter → custom parsing (weight in kg)
+      {
+        id: 'weight',
+        header: 'Weight (custom)',
+        width: 130,
+        align: 'right',
+        valueFormatter: (v: unknown) => typeof v === 'number' ? `${v.toFixed(2)} kg` : String(v ?? ''),
+        valueParser: (s: string) => {
+          const num = Number(s.replace(/[^0-9.\-]/g, ''));
+          return isNaN(num) ? 0 : Math.round(num * 100) / 100;
+        },
+      },
+
+      // 8. options (strings) → dropdown
       {
         id: 'status',
         header: 'Status (dropdown)',
@@ -83,7 +102,7 @@ export function EditableGrid() {
         options: ['Open', 'Pending', 'Closed'],
       },
 
-      // 7. options ({ label, value }) → dropdown with label/value
+      // 9. options ({ label, value }) → dropdown with label/value
       {
         id: 'priority',
         header: 'Priority (l/v)',
@@ -102,7 +121,7 @@ export function EditableGrid() {
         },
       },
 
-      // 8. Boolean auto-detect → dropdown (Yes/No)
+      // 10. Boolean auto-detect → dropdown (Yes/No)
       {
         id: 'active',
         header: 'Active (auto)',
@@ -114,7 +133,7 @@ export function EditableGrid() {
         },
       },
 
-      // 9. Boolean with editor: 'text' → force text input
+      // 11. Boolean with editor: 'text' → force text input
       {
         id: 'activeForcedText',
         header: 'Bool (text)',
@@ -126,13 +145,13 @@ export function EditableGrid() {
         },
       },
 
-      // 10. cellType: 'date' → text input with date formatting
+      // 12. cellType: 'date' → text input with date formatting
       { id: 'date', header: 'Date', width: 120, cellType: 'date' },
 
-      // 11. Plain string (empty allowed)
+      // 13. Plain string (empty allowed)
       { id: 'notes', header: 'Notes', width: 140 },
 
-      // 12. Read-only column
+      // 14. Read-only column
       { id: 'readonly', header: 'Read-only', width: 110, editable: false },
     ],
     [],
@@ -171,8 +190,8 @@ export function EditableGrid() {
         height={300}
       />
       <div style={{ marginTop: 16, fontSize: 13, color: '#888' }}>
-        <strong>Columns:</strong> ID (readonly) | Name (text) | Qty (auto-number) | Price (currency) |
-        Rate (percent) | Status (string dropdown) | Priority (label/value dropdown) |
+        <strong>Columns:</strong> ID (readonly) | Name (text) | Qty (auto-number) | Price (currency, precision: 2) |
+        Rate (percent) | Serial (bigint) | Weight (valueParser/valueFormatter) | Status (string dropdown) | Priority (label/value dropdown) |
         Active (auto boolean dropdown) | Bool-text (forced text) | Date | Notes (text) | Read-only
       </div>
 
@@ -180,8 +199,12 @@ export function EditableGrid() {
 
 { editable: false }           // readonly
 { /* default string */ }      // text input
-{ cellType: 'currency' }      // text → parses $1,234
+{ cellType: 'currency',       // text → parses $1,234
+  meta: { precision: 2 } }   // clamp to 2 decimal places
 { cellType: 'percent' }       // text → shows 5, stores 0.05
+{ cellType: 'bigint' }        // full-precision large integers
+{ valueParser: (s) => ...,    // custom parse/format
+  valueFormatter: (v) => ... }
 { cellType: 'date' }          // text → date string
 { options: ['A', 'B'] }       // dropdown (string)
 { options: [                   // dropdown (label/value)

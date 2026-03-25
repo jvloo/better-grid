@@ -72,6 +72,7 @@ export function ValidationDemo() {
         header: 'Unit Price',
         width: 100,
         cellType: 'currency',
+        meta: { precision: 2 },
         rules: [
           { validate: (v) => (v as number) >= 0 || 'Cannot be negative' },
         ],
@@ -156,6 +157,7 @@ const columns = [
     }] },
   { id: 'unitPrice', header: 'Unit Price', width: 100,
     cellType: 'currency',
+    meta: { precision: 2 },
     rules: [{
       validate: (v) => v >= 0 || 'Cannot be negative'
     }] },

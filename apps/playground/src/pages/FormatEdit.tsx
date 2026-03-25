@@ -50,8 +50,8 @@ export function FormatEdit() {
         width: 110,
         options: ['Electronics', 'Hardware', 'IoT', 'Accessories', 'Software', 'Networking'],
       },
-      { id: 'price', header: 'Price', width: 100, cellType: 'currency' },
-      { id: 'cost', header: 'Cost', width: 100, cellType: 'currency' },
+      { id: 'price', header: 'Price', width: 100, cellType: 'currency', meta: { precision: 2 } },
+      { id: 'cost', header: 'Cost', width: 100, cellType: 'currency', meta: { precision: 2 } },
       { id: 'margin', header: 'Margin', width: 80, cellType: 'percent' },
       { id: 'launchDate', header: 'Launch', width: 120, cellType: 'date' },
       {
@@ -84,7 +84,7 @@ export function FormatEdit() {
         <code>formatting()</code> + <code>editing()</code> plugins. Compare with Core Only — same data, different presentation.
       </p>
       <div style={{ marginBottom: 16, fontSize: 13, color: '#888', lineHeight: 1.6 }}>
-        <strong>Formatting:</strong> Price/Cost → <code>$299.99</code> &bull; Margin → <code>40%</code> &bull; Launch → <code>Jan 15, 2026</code>
+        <strong>Formatting:</strong> Price/Cost → <code>$299.99</code> (precision: 2) &bull; Margin → <code>40%</code> &bull; Launch → <code>Jan 15, 2026</code>
         <br />
         <strong>Editing:</strong> Double-click any cell &bull; Category → dropdown &bull; In Stock → Yes/No toggle &bull; Margin → type "40", stores 0.4
       </div>
@@ -106,9 +106,11 @@ const columns = [
   { id: 'category', header: 'Category', width: 110,
     options: ['Electronics', 'Hardware', 'IoT', 'Accessories', 'Software', 'Networking'] },
   { id: 'price', header: 'Price', width: 100,
-    cellType: 'currency' },             // → $299.99
+    cellType: 'currency',
+    meta: { precision: 2 } },           // → $299.99 (2dp)
   { id: 'cost', header: 'Cost', width: 100,
-    cellType: 'currency' },             // → $180.00
+    cellType: 'currency',
+    meta: { precision: 2 } },           // → $180.00 (2dp)
   { id: 'margin', header: 'Margin', width: 90,
     cellType: 'percent' },              // → 40%
   { id: 'launchDate', header: 'Launch', width: 120,
