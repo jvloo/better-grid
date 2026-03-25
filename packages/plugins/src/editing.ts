@@ -13,6 +13,8 @@ export interface EditingOptions {
   cancelOnEscape?: boolean;
   /** Custom labels for boolean dropdown. Default: ['Yes', 'No'] */
   booleanLabels?: [string, string];
+  /** Default decimal precision for number/currency cells. Per-column meta.precision overrides. */
+  precision?: number;
 }
 
 /** Dropdown option for columns with meta.options */
@@ -51,6 +53,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
     commitOn: options?.commitOn ?? ['enter', 'tab'],
     cancelOnEscape: options?.cancelOnEscape ?? true,
     booleanLabels: options?.booleanLabels ?? (['Yes', 'No'] as [string, string]),
+    precision: options?.precision,
   };
 
   return {
@@ -135,12 +138,30 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         if (dropdownOpts) {
           activeEditor = createDropdown(cellEl, dropdownOpts, originalValue);
         } else {
-          // For percent: show user-friendly value (5 instead of 0.05)
+          // Determine display string for the editor
           let rawStr = originalValue != null ? String(originalValue) : '';
-          if (column.cellType === 'percent' && typeof originalValue === 'number') {
+
+          if (column.valueFormatter) {
+            // Custom valueFormatter takes priority
+            rawStr = column.valueFormatter(originalValue);
+          } else if (column.cellType === 'bigint') {
+            // BigInt: use String() to preserve full integer precision
+            rawStr = originalValue != null ? String(originalValue) : '';
+          } else if (column.cellType === 'percent' && typeof originalValue === 'number') {
+            // For percent: show user-friendly value (5 instead of 0.05)
             // Avoid floating point: 0.0008 * 100 = 0.08 not 0.07999...
             rawStr = String(parseFloat((originalValue * 100).toPrecision(12)));
+          } else if (
+            (column.cellType === 'number' || column.cellType === 'currency') &&
+            typeof originalValue === 'number'
+          ) {
+            // Apply precision formatting when starting edit
+            const prec = getPrecision(column);
+            if (prec != null) {
+              rawStr = originalValue.toFixed(prec);
+            }
           }
+
           const editValue = initialValue ?? rawStr;
           activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined);
         }
@@ -485,6 +506,17 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       }
 
       // -----------------------------------------------------------------------
+      // Precision helper
+      // -----------------------------------------------------------------------
+
+      function getPrecision(column: ColumnDef): number | undefined {
+        // Per-column meta.precision overrides global config precision
+        const metaPrecision = column.meta?.precision;
+        if (typeof metaPrecision === 'number') return metaPrecision;
+        return config.precision;
+      }
+
+      // -----------------------------------------------------------------------
       // Commit / Cancel
       // -----------------------------------------------------------------------
 
@@ -521,15 +553,38 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
       function parseTextValue(
         newValue: string,
-        column: { cellType?: string } | undefined,
+        column: ColumnDef | undefined,
         prevValue: unknown,
       ): unknown {
         if (!column) return newValue;
 
+        // Custom valueParser takes priority over all built-in parsing
+        if (column.valueParser) {
+          return column.valueParser(newValue);
+        }
+
         const cellType = column.cellType;
+
+        // BigInt: parse to BigInt, reject decimals
+        if (cellType === 'bigint') {
+          const cleaned = newValue.replace(/[^0-9\-]/g, '');
+          if (cleaned === '' || cleaned === '-') return prevValue;
+          try {
+            return BigInt(cleaned);
+          } catch {
+            return prevValue;
+          }
+        }
+
         if (cellType === 'number' || cellType === 'currency') {
           const num = Number(newValue.replace(/[^0-9.\-]/g, ''));
-          return isNaN(num) ? prevValue : num;
+          if (isNaN(num)) return prevValue;
+          // Apply precision rounding if configured
+          const prec = getPrecision(column);
+          if (prec != null) {
+            return Number(num.toFixed(prec));
+          }
+          return num;
         }
         if (cellType === 'percent') {
           const num = Number(newValue.replace(/[^0-9.\-]/g, ''));

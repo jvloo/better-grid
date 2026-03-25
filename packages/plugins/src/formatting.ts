@@ -107,8 +107,17 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
         return fmt;
       }
 
-      function formatValue(value: unknown, type: string, column?: { hideZero?: boolean; dateFormat?: string }): string {
+      function formatValue(
+        value: unknown,
+        type: string,
+        column?: { hideZero?: boolean; dateFormat?: string; valueFormatter?: (value: unknown) => string },
+      ): string {
         if (value == null) return '';
+
+        // Custom valueFormatter takes priority over built-in formatting
+        if (column?.valueFormatter) {
+          return column.valueFormatter(value);
+        }
 
         if (column?.hideZero && value === 0) return '';
 
@@ -123,6 +132,25 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
             return currencyFmt.format(value);
           case 'percent':
             return typeof value === 'number' ? percentFmt.format(value) : String(value);
+          case 'bigint': {
+            // BigInt values: convert to number for Intl formatting (integer grouping)
+            // or to string if the value exceeds safe integer range
+            if (typeof value === 'bigint') {
+              // Intl.NumberFormat doesn't support BigInt directly, format via string
+              const str = value.toString();
+              // Use numberFmt for grouping separators on the integer
+              const asNum = Number(value);
+              if (Number.isSafeInteger(asNum)) {
+                return numberFmt.format(asNum);
+              }
+              // For very large integers, manually add grouping
+              const negative = str.startsWith('-');
+              const digits = negative ? str.slice(1) : str;
+              const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+              return negative ? `-${grouped}` : grouped;
+            }
+            return String(value);
+          }
           case 'date': {
             const datePreset = (column?.dateFormat as DateFormatPreset) ?? defaultDateFormat;
             if (datePreset === 'iso') {
@@ -151,6 +179,11 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
             return Number(displayValue.replace(/[^0-9.-]/g, ''));
           case 'percent':
             return Number(displayValue.replace(/[^0-9.-]/g, '')) / 100;
+          case 'bigint': {
+            const cleaned = displayValue.replace(/[^0-9\-]/g, '');
+            if (cleaned === '' || cleaned === '-') return displayValue;
+            try { return BigInt(cleaned); } catch { return displayValue; }
+          }
           case 'date':
             return new Date(displayValue);
           default:
@@ -159,14 +192,14 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
       }
 
       // Register cell type renderers
-      const cellTypes = ['number', 'currency', 'percent', 'date'] as const;
+      const cellTypes = ['number', 'currency', 'percent', 'date', 'bigint'] as const;
       const unregisters: (() => void)[] = [];
 
       for (const type of cellTypes) {
         const renderer: CellTypeRenderer = {
           render(container: HTMLElement, context: CellRenderContext) {
             container.textContent = formatValue(context.value, type, context.column);
-            if (type === 'number' || type === 'currency' || type === 'percent') {
+            if (type === 'number' || type === 'currency' || type === 'percent' || type === 'bigint') {
               container.style.textAlign = 'right';
             }
           },

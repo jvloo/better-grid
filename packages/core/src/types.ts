@@ -102,7 +102,7 @@ export interface CellTypeRenderer {
 // ---------------------------------------------------------------------------
 
 /** Built-in cell types for formatting and editing */
-export type CellType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'select' | 'toggle' | (string & {});
+export type CellType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'bigint' | 'select' | 'toggle' | (string & {});
 
 /** Editor mode override */
 export type EditorType = 'text' | 'dropdown';
@@ -145,6 +145,10 @@ export interface ColumnDef<TData = unknown> {
   // Formatting
   dateFormat?: 'short' | 'medium' | 'long' | 'full' | 'iso' | 'month-year' | 'year' | 'time' | 'datetime';
   hideZero?: boolean;
+
+  // Custom value parsing/formatting (e.g., for arbitrary precision with decimal.js)
+  valueParser?: (value: string) => unknown;
+  valueFormatter?: (value: unknown) => string;
 
   // Validation
   required?: boolean;
