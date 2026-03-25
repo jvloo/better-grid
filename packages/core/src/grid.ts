@@ -253,8 +253,15 @@ export function createGrid<
     e.preventDefault();
     // Normalize deltaMode: 0=pixels, 1=lines(~40px), 2=pages
     const multiplier = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1;
-    fakeScrollbar.scrollTop += e.deltaY * multiplier;
-    fakeScrollbar.scrollLeft += e.deltaX * multiplier;
+    const dy = e.deltaY * multiplier;
+    const dx = e.deltaX * multiplier;
+    // Shift+scroll → horizontal scroll (standard UX convention)
+    if (e.shiftKey && dx === 0) {
+      fakeScrollbar.scrollLeft += dy;
+    } else {
+      fakeScrollbar.scrollTop += dy;
+      fakeScrollbar.scrollLeft += dx;
+    }
   }
 
   function handleScroll(): void {
