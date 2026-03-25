@@ -152,6 +152,10 @@ export class RenderingPipeline<TData = unknown> {
         // Cleanup previous render
         this.cleanupFns.get(key)?.();
 
+        // Apply column-level alignment before render (renderer can override)
+        cell.style.textAlign = column.align ?? '';
+        cell.style.verticalAlign = column.verticalAlign ?? '';
+
         // Render priority: column renderer > cell type > global > default text
         let cleanup: void | (() => void) = undefined;
         if (column.cellRenderer) {

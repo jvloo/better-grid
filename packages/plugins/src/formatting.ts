@@ -166,7 +166,7 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
         const renderer: CellTypeRenderer = {
           render(container: HTMLElement, context: CellRenderContext) {
             container.textContent = formatValue(context.value, type, context.column);
-            if (type === 'number' || type === 'currency') {
+            if (type === 'number' || type === 'currency' || type === 'percent') {
               container.style.textAlign = 'right';
             }
           },

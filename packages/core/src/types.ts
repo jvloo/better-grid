@@ -125,6 +125,10 @@ export interface ColumnDef<TData = unknown> {
   maxWidth?: number;
   resizable?: boolean;
 
+  // Alignment
+  align?: 'left' | 'center' | 'right';
+  verticalAlign?: 'top' | 'middle' | 'bottom';
+
   // Cell rendering
   cellType?: CellType;
   cellRenderer?: CellRenderer<TData>;
