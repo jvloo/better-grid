@@ -52,11 +52,11 @@ export function ProPreview() {
       </div>
 
       <div style={{ marginTop: 32, padding: 16, background: '#f0f7ff', borderRadius: 8, border: '1px solid #d0e0f0' }}>
-        <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>AI-Native (Future)</h3>
+        <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>AI Integration (Future)</h3>
         <p style={{ margin: 0, color: '#555', lineHeight: 1.5 }}>
-          <strong>MCP Server</strong> — AI-assisted column config generation, schema inference from TypeScript types, migration from AG Grid/ReactGrid/Handsontable.
+          <strong>MCP Server</strong> — AI-assisted column config generation, schema inference, migration tooling from other grids.
           <br />
-          <strong>AI Plugin</strong> — Natural language filtering ("show costs over $50k from Q1"), data summarization on selected ranges, smart column suggestions.
+          <strong>AI Plugin</strong> — Free NL filtering ("show costs over $50k from Q1"), plus pro-tier data summarization, anomaly detection, smart suggestions.
         </p>
       </div>
     </div>

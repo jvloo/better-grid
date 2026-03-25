@@ -1,6 +1,6 @@
 # Better Grid
 
-Framework-agnostic, TypeScript-first, AI-native data grid & spreadsheet library with plugin architecture.
+Framework-agnostic, TypeScript-first data grid & spreadsheet library with composable plugin architecture.
 
 ## Architecture
 
@@ -14,8 +14,8 @@ Monorepo with pnpm workspaces + Turborepo.
 | `@better-grid/react` | React adapter (hooks + component) | MIT |
 | `@better-grid/plugins` | Free plugins (editing, sorting, filtering, formatting, validation) + built-in cell renderers | MIT |
 | `@better-grid/pro` | Paid plugins (clipboard, grouping, undo/redo, export, advanced renderers) | Commercial (future) |
-| `@better-grid/mcp` | AI-native MCP server for developer tooling | MIT (future) |
-| `@better-grid/plugin-ai` | End-user AI features (NL filtering, summarization) | Commercial (future) |
+| `@better-grid/mcp` | MCP server for developer tooling | MIT (future) |
+| `@better-grid/plugin-ai` | AI features: free NL filtering + pro data intelligence | Tiered (future) |
 
 ### Core Design (Better Auth-inspired)
 

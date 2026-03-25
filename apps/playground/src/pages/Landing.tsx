@@ -89,7 +89,7 @@ export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
           </span>
         </h1>
         <p style={{ fontSize: 20, color: '#888', maxWidth: 600, lineHeight: 1.5, margin: '0 0 32px' }}>
-          Framework-agnostic, TypeScript-first, AI-native data grid & spreadsheet library with composable plugin architecture.
+          Framework-agnostic, TypeScript-first data grid & spreadsheet library with composable plugin architecture.
         </p>
         <div style={{ display: 'flex', gap: 12, marginBottom: 48 }}>
           <button onClick={onExploreDemos} style={{
@@ -132,7 +132,7 @@ export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
           <PillarCard
             emoji="⚡"
             title="Performance First"
-            description="10M cells at 141 FPS. DOM virtualization with only ~200 elements regardless of dataset size. Binary search on prefix-sum arrays for O(log n) scroll."
+            description="10M cells at 60 FPS sustained. DOM virtualization with only ~200 cell elements regardless of dataset size. Binary search on prefix-sum arrays for O(log n) scroll."
             gradient="from-blue"
           />
           <PillarCard
@@ -143,8 +143,8 @@ export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
           />
           <PillarCard
             emoji="🤖"
-            title="AI Native"
-            description="First data grid with MCP server and AI plugin support. Schema inference, natural language filtering, migration from AG Grid — coming soon."
+            title="AI Ready"
+            description="Composable AI plugins with free NL filtering — no $999 Enterprise paywall. Schema inference, migration tooling, and data intelligence — coming soon."
             gradient="from-pink"
           />
         </div>
@@ -156,13 +156,13 @@ export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
           Built for <span style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>scale</span>
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-          <StatCard value="141" unit="FPS" label="Scroll performance" />
+          <StatCard value="60" unit="FPS" label="Sustained scroll perf" />
           <StatCard value="10M" unit="cells" label="Handled in 1.3 seconds" />
-          <StatCard value="~200" unit="DOM" label="Elements regardless of size" />
+          <StatCard value="~200" unit="cells" label="In DOM regardless of size" />
           <StatCard value="480" unit="MB" label="Heap for 10M cells" />
         </div>
         <p style={{ fontSize: 14, color: '#555', marginTop: 24 }}>
-          AG Grid crashes at 400K rows (4M cells). We handle 10M cells smoothly.
+          Constant ~200 cell DOM footprint whether you have 1K or 10M cells. No lag, no blank flash.
         </p>
       </section>
 
@@ -182,14 +182,14 @@ export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
               </tr>
             </thead>
             <tbody>
-              <CompRow feature="Free editing & formatting" ag="Enterprise" hs="Commercial" bg="MIT (free)" />
-              <CompRow feature="Free sorting & filtering" ag="Community" hs="Commercial" bg="MIT (free)" />
+              <CompRow feature="Free editing & validation" ag="✓ Community" hs="Non-commercial" bg="MIT (free)" />
+              <CompRow feature="Free badge/progress/rating" ag="✗" hs="✗" bg="✓ (MIT)" />
               <CompRow feature="Range selection" ag="Enterprise" hs="Commercial" bg="MIT (free)" />
               <CompRow feature="Framework agnostic" ag="✓" hs="✓" bg="✓" />
-              <CompRow feature="Plugin architecture" ag="✗" hs="✗" bg="✓" />
+              <CompRow feature="Type-safe plugin DX" ag="✗ (modules)" hs="✗ (monolithic)" bg="✓ ($Infer)" />
               <CompRow feature="TypeScript-first" ag="Partial" hs="Partial" bg="✓ Strict" />
-              <CompRow feature="AI-native (MCP)" ag="✗" hs="✗" bg="Coming soon" />
-              <CompRow feature="Price" ag="$999/dev/yr" hs="$999/dev/yr" bg="Free (MIT)" />
+              <CompRow feature="Free AI filtering" ag="Enterprise ($999)" hs="✗" bg="Planned (free)" />
+              <CompRow feature="Core price" ag="Free" hs="$899/dev/yr" bg="Free (MIT)" />
             </tbody>
           </table>
         </div>

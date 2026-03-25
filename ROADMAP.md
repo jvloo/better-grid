@@ -26,19 +26,20 @@
 ## Competitive Position
 
 ```
-                    AG Grid    Handsontable   RevoGrid Pro  Better Grid
-Free editing          ✗ ($$$)    ✓*             ✓             ✓
-Free checkbox         ✓          ✓              ✗             ✓
-Free badge            ✗          ✗              ✗ (Pro)       ✓  ← unique
-Free progress bar     ✗          ✗              ✗ (Pro)       ✓  ← unique
-Free rating           ✗          ✗              ✗ (Pro)       ✓  ← unique
-Free sparkline        ✗ ($$$)    ✗              ✗ (Pro)       ✗ (Pro)
-Free validation       ✗          ✓              ✗ (Pro)       ✓
-Free sorting          ✓          ✓              ✓             ✓
-Plugin architecture   ✗          ✗              ✗             ✓  ← unique
-AI-native (MCP)       ✗          ✗              ✗             ✓  ← unique
+                         AG Grid    Handsontable   RevoGrid     MUI X       Better Grid
+Free editing               ✓          ✓*             ✓ (MIT)      ✓           ✓
+Free cell renderers        2          11             4            6           6+ (MIT)
+Free badge/progress/rating ✗          ✗              ✗ (Pro)      ✗           ✓  ← unique free
+Free sparkline             ✗ ($$$)    ✗              ✗ (Pro)      ✗           ✗ (Pro)
+Free validation            ✓          ✓              ✗ (Pro)      ✓           ✓
+Free clipboard             ✗ ($$$)    ✓              ✗ (Pro)      ✗ (Pro)     ✗ (Pro)
+Plugin system              Modules    Plugins        BasePlugin   Slots       Composable plugins
+Type-safe plugin DX        ✗          ✗              ✗            ✗           ✓  ← unique
+Framework-agnostic         ✓          ✓              ✓            ✗ (React)   ✓
+MCP server (dev)           ✓ (free)   ✗              ✗            ✓ (free)    Planned
+AI toolkit (runtime)       ✓ ($$$)    ✗              ✗            ✓ ($$$)     Planned (free tier)
 
-* Handsontable: free for non-commercial only
+* Handsontable: free for non-commercial only ($899/dev/yr commercial)
 ```
 
 ## Phase 1: Built-in Cell Renderers (Free Plugin)
@@ -141,23 +142,53 @@ Like AG Grid's data type system — infer cellType, editor, filter, and alignmen
 | `tooltip` | Rich hover (warning/error/info) | RevoGrid Pro |
 | `loading` | Shimmer skeleton state | AG Grid Community |
 
-## Phase 4: AI-Native
+## Phase 4: AI Integration
+
+### Competitive Landscape (as of 2026-03)
+
+AG Grid shipped both MCP server (free/MIT, Oct 2025) and AI Toolkit (Enterprise, Oct 2025).
+MUI X shipped MCP server (free) and "Ask Your Table" (Premium tier, 2026).
+Bryntum has MCP server + AIFilter (paid). Syncfusion has MCP server (free).
+Handsontable, RevoGrid, Tabulator: no AI features.
+
+**AG Grid's approach:** `getStructuredSchema()` → send to any LLM → `setState()` applies result.
+Controls 7 features: filter, sort, group, pivot, aggregate, column visibility, column sizing.
+No data sent to LLM (only schema/metadata). Enterprise only ($999/dev/yr).
+
+**MUI X's approach:** Similar NL→state pattern. Premium tier (contact sales).
+
+### Our Differentiation Angle
+
+AG Grid and MUI X bolted AI onto mature products. Their MCP servers are doc-search wrappers.
+Their runtime AI is state-manipulation only (filter/sort/group). No data intelligence.
+
+Better Grid can differentiate by:
+1. **Plugin-native AI** — AI as a composable plugin, not a monolithic API bolted onto the grid
+2. **Data-aware AI** — go beyond state manipulation: anomaly detection, smart suggestions, summarization
+3. **Open runtime AI** — free tier NL→filter/sort (AG Grid gates this behind Enterprise)
+4. **Migration tooling** — MCP tools to convert AG Grid/Handsontable configs (competitors don't help you leave)
+5. **Schema-first DX** — generate full grid config from TypeScript types or API responses
 
 ### `@better-grid/mcp` (MIT)
 
 Developer tooling via MCP server:
-- Column config generation from data schema
-- Migration from AG Grid / Handsontable config
+- Column config generation from TypeScript types / data samples
+- Migration from AG Grid / Handsontable / MUI X config → Better Grid
 - Natural language → filter/sort expressions
-- Schema inference from CSV/JSON
+- Schema inference from CSV/JSON/API endpoints
+- Plugin recommendation based on use case
 
-### `@better-grid/plugin-ai` (Commercial)
+### `@better-grid/plugin-ai` (Tiered)
 
-End-user AI features:
-- Natural language filtering ("show me overdue tasks assigned to Alice")
-- Data summarization
-- Smart column suggestions
-- Anomaly highlighting
+**Free tier** (differentiator vs AG Grid Enterprise):
+- Natural language filtering ("show overdue tasks assigned to Alice")
+- Natural language sorting/grouping
+
+**Pro tier:**
+- Data summarization on selected ranges
+- Anomaly highlighting (outlier detection)
+- Smart column suggestions (formatting, grouping based on data patterns)
+- Formula/computed column generation from plain English
 
 ## Framework Adapters
 
@@ -175,5 +206,5 @@ End-user AI features:
 2. **Plugins add opinions** — each plugin is one concern, composable, tree-shakeable
 3. **Free tier beats competitors** — more built-in renderers than AG Grid Community
 4. **Pro tier has visual wow** — sparklines, heatmaps, charts that sell the upgrade
-5. **AI-native is the moat** — no competitor has MCP or runtime AI features
-6. **Performance is non-negotiable** — 10M cells, 141 FPS, ~200 DOM elements
+5. **AI as a plugin, not a bolt-on** — composable AI with free NL filtering (competitors gate behind $$)
+6. **Performance is non-negotiable** — 10M cells, 60 FPS sustained, ~200 cell elements

@@ -351,7 +351,7 @@ const data = generateData(100_000, 100);
   height={480}
 />
 
-// Stats: 10M cells, ~200 DOM elements, 141 FPS`} />
+// Stats: 10M cells, ~200 cell elements, 60 FPS sustained`} />
     </div>
   );
 }

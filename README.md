@@ -1,26 +1,27 @@
 # Better Grid
 
-A framework-agnostic, TypeScript-first, AI-native data grid & spreadsheet library — built for the AI era.
+A framework-agnostic, TypeScript-first data grid & spreadsheet library with composable plugin architecture.
 
 > **Status**: Early development (v0.0.1). API is unstable.
 
 ## Why Better Grid?
 
-The data grid market has a gap:
+The data grid market has a gap — no library combines a rich free tier, type-safe plugin composition, and framework-agnostic design:
 
-| Library         | Free editing & formatting? | Free cell renderers?   | Framework-agnostic? | Plugin architecture? | AI-native? |
-| --------------- | -------------------------- | ---------------------- | ------------------- | -------------------- | ---------: |
-| AG Grid         | Paywalled ($999/dev/yr)    | 2 (checkbox, skeleton) | Yes                 | No                   |         No |
-| Handsontable    | Non-commercial only        | 13 (all included)      | Yes                 | No                   |         No |
-| RevoGrid        | Yes (MIT)                  | 0 free / 16 Pro        | Yes                 | No                   |         No |
-| TanStack Table  | Headless (build yourself)  | N/A                    | Yes                 | No                   |         No |
-| **Better Grid** | **Yes (MIT)**              | **6+ (MIT)**           | **Yes**             | **Yes**              |    **Yes** |
+| Library         | Free renderers | Type-safe plugin DX | Framework-agnostic? | Free badge/progress/rating? |
+| --------------- | -------------- | ------------------- | ------------------- | --------------------------: |
+| AG Grid         | 2              | No (modules)        | Yes                 |        No (Enterprise $999) |
+| MUI X           | 6              | No (slots)          | No (React only)     |                          No |
+| Handsontable    | 11             | No (monolithic)     | Yes                 |                          No |
+| RevoGrid        | 4              | No (BasePlugin)     | Yes                 |               No (Pro only) |
+| TanStack Table  | 0 (headless)   | Partial (features)  | Yes                 |                         N/A |
+| **Better Grid** | **6+ (MIT)**   | **Yes ($Infer)**    | **Yes**             |                     **Yes** |
 
 ## Features
 
 ### Core (MIT, free forever)
 
-- Virtual scrolling (10M+ cells at 141 FPS)
+- Virtual scrolling (10M+ cells at 60 FPS sustained)
 - DOM cell pooling with recycling (~200 elements regardless of dataset size)
 - Fake scrollbar scroll architecture (no blank flash on fast scroll)
 - Frozen rows & columns (separate overlay, zero lag)
@@ -51,7 +52,7 @@ The data grid market has a gap:
 - Formulas (=SUM, =IF, =VLOOKUP)
 - Advanced cell renderers (sparkline, heatmap, avatar, mini charts)
 
-### AI-Native (coming soon)
+### AI Integration (coming soon)
 
 - **MCP Server** — AI-assisted column config, schema inference, migration from other grids
 - **AI Plugin** — natural language filtering, data summarization, smart suggestions
@@ -101,12 +102,11 @@ function MyGrid({ data }: { data: Row[] }) {
 
 Inspired by [Better Auth](https://better-auth.com):
 
-- **Plugin architecture** — features as composable, tree-shakeable plugins
-- **`$Infer` pattern** — full TypeScript inference from config
+- **Type-safe plugin composition** — composable, tree-shakeable plugins with `$Infer` pattern for full TypeScript inference
 - **Framework-agnostic** — vanilla TS core, thin framework adapters
 - **Works out of the box** — sensible defaults, zero config needed
-- **AI-native** — built for the AI era with MCP and runtime AI plugins
-- **Performance first** — 10M cells, 141 FPS, ~200 DOM elements
+- **AI-ready** — composable AI plugins with free NL filtering (planned)
+- **Performance first** — 10M cells, 60 FPS sustained, ~200 cell elements
 
 ## Packages
 
