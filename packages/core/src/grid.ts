@@ -274,13 +274,13 @@ export function createGrid<
 
       if (freezeClipWidth === null) {
         // No clip active — handle sits at the frozen boundary
-        freezeClipHandle.style.left = `${fullFrozenWidth - 4}px`;
+        freezeClipHandle.style.left = `${fullFrozenWidth}px`;
         frozenColOverlay.style.width = `${fullFrozenWidth}px`;
       } else {
         // Clip active — constrain overlay width, position handle at clip edge
         const clampedWidth = Math.max(0, Math.min(freezeClipWidth, fullFrozenWidth));
         frozenColOverlay.style.width = `${clampedWidth}px`;
-        freezeClipHandle.style.left = `${clampedWidth - 4}px`;
+        freezeClipHandle.style.left = `${clampedWidth}px`;
       }
       // Re-apply scroll transforms with updated clip offset
       const scrollState = store.getState();
