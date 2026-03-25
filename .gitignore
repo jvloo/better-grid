@@ -28,5 +28,10 @@ coverage/
 
 # Logs
 *.log
+
+# Tmp
 .playwright-mcp/
+.ref/
+
+# Agents
 .claude/settings.local.json
