@@ -557,7 +557,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
         // Custom valueParser takes priority over all built-in parsing
         if (column.valueParser) {
-          return column.valueParser(newValue);
+          try {
+            const parsed = column.valueParser(newValue);
+            return parsed !== undefined ? parsed : prevValue;
+          } catch {
+            return prevValue;
+          }
         }
 
         const cellType = column.cellType;
@@ -574,7 +579,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         }
 
         if (cellType === 'number' || cellType === 'currency') {
-          const num = Number(newValue.replace(/[^0-9.\-]/g, ''));
+          const cleaned = newValue.replace(/[^0-9.\-]/g, '');
+          if (cleaned === '' || cleaned === '-') return prevValue;
+          const num = Number(cleaned);
           if (isNaN(num)) return prevValue;
           // Apply precision rounding if configured
           const prec = getPrecision(column);
@@ -584,11 +591,18 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           return num;
         }
         if (cellType === 'percent') {
-          const num = Number(newValue.replace(/[^0-9.\-]/g, ''));
+          const cleaned = newValue.replace(/[^0-9.\-]/g, '');
+          if (cleaned === '' || cleaned === '-') return prevValue;
+          const num = Number(cleaned);
           if (isNaN(num)) return prevValue;
           // Avoid floating point errors: 0.08 / 100 = 0.0008 not 0.0007999...
           const decimals = (newValue.split('.')[1] || '').length + 2;
           return Number((num / 100).toFixed(decimals));
+        }
+        if (cellType === 'date') {
+          if (newValue.trim() === '') return prevValue;
+          const d = new Date(newValue);
+          return isNaN(d.getTime()) ? prevValue : newValue;
         }
         if (typeof prevValue === 'boolean') {
           const lower = newValue.toLowerCase().trim();
@@ -706,7 +720,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       const unbindEnter = ctx.registerKeyBinding({
         key: 'Enter',
         priority: 10,
-        handler: (_event, cell) => {
+        handler: (event, cell) => {
+          if (event.key !== 'Enter') return false; // defense-in-depth
           if (editingCell) return false; // let the editor's own keydown handle it
           if (cell) { startEdit(cell); return true; }
           return false;
@@ -724,26 +739,28 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           })
         : undefined;
 
-      const unbindType = config.editTrigger === 'type'
-        ? ctx.registerKeyBinding({
-            key: '*',
-            priority: -1,
-            handler: (event, cell) => {
-              if (editingCell || !cell) return false;
-              if (event.key.length !== 1) return false;
-              if (event.ctrlKey || event.altKey || event.metaKey) return false;
-              startEdit(cell, event.key);
-              return true;
-            },
-          })
-        : undefined;
+      // Type-to-edit: any printable character starts editing with that keystroke.
+      // Always active regardless of editTrigger (standard spreadsheet behavior).
+      const unbindType = ctx.registerKeyBinding({
+        key: '*',
+        priority: -1,
+        handler: (event, cell) => {
+          if (editingCell || !cell) return false;
+          if (event.key.length !== 1) return false;
+          if (event.ctrlKey || event.altKey || event.metaKey) return false;
+          const column = ctx.grid.getState().columns[cell.colIndex];
+          if (column?.editable === false) return false;
+          startEdit(cell, event.key);
+          return true;
+        },
+      });
 
       ctx.expose(api);
 
       return () => {
         unbindEnter();
         unbindEscape?.();
-        unbindType?.();
+        unbindType();
         if (editingCell) cancelEdit();
       };
     },

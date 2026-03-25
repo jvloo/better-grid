@@ -435,8 +435,10 @@ export function createGrid<
     const state = store.getState();
 
     // Run plugin key bindings first (higher priority first)
+    // Only call handler when binding.key matches the event key (or '*' for catch-all)
     const sorted = [...keyBindings].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
     for (const binding of sorted) {
+      if (binding.key !== '*' && binding.key !== event.key) continue;
       const result = binding.handler(event, state.selection.active);
       if (result === true) {
         event.preventDefault();
