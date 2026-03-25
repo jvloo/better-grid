@@ -218,6 +218,17 @@ export interface VirtualizationOptions {
 }
 
 // ---------------------------------------------------------------------------
+// Freeze Clip Options
+// ---------------------------------------------------------------------------
+
+export interface FreezeClipOptions {
+  /** Minimum number of frozen columns that remain visible when clipping. Default: 1. Set 0 to allow hiding all. */
+  minVisible?: number;
+  /** Show "+N" indicator for clipped columns. Default: true */
+  showIndicator?: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Grid Events
 // ---------------------------------------------------------------------------
 
@@ -236,6 +247,9 @@ export interface GridEvents<TData = unknown> {
 
   // Column
   'column:resize': (columnId: string, width: number) => void;
+
+  // Freeze clip
+  'freezeClip:change': (visibleCount: number, totalFrozen: number) => void;
 
   // Keyboard
   'key:down': (event: KeyboardEvent, cell: CellPosition | null) => void;
@@ -273,6 +287,7 @@ export interface GridOptions<
   headerHeight?: number;
   frozenTopRows?: number;
   frozenLeftColumns?: number;
+  freezeClip?: boolean | FreezeClipOptions;
   headerRows?: HeaderRow[];
   footerRows?: FooterRow[];
   selection?: SelectionOptions;
@@ -298,6 +313,7 @@ export interface GridState<TData = unknown> {
   selection: Selection;
   frozenTopRows: number;
   frozenLeftColumns: number;
+  visibleFrozenColumns: number;
   pluginState: Record<string, unknown>;
 }
 
@@ -394,6 +410,9 @@ export interface GridInstance<
   getSelection(): Selection;
   setSelection(selection: Selection): void;
   clearSelection(): void;
+
+  getVisibleFrozenColumns(): number;
+  setVisibleFrozenColumns(count: number): void;
 
   scrollTo(row: number, column?: number): void;
   getScrollState(): ScrollState;
