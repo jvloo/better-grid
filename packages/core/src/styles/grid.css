@@ -15,8 +15,7 @@
 }
 
 .bg-grid:focus {
-  outline: 2px solid var(--bg-focus-outline, #1a73e8);
-  outline-offset: -2px;
+  outline: none;
 }
 
 /* Scroll container */
