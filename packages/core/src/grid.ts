@@ -43,8 +43,8 @@ export function createGrid<
   const emitter = new EventEmitter<GridEvents<TData>>();
   const columnManager = new ColumnManager<TData>();
   const virtualization = new VirtualizationEngine(
-    options.virtualization?.overscanRows ?? 5,
-    options.virtualization?.overscanColumns ?? 3,
+    options.virtualization?.overscanRows ?? 20,
+    options.virtualization?.overscanColumns ?? 5,
   );
   const rendering = new RenderingPipeline<TData>();
   const frozenRendering = new RenderingPipeline<TData>();
@@ -53,8 +53,9 @@ export function createGrid<
   const commands = new Map<string, Command>();
 
   let container: HTMLElement | null = null;
-  let scrollContainer: HTMLElement | null = null;
-  let contentSizer: HTMLElement | null = null;
+  let viewport: HTMLElement | null = null;
+  let fakeScrollbar: HTMLElement | null = null;
+  let scrollSizer: HTMLElement | null = null;
   let headerContainer: HTMLElement | null = null;
   let cellContainer: HTMLElement | null = null;
   let frozenColOverlay: HTMLElement | null = null;
@@ -124,9 +125,11 @@ export function createGrid<
   // ---------------------------------------------------------------------------
 
   let renderPending = false;
+  let headersDirty = true; // track whether headers need re-rendering
   function scheduleRender(): void {
-    if (!scrollContainer || !cellContainer || renderPending) return;
+    if (!viewport || !cellContainer || renderPending) return;
     renderPending = true;
+    headersDirty = true;
     requestAnimationFrame(() => {
       renderPending = false;
       render();
@@ -134,20 +137,27 @@ export function createGrid<
   }
 
   function render(): void {
-    if (!scrollContainer || !contentSizer || !cellContainer) return;
+    if (!viewport || !scrollSizer || !cellContainer) return;
 
     const state = store.getState();
     const measurements = virtualization.getMeasurements();
 
-    // Update content sizer (header is sticky inside, cells below)
-    contentSizer.style.width = `${measurements.totalWidth}px`;
-    contentSizer.style.height = `${measurements.totalHeight + headerHeight}px`;
+    // Update scroll sizer (inside fakeScrollbar) for scrollbar dimensions
+    scrollSizer.style.width = `${measurements.totalWidth}px`;
+    scrollSizer.style.height = `${measurements.totalHeight + headerHeight}px`;
 
-    // Cell container height must match data height exactly
+    // Cell container sized to full data dimensions (cells at data-space positions).
+    // Container-level transform shifts them into the viewport.
+    cellContainer.style.width = `${measurements.totalWidth}px`;
     cellContainer.style.height = `${measurements.totalHeight}px`;
+    // Header width must also match for horizontal scrolling
+    headerContainer!.style.width = `${measurements.totalWidth}px`;
 
-    // Render headers
-    renderHeaders(state, measurements);
+    // Skip header re-render on scroll-only updates (headers are sticky / don't change)
+    if (headersDirty) {
+      renderHeaders(state, measurements);
+      headersDirty = false;
+    }
 
     // Compute frozen dimensions
     const zoneDims = computeZoneDimensions(
@@ -162,8 +172,8 @@ export function createGrid<
     );
 
     // Compute visible range
-    const viewportWidth = scrollContainer.clientWidth;
-    const viewportHeight = scrollContainer.clientHeight;
+    const viewportWidth = viewport.clientWidth;
+    const viewportHeight = viewport.clientHeight;
 
     // Adjust scrollTop for header — data rows start after the sticky header
     const dataScrollTop = Math.max(0, state.scrollTop - headerHeight);
@@ -223,14 +233,8 @@ export function createGrid<
       frozenColOverlay!.style.width = `${frozenWidth}px`;
       // Match content height so shadow doesn't extend past data
       const contentHeight = measurements.totalHeight + headerHeight;
-      frozenColOverlay!.style.height = `${Math.min(contentHeight, scrollContainer!.clientHeight)}px`;
+      frozenColOverlay!.style.height = `${Math.min(contentHeight, viewport!.clientHeight)}px`;
       frozenColOverlay!.style.bottom = 'auto';
-
-      // Offset scroll content so cells don't bleed behind frozen overlay.
-      // padding-left pushes content right, negative margin on sizer
-      // compensates so scroll dimensions stay correct.
-      scrollContainer!.style.paddingLeft = `${frozenWidth}px`;
-      contentSizer!.style.marginLeft = `-${frozenWidth}px`;
     }
 
     // Render selection layer
@@ -243,22 +247,42 @@ export function createGrid<
   // Event handlers
   // ---------------------------------------------------------------------------
 
+  /** Forward wheel events from viewport to fakeScrollbar */
+  function handleWheel(e: WheelEvent): void {
+    if (!fakeScrollbar) return;
+    e.preventDefault();
+    // Normalize deltaMode: 0=pixels, 1=lines(~40px), 2=pages
+    const multiplier = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1;
+    fakeScrollbar.scrollTop += e.deltaY * multiplier;
+    fakeScrollbar.scrollLeft += e.deltaX * multiplier;
+  }
+
   function handleScroll(): void {
-    if (!scrollContainer) return;
-    const scrollTop = scrollContainer.scrollTop;
-    const scrollLeft = scrollContainer.scrollLeft;
+    if (!fakeScrollbar) return;
+    const scrollTop = fakeScrollbar.scrollTop;
+    const scrollLeft = fakeScrollbar.scrollLeft;
     store.setScroll(scrollTop, scrollLeft);
 
-    // Sync frozen cell overlay vertical position.
-    // The frozen overlay is outside the scroll container, so it doesn't
-    // scroll. We translate the data cells portion to match scrollTop.
-    // The frozenCellOverlay starts at offsetTop=headerHeight within the
-    // frozen overlay, so we use the full scrollTop (not dataScrollTop).
+    // Translate cell container to match scroll position.
+    // Cells stay at data-space positions; the container transform shifts
+    // them into the viewport. Old cells remain visible until JS updates.
+    const dataScrollTop = Math.max(0, scrollTop - headerHeight);
+    if (cellContainer) {
+      cellContainer.style.transform = `translate3d(${-scrollLeft}px, ${-dataScrollTop}px, 0)`;
+    }
+    // Translate headers horizontally
+    if (headerContainer) {
+      headerContainer.style.transform = `translate3d(${-scrollLeft}px, 0, 0)`;
+    }
+    // Sync frozen cell overlay vertical position
     if (frozenCellOverlay) {
       frozenCellOverlay.style.transform = `translate3d(0, ${-snapToDevicePixel(scrollTop)}px, 0)`;
     }
 
     emitter.emit('scroll', { scrollTop, scrollLeft });
+
+    // Render via rAF — safe because cells stay visible via container transform.
+    // No blank flash since old cells remain in place until new ones are created.
     scheduleRender();
   }
 
@@ -704,7 +728,7 @@ export function createGrid<
   // ---------------------------------------------------------------------------
 
   function scrollCellIntoView(cell: CellPosition): void {
-    if (!scrollContainer) return;
+    if (!fakeScrollbar) return;
 
     const measurements = virtualization.getMeasurements();
     const rowTop = measurements.rowOffsets[cell.rowIndex]!;
@@ -712,25 +736,25 @@ export function createGrid<
     const colLeft = measurements.colOffsets[cell.colIndex]!;
     const colRight = measurements.colOffsets[cell.colIndex + 1]!;
 
-    const viewTop = scrollContainer.scrollTop - headerHeight;
-    const viewBottom = viewTop + scrollContainer.clientHeight - headerHeight;
-    const viewLeft = scrollContainer.scrollLeft;
-    const viewRight = viewLeft + scrollContainer.clientWidth;
+    const viewTop = fakeScrollbar.scrollTop - headerHeight;
+    const viewBottom = viewTop + (viewport?.clientHeight ?? 0) - headerHeight;
+    const viewLeft = fakeScrollbar.scrollLeft;
+    const viewRight = viewLeft + (viewport?.clientWidth ?? 0);
 
     // Vertical scroll
     if (rowTop < viewTop) {
-      scrollContainer.scrollTop = rowTop + headerHeight;
+      fakeScrollbar.scrollTop = rowTop + headerHeight;
     } else if (rowBottom > viewBottom) {
-      scrollContainer.scrollTop = rowBottom - scrollContainer.clientHeight + headerHeight * 2;
+      fakeScrollbar.scrollTop = rowBottom - (viewport?.clientHeight ?? 0) + headerHeight * 2;
     }
 
     // Horizontal scroll (skip if frozen column)
     const state = store.getState();
     if (cell.colIndex >= state.frozenLeftColumns) {
       if (colLeft < viewLeft) {
-        scrollContainer.scrollLeft = colLeft;
+        fakeScrollbar.scrollLeft = colLeft;
       } else if (colRight > viewRight) {
-        scrollContainer.scrollLeft = colRight - scrollContainer.clientWidth;
+        fakeScrollbar.scrollLeft = colRight - (viewport?.clientWidth ?? 0);
       }
     }
   }
@@ -1031,37 +1055,57 @@ export function createGrid<
       container.classList.add('bg-grid');
       container.tabIndex = 0;
 
-      // Create scroll container
-      scrollContainer = document.createElement('div');
-      scrollContainer.className = 'bg-grid__scroll';
-      scrollContainer.style.position = 'relative';
-      scrollContainer.style.width = '100%';
-      scrollContainer.style.height = '100%';
-      scrollContainer.style.overflow = 'auto';
-      scrollContainer.style.zIndex = '0'; // stacking context below frozen overlay
+      // ── Fake scrollbar pattern (AG Grid-inspired) ──
+      // Viewport (overflow:hidden) holds headers + cells — nothing scrolls natively.
+      // FakeScrollbar (overflow:auto, sibling) holds a sizer for native scrollbar UI.
+      // Scroll events on fakeScrollbar drive JS that translates headers/cells via
+      // container-level transforms. Old cells stay visible during compositor-JS gap.
 
-      // Content sizer (sets scroll dimensions)
-      contentSizer = document.createElement('div');
-      contentSizer.className = 'bg-grid__sizer';
-      contentSizer.style.position = 'relative';
+      // Viewport — clips content, no native scroll. Sits on top of
+      // fakeScrollbar but sized smaller to expose scrollbar tracks.
+      viewport = document.createElement('div');
+      viewport.className = 'bg-grid__viewport';
+      viewport.style.position = 'absolute';
+      viewport.style.top = '0';
+      viewport.style.left = '0';
+      viewport.style.right = 'var(--bg-scrollbar-size, 10px)';
+      viewport.style.bottom = 'var(--bg-scrollbar-size, 10px)';
+      viewport.style.overflow = 'hidden';
+      viewport.style.zIndex = '2';
 
-      // Header container (sticky at top)
+      // Header container (absolute, translated horizontally by scrollLeft)
       headerContainer = document.createElement('div');
       headerContainer.className = 'bg-grid__headers';
-      headerContainer.style.position = 'sticky';
+      headerContainer.style.position = 'absolute';
       headerContainer.style.top = '0';
+      headerContainer.style.left = '0';
       headerContainer.style.height = `${headerHeight}px`;
       headerContainer.style.zIndex = '10';
       headerContainer.style.background = '#f8f9fa';
 
-      // Cell container (offset by header height)
+      // Cell container (absolute, translated by scroll offsets)
       cellContainer = document.createElement('div');
       cellContainer.className = 'bg-grid__cells';
-      cellContainer.style.position = 'relative';
+      cellContainer.style.position = 'absolute';
+      cellContainer.style.top = `${headerHeight}px`;
+      cellContainer.style.left = '0';
 
-      contentSizer.appendChild(headerContainer);
-      contentSizer.appendChild(cellContainer);
-      scrollContainer.appendChild(contentSizer);
+      viewport.appendChild(headerContainer);
+      viewport.appendChild(cellContainer);
+
+      // Fake scrollbar — provides native scrollbar UI via an oversized sizer.
+      // Sits behind viewport; scrollbar tracks are exposed at the right/bottom
+      // edges where the viewport is sized smaller to leave room.
+      fakeScrollbar = document.createElement('div');
+      fakeScrollbar.className = 'bg-grid__scroll'; // keep class for plugin compat
+      fakeScrollbar.style.position = 'absolute';
+      fakeScrollbar.style.inset = '0';
+      fakeScrollbar.style.overflow = 'auto';
+      fakeScrollbar.style.zIndex = '1';
+
+      scrollSizer = document.createElement('div');
+      scrollSizer.className = 'bg-grid__sizer';
+      fakeScrollbar.appendChild(scrollSizer);
 
       // Frozen column overlay — positioned absolutely over the grid,
       // doesn't participate in horizontal scroll. Syncs vertical scroll
@@ -1095,9 +1139,10 @@ export function createGrid<
         frozenColOverlay.appendChild(frozenCellOverlay);
       }
 
-      container.appendChild(scrollContainer);
+      container.appendChild(viewport);
+      container.appendChild(fakeScrollbar);
 
-      // Append frozen overlay AFTER scroll container so it renders on top
+      // Append frozen overlay AFTER viewport so it renders on top
       if (frozenColOverlay) {
         container.appendChild(frozenColOverlay);
       }
@@ -1105,8 +1150,9 @@ export function createGrid<
       // Selection layer (inside cell container so offsets align with cells)
       selectionLayer = new SelectionLayer(cellContainer);
 
-      // Events
-      scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+      // Events — scroll on fakeScrollbar, wheel forwarded from viewport
+      fakeScrollbar.addEventListener('scroll', handleScroll, { passive: true });
+      viewport.addEventListener('wheel', handleWheel, { passive: false });
       cellContainer.addEventListener('pointerdown', handlePointerDown);
       cellContainer.addEventListener('dblclick', handleDblClick);
       cellContainer.addEventListener('mouseover', handleCellMouseOver);
@@ -1132,7 +1178,8 @@ export function createGrid<
     unmount(): void {
       if (!mounted) return;
 
-      scrollContainer?.removeEventListener('scroll', handleScroll);
+      fakeScrollbar?.removeEventListener('scroll', handleScroll);
+      viewport?.removeEventListener('wheel', handleWheel);
       cellContainer?.removeEventListener('pointerdown', handlePointerDown);
       cellContainer?.removeEventListener('dblclick', handleDblClick);
       cellContainer?.removeEventListener('mouseover', handleCellMouseOver);
@@ -1151,8 +1198,9 @@ export function createGrid<
       }
 
       container = null;
-      scrollContainer = null;
-      contentSizer = null;
+      viewport = null;
+      fakeScrollbar = null;
+      scrollSizer = null;
       headerContainer = null;
       cellContainer = null;
       frozenColOverlay = null;
@@ -1246,12 +1294,12 @@ export function createGrid<
     },
 
     scrollTo(row: number, column?: number): void {
-      if (!scrollContainer) return;
+      if (!fakeScrollbar) return;
       const rowMetrics = virtualization.getRowMetrics(row);
-      scrollContainer.scrollTop = rowMetrics.offset;
+      fakeScrollbar.scrollTop = rowMetrics.offset + headerHeight;
       if (column !== undefined) {
         const colMetrics = virtualization.getColMetrics(column);
-        scrollContainer.scrollLeft = colMetrics.offset;
+        fakeScrollbar.scrollLeft = colMetrics.offset;
       }
     },
 

@@ -22,6 +22,8 @@ export class RenderingPipeline<TData = unknown> {
   private globalCellRenderer: CellRenderer<TData> | null = null;
   /** Frozen cells keyed by numeric key with their base left offset */
   private frozenCells = new Map<number, { element: HTMLElement; baseLeft: number; top: number }>();
+  /** Recycled DOM elements ready for reuse — avoids remove()/appendChild() churn */
+  private recyclePool: HTMLElement[] = [];
 
   setGlobalCellRenderer(renderer: CellRenderer<TData> | null): void {
     this.globalCellRenderer = renderer;
@@ -55,18 +57,44 @@ export class RenderingPipeline<TData = unknown> {
   ): void {
     const visibleKeys = new Set<number>();
 
+    // Phase 1: Collect cells to visible set, identify which are new
+    for (let row = startRow; row < endRow; row++) {
+      for (let col = startCol; col < endCol; col++) {
+        visibleKeys.add(cellKey(row, col));
+      }
+    }
+
+    // Phase 2: Recycle cells no longer visible (keep in DOM, move to recycle pool)
+    for (const [key, element] of this.cellPool) {
+      if (!visibleKeys.has(key)) {
+        this.cleanupFns.get(key)?.();
+        this.cleanupFns.delete(key);
+        this.frozenCells.delete(key);
+        this.recyclePool.push(element);
+        this.cellPool.delete(key);
+      }
+    }
+
+    // Phase 3: Render visible cells, reusing recycled elements
     for (let row = startRow; row < endRow; row++) {
       for (let col = startCol; col < endCol; col++) {
         const key = cellKey(row, col);
-        visibleKeys.add(key);
 
         let cell = this.cellPool.get(key);
         if (!cell) {
-          cell = document.createElement('div');
-          cell.className = 'bg-cell';
+          // Reuse a recycled element (already in DOM) or create new
+          cell = this.recyclePool.pop() ?? null;
+          if (cell) {
+            // Reset recycled element
+            cell.className = 'bg-cell';
+          } else {
+            cell = document.createElement('div');
+            cell.className = 'bg-cell';
+            cell.style.position = 'absolute';
+            container.appendChild(cell);
+          }
           cell.dataset.row = String(row);
           cell.dataset.col = String(col);
-          container.appendChild(cell);
           this.cellPool.set(key, cell);
         }
 
@@ -76,7 +104,6 @@ export class RenderingPipeline<TData = unknown> {
         const height = snapToDevicePixel(measurements.rowOffsets[row + 1]!) - top;
         const width = snapToDevicePixel(measurements.colOffsets[col + 1]!) - left;
 
-        cell.style.position = 'absolute';
         cell.style.transform = `translate3d(${left}px, ${top}px, 0)`;
         cell.style.width = `${width}px`;
         cell.style.height = `${height}px`;
@@ -144,14 +171,9 @@ export class RenderingPipeline<TData = unknown> {
       }
     }
 
-    // Remove cells no longer visible
-    for (const [key, element] of this.cellPool) {
-      if (!visibleKeys.has(key)) {
-        this.cleanupFns.get(key)?.();
-        this.cleanupFns.delete(key);
-        element.remove();
-        this.cellPool.delete(key);
-      }
+    // Phase 4: Remove excess recycled elements from DOM (only if pool is oversized)
+    while (this.recyclePool.length > 0) {
+      this.recyclePool.pop()!.remove();
     }
   }
 
@@ -168,6 +190,8 @@ export class RenderingPipeline<TData = unknown> {
       this.cleanupFns.get(key)?.();
       element.remove();
     }
+    for (const el of this.recyclePool) el.remove();
+    this.recyclePool.length = 0;
     this.frozenCells.clear();
     this.cellPool.clear();
     this.cleanupFns.clear();
