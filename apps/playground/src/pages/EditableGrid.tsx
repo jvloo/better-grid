@@ -89,8 +89,10 @@ export function EditableGrid() {
         align: 'right',
         valueFormatter: (v: unknown) => typeof v === 'number' ? `${v.toFixed(2)} kg` : String(v ?? ''),
         valueParser: (s: string) => {
-          const num = Number(s.replace(/[^0-9.\-]/g, ''));
-          return isNaN(num) ? 0 : Math.round(num * 100) / 100;
+          const cleaned = s.replace(/[^0-9.\-]/g, '');
+          if (cleaned === '' || cleaned === '-') return undefined; // invalid → keep original
+          const num = Number(cleaned);
+          return isNaN(num) ? undefined : Math.round(num * 100) / 100;
         },
       },
 
