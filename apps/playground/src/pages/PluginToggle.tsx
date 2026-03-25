@@ -50,25 +50,25 @@ export function PluginToggle() {
 
   const columns = useMemo<ColumnDef<DemoRow>[]>(
     () => [
-      { id: 'id', header: 'ID', width: 50, editable: false, sortable: true },
-      { id: 'name', header: 'Name', width: 120, required: true, sortable: true },
+      { id: 'id', header: '#', width: 40, editable: false, sortable: true },
+      { id: 'name', header: 'Name', width: 100, required: true, sortable: true },
       {
         id: 'category',
         header: 'Category',
-        width: 110,
+        width: 100,
         options: ['Revenue', 'Cost', 'Expense'],
         sortable: true,
       },
       {
         id: 'amount',
         header: 'Amount',
-        width: 130,
+        width: 120,
         cellType: 'currency',
         sortable: true,
         rules: [{ validate: (v) => typeof v === 'number' || 'Must be number' }],
       },
-      { id: 'rate', header: 'Rate', width: 80, cellType: 'percent', sortable: true },
-      { id: 'date', header: 'Date', width: 130, cellType: 'date', sortable: true },
+      { id: 'rate', header: 'Rate', width: 75, cellType: 'percent', sortable: true },
+      { id: 'date', header: 'Date', width: 120, cellType: 'date', sortable: true },
       {
         id: 'active',
         header: 'Active',
@@ -77,6 +77,7 @@ export function PluginToggle() {
           ? (container, ctx) => {
               container.textContent = ctx.value ? 'Yes' : 'No';
               container.style.color = ctx.value ? '#2e7d32' : '#c62828';
+              container.style.textAlign = 'center';
             }
           : undefined,
       },

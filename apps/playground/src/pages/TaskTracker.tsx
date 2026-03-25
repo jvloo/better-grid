@@ -44,11 +44,11 @@ export function TaskTracker() {
   const columns = useMemo<ColumnDef<TaskRow>[]>(
     () => [
       { id: 'id', header: '#', width: 40, editable: false, sortable: true },
-      { id: 'task', header: 'Task', width: 200, required: true, sortable: true },
+      { id: 'task', header: 'Task', width: 230, required: true, sortable: true },
       {
         id: 'assignee',
         header: 'Assignee',
-        width: 100,
+        width: 90,
         options: ['Alice', 'Bob', 'Carol', 'David', 'Emma'],
         sortable: true,
       },
@@ -90,11 +90,11 @@ export function TaskTracker() {
             'Done': { bg: '#e8f5e9', fg: '#2e7d32' },
           };
           const c = colors[v] ?? { bg: '#f5f5f5', fg: '#666' };
-          container.innerHTML = `<span style="padding:2px 8px;border-radius:12px;font-size:12px;background:${c.bg};color:${c.fg}">${v}</span>`;
+          container.innerHTML = `<span style="pointer-events:none;padding:2px 8px;border-radius:12px;font-size:12px;background:${c.bg};color:${c.fg}">${v}</span>`;
         },
       },
       { id: 'dueDate', header: 'Due', width: 110, cellType: 'date', sortable: true },
-      { id: 'estimate', header: 'Est (h)', width: 75, sortable: true },
+      { id: 'estimate', header: 'Est (h)', width: 75, align: 'right', sortable: true },
       {
         id: 'progress',
         header: 'Progress',
@@ -104,7 +104,7 @@ export function TaskTracker() {
           const pct = Math.round((ctx.value as number) * 100);
           const color = pct === 100 ? '#2e7d32' : pct > 50 ? '#1565c0' : '#f57f17';
           container.innerHTML = `
-            <div style="display:flex;align-items:center;gap:6px;width:100%">
+            <div style="pointer-events:none;display:flex;align-items:center;gap:6px;width:100%">
               <div style="flex:1;height:6px;background:#eee;border-radius:3px;overflow:hidden">
                 <div style="width:${pct}%;height:100%;background:${color};border-radius:3px"></div>
               </div>
@@ -113,7 +113,7 @@ export function TaskTracker() {
           `;
         },
       },
-      { id: 'tags', header: 'Tags', width: 100, sortable: true },
+      { id: 'tags', header: 'Tags', width: 90, sortable: true },
     ],
     [],
   );

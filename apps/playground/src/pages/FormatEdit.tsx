@@ -42,8 +42,8 @@ const data: ProductRow[] = [
 export function FormatEdit() {
   const columns = useMemo<ColumnDef<ProductRow>[]>(
     () => [
-      { id: 'id', header: 'ID', width: 45, editable: false },
-      { id: 'name', header: 'Product', width: 140 },
+      { id: 'id', header: '#', width: 40, editable: false },
+      { id: 'name', header: 'Product', width: 155 },
       {
         id: 'category',
         header: 'Category',
@@ -52,7 +52,7 @@ export function FormatEdit() {
       },
       { id: 'price', header: 'Price', width: 100, cellType: 'currency' },
       { id: 'cost', header: 'Cost', width: 100, cellType: 'currency' },
-      { id: 'margin', header: 'Margin', width: 90, cellType: 'percent' },
+      { id: 'margin', header: 'Margin', width: 80, cellType: 'percent' },
       { id: 'launchDate', header: 'Launch', width: 120, cellType: 'date' },
       {
         id: 'inStock',
@@ -101,7 +101,7 @@ export function FormatEdit() {
       <CodeBlock title="Format & Edit" code={`import { formatting, editing } from '@better-grid/plugins';
 
 const columns = [
-  { id: 'id', header: 'ID', width: 45, editable: false },
+  { id: 'id', header: '#', width: 40, editable: false },
   { id: 'name', header: 'Product', width: 140 },
   { id: 'category', header: 'Category', width: 110,
     options: ['Electronics', 'Hardware', 'IoT', 'Accessories', 'Software', 'Networking'] },

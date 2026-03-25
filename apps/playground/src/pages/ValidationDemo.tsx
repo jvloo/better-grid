@@ -62,6 +62,7 @@ export function ValidationDemo() {
         id: 'quantity',
         header: 'Qty',
         width: 70,
+        align: 'right',
         rules: [
           { validate: (v) => (v as number) > 0 || 'Must be > 0' },
         ],
@@ -87,7 +88,7 @@ export function ValidationDemo() {
       {
         id: 'email',
         header: 'Email',
-        width: 160,
+        width: 190,
         required: true,
         rules: [
           { validate: (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v as string) || 'Invalid email' },

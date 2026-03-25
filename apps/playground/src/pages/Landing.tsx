@@ -49,14 +49,14 @@ export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
   ], []);
 
   const heroCols = useMemo<ColumnDef<HeroRow>[]>(() => [
-    { id: 'id', header: '#', width: 35, editable: false },
+    { id: 'id', header: '#', width: 40, editable: false },
     { id: 'project', header: 'Project', width: 120 },
     { id: 'category', header: 'Type', width: 80 },
     { id: 'total', header: 'Total', width: 110, cellType: 'currency', sortable: true },
     ...(['jan','feb','mar','apr','may','jun'] as const).map(m => ({
       id: m,
       header: m.charAt(0).toUpperCase() + m.slice(1),
-      width: 85,
+      width: 90,
       cellType: 'currency' as const,
       cellRenderer: (container: HTMLElement, ctx: { value: unknown }) => {
         const val = ctx.value as number;

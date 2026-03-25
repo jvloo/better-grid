@@ -121,7 +121,7 @@ export function ComplexGrid() {
     () => [
       { id: 'id', header: '#', width: 40, editable: false },
       { id: 'department', header: 'Department', width: 110, sortable: true },
-      { id: 'lineItem', header: 'Line Item', width: 140, sortable: true },
+      { id: 'lineItem', header: 'Line Item', width: 170, sortable: true },
       { id: 'total', header: 'Total', width: 120, cellType: 'currency', editable: false, sortable: true },
       ...(['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] as const).map(
         (month) => ({
@@ -163,7 +163,7 @@ export function ComplexGrid() {
       {
         id: 'status',
         header: 'Status',
-        width: 90,
+        width: 100,
         options: ['Active', 'Pending', 'On Hold', 'Completed'],
         cellRenderer: (container: HTMLElement, ctx: { value: unknown }) => {
           const val = ctx.value as string;
@@ -174,7 +174,7 @@ export function ComplexGrid() {
             Completed: { bg: '#e3f2fd', fg: '#1565c0' },
           };
           const c = colors[val] ?? { bg: '#f5f5f5', fg: '#666' };
-          container.innerHTML = `<span style="padding:2px 8px;border-radius:12px;font-size:11px;background:${c.bg};color:${c.fg}">${val}</span>`;
+          container.innerHTML = `<span style="pointer-events:none;padding:2px 8px;border-radius:12px;font-size:11px;background:${c.bg};color:${c.fg}">${val}</span>`;
         },
       },
     ],

@@ -48,7 +48,7 @@ function createData(rowCount: number, colCount: number, rich = false): { data: L
 
 function generateColumns(colCount: number, rich = false): ColumnDef<LargeRow>[] {
   const cols: ColumnDef<LargeRow>[] = [
-    { id: 'id', header: 'ID', width: 90 },
+    { id: 'id', header: '#', width: 40 },
   ];
   if (rich) {
     // Generate 100 meaningful columns with varied types
@@ -62,20 +62,20 @@ function generateColumns(colCount: number, rich = false): ColumnDef<LargeRow>[] 
           cols.push({ id: colId, header: `Rev G${group}`, width: 110, cellType: 'currency', sortable: true });
           break;
         case 'percent':
-          cols.push({ id: colId, header: `Rate G${group}`, width: 80, cellType: 'percent', sortable: true });
+          cols.push({ id: colId, header: `Rate G${group}`, width: 90, cellType: 'percent', sortable: true });
           break;
         case 'number':
-          cols.push({ id: colId, header: `Qty G${group}`, width: 80, sortable: true });
+          cols.push({ id: colId, header: `Qty G${group}`, width: 80, align: 'right', sortable: true });
           break;
         case 'text':
-          cols.push({ id: colId, header: `Note G${group}`, width: 120, sortable: true });
+          cols.push({ id: colId, header: `Note G${group}`, width: 155, sortable: true });
           break;
         case 'date':
-          cols.push({ id: colId, header: `Date G${group}`, width: 100, cellType: 'date', sortable: true });
+          cols.push({ id: colId, header: `Date G${group}`, width: 115, cellType: 'date', sortable: true });
           break;
         case 'status':
           cols.push({
-            id: colId, header: `Status G${group}`, width: 90, sortable: true,
+            id: colId, header: `Status G${group}`, width: 100, sortable: true,
             options: STATUSES,
             cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
               const v = ctx.value as string;
@@ -84,13 +84,13 @@ function generateColumns(colCount: number, rich = false): ColumnDef<LargeRow>[] 
                 'On Hold': { bg: '#ffebee', fg: '#c62828' }, Done: { bg: '#e3f2fd', fg: '#1565c0' },
               };
               const clr = colors[v] ?? { bg: '#f5f5f5', fg: '#666' };
-              el.innerHTML = `<span style="padding:2px 6px;border-radius:10px;font-size:11px;background:${clr.bg};color:${clr.fg}">${v}</span>`;
+              el.innerHTML = `<span style="pointer-events:none;padding:2px 6px;border-radius:10px;font-size:11px;background:${clr.bg};color:${clr.fg}">${v}</span>`;
             },
           });
           break;
         case 'boolean':
           cols.push({
-            id: colId, header: `Flag G${group}`, width: 60, sortable: true,
+            id: colId, header: `Flag G${group}`, width: 75, sortable: true,
             cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
               el.textContent = ctx.value ? '✓' : '✗';
               el.style.color = ctx.value ? '#2e7d32' : '#c62828';
@@ -100,7 +100,7 @@ function generateColumns(colCount: number, rich = false): ColumnDef<LargeRow>[] 
           break;
         case 'rating':
           cols.push({
-            id: colId, header: `Score G${group}`, width: 70, sortable: true,
+            id: colId, header: `Score G${group}`, width: 85, sortable: true,
             cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
               const v = ctx.value as number;
               el.textContent = v.toFixed(1);

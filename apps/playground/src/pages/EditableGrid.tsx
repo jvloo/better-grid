@@ -50,16 +50,16 @@ export function EditableGrid() {
     () => [
       // 1. Non-editable (meta.editable: false)
       // 1. Non-editable
-      { id: 'id', header: 'ID', width: 50, editable: false },
+      { id: 'id', header: '#', width: 40, editable: false},
 
       // 2. Default string → text input (required)
-      { id: 'name', header: 'Name (text)', width: 130, required: true },
+      { id: 'name', header: 'Name (text)', width: 150, required: true },
 
       // 3. Default number → text input with validation
       {
         id: 'quantity',
         header: 'Qty (number)',
-        width: 100,
+        width: 115,
         rules: [{ validate: (v) => (v as number) > 0 || 'Must be positive', message: 'Qty must be > 0' }],
       },
 
@@ -67,19 +67,19 @@ export function EditableGrid() {
       {
         id: 'price',
         header: 'Price (currency)',
-        width: 140,
+        width: 150,
         cellType: 'currency',
         rules: [{ validate: (v) => (v as number) >= 0 || 'Cannot be negative' }],
       },
 
       // 5. cellType: 'percent' → text input, parses 50 → 0.5
-      { id: 'rate', header: 'Rate (percent)', width: 110, cellType: 'percent' },
+      { id: 'rate', header: 'Rate (percent)', width: 130, cellType: 'percent' },
 
       // 6. options (strings) → dropdown
       {
         id: 'status',
         header: 'Status (dropdown)',
-        width: 140,
+        width: 155,
         options: ['Open', 'Pending', 'Closed'],
       },
 
@@ -106,10 +106,11 @@ export function EditableGrid() {
       {
         id: 'active',
         header: 'Active (auto)',
-        width: 110,
+        width: 120,
         cellRenderer: (container, ctx) => {
           container.textContent = ctx.value ? 'Yes' : 'No';
           container.style.color = ctx.value ? '#2e7d32' : '#c62828';
+          container.style.textAlign = 'center';
         },
       },
 
@@ -121,6 +122,7 @@ export function EditableGrid() {
         editor: 'text',
         cellRenderer: (container, ctx) => {
           container.textContent = ctx.value ? 'Yes' : 'No';
+          container.style.textAlign = 'center';
         },
       },
 

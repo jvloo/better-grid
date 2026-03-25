@@ -29,24 +29,24 @@ const sampleData: SampleRow[] = [
 export function BasicGrid() {
   const columns = useMemo<ColumnDef<SampleRow>[]>(
     () => [
-      { id: 'id', header: 'ID', width: 60, editable: false, sortable: true },
-      { id: 'name', header: 'Name', width: 200, required: true, sortable: true },
+      { id: 'id', header: '#', width: 40, editable: false, sortable: true},
+      { id: 'name', header: 'Name', width: 150, required: true, sortable: true },
       {
         id: 'category',
         header: 'Category',
-        width: 120,
+        width: 100,
         options: ['Revenue', 'Cost', 'Expense', 'Other'],
         sortable: true,
       },
       {
         id: 'amount',
         header: 'Amount',
-        width: 150,
+        width: 130,
         cellType: 'currency',
         sortable: true,
         rules: [{ validate: (v) => typeof v === 'number' || 'Must be a number' }],
       },
-      { id: 'date', header: 'Date', width: 150, cellType: 'date', sortable: true },
+      { id: 'date', header: 'Date', width: 120, cellType: 'date', sortable: true },
       {
         id: 'active',
         header: 'Active',
@@ -54,6 +54,7 @@ export function BasicGrid() {
         cellRenderer: (container, ctx) => {
           container.textContent = ctx.value ? 'Yes' : 'No';
           container.style.color = ctx.value ? '#2e7d32' : '#c62828';
+          container.style.textAlign = 'center';
         },
       },
     ],

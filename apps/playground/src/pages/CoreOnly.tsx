@@ -41,12 +41,12 @@ export function CoreOnly() {
 
   const columns = useMemo<ColumnDef<SampleRow>[]>(
     () => [
-      { id: 'id', header: 'ID', width: 50 },
-      { id: 'name', header: 'Name', width: 160 },
-      { id: 'department', header: 'Department', width: 120 },
-      { id: 'salary', header: 'Salary', width: 120 },
-      { id: 'startDate', header: 'Start Date', width: 120 },
-      { id: 'active', header: 'Active', width: 80 },
+      { id: 'id', header: '#', width: 40 },
+      { id: 'name', header: 'Name', width: 140 },
+      { id: 'department', header: 'Department', width: 110 },
+      { id: 'salary', header: 'Salary', width: 100, align: 'right' },
+      { id: 'startDate', header: 'Start Date', width: 110 },
+      { id: 'active', header: 'Active', width: 80, align: 'center' },
     ],
     [],
   );
@@ -111,7 +111,7 @@ import '@better-grid/core/styles.css';
 // Raw values: 125000 (not $125,000), "2024-03-15" (not Mar 15, 2024)
 <BetterGrid
   columns={[
-    { id: 'id', header: 'ID', width: 50 },
+    { id: 'id', header: '#', width: 40 },
     { id: 'name', header: 'Name', width: 160 },
     { id: 'department', header: 'Department', width: 120 },
     { id: 'salary', header: 'Salary', width: 120 },

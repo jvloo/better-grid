@@ -47,7 +47,7 @@ export function SortFilter() {
       { id: 'department', header: 'Dept', width: 110, sortable: true },
       { id: 'role', header: 'Role', width: 90, sortable: true },
       { id: 'salary', header: 'Salary', width: 110, cellType: 'currency', sortable: true },
-      { id: 'experience', header: 'Exp (yrs)', width: 90, sortable: true },
+      { id: 'experience', header: 'Exp (yrs)', width: 90, align: 'right', sortable: true },
       {
         id: 'rating',
         header: 'Rating',
