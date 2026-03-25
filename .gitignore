@@ -35,3 +35,4 @@ coverage/
 
 # Agents
 .claude/settings.local.json
+screenshots/
