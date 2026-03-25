@@ -165,7 +165,8 @@ export function createGrid<
     const sbClientWidth = fakeScrollbar?.clientWidth ?? viewport.clientWidth;
     const vpHeight = viewport.clientHeight;
     const vpWidth = viewport.clientWidth;
-    scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth}px`;
+    const clipOffset = getFreezeClipOffset();
+    scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth - clipOffset}px`;
     scrollSizer.style.height = `${measurements.totalHeight + sbClientHeight - vpHeight + headerHeight}px`;
 
     // Cell container sized to full data dimensions (cells at data-space positions).
@@ -200,6 +201,12 @@ export function createGrid<
     // scrollTop maps directly to data offset (scroll sizer = data height only)
     const dataScrollTop = state.scrollTop;
 
+    // When freeze clip is active, the effective frozen width is smaller,
+    // so more scrollable columns are visible in the viewport.
+    const effectiveFrozenLeftWidth = freezeClipWidth !== null
+      ? Math.max(0, Math.min(freezeClipWidth, zoneDims.frozenLeftWidth))
+      : zoneDims.frozenLeftWidth;
+
     const visibleRange = virtualization.computeVisibleRange(
       dataScrollTop,
       state.scrollLeft,
@@ -207,7 +214,7 @@ export function createGrid<
       viewportHeight - headerHeight,
       zoneDims.frozenTopHeight,
       zoneDims.frozenBottomHeight,
-      zoneDims.frozenLeftWidth,
+      effectiveFrozenLeftWidth,
       zoneDims.frozenRightWidth,
     );
 
@@ -266,20 +273,23 @@ export function createGrid<
       const handleHeight = Math.min(clipContentHeight, viewport!.clientHeight);
 
       if (freezeClipWidth === null) {
-        // No clip active — handle sits at the frozen boundary, viewport at normal position
+        // No clip active — handle sits at the frozen boundary
         freezeClipHandle.style.left = `${fullFrozenWidth - 4}px`;
         frozenColOverlay.style.width = `${fullFrozenWidth}px`;
-        viewport!.style.left = '0';
-        fakeScrollbar!.style.left = '0';
       } else {
-        // Clip active — constrain overlay, shift viewport left to fill freed space
+        // Clip active — constrain overlay width, position handle at clip edge
         const clampedWidth = Math.max(0, Math.min(freezeClipWidth, fullFrozenWidth));
-        const clipOffset = fullFrozenWidth - clampedWidth;
         frozenColOverlay.style.width = `${clampedWidth}px`;
         freezeClipHandle.style.left = `${clampedWidth - 4}px`;
-        // Shift viewport and scrollbar left so non-frozen content fills the gap
-        viewport!.style.left = `${-clipOffset}px`;
-        fakeScrollbar!.style.left = `${-clipOffset}px`;
+      }
+      // Re-apply scroll transforms with updated clip offset
+      const scrollState = store.getState();
+      const clipOffset = getFreezeClipOffset();
+      if (cellContainer) {
+        cellContainer.style.transform = `translate3d(${-scrollState.scrollLeft - clipOffset}px, ${-scrollState.scrollTop}px, 0)`;
+      }
+      if (headerContainer) {
+        headerContainer.style.transform = `translate3d(${-scrollState.scrollLeft - clipOffset}px, 0, 0)`;
       }
       freezeClipHandle.style.height = `${handleHeight}px`;
 
@@ -326,6 +336,15 @@ export function createGrid<
     }
   }
 
+  /** Pixel offset to shift scrollable content left when freeze clip is active. */
+  function getFreezeClipOffset(): number {
+    if (freezeClipWidth === null) return 0;
+    const measurements = virtualization.getMeasurements();
+    const state = store.getState();
+    const fullFrozenWidth = measurements.colOffsets[state.frozenLeftColumns]!;
+    return Math.max(0, fullFrozenWidth - Math.max(0, Math.min(freezeClipWidth, fullFrozenWidth)));
+  }
+
   function handleScroll(): void {
     if (!fakeScrollbar) return;
     const scrollTop = fakeScrollbar.scrollTop;
@@ -336,12 +355,15 @@ export function createGrid<
     // Cells stay at data-space positions; the container transform shifts
     // them into the viewport. scrollTop maps directly to data offset
     // since the scroll sizer only covers data height (headers are fixed).
+    // When freeze clip is active, shift content left by clipOffset so
+    // scrollable cells fill the space freed by the clipped frozen area.
+    const clipOffset = getFreezeClipOffset();
     if (cellContainer) {
-      cellContainer.style.transform = `translate3d(${-scrollLeft}px, ${-scrollTop}px, 0)`;
+      cellContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, ${-scrollTop}px, 0)`;
     }
     // Translate headers horizontally
     if (headerContainer) {
-      headerContainer.style.transform = `translate3d(${-scrollLeft}px, 0, 0)`;
+      headerContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
     }
     // Sync frozen cell overlay vertical position (same offset as main cellContainer)
     if (frozenCellOverlay) {

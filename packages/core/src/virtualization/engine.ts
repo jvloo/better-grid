@@ -85,7 +85,7 @@ export class VirtualizationEngine {
     const endRow = this.binarySearch(rowOffsets, scrollTop + availableHeight);
 
     const startCol = this.binarySearch(colOffsets, scrollLeft);
-    const endCol = this.binarySearch(colOffsets, scrollLeft + availableWidth);
+    const endCol = this.binarySearch(colOffsets, frozenLeftWidth + scrollLeft + availableWidth);
 
     return {
       startRow: Math.max(0, startRow - this.overscanRows),
