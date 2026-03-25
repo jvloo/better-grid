@@ -64,6 +64,8 @@ export function createGrid<
   let selectionLayer: SelectionLayer | null = null;
   let freezeClipHandle: HTMLElement | null = null;
   let freezeClipIndicator: HTMLElement | null = null;
+  /** Current clip width in pixels. null = no clip active (full frozen width). */
+  let freezeClipWidth: number | null = null;
   let resizeObserver: ResizeObserver | null = null;
   let mounted = false;
 
@@ -96,7 +98,6 @@ export function createGrid<
     selection: createEmptySelection(),
     frozenTopRows: options.frozenTopRows ?? 0,
     frozenLeftColumns: options.frozenLeftColumns ?? 0,
-    visibleFrozenColumns: options.frozenLeftColumns ?? 0,
     pluginState: {},
   };
 
@@ -105,9 +106,9 @@ export function createGrid<
   // Resolve freeze clip config
   const freezeClipConfig = (() => {
     const opt = options.freezeClip;
-    if (opt === false || opt === undefined) return { enabled: false, minVisible: 1, showIndicator: true };
-    if (opt === true) return { enabled: true, minVisible: 1, showIndicator: true };
-    return { enabled: true, minVisible: opt.minVisible ?? 1, showIndicator: opt.showIndicator ?? true };
+    if (opt === false || opt === undefined) return { enabled: false, minVisible: 1 };
+    if (opt === true) return { enabled: true, minVisible: 1 };
+    return { enabled: true, minVisible: opt.minVisible ?? 1 };
   })();
 
   // Forward store changes to user callbacks
@@ -180,12 +181,12 @@ export function createGrid<
       headersDirty = false;
     }
 
-    // Compute frozen dimensions (use visibleFrozenColumns for rendering)
+    // Compute frozen dimensions
     const zoneDims = computeZoneDimensions(
       {
         frozenTopRows: state.frozenTopRows,
         frozenBottomRows: 0,
-        frozenLeftColumns: state.visibleFrozenColumns,
+        frozenLeftColumns: state.frozenLeftColumns,
         frozenRightColumns: 0,
       },
       (i) => state.rowHeights.length > 0 ? (state.rowHeights[i] ?? DEFAULT_ROW_HEIGHT) : getRowHeight(i),
@@ -213,7 +214,7 @@ export function createGrid<
     store.update('visibleRange', () => ({ visibleRange }));
 
     // Render non-frozen cells into main cell container
-    const frozenCols = state.visibleFrozenColumns;
+    const frozenCols = state.frozenLeftColumns;
     const mainStartCol = Math.max(visibleRange.startCol, frozenCols);
 
     rendering.renderCells(
@@ -258,31 +259,44 @@ export function createGrid<
       frozenColOverlay!.style.bottom = 'auto';
     }
 
-    // Hide frozen overlay when all frozen columns are clipped
-    if (frozenColOverlay) {
-      frozenColOverlay.style.display = state.visibleFrozenColumns > 0 ? '' : 'none';
-    }
-
-    // Update freeze clip handle position
-    if (freezeClipHandle) {
-      const visibleFrozen = state.visibleFrozenColumns;
-      const handleLeft = visibleFrozen > 0 ? measurements.colOffsets[visibleFrozen]! : 0;
-      freezeClipHandle.style.left = `${handleLeft - 4}px`;
+    // Freeze clip: constrain frozen overlay width when clip is active
+    if (freezeClipHandle && frozenColOverlay) {
+      const fullFrozenWidth = measurements.colOffsets[frozenCols]!;
       const clipContentHeight = measurements.totalHeight + headerHeight;
-      freezeClipHandle.style.height = `${Math.min(clipContentHeight, viewport!.clientHeight)}px`;
+      const handleHeight = Math.min(clipContentHeight, viewport!.clientHeight);
 
-      // Update indicator
+      if (freezeClipWidth === null) {
+        // No clip active — handle sits at the frozen boundary, viewport at normal position
+        freezeClipHandle.style.left = `${fullFrozenWidth - 4}px`;
+        frozenColOverlay.style.width = `${fullFrozenWidth}px`;
+        viewport!.style.left = '0';
+        fakeScrollbar!.style.left = '0';
+      } else {
+        // Clip active — constrain overlay, shift viewport left to fill freed space
+        const clampedWidth = Math.max(0, Math.min(freezeClipWidth, fullFrozenWidth));
+        const clipOffset = fullFrozenWidth - clampedWidth;
+        frozenColOverlay.style.width = `${clampedWidth}px`;
+        freezeClipHandle.style.left = `${clampedWidth - 4}px`;
+        // Shift viewport and scrollbar left so non-frozen content fills the gap
+        viewport!.style.left = `${-clipOffset}px`;
+        fakeScrollbar!.style.left = `${-clipOffset}px`;
+      }
+      freezeClipHandle.style.height = `${handleHeight}px`;
+
+      // Visual hint: show a subtle clipped-edge indicator
       if (freezeClipIndicator) {
-        const clippedCount = state.frozenLeftColumns - visibleFrozen;
-        if (clippedCount > 0) {
+        const isClipped = freezeClipWidth !== null && freezeClipWidth < fullFrozenWidth;
+        if (isClipped) {
+          const clampedWidth = Math.max(0, Math.min(freezeClipWidth!, fullFrozenWidth));
           freezeClipIndicator.style.display = '';
-          freezeClipIndicator.textContent = `+${clippedCount}`;
-          freezeClipIndicator.style.left = `${handleLeft + 6}px`;
-          freezeClipIndicator.style.top = `${headerHeight / 2 - 10}px`;
+          freezeClipIndicator.style.left = `${clampedWidth}px`;
+          freezeClipIndicator.style.top = '0';
+          freezeClipIndicator.style.height = `${handleHeight}px`;
         } else {
           freezeClipIndicator.style.display = 'none';
         }
       }
+
     }
 
     // Render selection layer
@@ -503,8 +517,8 @@ export function createGrid<
       const column = state.columns[col]!;
       const left = measurements.colOffsets[col]!;
       const width = measurements.colOffsets[col + 1]! - left;
-      const isFrozen = col < state.visibleFrozenColumns;
-      const isLastFrozenCol = col === state.visibleFrozenColumns - 1;
+      const isFrozen = col < state.frozenLeftColumns;
+      const isLastFrozenCol = col === state.frozenLeftColumns - 1;
 
       const cell = createHeaderCell({
         left,
@@ -535,7 +549,7 @@ export function createGrid<
     // Track column indices at the right edge of a group span.
     // These columns get resize handles that extend upward to cover the group row.
     const groupSpanEndCols = new Set<number>();
-    const frozenCols = state.visibleFrozenColumns;
+    const frozenCols = state.frozenLeftColumns;
 
     // Pre-scan all non-last header rows to find group span boundaries
     for (let ri = 0; ri < totalRows - 1; ri++) {
@@ -785,16 +799,6 @@ export function createGrid<
   function scrollCellIntoView(cell: CellPosition): void {
     if (!fakeScrollbar) return;
 
-    // Auto-expand freeze clip if navigating into a clipped frozen column
-    const state = store.getState();
-    const visibleFrozen = state.visibleFrozenColumns;
-    if (cell.colIndex < state.frozenLeftColumns && cell.colIndex >= visibleFrozen) {
-      // Column is frozen but clipped — expand to show it
-      store.update('frozenLayout', () => ({ visibleFrozenColumns: cell.colIndex + 1 }));
-      invalidateHeaders();
-      scheduleRender();
-    }
-
     const measurements = virtualization.getMeasurements();
     const rowTop = measurements.rowOffsets[cell.rowIndex]!;
     const rowBottom = measurements.rowOffsets[cell.rowIndex + 1]!;
@@ -814,6 +818,7 @@ export function createGrid<
     }
 
     // Horizontal scroll (skip if frozen column)
+    const state = store.getState();
     if (cell.colIndex >= state.frozenLeftColumns) {
       if (colLeft < viewLeft) {
         fakeScrollbar.scrollLeft = colLeft;
@@ -858,21 +863,26 @@ export function createGrid<
     startEvent.preventDefault();
     startEvent.stopPropagation();
 
-    const state = store.getState();
-    const totalFrozen = state.frozenLeftColumns;
     const measurements = virtualization.getMeasurements();
+    const state = store.getState();
+    const fullFrozenWidth = measurements.colOffsets[state.frozenLeftColumns]!;
     const containerRect = container!.getBoundingClientRect();
+    // minVisible columns must stay visible — use their actual cumulative width
+    const minCols = Math.min(freezeClipConfig.minVisible, state.frozenLeftColumns);
+    const minWidth = minCols > 0 ? measurements.colOffsets[minCols]! : 0;
 
     const onPointerMove = (e: PointerEvent) => {
       const currentX = e.clientX - containerRect.left;
-      const newVisible = snapToFreezeClipBoundary(currentX, totalFrozen, measurements);
-      const clamped = Math.max(freezeClipConfig.minVisible, Math.min(totalFrozen, newVisible));
+      // Clamp between minVisible-derived width and full frozen width
+      const clampedWidth = Math.max(minWidth, Math.min(fullFrozenWidth, currentX));
 
-      if (clamped !== store.getState().visibleFrozenColumns) {
-        store.update('frozenLayout', () => ({ visibleFrozenColumns: clamped }));
-        invalidateHeaders();
-        scheduleRender();
+      // Snap to full width if within 8px of the boundary (easy restore)
+      if (clampedWidth >= fullFrozenWidth - 8) {
+        freezeClipWidth = null; // null = no clip active
+      } else {
+        freezeClipWidth = clampedWidth;
       }
+      scheduleRender();
     };
 
     const onPointerUp = () => {
@@ -880,8 +890,7 @@ export function createGrid<
       document.removeEventListener('pointerup', onPointerUp);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      const finalState = store.getState();
-      emitter.emit('freezeClip:change', finalState.visibleFrozenColumns, totalFrozen);
+      emitter.emit('freezeClip:change', freezeClipWidth ?? fullFrozenWidth, fullFrozenWidth);
     };
 
     document.addEventListener('pointermove', onPointerMove);
@@ -890,35 +899,14 @@ export function createGrid<
     document.body.style.userSelect = 'none';
   }
 
-  function snapToFreezeClipBoundary(
-    xPosition: number,
-    maxColumns: number,
-    measurements: LayoutMeasurements,
-  ): number {
-    // Find the column count whose right edge is closest to xPosition
-    for (let i = maxColumns; i >= 0; i--) {
-      const boundary = measurements.colOffsets[i]!;
-      if (i === maxColumns) {
-        // If cursor is past the last frozen column boundary, show all
-        if (xPosition >= boundary) return maxColumns;
-        continue;
-      }
-      const nextBoundary = measurements.colOffsets[i + 1]!;
-      const midpoint = (boundary + nextBoundary) / 2;
-      if (xPosition >= midpoint) {
-        return i + 1;
-      }
-    }
-    return 0;
-  }
-
   function restoreAllFrozenColumns(): void {
-    const state = store.getState();
-    if (state.visibleFrozenColumns < state.frozenLeftColumns) {
-      store.update('frozenLayout', () => ({ visibleFrozenColumns: state.frozenLeftColumns }));
-      emitter.emit('freezeClip:change', state.frozenLeftColumns, state.frozenLeftColumns);
-      invalidateHeaders();
+    if (freezeClipWidth !== null) {
+      freezeClipWidth = null;
       scheduleRender();
+      const measurements = virtualization.getMeasurements();
+      const state = store.getState();
+      const fullFrozenWidth = measurements.colOffsets[state.frozenLeftColumns]!;
+      emitter.emit('freezeClip:change', fullFrozenWidth, fullFrozenWidth);
     }
   }
 
@@ -1080,17 +1068,18 @@ export function createGrid<
   let tooltipEl: HTMLElement | null = null;
   let tooltipTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function showTooltip(target: HTMLElement, text: string): void {
+  function showTooltip(target: HTMLElement, text: string, cursorX?: number, cursorY?: number): void {
     dismissTooltip();
     tooltipTimer = setTimeout(() => {
-      const rect = target.getBoundingClientRect();
+      const left = cursorX ?? target.getBoundingClientRect().left;
+      const top = cursorY != null ? cursorY + 12 : target.getBoundingClientRect().bottom + 4;
       tooltipEl = document.createElement('div');
       tooltipEl.className = 'bg-tooltip';
       tooltipEl.textContent = text;
       tooltipEl.style.cssText = `
         position: fixed;
-        left: ${rect.left}px;
-        top: ${rect.bottom + 4}px;
+        left: ${left}px;
+        top: ${top}px;
         z-index: 100;
         background: var(--bg-context-menu-bg, #fff);
         border: 1px solid var(--bg-context-menu-border, #d0d0d0);
@@ -1291,13 +1280,18 @@ export function createGrid<
 
         freezeClipHandle.addEventListener('pointerdown', startFreezeClipDrag);
         freezeClipHandle.addEventListener('dblclick', restoreAllFrozenColumns);
+        freezeClipHandle.addEventListener('mouseenter', (e: MouseEvent) => {
+          const text = freezeClipWidth !== null
+            ? 'Double-click to expand'
+            : 'Drag to clip';
+          showTooltip(freezeClipHandle!, text, e.clientX, e.clientY);
+        });
+        freezeClipHandle.addEventListener('mouseleave', dismissTooltip);
 
-        if (freezeClipConfig.showIndicator) {
-          freezeClipIndicator = document.createElement('div');
-          freezeClipIndicator.className = 'bg-freeze-clip-indicator';
-          freezeClipIndicator.style.display = 'none';
-          container.appendChild(freezeClipIndicator);
-        }
+        freezeClipIndicator = document.createElement('div');
+        freezeClipIndicator.className = 'bg-freeze-clip-indicator';
+        freezeClipIndicator.style.display = 'none';
+        container.appendChild(freezeClipIndicator);
       }
 
       // Selection layer (inside cell container so offsets align with cells)
@@ -1419,11 +1413,9 @@ export function createGrid<
         columns: columnManager.getColumns(),
         columnWidths: columnManager.getWidths(),
       }));
-      // Clamp visibleFrozenColumns if frozen count changed
-      const currentVisible = store.getState().visibleFrozenColumns;
-      const newFrozen = store.getState().frozenLeftColumns;
-      if (currentVisible > newFrozen) {
-        store.update('frozenLayout', () => ({ visibleFrozenColumns: newFrozen }));
+      // Reset freeze clip if column count changed
+      if (freezeClipWidth !== null) {
+        freezeClipWidth = null;
       }
       invalidateHeaders();
       recomputeMeasurements();
@@ -1454,19 +1446,20 @@ export function createGrid<
       instance.setSelection(createEmptySelection());
     },
 
-    getVisibleFrozenColumns(): number {
-      return store.getState().visibleFrozenColumns;
+    getFreezeClipWidth(): number | null {
+      return freezeClipWidth;
     },
 
-    setVisibleFrozenColumns(count: number): void {
-      const state = store.getState();
-      const clamped = Math.max(freezeClipConfig.minVisible, Math.min(state.frozenLeftColumns, count));
-      if (clamped !== state.visibleFrozenColumns) {
-        store.update('frozenLayout', () => ({ visibleFrozenColumns: clamped }));
-        emitter.emit('freezeClip:change', clamped, state.frozenLeftColumns);
-        invalidateHeaders();
-        scheduleRender();
+    setFreezeClipWidth(width: number | null): void {
+      if (width === null) {
+        freezeClipWidth = null;
+      } else {
+        const measurements = virtualization.getMeasurements();
+        const state = store.getState();
+        const fullWidth = measurements.colOffsets[state.frozenLeftColumns]!;
+        freezeClipWidth = Math.max(0, Math.min(width, fullWidth));
       }
+      scheduleRender();
     },
 
     scrollTo(row: number, column?: number): void {

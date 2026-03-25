@@ -224,8 +224,6 @@ export interface VirtualizationOptions {
 export interface FreezeClipOptions {
   /** Minimum number of frozen columns that remain visible when clipping. Default: 1. Set 0 to allow hiding all. */
   minVisible?: number;
-  /** Show "+N" indicator for clipped columns. Default: true */
-  showIndicator?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -249,7 +247,7 @@ export interface GridEvents<TData = unknown> {
   'column:resize': (columnId: string, width: number) => void;
 
   // Freeze clip
-  'freezeClip:change': (visibleCount: number, totalFrozen: number) => void;
+  'freezeClip:change': (clipWidth: number, fullFrozenWidth: number) => void;
 
   // Keyboard
   'key:down': (event: KeyboardEvent, cell: CellPosition | null) => void;
@@ -313,7 +311,6 @@ export interface GridState<TData = unknown> {
   selection: Selection;
   frozenTopRows: number;
   frozenLeftColumns: number;
-  visibleFrozenColumns: number;
   pluginState: Record<string, unknown>;
 }
 
@@ -411,8 +408,10 @@ export interface GridInstance<
   setSelection(selection: Selection): void;
   clearSelection(): void;
 
-  getVisibleFrozenColumns(): number;
-  setVisibleFrozenColumns(count: number): void;
+  /** Get the current freeze clip width in pixels, or null if no clip is active. */
+  getFreezeClipWidth(): number | null;
+  /** Set the freeze clip width in pixels. Pass null to remove the clip. */
+  setFreezeClipWidth(width: number | null): void;
 
   scrollTo(row: number, column?: number): void;
   getScrollState(): ScrollState;

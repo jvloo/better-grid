@@ -253,13 +253,8 @@
 .bg-freeze-clip-indicator {
   position: absolute;
   z-index: 9;
-  background: var(--bg-freeze-clip-indicator-bg, #1a73e8);
-  color: var(--bg-freeze-clip-indicator-color, #fff);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 10px;
+  width: 2px;
   pointer-events: none;
-  white-space: nowrap;
-  line-height: 16px;
+  background: var(--bg-freeze-clip-indicator-bg, rgba(33, 133, 208, 0.6));
+  box-shadow: var(--bg-freeze-clip-indicator-shadow, -3px 0 10px 1px rgba(33, 133, 208, 0.18), -1px 0 4px rgba(33, 133, 208, 0.25));
 }
