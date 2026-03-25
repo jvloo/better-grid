@@ -142,9 +142,19 @@ export function createGrid<
     const state = store.getState();
     const measurements = virtualization.getMeasurements();
 
-    // Update scroll sizer (inside fakeScrollbar) for scrollbar dimensions
-    scrollSizer.style.width = `${measurements.totalWidth}px`;
-    scrollSizer.style.height = `${measurements.totalHeight + headerHeight}px`;
+    // Update scroll sizer (inside fakeScrollbar) for scrollbar dimensions.
+    // The sizer must be tall enough so that at max scrollTop the last row
+    // is fully visible inside the viewport (which is smaller than fakeScrollbar
+    // due to the scrollbar gutter). Formula:
+    //   maxScrollTop + (vpHeight - headerHeight) = totalHeight
+    //   sizerHeight - sbClientHeight + vpHeight - headerHeight = totalHeight
+    //   sizerHeight = totalHeight + sbClientHeight - vpHeight + headerHeight
+    const sbClientHeight = fakeScrollbar?.clientHeight ?? viewport.clientHeight;
+    const sbClientWidth = fakeScrollbar?.clientWidth ?? viewport.clientWidth;
+    const vpHeight = viewport.clientHeight;
+    const vpWidth = viewport.clientWidth;
+    scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth}px`;
+    scrollSizer.style.height = `${measurements.totalHeight + sbClientHeight - vpHeight + headerHeight}px`;
 
     // Cell container sized to full data dimensions (cells at data-space positions).
     // Container-level transform shifts them into the viewport.
@@ -171,12 +181,12 @@ export function createGrid<
       (i) => columnManager.getWidth(i),
     );
 
-    // Compute visible range
+    // Compute visible range — use viewport dimensions (the actual visible clip area)
     const viewportWidth = viewport.clientWidth;
     const viewportHeight = viewport.clientHeight;
 
-    // Adjust scrollTop for header — data rows start after the sticky header
-    const dataScrollTop = Math.max(0, state.scrollTop - headerHeight);
+    // scrollTop maps directly to data offset (scroll sizer = data height only)
+    const dataScrollTop = state.scrollTop;
 
     const visibleRange = virtualization.computeVisibleRange(
       dataScrollTop,
@@ -272,16 +282,16 @@ export function createGrid<
 
     // Translate cell container to match scroll position.
     // Cells stay at data-space positions; the container transform shifts
-    // them into the viewport. Old cells remain visible until JS updates.
-    const dataScrollTop = Math.max(0, scrollTop - headerHeight);
+    // them into the viewport. scrollTop maps directly to data offset
+    // since the scroll sizer only covers data height (headers are fixed).
     if (cellContainer) {
-      cellContainer.style.transform = `translate3d(${-scrollLeft}px, ${-dataScrollTop}px, 0)`;
+      cellContainer.style.transform = `translate3d(${-scrollLeft}px, ${-scrollTop}px, 0)`;
     }
     // Translate headers horizontally
     if (headerContainer) {
       headerContainer.style.transform = `translate3d(${-scrollLeft}px, 0, 0)`;
     }
-    // Sync frozen cell overlay vertical position
+    // Sync frozen cell overlay vertical position (same offset as main cellContainer)
     if (frozenCellOverlay) {
       frozenCellOverlay.style.transform = `translate3d(0, ${-snapToDevicePixel(scrollTop)}px, 0)`;
     }
@@ -743,16 +753,16 @@ export function createGrid<
     const colLeft = measurements.colOffsets[cell.colIndex]!;
     const colRight = measurements.colOffsets[cell.colIndex + 1]!;
 
-    const viewTop = fakeScrollbar.scrollTop - headerHeight;
-    const viewBottom = viewTop + (viewport?.clientHeight ?? 0) - headerHeight;
+    const viewTop = fakeScrollbar.scrollTop;
+    const viewBottom = viewTop + (fakeScrollbar?.clientHeight ?? 0) - headerHeight;
     const viewLeft = fakeScrollbar.scrollLeft;
     const viewRight = viewLeft + (viewport?.clientWidth ?? 0);
 
     // Vertical scroll
     if (rowTop < viewTop) {
-      fakeScrollbar.scrollTop = rowTop + headerHeight;
+      fakeScrollbar.scrollTop = rowTop;
     } else if (rowBottom > viewBottom) {
-      fakeScrollbar.scrollTop = rowBottom - (viewport?.clientHeight ?? 0) + headerHeight * 2;
+      fakeScrollbar.scrollTop = rowBottom - (fakeScrollbar?.clientHeight ?? 0) + headerHeight;
     }
 
     // Horizontal scroll (skip if frozen column)
@@ -1303,7 +1313,7 @@ export function createGrid<
     scrollTo(row: number, column?: number): void {
       if (!fakeScrollbar) return;
       const rowMetrics = virtualization.getRowMetrics(row);
-      fakeScrollbar.scrollTop = rowMetrics.offset + headerHeight;
+      fakeScrollbar.scrollTop = rowMetrics.offset;
       if (column !== undefined) {
         const colMetrics = virtualization.getColMetrics(column);
         fakeScrollbar.scrollLeft = colMetrics.offset;
