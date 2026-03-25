@@ -12,8 +12,8 @@ Monorepo with pnpm workspaces + Turborepo.
 |---------|-------------|---------|
 | `@better-grid/core` | Framework-agnostic grid engine | MIT |
 | `@better-grid/react` | React adapter (hooks + component) | MIT |
-| `@better-grid/plugins` | Free plugins (editing, sorting, filtering, formatting, validation) + built-in cell renderers | MIT |
-| `@better-grid/pro` | Paid plugins (clipboard, grouping, undo/redo, export, advanced renderers) | Commercial (future) |
+| `@better-grid/plugins` | Free plugins (editing, sorting, filtering, formatting, validation, hierarchy, clipboard) + built-in cell renderers | MIT |
+| `@better-grid/pro` | Paid plugins (grouping w/ aggregation, clipboard fill-down/series, undo/redo, export, advanced renderers) | Commercial (future) |
 | `@better-grid/mcp` | MCP server for developer tooling | MIT (future) |
 | `@better-grid/plugin-ai` | AI features: free NL filtering + pro data intelligence | Tiered (future) |
 
@@ -30,21 +30,24 @@ Monorepo with pnpm workspaces + Turborepo.
 - **Virtual scrolling**: prefix-sum arrays + binary search for O(log n) visible range
 - **Rendering**: DOM-based cell pooling with recycling + `transform: translate3d()` for GPU compositing
 - **Scroll architecture**: fake scrollbar pattern — viewport (`overflow:hidden`) + sibling fakeScrollbar (`overflow:auto`). Container-level transform shifts cells. Old cells stay visible during JS update (no blank flash).
-- **Frozen columns**: separate overlay outside scroll container, synced via same transform offset
+- **Frozen vs Pinned**:
+  - `frozen` = lock first N items from the main array in place while scrolling. `frozenLeftColumns`, `frozenTopRows`.
+  - `pinned` = attach separate data outside the main array. `pinnedTopRows`, `pinnedBottomRows` (footer/totals).
+  - Frozen columns: separate overlay outside scroll container, synced via same transform offset.
 - **Selection**: overlay layer (avoids re-rendering all cells on selection change)
 - **State**: fine-grained slice subscriptions + batching
 - **Alignment**: `align` and `verticalAlign` props on ColumnDef, applied before cellRenderer (renderer can override)
 
-### ColumnDef Props (20 total)
+### ColumnDef Props
 
 ```
 Identity:    id, accessorKey, accessorFn, header
 Layout:      width, minWidth, maxWidth, resizable
 Alignment:   align ('left'|'center'|'right'), verticalAlign ('top'|'middle'|'bottom')
-Rendering:   cellType ('number'|'currency'|'percent'|'date'), cellRenderer
-Editing:     editable, editor ('text'|'dropdown'), options
+Rendering:   cellType ('number'|'currency'|'percent'|'date'|'bigint'|'select'|'boolean'), cellRenderer
+Editing:     editable, editor ('text'|'dropdown'), options, precision
 Sorting:     sortable, comparator
-Formatting:  dateFormat, hideZero
+Formatting:  dateFormat, hideZero, valueModifier ({ format, parse })
 Validation:  required, rules
 Extension:   meta
 ```
