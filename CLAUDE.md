@@ -12,8 +12,8 @@ Monorepo with pnpm workspaces + Turborepo.
 |---------|-------------|---------|
 | `@better-grid/core` | Framework-agnostic grid engine | MIT |
 | `@better-grid/react` | React adapter (hooks + component) | MIT |
-| `@better-grid/plugins` | Free plugins (editing, sorting, filtering, formatting, validation) | MIT |
-| `@better-grid/pro` | Paid plugins (clipboard, grouping, undo/redo, export) | Commercial (future) |
+| `@better-grid/plugins` | Free plugins (editing, sorting, filtering, formatting, validation) + built-in cell renderers | MIT |
+| `@better-grid/pro` | Paid plugins (clipboard, grouping, undo/redo, export, advanced renderers) | Commercial (future) |
 | `@better-grid/mcp` | AI-native MCP server for developer tooling | MIT (future) |
 | `@better-grid/plugin-ai` | End-user AI features (NL filtering, summarization) | Commercial (future) |
 
@@ -23,14 +23,31 @@ Monorepo with pnpm workspaces + Turborepo.
 - **`$Infer` pattern** — `typeof grid.$Infer.Row` flows column schema to full type inference
 - **Config-driven DX** — works out of the box with `createGrid()`, one function call
 - **Framework adapters** — thin reactivity wrappers (~50 lines each)
+- **cellType registry** — plugins register renderers via `registerCellType()`; core just dispatches
 
 ### Key Internals
 
 - **Virtual scrolling**: prefix-sum arrays + binary search for O(log n) visible range
-- **Rendering**: DOM-based cell pooling with `transform: translate3d()` for GPU compositing
-- **Frozen columns**: separate overlay outside scroll container (no lag)
+- **Rendering**: DOM-based cell pooling with recycling + `transform: translate3d()` for GPU compositing
+- **Scroll architecture**: fake scrollbar pattern — viewport (`overflow:hidden`) + sibling fakeScrollbar (`overflow:auto`). Container-level transform shifts cells. Old cells stay visible during JS update (no blank flash).
+- **Frozen columns**: separate overlay outside scroll container, synced via same transform offset
 - **Selection**: overlay layer (avoids re-rendering all cells on selection change)
 - **State**: fine-grained slice subscriptions + batching
+- **Alignment**: `align` and `verticalAlign` props on ColumnDef, applied before cellRenderer (renderer can override)
+
+### ColumnDef Props (20 total)
+
+```
+Identity:    id, accessorKey, accessorFn, header
+Layout:      width, minWidth, maxWidth, resizable
+Alignment:   align ('left'|'center'|'right'), verticalAlign ('top'|'middle'|'bottom')
+Rendering:   cellType ('number'|'currency'|'percent'|'date'), cellRenderer
+Editing:     editable, editor ('text'|'dropdown'), options
+Sorting:     sortable, comparator
+Formatting:  dateFormat, hideZero
+Validation:  required, rules
+Extension:   meta
+```
 
 ## Build
 
@@ -61,7 +78,7 @@ node scripts/playground-build.js dev
 ```
 packages/core/src/
   grid.ts              # createGrid() factory — main entry point
-  types.ts             # All type definitions
+  types.ts             # All type definitions (ColumnDef, Selection, etc.)
   state/store.ts       # Reactive state store with batching
   virtualization/      # Virtual scrolling engine + 9-zone layout
   rendering/           # Cell rendering pipeline + selection overlay
@@ -77,11 +94,16 @@ packages/react/src/
   hooks/useGrid.ts      # Main hook (useSyncExternalStore)
 
 packages/plugins/src/
-  editing.ts            # Cell editing
-  sorting.ts            # Column sorting
-  filtering.ts          # Column filtering
+  editing.ts            # Cell editing (text, dropdown, boolean)
+  sorting.ts            # Column sorting (header click, indicators)
+  filtering.ts          # Column filtering (9 operators, context menu)
   formatting.ts         # Number/currency/percent/date via Intl
-  validation.ts         # Cell validation rules
+  validation.ts         # Cell validation (required, rules, error UI)
 
-apps/playground/        # Vite + React dev playground
+apps/playground/        # Vite + React dev playground (12 demo pages + landing)
+
+.ref/                   # Third-party reference material (gitignored, see .ref/CLAUDE.md)
+
 ```
+
+See `ROADMAP.md` for strategic tier analysis and feature roadmap.

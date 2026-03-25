@@ -8,46 +8,52 @@ A framework-agnostic, TypeScript-first, AI-native data grid & spreadsheet librar
 
 The data grid market has a gap:
 
-| Library         | Free spreadsheet features?   | Framework-agnostic? | AI-native? |
-| --------------- | ---------------------------- | ------------------- | ---------: |
-| AG Grid         | Paywalled ($999/dev/yr)      | Yes                 |         No |
-| Handsontable    | Paywalled ($999/dev/yr)      | Yes                 |         No |
-| Glide Data Grid | Yes (MIT)                    | React only          |         No |
-| RevoGrid        | Partially                    | Yes                 |         No |
-| TanStack Table  | Headless (build it yourself) | Yes                 |         No |
-| **Better Grid** | **Yes (MIT core)**           | **Yes**             |    **Yes** |
+| Library         | Free editing & formatting? | Free cell renderers?   | Framework-agnostic? | Plugin architecture? | AI-native? |
+| --------------- | -------------------------- | ---------------------- | ------------------- | -------------------- | ---------: |
+| AG Grid         | Paywalled ($999/dev/yr)    | 2 (checkbox, skeleton) | Yes                 | No                   |         No |
+| Handsontable    | Non-commercial only        | 13 (all included)      | Yes                 | No                   |         No |
+| RevoGrid        | Yes (MIT)                  | 0 free / 16 Pro        | Yes                 | No                   |         No |
+| TanStack Table  | Headless (build yourself)  | N/A                    | Yes                 | No                   |         No |
+| **Better Grid** | **Yes (MIT)**              | **6+ (MIT)**           | **Yes**             | **Yes**              |    **Yes** |
 
 ## Features
 
 ### Core (MIT, free forever)
 
-- Virtual scrolling (10K+ rows, 100+ columns)
-- Frozen rows & columns (no visual lag)
+- Virtual scrolling (10M+ cells at 141 FPS)
+- DOM cell pooling with recycling (~200 elements regardless of dataset size)
+- Fake scrollbar scroll architecture (no blank flash on fast scroll)
+- Frozen rows & columns (separate overlay, zero lag)
 - Cell selection (single, range, multi-range)
 - Keyboard navigation (arrow, tab, enter, escape)
-- Column headers (sticky, multi-level)
+- Multi-level column headers (colSpan + rowSpan)
 - Column resizing (drag handles)
-- Custom cell renderers (DOM-based)
+- Column alignment (`align`, `verticalAlign` props)
+- Custom cell renderers (DOM-based `cellRenderer` API)
+- Cell type registry (`cellType` + `registerCellType()`)
 - CSS custom properties for theming
 
 ### Free Plugins (MIT)
 
-- **Editing** — type-to-edit, double-click, commit/cancel
-- **Sorting** — single/multi-column, custom comparators
-- **Filtering** — column filters, custom functions
-- **Formatting** — currency, percent, dates via Intl
-- **Validation** — rules per column, error state
+- **Formatting** — currency, percent, dates via Intl API
+- **Editing** — text input, dropdown, boolean toggle, date
+- **Sorting** — single/multi-column, custom comparators, header click
+- **Filtering** — 9 operators, context menu, column filters
+- **Validation** — required fields, custom rules, error state UI
 
 ### Pro Plugins (Commercial, coming soon)
 
 - Clipboard (copy/cut/paste, fill-down)
-- Row grouping with collapse
+- Row grouping with collapse/expand
 - Undo/redo history
 - CSV/Excel export
+- Search & highlight
+- Formulas (=SUM, =IF, =VLOOKUP)
+- Advanced cell renderers (sparkline, heatmap, avatar, mini charts)
 
 ### AI-Native (coming soon)
 
-- **MCP Server** — AI-assisted column config generation, schema inference, migration from other grids
+- **MCP Server** — AI-assisted column config, schema inference, migration from other grids
 - **AI Plugin** — natural language filtering, data summarization, smart suggestions
 
 ## Quick Start
@@ -58,27 +64,33 @@ npm install @better-grid/core @better-grid/react @better-grid/plugins
 
 ```tsx
 import { BetterGrid } from '@better-grid/react';
-import { formatting } from '@better-grid/plugins';
+import { formatting, editing, sorting } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface Row {
   id: number;
   name: string;
   amount: number;
+  active: boolean;
 }
 
 function MyGrid({ data }: { data: Row[] }) {
   return (
     <BetterGrid<Row>
       columns={[
-        { id: 'id', header: 'ID', width: 60 },
+        { id: 'id', header: '#', width: 40 },
         { id: 'name', header: 'Name', width: 200 },
-        { id: 'amount', header: 'Amount', width: 150, cellType: 'currency' },
+        { id: 'amount', header: 'Amount', width: 150, cellType: 'currency', align: 'right' },
+        { id: 'active', header: 'Active', width: 80, align: 'center' },
       ]}
       data={data}
       frozenLeftColumns={1}
       selection={{ mode: 'range' }}
-      plugins={[formatting({ locale: 'en-US', currencyCode: 'USD' })]}
+      plugins={[
+        formatting({ locale: 'en-US', currencyCode: 'USD' }),
+        editing({ editTrigger: 'dblclick' }),
+        sorting(),
+      ]}
       height={400}
     />
   );
@@ -94,6 +106,7 @@ Inspired by [Better Auth](https://better-auth.com):
 - **Framework-agnostic** — vanilla TS core, thin framework adapters
 - **Works out of the box** — sensible defaults, zero config needed
 - **AI-native** — built for the AI era with MCP and runtime AI plugins
+- **Performance first** — 10M cells, 141 FPS, ~200 DOM elements
 
 ## Packages
 
@@ -101,7 +114,7 @@ Inspired by [Better Auth](https://better-auth.com):
 | ---------------------- | ------------------------------------------------------- |
 | `@better-grid/core`    | Framework-agnostic grid engine                          |
 | `@better-grid/react`   | React adapter (`useGrid` hook + `BetterGrid` component) |
-| `@better-grid/plugins` | Official free plugins                                   |
+| `@better-grid/plugins` | Official free plugins + built-in cell renderers         |
 
 ## Theming
 
@@ -120,6 +133,10 @@ Customize via CSS custom properties:
   --bg-frozen-col-border: 2px solid #6495ed;
 }
 ```
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the full feature roadmap, tier strategy, and competitive analysis.
 
 ## License
 
