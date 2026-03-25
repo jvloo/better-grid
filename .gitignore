@@ -31,8 +31,8 @@ coverage/
 
 # Tmp
 .playwright-mcp/
+screenshots/
 .ref/
 
 # Agents
 .claude/settings.local.json
-screenshots/
