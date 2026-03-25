@@ -48,7 +48,7 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
 
   for (let r = 0; r < rowsNumber; r++) {
     const seed = r * 31 + 17;
-    const row: Record<string, unknown> = {};
+    const row: Record<string, unknown> = { id: r + 1 };
 
     for (let c = 0; c < colsNumber; c++) {
       const cellSeed = seed + c * 13;
