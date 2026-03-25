@@ -141,10 +141,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           // Determine display string for the editor
           let rawStr = originalValue != null ? String(originalValue) : '';
 
-          if (column.valueFormatter) {
-            // Custom valueFormatter takes priority
-            rawStr = column.valueFormatter(originalValue);
-          } else if (column.cellType === 'bigint') {
+          if (column.cellType === 'bigint') {
             // BigInt: use String() to preserve full integer precision
             rawStr = originalValue != null ? String(originalValue) : '';
           } else if (column.cellType === 'percent' && typeof originalValue === 'number') {
