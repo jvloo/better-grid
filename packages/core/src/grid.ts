@@ -24,7 +24,7 @@ import { VirtualizationEngine } from './virtualization/engine';
 import type { LayoutMeasurements } from './virtualization/engine';
 import { RenderingPipeline } from './rendering/pipeline';
 import { SelectionLayer } from './rendering/layers';
-import { createEmptySelection, createCellSelection, extendSelection } from './selection/model';
+import { createEmptySelection, createCellSelection, extendSelection, addRangeToSelection } from './selection/model';
 import { navigateCell, navigateTab, getNavigationDirection } from './keyboard/navigation';
 import { computeZoneDimensions } from './virtualization/layout';
 
@@ -392,10 +392,24 @@ export function createGrid<
     const selectionMode = options.selection?.mode ?? 'cell';
     if (selectionMode === 'none') return;
 
+    const isCtrlHeld = event.ctrlKey || event.metaKey;
+
     if (event.shiftKey && store.getState().selection.active) {
-      // Extend selection
+      // Extend the last range (works with both plain Shift and Shift+Ctrl)
       const newSelection = extendSelection(store.getState().selection, cell);
       store.setSelection(newSelection);
+    } else if (isCtrlHeld) {
+      // Ctrl/Meta+click: add a new single-cell range to existing selection
+      const currentSelection = store.getState().selection;
+      const cellRange = {
+        startRow: cell.rowIndex,
+        endRow: cell.rowIndex,
+        startCol: cell.colIndex,
+        endCol: cell.colIndex,
+      };
+      const newSelection = addRangeToSelection(currentSelection, cellRange);
+      // Update active cell to the newly clicked cell
+      store.setSelection({ ...newSelection, active: cell });
     } else {
       store.setSelection(createCellSelection(cell));
     }
