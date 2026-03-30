@@ -43,7 +43,11 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy'> {
       const columns = store.getState().columns;
       const col = columns.find(c => c.id === expandColId);
       if (col) {
-        const originalRenderer = col.cellRenderer;
+        // Guard against double-wrapping on re-init (React StrictMode calls init twice)
+        const alreadyWrapped = col.cellRenderer && '__hierarchyOriginal' in (col.cellRenderer as object);
+        const originalRenderer = alreadyWrapped
+          ? (col.cellRenderer as unknown as { __hierarchyOriginal: typeof col.cellRenderer }).__hierarchyOriginal
+          : col.cellRenderer;
 
         col.cellRenderer = (container: HTMLElement, context: CellRenderContext) => {
           const state = store.getState();
@@ -130,6 +134,9 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy'> {
             container.appendChild(textNode);
           }
         };
+
+        // Tag wrapped renderer so re-init can recover the original
+        (col.cellRenderer as unknown as { __hierarchyOriginal?: typeof originalRenderer }).__hierarchyOriginal = originalRenderer;
 
         // Force column update in store so the renderer change takes effect
         store.update('columns', () => ({
