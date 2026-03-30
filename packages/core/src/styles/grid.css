@@ -108,10 +108,11 @@
   display: inline-flex;
 }
 
-/* Keep filter icon visible when column has active filter indicator */
-.bg-header-cell:has(.bg-filter-indicator) .bg-header-cell__filter-btn {
+/* Keep filter icon visible and highlighted when column has active filter */
+.bg-header-cell--filtered .bg-header-cell__filter-btn {
   display: inline-flex;
-  opacity: 0.6;
+  opacity: 0.8;
+  color: var(--bg-active-border, #1a73e8);
 }
 
 /* Column resize handle */

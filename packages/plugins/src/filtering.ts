@@ -111,10 +111,12 @@ export function filtering(options?: FilteringOptions): GridPlugin<'filtering'> {
       }
 
       function updateFilterIndicators(): void {
-        // Remove existing indicators
-        document.querySelectorAll('.bg-filter-indicator').forEach((el) => el.remove());
+        // Remove active-filter class from all headers
+        document.querySelectorAll('.bg-header-cell--filtered').forEach((el) =>
+          el.classList.remove('bg-header-cell--filtered'),
+        );
 
-        // Add indicators to filtered columns
+        // Mark filtered columns so the filter button stays visible + highlighted
         for (const { columnId } of filters) {
           const col = ctx.grid.getState().columns.findIndex((c) => c.id === columnId);
           if (col === -1) continue;
@@ -123,13 +125,7 @@ export function filtering(options?: FilteringOptions): GridPlugin<'filtering'> {
             `.bg-header-cell[data-col="${col}"]:not(.bg-header-cell--group)`,
           );
           for (const headerCell of headerCells) {
-            const indicator = document.createElement('span');
-            indicator.className = 'bg-filter-indicator';
-            indicator.textContent = ' \u25BC'; // ▼ funnel-like
-            indicator.style.fontSize = '8px';
-            indicator.style.opacity = '0.5';
-            indicator.style.marginLeft = '4px';
-            headerCell.appendChild(indicator);
+            headerCell.classList.add('bg-header-cell--filtered');
           }
         }
       }
@@ -168,7 +164,9 @@ export function filtering(options?: FilteringOptions): GridPlugin<'filtering'> {
       ctx.expose(api);
 
       return () => {
-        document.querySelectorAll('.bg-filter-indicator').forEach((el) => el.remove());
+        document.querySelectorAll('.bg-header-cell--filtered').forEach((el) =>
+          el.classList.remove('bg-header-cell--filtered'),
+        );
       };
     },
   };
