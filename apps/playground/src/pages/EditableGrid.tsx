@@ -81,18 +81,20 @@ export function EditableGrid() {
       // 6. cellType: 'bigint' → full-precision large integers
       { id: 'serialNumber', header: 'Serial (bigint)', width: 185, cellType: 'bigint' },
 
-      // 7. valueParser/valueFormatter → custom parsing (weight in kg)
+      // 7. valueModifier → custom parsing (weight in kg)
       {
         id: 'weight',
         header: 'Weight (custom)',
         width: 130,
         align: 'right',
-        valueFormatter: (v: unknown) => typeof v === 'number' ? `${v.toFixed(2)} kg` : String(v ?? ''),
-        valueParser: (s: string) => {
-          const cleaned = s.replace(/[^0-9.\-]/g, '');
-          if (cleaned === '' || cleaned === '-') return undefined; // invalid → keep original
-          const num = Number(cleaned);
-          return isNaN(num) ? undefined : Math.round(num * 100) / 100;
+        valueModifier: {
+          format: (v: unknown) => typeof v === 'number' ? `${v.toFixed(2)} kg` : String(v ?? ''),
+          parse: (s: string) => {
+            const cleaned = s.replace(/[^0-9.\-]/g, '');
+            if (cleaned === '' || cleaned === '-') return undefined; // invalid → keep original
+            const num = Number(cleaned);
+            return isNaN(num) ? undefined : Math.round(num * 100) / 100;
+          },
         },
       },
 
@@ -193,7 +195,7 @@ export function EditableGrid() {
       />
       <div style={{ marginTop: 16, fontSize: 13, color: '#888' }}>
         <strong>Columns:</strong> ID (readonly) | Name (text) | Qty (auto-number) | Price (currency, precision: 2) |
-        Rate (percent) | Serial (bigint) | Weight (valueParser/valueFormatter) | Status (string dropdown) | Priority (label/value dropdown) |
+        Rate (percent) | Serial (bigint) | Weight (valueModifier) | Status (string dropdown) | Priority (label/value dropdown) |
         Active (auto boolean dropdown) | Bool-text (forced text) | Date | Notes (text) | Read-only
       </div>
 
@@ -205,8 +207,9 @@ export function EditableGrid() {
   precision: 2 }              // clamp to 2 decimal places
 { cellType: 'percent' }       // text → shows 5, stores 0.05
 { cellType: 'bigint' }        // full-precision large integers
-{ valueParser: (s) => ...,    // custom parse/format
-  valueFormatter: (v) => ... }
+{ valueModifier: {             // custom parse/format
+    format: (v) => ...,
+    parse: (s) => ... } }
 { cellType: 'date' }          // text → date string
 { options: ['A', 'B'] }       // dropdown (string)
 { options: [                   // dropdown (label/value)

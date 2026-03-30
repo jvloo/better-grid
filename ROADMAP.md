@@ -274,7 +274,7 @@ Fixes identified during review that should ship with Phase 0:
 | Key binding dispatch ignores `binding.key` | `handleKeyDown` calls every binding handler for every keypress. Enter binding doesn't check `event.key`, so it starts editing on Arrow/Tab/Escape too. Fix: check `binding.key === '*' \|\| binding.key === event.key` before calling handler. |
 | `toggle` cellType in union but unimplemented | Remove `toggle` from `CellType` union, consolidate to `boolean` |
 | `precision` buried in `meta` | Promote to first-class `ColumnDef.precision` prop |
-| `valueParser` / `valueFormatter` naming | Consolidate to `valueModifier: { format, parse }` |
+| ~~`valueParser` / `valueFormatter` naming~~ | ~~Consolidated to `valueModifier: { format, parse }`~~ Done |
 
 ---
 

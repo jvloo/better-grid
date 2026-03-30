@@ -110,13 +110,13 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
       function formatValue(
         value: unknown,
         type: string,
-        column?: { hideZero?: boolean; dateFormat?: string; valueFormatter?: (value: unknown) => string },
+        column?: { hideZero?: boolean; dateFormat?: string; valueModifier?: { format?: (value: unknown) => string } },
       ): string {
         if (value == null) return '';
 
-        // Custom valueFormatter takes priority over built-in formatting
-        if (column?.valueFormatter) {
-          return column.valueFormatter(value);
+        // Custom valueModifier.format takes priority over built-in formatting
+        if (column?.valueModifier?.format) {
+          return column.valueModifier.format(value);
         }
 
         if (column?.hideZero && value === 0) return '';

@@ -113,6 +113,14 @@ export interface ColumnOption {
   value: string | number | boolean;
 }
 
+/** Custom value modifier for formatting display and parsing input */
+export interface ValueModifier {
+  /** Format raw value for display (render time) */
+  format?: (value: unknown) => string;
+  /** Parse user input string back to data (edit commit time). Return undefined to keep original value. */
+  parse?: (value: string) => unknown;
+}
+
 export interface ColumnDef<TData = unknown> {
   id: string;
   accessorKey?: keyof TData & string;
@@ -147,9 +155,8 @@ export interface ColumnDef<TData = unknown> {
   dateFormat?: 'short' | 'medium' | 'long' | 'full' | 'iso' | 'month-year' | 'year' | 'time' | 'datetime';
   hideZero?: boolean;
 
-  // Custom value parsing/formatting (e.g., for arbitrary precision with decimal.js)
-  valueParser?: (value: string) => unknown;
-  valueFormatter?: (value: unknown) => string;
+  /** Custom value modifier for formatting display and parsing input */
+  valueModifier?: ValueModifier;
 
   // Validation
   required?: boolean;

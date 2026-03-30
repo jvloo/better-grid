@@ -556,10 +556,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       ): unknown {
         if (!column) return newValue;
 
-        // Custom valueParser takes priority over all built-in parsing
-        if (column.valueParser) {
+        // Custom valueModifier.parse takes priority over all built-in parsing
+        if (column.valueModifier?.parse) {
           try {
-            const parsed = column.valueParser(newValue);
+            const parsed = column.valueModifier.parse(newValue);
             return parsed !== undefined ? parsed : prevValue;
           } catch {
             return prevValue;
