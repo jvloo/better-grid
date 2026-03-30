@@ -169,10 +169,13 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting'> {
           for (const headerCell of headerCells) {
             const indicator = document.createElement('span');
             indicator.className = 'bg-sort-indicator';
-            indicator.textContent = direction === 'asc' ? ' \u25B2' : ' \u25BC';
-            indicator.style.fontSize = '10px';
+            indicator.innerHTML = direction === 'asc'
+              ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2v6M2.5 4.5L5 2l2.5 2.5"/></svg>'
+              : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2v6M2.5 5.5L5 8l2.5-2.5"/></svg>';
             indicator.style.opacity = '0.6';
             indicator.style.marginLeft = '4px';
+            indicator.style.display = 'inline-flex';
+            indicator.style.verticalAlign = 'middle';
             // Insert before filter button so sort icon appears first
             const filterBtn = headerCell.querySelector('.bg-header-cell__filter-btn');
             if (filterBtn) {
