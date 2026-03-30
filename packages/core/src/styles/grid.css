@@ -93,10 +93,11 @@
   display: none;
   margin-left: auto;
   padding: 0 2px;
-  font-size: 8px;
   opacity: 0.4;
   cursor: pointer;
   flex-shrink: 0;
+  vertical-align: middle;
+  align-items: center;
 }
 
 .bg-header-cell__filter-btn:hover {
@@ -104,12 +105,12 @@
 }
 
 .bg-header-cell:hover .bg-header-cell__filter-btn {
-  display: inline-block;
+  display: inline-flex;
 }
 
 /* Keep filter icon visible when column has active filter indicator */
 .bg-header-cell:has(.bg-filter-indicator) .bg-header-cell__filter-btn {
-  display: inline-block;
+  display: inline-flex;
   opacity: 0.6;
 }
 
