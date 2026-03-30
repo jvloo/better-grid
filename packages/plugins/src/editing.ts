@@ -652,6 +652,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         originalValue = null;
 
         ctx.grid.refresh();
+
+        // Refocus the grid container so keyboard navigation resumes
+        const gridEl = document.querySelector('.bg-grid') as HTMLElement | null;
+        gridEl?.focus();
       }
 
       // -----------------------------------------------------------------------

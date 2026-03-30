@@ -28,15 +28,24 @@ export class SelectionLayer {
     }
     this.rangeBorders = [];
 
+    const hasMultipleRanges = selection.ranges.length > 1;
+
     // Range selection highlights
     for (const range of selection.ranges) {
-      // Skip single-cell ranges (handled by .bg-cell--active CSS)
-      if (
-        range.startRow === range.endRow &&
-        range.startCol === range.endCol
-      ) {
+      const isSingleCell = range.startRow === range.endRow && range.startCol === range.endCol;
+
+      // Skip single-cell ranges ONLY when there's just one range
+      // (handled by .bg-cell--active CSS). With multi-range (Ctrl+click),
+      // non-active single-cell ranges need visible highlights.
+      if (isSingleCell && !hasMultipleRanges) {
         continue;
       }
+
+      // Skip the active cell's range in multi-range — it already has .bg-cell--active outline
+      const isActiveRange = isSingleCell && selection.active &&
+        range.startRow === selection.active.rowIndex &&
+        range.startCol === selection.active.colIndex;
+      if (isActiveRange) continue;
 
       const border = document.createElement('div');
       border.className = 'bg-selection-range';
