@@ -16,3 +16,6 @@ export type { FormattingOptions, FormattingApi, DateFormatPreset } from './forma
 
 export { validation } from './validation';
 export type { ValidationOptions, ValidationApi, ValidationError } from './validation';
+
+export { clipboard } from './clipboard';
+export type { ClipboardOptions, ClipboardApi } from './clipboard';
