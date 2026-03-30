@@ -229,6 +229,261 @@ const changeRenderer: CellTypeRenderer = {
 };
 
 // ---------------------------------------------------------------------------
+// Timeline — Date range bar
+// ---------------------------------------------------------------------------
+
+const timelineRenderer: CellTypeRenderer = {
+  render(container: HTMLElement, context: CellRenderContext): void {
+    container.textContent = '';
+    container.style.position = 'relative';
+    container.style.width = '100%';
+    container.style.height = '100%';
+
+    let start: Date | null = null;
+    let end: Date | null = null;
+
+    const val = context.value as
+      | { start: string | Date; end: string | Date }
+      | [string | Date, string | Date]
+      | null
+      | undefined;
+
+    if (Array.isArray(val) && val.length >= 2) {
+      start = new Date(val[0]);
+      end = new Date(val[1]);
+    } else if (val && typeof val === 'object' && 'start' in val) {
+      start = new Date(val.start);
+      end = new Date(val.end);
+    }
+
+    const bar = document.createElement('div');
+    const color = 'var(--bg-timeline-color, #3b82f6)';
+    bar.style.height = '8px';
+    bar.style.borderRadius = '4px';
+    bar.style.background = color;
+    bar.style.position = 'absolute';
+    bar.style.top = '50%';
+    bar.style.transform = 'translateY(-50%)';
+
+    const meta = context.column.meta as Record<string, unknown> | undefined;
+    const rangeStart = meta?.timelineStart ? new Date(meta.timelineStart as string | number) : null;
+    const rangeEnd = meta?.timelineEnd ? new Date(meta.timelineEnd as string | number) : null;
+
+    if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime()) && rangeStart && rangeEnd && !isNaN(rangeStart.getTime()) && !isNaN(rangeEnd.getTime())) {
+      const totalRange = rangeEnd.getTime() - rangeStart.getTime();
+      if (totalRange > 0) {
+        const leftPct = ((start.getTime() - rangeStart.getTime()) / totalRange) * 100;
+        const rightPct = ((end.getTime() - rangeStart.getTime()) / totalRange) * 100;
+        bar.style.left = `${Math.max(0, leftPct)}%`;
+        bar.style.width = `${Math.min(100, rightPct) - Math.max(0, leftPct)}%`;
+      } else {
+        bar.style.left = '25%';
+        bar.style.width = '50%';
+      }
+    } else {
+      bar.style.left = '25%';
+      bar.style.width = '50%';
+    }
+
+    container.appendChild(bar);
+  },
+  getStringValue(context: CellRenderContext): string {
+    const val = context.value as
+      | { start: string | Date; end: string | Date }
+      | [string | Date, string | Date]
+      | null
+      | undefined;
+
+    let start: string | null = null;
+    let end: string | null = null;
+
+    if (Array.isArray(val) && val.length >= 2) {
+      start = String(val[0]);
+      end = String(val[1]);
+    } else if (val && typeof val === 'object' && 'start' in val) {
+      start = String(val.start);
+      end = String(val.end);
+    }
+
+    return start && end ? `${start} – ${end}` : '';
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Change Indicator — Arrow icon with +/-
+// ---------------------------------------------------------------------------
+
+const changeIndicatorRenderer: CellTypeRenderer = {
+  render(container: HTMLElement, context: CellRenderContext): void {
+    container.textContent = '';
+    container.style.display = 'flex';
+    container.style.alignItems = 'center';
+    container.style.gap = '4px';
+
+    const val = typeof context.value === 'number' ? context.value : 0;
+    const formatter = new Intl.NumberFormat(undefined, { useGrouping: true, maximumFractionDigits: 2 });
+
+    const arrow = document.createElement('span');
+    const text = document.createElement('span');
+
+    if (val > 0) {
+      arrow.textContent = '\u2191';
+      arrow.style.color = '#16a34a';
+      text.textContent = `+${formatter.format(val)}`;
+      text.style.color = '#16a34a';
+    } else if (val < 0) {
+      arrow.textContent = '\u2193';
+      arrow.style.color = '#dc2626';
+      text.textContent = `${formatter.format(val)}`;
+      text.style.color = '#dc2626';
+    } else {
+      arrow.textContent = '\u2014';
+      arrow.style.color = '#9ca3af';
+      text.textContent = '0';
+      text.style.color = '#9ca3af';
+    }
+
+    container.appendChild(arrow);
+    container.appendChild(text);
+  },
+  getStringValue(context: CellRenderContext): string {
+    const val = typeof context.value === 'number' ? context.value : 0;
+    if (val > 0) return `+${val}`;
+    return String(val);
+  },
+  parseStringValue(value: string): unknown {
+    const num = parseFloat(value.replace(/[^0-9.\-]/g, ''));
+    return isNaN(num) ? undefined : num;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Tooltip — Rich hover content
+// ---------------------------------------------------------------------------
+
+const tooltipRenderer: CellTypeRenderer = {
+  render(container: HTMLElement, context: CellRenderContext): void | (() => void) {
+    container.textContent = '';
+
+    const val = context.value as
+      | { text: string; tooltip: string; type?: 'info' | 'warning' | 'error' }
+      | string
+      | null
+      | undefined;
+
+    let displayText = '';
+    let tooltipText = '';
+    let tooltipType: 'info' | 'warning' | 'error' = 'info';
+
+    if (typeof val === 'string') {
+      displayText = val;
+    } else if (val && typeof val === 'object') {
+      displayText = val.text ?? '';
+      tooltipText = val.tooltip ?? '';
+      tooltipType = val.type ?? 'info';
+    }
+
+    container.textContent = displayText;
+
+    if (!tooltipText) return;
+
+    let tooltipEl: HTMLDivElement | null = null;
+
+    const typeColors: Record<string, { bg: string; color: string }> = {
+      info: { bg: '#dbeafe', color: '#1e40af' },
+      warning: { bg: '#fef3c7', color: '#92400e' },
+      error: { bg: '#fee2e2', color: '#991b1b' },
+    };
+
+    const onMouseEnter = () => {
+      tooltipEl = document.createElement('div');
+      tooltipEl.textContent = tooltipText;
+      tooltipEl.style.position = 'fixed';
+      tooltipEl.style.zIndex = '200';
+      tooltipEl.style.padding = '6px 10px';
+      tooltipEl.style.borderRadius = '6px';
+      tooltipEl.style.fontSize = '12px';
+      tooltipEl.style.maxWidth = '250px';
+      tooltipEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+      tooltipEl.style.pointerEvents = 'none';
+      tooltipEl.style.whiteSpace = 'normal';
+
+      const colors = typeColors[tooltipType] ?? typeColors.info;
+      tooltipEl.style.backgroundColor = colors.bg;
+      tooltipEl.style.color = colors.color;
+
+      document.body.appendChild(tooltipEl);
+
+      const rect = container.getBoundingClientRect();
+      const ttRect = tooltipEl.getBoundingClientRect();
+      tooltipEl.style.left = `${rect.left + rect.width / 2 - ttRect.width / 2}px`;
+      tooltipEl.style.top = `${rect.top - ttRect.height - 4}px`;
+    };
+
+    const onMouseLeave = () => {
+      if (tooltipEl) {
+        tooltipEl.remove();
+        tooltipEl = null;
+      }
+    };
+
+    container.addEventListener('mouseenter', onMouseEnter);
+    container.addEventListener('mouseleave', onMouseLeave);
+
+    return () => {
+      container.removeEventListener('mouseenter', onMouseEnter);
+      container.removeEventListener('mouseleave', onMouseLeave);
+      if (tooltipEl) {
+        tooltipEl.remove();
+        tooltipEl = null;
+      }
+    };
+  },
+  getStringValue(context: CellRenderContext): string {
+    const val = context.value as
+      | { text: string; tooltip: string }
+      | string
+      | null
+      | undefined;
+
+    if (typeof val === 'string') return val;
+    if (val && typeof val === 'object') return val.text ?? '';
+    return '';
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Loading — Shimmer skeleton state
+// ---------------------------------------------------------------------------
+
+const loadingRenderer: CellTypeRenderer = {
+  render(container: HTMLElement): void {
+    container.textContent = '';
+
+    // Inject shimmer keyframes once
+    if (!document.getElementById('bg-shimmer-style')) {
+      const style = document.createElement('style');
+      style.id = 'bg-shimmer-style';
+      style.textContent = '@keyframes bg-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }';
+      document.head.appendChild(style);
+    }
+
+    const shimmer = document.createElement('div');
+    shimmer.style.height = '14px';
+    shimmer.style.borderRadius = '4px';
+    shimmer.style.background = 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)';
+    shimmer.style.backgroundSize = '200% 100%';
+    shimmer.style.animation = 'bg-shimmer 1.5s infinite';
+    shimmer.style.width = '80%';
+
+    container.appendChild(shimmer);
+  },
+  getStringValue(): string {
+    return 'Loading...';
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Plugin factory
 // ---------------------------------------------------------------------------
 
@@ -274,6 +529,10 @@ export function cellRenderers(): GridPlugin<'cell-renderers'> {
       unregs.push(ctx.registerCellType('boolean', booleanRenderer));
       unregs.push(ctx.registerCellType('rating', ratingRenderer));
       unregs.push(ctx.registerCellType('change', changeRenderer));
+      unregs.push(ctx.registerCellType('timeline', timelineRenderer));
+      unregs.push(ctx.registerCellType('changeIndicator', changeIndicatorRenderer));
+      unregs.push(ctx.registerCellType('tooltip', tooltipRenderer));
+      unregs.push(ctx.registerCellType('loading', loadingRenderer));
 
       return () => {
         for (const u of unregs) u();
