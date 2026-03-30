@@ -19,6 +19,8 @@ export interface ClipboardApi {
   copy(): void;
   paste(): Promise<void>;
   cut(): void;
+  fillDown(): void;
+  fillSeries(): void;
 }
 
 export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard'> {
@@ -359,6 +361,167 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard'> {
       }
 
       // -------------------------------------------------------------------
+      // Fill-down (Ctrl+D)
+      // -------------------------------------------------------------------
+
+      function getSelectionRanges() {
+        const state = ctx.grid.getState();
+        const { selection } = state;
+
+        return selection.ranges.length > 0
+          ? selection.ranges
+          : selection.active
+            ? [{ startRow: selection.active.rowIndex, endRow: selection.active.rowIndex, startCol: selection.active.colIndex, endCol: selection.active.colIndex }]
+            : [];
+      }
+
+      function fillDown(): void {
+        const state = ctx.grid.getState();
+        const ranges = getSelectionRanges();
+
+        for (const range of ranges) {
+          const r1 = Math.min(range.startRow, range.endRow);
+          const r2 = Math.max(range.startRow, range.endRow);
+          const c1 = Math.min(range.startCol, range.endCol);
+          const c2 = Math.max(range.startCol, range.endCol);
+
+          if (r1 === r2) continue; // Nothing to fill
+
+          const sourceRow = state.data[r1];
+          if (!sourceRow) continue;
+
+          for (let c = c1; c <= c2; c++) {
+            const column = state.columns[c];
+            if (!column) continue;
+            if (column.editable === false) continue;
+
+            const sourceValue = getCellValue(sourceRow, column);
+
+            for (let r = r1 + 1; r <= r2; r++) {
+              ctx.grid.updateCell(r, column.id, sourceValue);
+            }
+          }
+        }
+      }
+
+      // -------------------------------------------------------------------
+      // Fill-series (Ctrl+Shift+D)
+      // -------------------------------------------------------------------
+
+      function detectNumberStep(values: unknown[]): number | null {
+        if (values.length < 2) return null;
+        const nums: number[] = [];
+        for (const v of values) {
+          const n = typeof v === 'number' ? v : Number(v);
+          if (isNaN(n)) return null;
+          nums.push(n);
+        }
+        // All steps must be equal
+        const step = nums[1]! - nums[0]!;
+        for (let i = 2; i < nums.length; i++) {
+          if (Math.abs((nums[i]! - nums[i - 1]!) - step) > 1e-10) {
+            // Non-uniform steps — use first step anyway
+            break;
+          }
+        }
+        return step;
+      }
+
+      function detectDateStep(values: unknown[]): number | null {
+        if (values.length < 2) return null;
+        const dates: number[] = [];
+        for (const v of values) {
+          if (v instanceof Date) {
+            dates.push(v.getTime());
+          } else if (typeof v === 'string' || typeof v === 'number') {
+            const d = new Date(v as string | number);
+            if (isNaN(d.getTime())) return null;
+            dates.push(d.getTime());
+          } else {
+            return null;
+          }
+        }
+        const MS_PER_DAY = 86400000;
+        const stepMs = dates[1]! - dates[0]!;
+        // Return step in days
+        return stepMs / MS_PER_DAY;
+      }
+
+      function fillSeries(): void {
+        const state = ctx.grid.getState();
+        const ranges = getSelectionRanges();
+
+        for (const range of ranges) {
+          const r1 = Math.min(range.startRow, range.endRow);
+          const r2 = Math.max(range.startRow, range.endRow);
+          const c1 = Math.min(range.startCol, range.endCol);
+          const c2 = Math.max(range.startCol, range.endCol);
+
+          if (r1 === r2) continue;
+
+          for (let c = c1; c <= c2; c++) {
+            const column = state.columns[c];
+            if (!column) continue;
+            if (column.editable === false) continue;
+
+            // Gather existing values from the range to detect pattern
+            const sampleValues: unknown[] = [];
+            for (let r = r1; r <= r2; r++) {
+              const row = state.data[r];
+              if (!row) break;
+              sampleValues.push(getCellValue(row, column));
+              if (sampleValues.length >= 2) break; // We only need 2 to detect pattern
+            }
+
+            if (sampleValues.length < 2) {
+              // Fall back to fill-down behavior
+              const sourceRow = state.data[r1];
+              if (!sourceRow) continue;
+              const sourceValue = getCellValue(sourceRow, column);
+              for (let r = r1 + 1; r <= r2; r++) {
+                ctx.grid.updateCell(r, column.id, sourceValue);
+              }
+              continue;
+            }
+
+            // Try number pattern
+            const numberStep = detectNumberStep(sampleValues);
+            if (numberStep !== null) {
+              const baseValue = typeof sampleValues[0] === 'number' ? sampleValues[0] : Number(sampleValues[0]);
+              for (let r = r1 + 1; r <= r2; r++) {
+                const offset = r - r1;
+                ctx.grid.updateCell(r, column.id, baseValue + numberStep * offset);
+              }
+              continue;
+            }
+
+            // Try date pattern
+            const dayStep = detectDateStep(sampleValues);
+            if (dayStep !== null) {
+              const MS_PER_DAY = 86400000;
+              const baseDate = sampleValues[0] instanceof Date
+                ? sampleValues[0].getTime()
+                : new Date(sampleValues[0] as string | number).getTime();
+              const useDate = sampleValues[0] instanceof Date;
+
+              for (let r = r1 + 1; r <= r2; r++) {
+                const offset = r - r1;
+                const newTime = baseDate + dayStep * MS_PER_DAY * offset;
+                ctx.grid.updateCell(r, column.id, useDate ? new Date(newTime) : new Date(newTime).toISOString());
+              }
+              continue;
+            }
+
+            // String fallback: repeat the last known value
+            const lastValue = sampleValues[sampleValues.length - 1];
+            for (let r = r1 + 1; r <= r2; r++) {
+              ctx.grid.updateCell(r, column.id, lastValue);
+            }
+          }
+        }
+      }
+
+      // -------------------------------------------------------------------
       // Key bindings
       // -------------------------------------------------------------------
 
@@ -401,6 +564,32 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard'> {
         },
       });
 
+      const unbindFillDown = ctx.registerKeyBinding({
+        key: '*',
+        priority: 5,
+        handler: (event) => {
+          if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+            event.preventDefault();
+            fillDown();
+            return true;
+          }
+          return false;
+        },
+      });
+
+      const unbindFillSeries = ctx.registerKeyBinding({
+        key: '*',
+        priority: 5,
+        handler: (event) => {
+          if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'D') {
+            event.preventDefault();
+            fillSeries();
+            return true;
+          }
+          return false;
+        },
+      });
+
       // -------------------------------------------------------------------
       // API
       // -------------------------------------------------------------------
@@ -409,6 +598,8 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard'> {
         copy,
         paste,
         cut,
+        fillDown,
+        fillSeries,
       };
 
       ctx.expose(api);
@@ -417,6 +608,8 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard'> {
         unbindCopy();
         unbindPaste();
         unbindCut();
+        unbindFillDown();
+        unbindFillSeries();
       };
     },
   };
