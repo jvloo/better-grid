@@ -173,7 +173,13 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting'> {
             indicator.style.fontSize = '10px';
             indicator.style.opacity = '0.6';
             indicator.style.marginLeft = '4px';
-            headerCell.appendChild(indicator);
+            // Insert before filter button so sort icon appears first
+            const filterBtn = headerCell.querySelector('.bg-header-cell__filter-btn');
+            if (filterBtn) {
+              headerCell.insertBefore(indicator, filterBtn);
+            } else {
+              headerCell.appendChild(indicator);
+            }
           }
         }
       }
