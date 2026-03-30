@@ -280,6 +280,36 @@ export interface GridEvents<TData = unknown> {
 }
 
 // ---------------------------------------------------------------------------
+// Hierarchy (Row Tree)
+// ---------------------------------------------------------------------------
+
+/** Row hierarchy configuration for parent-child tree structures */
+export interface HierarchyConfig<TData = unknown> {
+  /** Get a stable unique ID for each row */
+  getRowId: (row: TData) => string | number;
+  /** Get the parent row ID. Return null/undefined for root rows */
+  getParentId: (row: TData) => string | number | null | undefined;
+  /** Whether rows start expanded. Default: true */
+  defaultExpanded?: boolean;
+}
+
+/** Hierarchy state maintained by the grid engine when hierarchy is configured */
+export interface HierarchyState {
+  /** Set of expanded row IDs */
+  expandedRows: Set<string | number>;
+  /** Mapping from visible row position to original data index */
+  visibleRows: number[];
+  /** Depth of each row in the tree (for indentation) */
+  rowDepths: Map<string | number, number>;
+  /** Map from row ID to array of child data indices */
+  childrenMap: Map<string | number | null, number[]>;
+  /** Set of row IDs that have children */
+  parentIds: Set<string | number>;
+  /** Map from data index to row ID (reverse lookup) */
+  dataIndexToRowId: Map<number, string | number>;
+}
+
+// ---------------------------------------------------------------------------
 // Grid Options
 // ---------------------------------------------------------------------------
 
@@ -298,6 +328,7 @@ export interface GridOptions<
   footerRows?: FooterRow[];
   selection?: SelectionOptions;
   virtualization?: VirtualizationOptions;
+  hierarchy?: HierarchyConfig<TData>;
   plugins?: TPlugins;
   onSelectionChange?: (selection: Selection) => void;
   onDataChange?: (changes: CellChange<TData>[]) => void;
@@ -319,6 +350,7 @@ export interface GridState<TData = unknown> {
   selection: Selection;
   frozenTopRows: number;
   frozenLeftColumns: number;
+  hierarchyState: HierarchyState | null;
   pluginState: Record<string, unknown>;
 }
 
@@ -420,6 +452,11 @@ export interface GridInstance<
   getFreezeClipWidth(): number | null;
   /** Set the freeze clip width in pixels. Pass null to remove the clip. */
   setFreezeClipWidth(width: number | null): void;
+
+  // Hierarchy
+  toggleRow(rowId: string | number): void;
+  expandAll(): void;
+  collapseAll(): void;
 
   scrollTo(row: number, column?: number): void;
   getScrollState(): ScrollState;

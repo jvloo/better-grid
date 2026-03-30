@@ -15,6 +15,8 @@ import type {
   KeyBinding,
   Command,
   PluginContext,
+  HierarchyConfig,
+  HierarchyState,
 } from './types';
 import { EventEmitter } from './events/emitter';
 import { StateStore } from './state/store';
@@ -98,10 +100,92 @@ export function createGrid<
     selection: createEmptySelection(),
     frozenTopRows: options.frozenTopRows ?? 0,
     frozenLeftColumns: options.frozenLeftColumns ?? 0,
+    hierarchyState: null,
     pluginState: {},
   };
 
   const store = new StateStore<TData>(initialState);
+
+  // ---------------------------------------------------------------------------
+  // Hierarchy (row tree) support
+  // ---------------------------------------------------------------------------
+
+  const hierarchyConfig = options.hierarchy as HierarchyConfig<TData> | undefined;
+
+  /** Build the hierarchy state from data + expanded set */
+  function buildHierarchyState(data: TData[], expandedRows: Set<string | number>): HierarchyState {
+    const cfg = hierarchyConfig!;
+    const childrenMap = new Map<string | number | null, number[]>();
+    const rowDepths = new Map<string | number, number>();
+    const parentIds = new Set<string | number>();
+    const dataIndexToRowId = new Map<number, string | number>();
+
+    // Build children map: parentId → array of data indices
+    // Also build dataIndex → rowId map
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i]!;
+      const rowId = cfg.getRowId(row);
+      const parentId = cfg.getParentId(row) ?? null;
+      dataIndexToRowId.set(i, rowId);
+      if (!childrenMap.has(parentId)) {
+        childrenMap.set(parentId, []);
+      }
+      childrenMap.get(parentId)!.push(i);
+    }
+
+    // Mark parent IDs (keys of childrenMap that are actual row IDs, not null)
+    for (const [parentId] of childrenMap) {
+      if (parentId !== null) {
+        parentIds.add(parentId);
+      }
+    }
+
+    // Walk tree depth-first to build visibleRows and rowDepths
+    const visibleRows: number[] = [];
+
+    function walk(parentId: string | number | null, depth: number): void {
+      const children = childrenMap.get(parentId);
+      if (!children) return;
+      for (const dataIndex of children) {
+        const row = data[dataIndex]!;
+        const rowId = cfg.getRowId(row);
+        rowDepths.set(rowId, depth);
+        visibleRows.push(dataIndex);
+
+        // Recurse into children if expanded
+        if (expandedRows.has(rowId) && childrenMap.has(rowId)) {
+          walk(rowId, depth + 1);
+        }
+      }
+    }
+
+    walk(null, 0);
+
+    return { expandedRows, visibleRows, rowDepths, childrenMap, parentIds, dataIndexToRowId };
+  }
+
+  /** Rebuild hierarchy state and update the store */
+  function rebuildHierarchy(): void {
+    if (!hierarchyConfig) return;
+    const state = store.getState();
+    const currentExpanded = state.hierarchyState?.expandedRows ?? new Set<string | number>();
+    const hierarchyState = buildHierarchyState(state.data, currentExpanded);
+    store.update('hierarchy', () => ({ hierarchyState }));
+  }
+
+  /** Initialize hierarchy if configured */
+  if (hierarchyConfig) {
+    const defaultExpanded = hierarchyConfig.defaultExpanded !== false; // default true
+    const initialExpanded = new Set<string | number>();
+    if (defaultExpanded) {
+      // Expand all rows that have children
+      for (let i = 0; i < options.data.length; i++) {
+        initialExpanded.add(hierarchyConfig.getRowId(options.data[i]!));
+      }
+    }
+    const hierarchyState = buildHierarchyState(options.data, initialExpanded);
+    store.update('hierarchy', () => ({ hierarchyState }));
+  }
 
   // Resolve freeze clip config
   const freezeClipConfig = (() => {
@@ -122,12 +206,39 @@ export function createGrid<
   // Measurements
   // ---------------------------------------------------------------------------
 
+  /** Get the effective row count (hierarchy-aware) */
+  function getEffectiveRowCount(): number {
+    const state = store.getState();
+    return state.hierarchyState ? state.hierarchyState.visibleRows.length : state.data.length;
+  }
+
+  /** Get visible data array: when hierarchy is active, returns rows in tree-walk order;
+   *  otherwise returns the raw data array (no copy). */
+  function getVisibleData(): TData[] {
+    const state = store.getState();
+    if (!state.hierarchyState) return state.data;
+    return state.hierarchyState.visibleRows.map(i => state.data[i]!);
+  }
+
+  /** Map a visible row index to the original data index */
+  function visibleToDataIndex(visibleIndex: number): number {
+    const state = store.getState();
+    if (!state.hierarchyState) return visibleIndex;
+    return state.hierarchyState.visibleRows[visibleIndex] ?? visibleIndex;
+  }
+
   function recomputeMeasurements(): void {
     const state = store.getState();
+    const rowCount = getEffectiveRowCount();
+    const hs = state.hierarchyState;
     virtualization.recompute(
-      state.data.length,
+      rowCount,
       state.columns.length,
-      (i) => state.rowHeights.length > 0 ? (state.rowHeights[i] ?? DEFAULT_ROW_HEIGHT) : getRowHeight(i),
+      (i) => {
+        // When hierarchy is active, map visible position to data index for height lookup
+        const dataIdx = hs ? (hs.visibleRows[i] ?? i) : i;
+        return state.rowHeights.length > 0 ? (state.rowHeights[dataIdx] ?? DEFAULT_ROW_HEIGHT) : getRowHeight(dataIdx);
+      },
       (i) => columnManager.getWidth(i),
     );
   }
@@ -153,6 +264,7 @@ export function createGrid<
 
     const state = store.getState();
     const measurements = virtualization.getMeasurements();
+    const visibleData = getVisibleData();
 
     // Update scroll sizer (inside fakeScrollbar) for scrollbar dimensions.
     // The sizer must be tall enough so that at max scrollTop the last row
@@ -230,7 +342,7 @@ export function createGrid<
       visibleRange.endRow,
       mainStartCol,
       visibleRange.endCol,
-      state.data,
+      visibleData,
       state.columns,
       measurements,
       state.selection,
@@ -248,7 +360,7 @@ export function createGrid<
         visibleRange.endRow,
         0,
         frozenCols,
-        state.data,
+        visibleData,
         state.columns,
         measurements,
         state.selection,
@@ -465,7 +577,7 @@ export function createGrid<
     if (!state.selection.active) return;
 
     const bounds = {
-      rowCount: state.data.length,
+      rowCount: getEffectiveRowCount(),
       colCount: state.columns.length,
       frozenTopRows: state.frozenTopRows,
       frozenLeftColumns: state.frozenLeftColumns,
@@ -1645,23 +1757,26 @@ export function createGrid<
       store.update('rowHeights', () => ({
         rowHeights: data.map((_, i) => getRowHeight(i)),
       }));
+      rebuildHierarchy();
       recomputeMeasurements();
       emitter.emit('data:set', data);
       scheduleRender();
     },
 
     updateRow(rowIndex: number, data: Partial<TData>): void {
+      const dataIndex = visibleToDataIndex(rowIndex);
       const current = store.getState().data;
       const newData = [...current];
-      newData[rowIndex] = { ...newData[rowIndex], ...data } as TData;
+      newData[dataIndex] = { ...newData[dataIndex], ...data } as TData;
       store.setData(newData);
       scheduleRender();
     },
 
     updateCell(rowIndex: number, columnId: string, value: unknown): void {
-      const oldValue = store.getState().data[rowIndex];
-      store.setCellValue(rowIndex, columnId, value);
-      const newRow = store.getState().data[rowIndex];
+      const dataIndex = visibleToDataIndex(rowIndex);
+      const oldValue = store.getState().data[dataIndex];
+      store.setCellValue(dataIndex, columnId, value);
+      const newRow = store.getState().data[dataIndex];
       if (oldValue !== undefined && newRow !== undefined) {
         emitter.emit('data:change', [
           { rowIndex, columnId, oldValue, newValue: value, row: newRow },
@@ -1727,6 +1842,44 @@ export function createGrid<
         const fullWidth = measurements.colOffsets[state.frozenLeftColumns]!;
         freezeClipWidth = Math.max(0, Math.min(width, fullWidth));
       }
+      scheduleRender();
+    },
+
+    // Hierarchy methods
+    toggleRow(rowId: string | number): void {
+      if (!hierarchyConfig) return;
+      const state = store.getState();
+      const expanded = new Set(state.hierarchyState?.expandedRows ?? []);
+      if (expanded.has(rowId)) {
+        expanded.delete(rowId);
+      } else {
+        expanded.add(rowId);
+      }
+      const hierarchyState = buildHierarchyState(state.data, expanded);
+      store.update('hierarchy', () => ({ hierarchyState }));
+      recomputeMeasurements();
+      scheduleRender();
+    },
+
+    expandAll(): void {
+      if (!hierarchyConfig) return;
+      const state = store.getState();
+      const expanded = new Set<string | number>();
+      for (const row of state.data) {
+        expanded.add(hierarchyConfig.getRowId(row));
+      }
+      const hierarchyState = buildHierarchyState(state.data, expanded);
+      store.update('hierarchy', () => ({ hierarchyState }));
+      recomputeMeasurements();
+      scheduleRender();
+    },
+
+    collapseAll(): void {
+      if (!hierarchyConfig) return;
+      const state = store.getState();
+      const hierarchyState = buildHierarchyState(state.data, new Set());
+      store.update('hierarchy', () => ({ hierarchyState }));
+      recomputeMeasurements();
       scheduleRender();
     },
 

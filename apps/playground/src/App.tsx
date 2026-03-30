@@ -14,13 +14,14 @@ import { MixedHeaderDemo } from './pages/MixedHeaderDemo';
 import { Benchmark } from './pages/Benchmark';
 import { FreezeClipDemo } from './pages/FreezeClipDemo';
 import { ProPreview } from './pages/ProPreview';
+import { HierarchyDemo } from './pages/HierarchyDemo';
 
 type View = 'landing' | 'demos';
-type Page = 'financial' | 'task-tracker' | 'toggle' | 'perf' | 'benchmark' | 'format-edit' | 'sort-filter' | 'validation' | 'editor-ref' | 'core' | 'multi-header' | 'mixed-header' | 'freeze-clip' | 'pro';
+type Page = 'financial' | 'task-tracker' | 'toggle' | 'perf' | 'benchmark' | 'format-edit' | 'sort-filter' | 'validation' | 'editor-ref' | 'core' | 'multi-header' | 'mixed-header' | 'freeze-clip' | 'hierarchy' | 'pro';
 
 const VALID_PAGES = new Set<Page>([
   'financial', 'task-tracker', 'toggle', 'perf', 'benchmark', 'format-edit', 'sort-filter',
-  'validation', 'editor-ref', 'core', 'multi-header', 'mixed-header', 'freeze-clip', 'pro',
+  'validation', 'editor-ref', 'core', 'multi-header', 'mixed-header', 'freeze-clip', 'hierarchy', 'pro',
 ]);
 
 function parseRoute(): { view: View; page: Page } {
@@ -108,6 +109,7 @@ export function App() {
           <NavButton active={page === 'validation'} onClick={() => navigatePage('validation')} icon="🛡️">Validation</NavButton>
           <NavButton active={page === 'editor-ref'} onClick={() => navigatePage('editor-ref')} icon="🧪">Editor Reference</NavButton>
           <NavButton active={page === 'freeze-clip'} onClick={() => navigatePage('freeze-clip')} icon="📌">Freeze Clip</NavButton>
+          <NavButton active={page === 'hierarchy'} onClick={() => navigatePage('hierarchy')} icon="🌳">Hierarchy</NavButton>
 
           <SectionLabel>Architecture</SectionLabel>
           <NavButton active={page === 'core'} onClick={() => navigatePage('core')} icon="🧱">Core Only</NavButton>
@@ -139,6 +141,7 @@ export function App() {
           {page === 'multi-header' && <MultiHeader />}
           {page === 'mixed-header' && <MixedHeaderDemo />}
           {page === 'freeze-clip' && <FreezeClipDemo />}
+          {page === 'hierarchy' && <HierarchyDemo />}
           {page === 'pro' && <ProPreview />}
         </div>
       </main>

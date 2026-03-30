@@ -42,6 +42,9 @@ export type {
   PluginContext,
   KeyBinding,
   Command,
+  // Hierarchy
+  HierarchyConfig,
+  HierarchyState,
   // Utility
   UnionToIntersection,
 } from './types';

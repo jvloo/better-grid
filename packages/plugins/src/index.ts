@@ -19,3 +19,6 @@ export type { ValidationOptions, ValidationApi, ValidationError } from './valida
 
 export { clipboard } from './clipboard';
 export type { ClipboardOptions, ClipboardApi } from './clipboard';
+
+export { hierarchy } from './hierarchy';
+export type { HierarchyOptions, HierarchyApi } from './hierarchy';
