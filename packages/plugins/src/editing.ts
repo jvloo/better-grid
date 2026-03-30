@@ -160,11 +160,20 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           }
 
           // Check editor type or auto-detect from cellType
+          const isDateEditor = column.editor === 'date' ||
+            (!column.editor && column.cellType === 'date');
           const isNumberEditor = column.editor === 'number' ||
             (!column.editor && (column.cellType === 'number' || column.cellType === 'currency'));
 
           const editValue = initialValue ?? rawStr;
-          activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined);
+
+          if (isDateEditor) {
+            activeEditor = createDateInput(cellEl, rawStr);
+          } else if (isNumberEditor) {
+            activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, column);
+          } else {
+            activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined);
+          }
         }
       }
 
@@ -406,6 +415,104 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           } as unknown as HTMLInputElement;
           activeEditor = editorShim;
           return editorShim;
+      }
+
+      // -----------------------------------------------------------------------
+      // Date input editor
+      // -----------------------------------------------------------------------
+
+      function createDateInput(
+        cellEl: HTMLElement,
+        value: string,
+      ): HTMLInputElement {
+        const cellRect = cellEl.getBoundingClientRect();
+        const cellFont = getComputedStyle(cellEl).font;
+        const cellPadding = getComputedStyle(cellEl).padding;
+
+        // Create floating container (same pattern as text editor)
+        const floatBox = document.createElement('div');
+        floatBox.className = 'bg-cell-editor-float';
+        const borderW = 2;
+        floatBox.style.cssText = `
+          position: fixed; z-index: 200; box-sizing: border-box;
+          top: ${cellRect.top}px; left: ${cellRect.left}px;
+          min-width: ${cellRect.width}px;
+          background: #fff; border: ${borderW}px solid var(--bg-active-border, #1a73e8);
+          border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        `;
+
+        // Native date input
+        const input = document.createElement('input');
+        input.type = 'date';
+        input.className = 'bg-cell-editor bg-cell-editor--date';
+        input.style.cssText = `
+          width: 100%; border: none; outline: none;
+          font: ${cellFont}; padding: ${cellPadding};
+          min-height: ${cellRect.height - borderW * 2}px;
+          box-sizing: border-box; background: transparent;
+          color: inherit;
+        `;
+
+        // Convert the value to YYYY-MM-DD format for the input
+        if (value) {
+          const d = new Date(value);
+          if (!isNaN(d.getTime())) {
+            input.value = d.toISOString().split('T')[0];
+          } else {
+            input.value = value; // Try as-is (might already be YYYY-MM-DD)
+          }
+        }
+
+        floatBox.appendChild(input);
+        document.body.appendChild(floatBox);
+
+        input.focus();
+
+        // Keyboard handling
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            handleEditorKeydown(e);
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            handleEditorKeydown(e);
+          } else if (e.key === 'Tab') {
+            e.preventDefault();
+            e.stopPropagation();
+            handleEditorKeydown(e);
+          }
+        });
+
+        // Click outside to commit
+        function onOutsideClick(ev: MouseEvent): void {
+          if (floatBox.contains(ev.target as Node)) return;
+          cleanup();
+          if (editingCell) commitEdit();
+        }
+        setTimeout(() => document.addEventListener('mousedown', onOutsideClick, true), 0);
+
+        let active = true;
+        function cleanup(): void {
+          if (!active) return;
+          active = false;
+          floatBox.remove();
+          document.removeEventListener('mousedown', onOutsideClick, true);
+        }
+
+        // Return a shim that acts like the text editor
+        const editorShim = {
+          get value() { return input.value; }, // Returns YYYY-MM-DD
+          set value(v: string) { input.value = v; },
+          focus() { input.focus(); },
+          removeEventListener: input.removeEventListener.bind(input),
+          addEventListener: input.addEventListener.bind(input),
+          setSelectionRange() {},
+          dispatchEvent: input.dispatchEvent.bind(input),
+        } as unknown as HTMLInputElement;
+
+        return editorShim;
       }
 
       // -----------------------------------------------------------------------

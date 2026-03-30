@@ -105,7 +105,7 @@ export interface CellTypeRenderer {
 export type CellType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'bigint' | 'select' | 'boolean' | (string & {});
 
 /** Editor mode override */
-export type EditorType = 'text' | 'dropdown' | 'number';
+export type EditorType = 'text' | 'dropdown' | 'number' | 'date';
 
 /** Dropdown option for select/autocomplete columns */
 export interface ColumnOption {
