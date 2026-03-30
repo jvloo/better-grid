@@ -382,3 +382,17 @@
 .bg-filter-panel__btn--apply:hover {
   background: var(--bg-filter-panel-apply-hover-bg, #1565c0);
 }
+
+/* ---------------------------------------------------------------------------
+   Search Highlights
+   --------------------------------------------------------------------------- */
+
+.bg-cell--search-match {
+  background: var(--bg-search-match-bg, rgba(250, 204, 21, 0.3)) !important;
+}
+
+.bg-cell--search-current {
+  background: var(--bg-search-current-bg, rgba(250, 204, 21, 0.6)) !important;
+  outline: 2px solid var(--bg-search-current-border, #f59e0b);
+  outline-offset: -2px;
+}
