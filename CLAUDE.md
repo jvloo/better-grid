@@ -71,6 +71,12 @@ node scripts/playground-build.js dev
 # Opens at http://localhost:8686
 ```
 
+**Note:** The script uses `execSync` so when launched via background task, the wrapper
+shell exits immediately while Vite keeps running as an orphan process. The task will
+report "completed" even though the server is still up. Check `netstat -ano | grep 8686`
+to verify. Kill orphan processes before restarting to avoid port conflicts (Vite
+auto-increments to 8687, 8688, etc.).
+
 ## TypeScript
 
 - `strict: true` required (type inference depends on it)
