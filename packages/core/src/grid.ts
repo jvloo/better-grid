@@ -1042,17 +1042,19 @@ export function createGrid<
         showHeaderContextMenu(e, opts.columnId!);
       });
 
-      // Filter icon button — visible on hover, stays visible when filter is active
-      const filterBtn = document.createElement('span');
-      filterBtn.className = 'bg-header-cell__filter-btn';
-      filterBtn.textContent = '\u25BC'; // ▼
-      filterBtn.title = 'Filter';
-      filterBtn.addEventListener('mousedown', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        showFilterPanel(e, opts.columnId!);
-      });
-      cell.appendChild(filterBtn);
+      // Filter icon button — only when filtering plugin is registered
+      if (pluginRegistry.getPlugin('filtering')) {
+        const filterBtn = document.createElement('span');
+        filterBtn.className = 'bg-header-cell__filter-btn';
+        filterBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 1h10L6 5.5V9L4 10V5.5z" fill="currentColor"/></svg>';
+        filterBtn.title = 'Filter';
+        filterBtn.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          showFilterPanel(e, opts.columnId!);
+        });
+        cell.appendChild(filterBtn);
+      }
     }
 
     if (opts.resizable) {
