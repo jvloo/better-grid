@@ -1041,6 +1041,18 @@ export function createGrid<
         e.preventDefault();
         showHeaderContextMenu(e, opts.columnId!);
       });
+
+      // Filter icon button — visible on hover, stays visible when filter is active
+      const filterBtn = document.createElement('span');
+      filterBtn.className = 'bg-header-cell__filter-btn';
+      filterBtn.textContent = '\u25BC'; // ▼
+      filterBtn.title = 'Filter';
+      filterBtn.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        showFilterPanel(e, opts.columnId!);
+      });
+      cell.appendChild(filterBtn);
     }
 
     if (opts.resizable) {

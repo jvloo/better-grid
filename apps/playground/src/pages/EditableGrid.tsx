@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, validation } from '@better-grid/plugins';
+import { formatting, editing, validation, clipboard } from '@better-grid/plugins';
 import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
 
@@ -98,12 +98,14 @@ export function EditableGrid() {
         },
       },
 
-      // 8. options (strings) → dropdown
+      // 8. options (strings) → autocomplete (searchable dropdown)
       {
         id: 'status',
-        header: 'Status (dropdown)',
+        header: 'Status (auto)',
         width: 155,
-        options: ['Open', 'Pending', 'Closed'],
+        editor: 'autocomplete' as const,
+        options: ['Open', 'Pending', 'Closed', 'Draft', 'Archived'],
+        meta: { allowCreate: true },
       },
 
       // 9. options ({ label, value }) → dropdown with label/value
@@ -165,6 +167,7 @@ export function EditableGrid() {
     () => [
       formatting({ locale: 'en-US', currencyCode: 'USD', accountingFormat: true }),
       editing({ editTrigger: 'dblclick' }),
+      clipboard(),
       validation({ validateOn: 'commit' }),
     ],
     [],

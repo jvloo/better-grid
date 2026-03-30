@@ -53,8 +53,8 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy'> {
           const state = store.getState();
           const hs = state.hierarchyState;
 
-          if (!hs) {
-            // No hierarchy configured — fallback to original or default
+          // Skip hierarchy rendering for pinned rows and when no hierarchy configured
+          if (!hs || container.classList.contains('bg-cell--pinned')) {
             if (originalRenderer) {
               return originalRenderer(container, context);
             }
@@ -107,8 +107,9 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy'> {
             toggle.style.display = 'inline-block';
             toggle.style.width = '12px';
             toggle.style.textAlign = 'center';
-            toggle.addEventListener('click', (e) => {
+            toggle.addEventListener('mousedown', (e) => {
               e.stopPropagation();
+              e.preventDefault(); // Prevent cell selection
               grid.toggleRow(rowId);
             });
             container.appendChild(toggle);

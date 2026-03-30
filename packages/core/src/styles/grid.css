@@ -88,6 +88,31 @@
   z-index: 11;
 }
 
+/* Filter icon button in header — visible on hover or when filter active */
+.bg-header-cell__filter-btn {
+  display: none;
+  margin-left: auto;
+  padding: 0 2px;
+  font-size: 8px;
+  opacity: 0.4;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.bg-header-cell__filter-btn:hover {
+  opacity: 0.8;
+}
+
+.bg-header-cell:hover .bg-header-cell__filter-btn {
+  display: inline-block;
+}
+
+/* Keep filter icon visible when column has active filter indicator */
+.bg-header-cell:has(.bg-filter-indicator) .bg-header-cell__filter-btn {
+  display: inline-block;
+  opacity: 0.6;
+}
+
 /* Column resize handle */
 .bg-resize-handle {
   position: absolute;
