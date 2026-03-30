@@ -159,8 +159,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             }
           }
 
+          // Check editor type or auto-detect from cellType
+          const isNumberEditor = column.editor === 'number' ||
+            (!column.editor && (column.cellType === 'number' || column.cellType === 'currency'));
+
           const editValue = initialValue ?? rawStr;
-          activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined);
+          activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined);
         }
       }
 
@@ -172,6 +176,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         cellEl: HTMLElement,
         value: string,
         cursorAtEnd: boolean,
+        numberColumn?: ColumnDef,
       ): HTMLInputElement {
           const cellRect = cellEl.getBoundingClientRect();
           const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
@@ -218,6 +223,62 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           `;
 
           floatBox.appendChild(ed);
+
+          // Number editor: add inputmode hint and restrict input to numeric characters
+          if (numberColumn) {
+            ed.setAttribute('inputmode', 'decimal');
+            const numberPrecision = getPrecision(numberColumn);
+
+            ed.addEventListener('keydown', (e) => {
+              // Allow control-modified keys (Ctrl+A/C/V/X etc.)
+              if (e.ctrlKey || e.metaKey || e.altKey) return;
+              // Allow navigation and control keys
+              if (['Backspace', 'Delete', 'Tab', 'Enter', 'Escape',
+                   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                   'Home', 'End'].includes(e.key)) return;
+              // Allow digits, minus, period
+              if (/^[0-9.\-]$/.test(e.key)) {
+                const text = ed.textContent || '';
+                const selection = window.getSelection();
+                const hasSelection = selection && selection.rangeCount > 0 &&
+                  !selection.getRangeAt(0).collapsed;
+
+                // Prevent multiple periods
+                if (e.key === '.' && text.includes('.') && !hasSelection) {
+                  e.preventDefault();
+                  return;
+                }
+                // Prevent minus except at start when no existing minus
+                if (e.key === '-') {
+                  if (text.includes('-') && !hasSelection) {
+                    e.preventDefault();
+                    return;
+                  }
+                  // Only allow minus at cursor position 0
+                  if (selection && selection.anchorOffset !== 0) {
+                    e.preventDefault();
+                    return;
+                  }
+                }
+                // Enforce precision: prevent more decimal places than allowed
+                if (numberPrecision != null && /^[0-9]$/.test(e.key) && !hasSelection) {
+                  const dotIndex = text.indexOf('.');
+                  if (dotIndex !== -1) {
+                    const decimals = text.length - dotIndex - 1;
+                    const cursorOffset = selection?.anchorOffset ?? text.length;
+                    if (cursorOffset > dotIndex && decimals >= numberPrecision) {
+                      e.preventDefault();
+                      return;
+                    }
+                  }
+                }
+                return;
+              }
+              // Block everything else
+              e.preventDefault();
+            });
+          }
+
           document.body.appendChild(floatBox);
 
           function autoSize(): void {
