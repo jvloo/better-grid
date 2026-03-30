@@ -127,7 +127,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           originalValue = cellEl.textContent;
         }
 
-        // Check if this should be a dropdown
+        // Check if this should be a dropdown or autocomplete
+        const isAutocomplete = column.editor === 'autocomplete';
         const dropdownOpts = getDropdownOptions(column, originalValue);
 
         // Prepare cell for editing — keep cell padding unchanged so text
@@ -135,7 +136,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         cellEl.textContent = '';
         cellEl.classList.add('bg-cell--editing');
 
-        if (dropdownOpts) {
+        if (isAutocomplete) {
+          const opts = dropdownOpts ?? [];
+          activeEditor = createAutocomplete(cellEl, opts, originalValue, column);
+        } else if (dropdownOpts) {
           activeEditor = createDropdown(cellEl, dropdownOpts, originalValue);
         } else {
           // Determine display string for the editor
@@ -457,7 +461,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         if (value) {
           const d = new Date(value);
           if (!isNaN(d.getTime())) {
-            input.value = d.toISOString().split('T')[0];
+            input.value = d.toISOString().split('T')[0] ?? '';
           } else {
             input.value = value; // Try as-is (might already be YYYY-MM-DD)
           }
@@ -668,6 +672,301 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             el.style.fontWeight = '';
           }
         });
+      }
+
+      // -----------------------------------------------------------------------
+      // Autocomplete editor
+      // -----------------------------------------------------------------------
+
+      function createAutocomplete(
+        cellEl: HTMLElement,
+        opts: DropdownOption[],
+        currentValue: unknown,
+        column: ColumnDef,
+      ): HTMLInputElement {
+        activeDropdownOptions = opts;
+
+        const allowCreate = !!(column.meta as Record<string, unknown> | undefined)?.allowCreate;
+        const onCreateOption = (column.meta as Record<string, unknown> | undefined)?.onCreateOption as
+          | ((value: string) => void)
+          | undefined;
+
+        // Find current label
+        const currentOpt = opts.find(
+          (o) => o.value === currentValue || String(o.value) === String(currentValue),
+        );
+        const currentLabel = currentOpt?.label ?? String(currentValue ?? '');
+
+        // Cell metrics
+        const rect = cellEl.getBoundingClientRect();
+        const cellFont = getComputedStyle(cellEl).font;
+
+        // Create panel
+        const panel = document.createElement('div');
+        panel.className = 'bg-dropdown-panel';
+        panel.style.cssText = `
+          position: fixed;
+          left: ${rect.left}px;
+          top: ${rect.top}px;
+          min-width: ${rect.width}px;
+          z-index: 200;
+          background: var(--bg-dropdown-bg, #fff);
+          border: 1px solid var(--bg-dropdown-border, #d0d0d0);
+          border-radius: 6px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          font: ${cellFont}; line-height: normal;
+        `;
+
+        // Search input
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Search...';
+        searchInput.value = currentLabel;
+        searchInput.style.cssText = `
+          border: none;
+          border-bottom: 1px solid #e0e0e0;
+          padding: 8px 12px;
+          width: 100%;
+          outline: none;
+          font: inherit;
+          box-sizing: border-box;
+        `;
+        panel.appendChild(searchInput);
+
+        // Options list container
+        const listEl = document.createElement('div');
+        listEl.style.cssText = `
+          max-height: 200px;
+          overflow-y: auto;
+          padding: 4px 0;
+        `;
+        panel.appendChild(listEl);
+
+        let highlightedIndex = -1;
+        let filteredOpts: DropdownOption[] = [];
+        let showCreateItem = false;
+        let selectedValue: unknown = currentValue;
+
+        function renderOptions(): void {
+          const query = searchInput.value.toLowerCase().trim();
+          filteredOpts = query
+            ? opts.filter((o) => o.label.toLowerCase().includes(query))
+            : [...opts];
+
+          // Determine if "create new" should show
+          const exactMatch = opts.some((o) => o.label.toLowerCase() === query);
+          showCreateItem = allowCreate && query.length > 0 && !exactMatch;
+
+          listEl.innerHTML = '';
+          highlightedIndex = -1;
+
+          for (let i = 0; i < filteredOpts.length; i++) {
+            const opt = filteredOpts[i]!;
+            const isSelected = opt.value === currentValue || String(opt.value) === String(currentValue);
+            const item = document.createElement('div');
+            item.className = 'bg-dropdown-item' + (isSelected ? ' bg-dropdown-item--selected' : '');
+            item.textContent = opt.label;
+            item.style.cssText = `
+              padding: 6px 12px;
+              cursor: pointer;
+              user-select: none;
+              font: inherit;
+              ${isSelected ? 'background: var(--bg-dropdown-selected-bg, #e8f0fe); font-weight: 500;' : ''}
+            `;
+            item.addEventListener('mouseenter', () => {
+              highlightedIndex = i;
+              highlightAutocompleteItem(listEl, highlightedIndex);
+            });
+            item.addEventListener('mousedown', (e) => {
+              e.preventDefault();
+              selectOption(opt.value);
+            });
+            listEl.appendChild(item);
+          }
+
+          // "Create new" item
+          if (showCreateItem) {
+            const createItem = document.createElement('div');
+            createItem.className = 'bg-dropdown-item bg-dropdown-item--create';
+            createItem.textContent = `+ Create "${searchInput.value}"`;
+            createItem.style.cssText = `
+              padding: 6px 12px;
+              cursor: pointer;
+              user-select: none;
+              font: inherit;
+              color: var(--bg-active-border, #1a73e8);
+              border-top: 1px solid #e0e0e0;
+            `;
+            createItem.addEventListener('mouseenter', () => {
+              highlightedIndex = filteredOpts.length;
+              highlightAutocompleteItem(listEl, highlightedIndex);
+            });
+            createItem.addEventListener('mousedown', (e) => {
+              e.preventDefault();
+              createNewOption();
+            });
+            listEl.appendChild(createItem);
+          }
+        }
+
+        function totalCount(): number {
+          return filteredOpts.length + (showCreateItem ? 1 : 0);
+        }
+
+        function selectOption(value: unknown): void {
+          selectedValue = value;
+          commitAutocomplete(value);
+        }
+
+        function createNewOption(): void {
+          const text = searchInput.value;
+          selectedValue = text;
+          if (typeof onCreateOption === 'function') {
+            onCreateOption(text);
+          }
+          commitAutocomplete(text);
+        }
+
+        function commitAutocomplete(value: unknown): void {
+          if (!editingCell) return;
+          const position = editingCell;
+          const prevValue = originalValue;
+          const state = ctx.grid.getState();
+          const col = state.columns[position.colIndex];
+
+          if (col?.accessorKey && value !== prevValue) {
+            ctx.grid.updateCell(position.rowIndex, col.id, value);
+          }
+
+          cleanup();
+          cleanupEdit();
+        }
+
+        function highlightAutocompleteItem(
+          container: HTMLElement,
+          index: number,
+        ): void {
+          const items = container.querySelectorAll('.bg-dropdown-item');
+          items.forEach((item, i) => {
+            const el = item as HTMLElement;
+            if (i === index) {
+              el.style.background = 'var(--bg-dropdown-hover-bg, #f0f0f0)';
+              el.style.fontWeight = '500';
+              el.scrollIntoView({ block: 'nearest' });
+            } else {
+              const isSelected =
+                i < filteredOpts.length &&
+                (filteredOpts[i]!.value === currentValue ||
+                  String(filteredOpts[i]!.value) === String(currentValue));
+              el.style.background = isSelected ? 'var(--bg-dropdown-selected-bg, #e8f0fe)' : '';
+              el.style.fontWeight = isSelected ? '500' : '';
+            }
+          });
+        }
+
+        // Keyboard handling
+        searchInput.addEventListener('keydown', (e) => {
+          const total = totalCount();
+
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            highlightedIndex = Math.min(highlightedIndex + 1, total - 1);
+            highlightAutocompleteItem(listEl, highlightedIndex);
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            highlightedIndex = Math.max(highlightedIndex - 1, 0);
+            highlightAutocompleteItem(listEl, highlightedIndex);
+          } else if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (highlightedIndex >= 0 && highlightedIndex < filteredOpts.length) {
+              selectOption(filteredOpts[highlightedIndex]!.value);
+            } else if (highlightedIndex === filteredOpts.length && showCreateItem) {
+              createNewOption();
+            } else if (filteredOpts.length > 0) {
+              selectOption(filteredOpts[0]!.value);
+            }
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            cleanup();
+            cancelEdit();
+          } else if (e.key === 'Tab') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (highlightedIndex >= 0 && highlightedIndex < filteredOpts.length) {
+              selectOption(filteredOpts[highlightedIndex]!.value);
+            } else if (highlightedIndex === filteredOpts.length && showCreateItem) {
+              createNewOption();
+            } else if (filteredOpts.length > 0) {
+              selectOption(filteredOpts[0]!.value);
+            } else {
+              cleanup();
+              cancelEdit();
+            }
+            // Move to next cell after commit
+            const pos = editingCell;
+            if (pos) {
+              const state = ctx.grid.getState();
+              const nextCol = e.shiftKey
+                ? Math.max(pos.colIndex - 1, 0)
+                : Math.min(pos.colIndex + 1, state.columns.length - 1);
+              setTimeout(() => {
+                ctx.grid.setSelection({
+                  active: { rowIndex: pos.rowIndex, colIndex: nextCol },
+                  ranges: [{ startRow: pos.rowIndex, endRow: pos.rowIndex, startCol: nextCol, endCol: nextCol }],
+                });
+              }, 0);
+            }
+          }
+        });
+
+        // Filter on input
+        searchInput.addEventListener('input', () => {
+          renderOptions();
+        });
+
+        document.body.appendChild(panel);
+        activeDropdownPanel = panel;
+
+        // Initial render
+        renderOptions();
+
+        // Focus the search input
+        searchInput.focus();
+        searchInput.select();
+
+        // Click outside to dismiss
+        let active = true;
+        function onOutsideClick(ev: MouseEvent): void {
+          if (!active) return;
+          if (panel.contains(ev.target as Node)) return;
+          cleanup();
+          if (editingCell) commitEdit();
+        }
+        setTimeout(() => document.addEventListener('mousedown', onOutsideClick, true), 0);
+
+        function cleanup(): void {
+          if (!active) return;
+          active = false;
+          document.removeEventListener('mousedown', onOutsideClick, true);
+        }
+
+        // Return editor shim so commitEdit can read the value
+        const editorShim = {
+          get value() {
+            return selectedValue != null ? String(selectedValue) : searchInput.value;
+          },
+          set value(v: string) { searchInput.value = v; },
+          focus() { searchInput.focus(); },
+          removeEventListener: searchInput.removeEventListener.bind(searchInput),
+          addEventListener: searchInput.addEventListener.bind(searchInput),
+          setSelectionRange() {},
+          dispatchEvent: searchInput.dispatchEvent.bind(searchInput),
+        } as unknown as HTMLInputElement;
+
+        activeEditor = editorShim;
+        return editorShim;
       }
 
       // -----------------------------------------------------------------------
