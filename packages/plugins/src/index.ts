@@ -22,3 +22,14 @@ export type { ClipboardOptions, ClipboardApi } from './clipboard';
 
 export { hierarchy } from './hierarchy';
 export type { HierarchyOptions, HierarchyApi } from './hierarchy';
+
+export { cellRenderers } from './cell-renderers';
+
+export { autoDetect } from './auto-detect';
+export type { AutoDetectOptions } from './auto-detect';
+
+export { undoRedo } from './undo-redo';
+export type { UndoRedoOptions, UndoRedoApi } from './undo-redo';
+
+export { search } from './search';
+export type { SearchOptions, SearchApi } from './search';

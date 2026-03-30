@@ -162,6 +162,10 @@ export interface ColumnDef<TData = unknown> {
   required?: boolean;
   rules?: ColumnValidationRule[];
 
+  // Conditional styling
+  cellStyle?: (value: unknown, row: unknown) => Record<string, string> | undefined;
+  cellClass?: (value: unknown, row: unknown) => string | undefined;
+
   // Extensibility (for third-party plugins)
   meta?: Record<string, unknown>;
 }

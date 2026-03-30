@@ -174,6 +174,16 @@ export class RenderingPipeline<TData = unknown> {
           this.cleanupFns.set(key, cleanup);
         }
 
+        // Apply conditional cellStyle / cellClass after rendering
+        if (column.cellStyle) {
+          const styles = column.cellStyle(value, rowData);
+          if (styles) Object.assign(cell.style, styles);
+        }
+        if (column.cellClass) {
+          const cls = column.cellClass(value, rowData);
+          if (cls) cell.className += ' ' + cls;
+        }
+
       }
     }
 
