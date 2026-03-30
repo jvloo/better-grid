@@ -1004,14 +1004,8 @@ export function createGrid<
           items.push({
             label: colFiltered ? 'Change Filter...' : 'Filter...',
             action: () => {
-              const value = prompt(`Filter "${columnId}" (contains):`);
-              if (value !== null) {
-                if (value === '') {
-                  api.removeFilter(columnId);
-                } else {
-                  api.setFilter(columnId, value, 'contains');
-                }
-              }
+              dismissContextMenu();
+              showFilterPanel(event, columnId, colFiltered as { columnId: string; value: unknown; operator: string } | undefined);
             },
             active: !!colFiltered,
           });
@@ -1097,6 +1091,241 @@ export function createGrid<
       activeContextMenu.remove();
       activeContextMenu = null;
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Filter Panel (replaces browser prompt())
+  // ---------------------------------------------------------------------------
+
+  let activeFilterPanel: HTMLElement | null = null;
+
+  function dismissFilterPanel(): void {
+    if (activeFilterPanel) {
+      activeFilterPanel.remove();
+      activeFilterPanel = null;
+    }
+  }
+
+  function showFilterPanel(
+    event: MouseEvent,
+    columnId: string,
+    currentFilter?: { columnId: string; value: unknown; operator: string },
+  ): void {
+    dismissFilterPanel();
+
+    const filteringPlugin = pluginRegistry.getPlugin<{
+      setFilter: (id: string, value: unknown, op?: string) => void;
+      removeFilter: (id: string) => void;
+    }>('filtering');
+    if (!filteringPlugin) return;
+
+    // Determine column name and type for operator list
+    const cols = columnManager.getColumns();
+    const colDef = cols.find((c) => c.id === columnId);
+    const columnName = (colDef?.header as string) || columnId;
+    const cellType = colDef?.cellType as string | undefined;
+    const isNumeric = cellType === 'number' || cellType === 'currency' || cellType === 'percent' || cellType === 'bigint';
+
+    const textOperators = [
+      { value: 'contains', label: 'Contains' },
+      { value: 'eq', label: 'Equals' },
+      { value: 'neq', label: 'Not equals' },
+      { value: 'startsWith', label: 'Starts with' },
+      { value: 'endsWith', label: 'Ends with' },
+    ];
+    const numberOperators = [
+      { value: 'eq', label: 'Equals' },
+      { value: 'neq', label: 'Not equals' },
+      { value: 'gt', label: 'Greater than' },
+      { value: 'gte', label: 'Greater or equal' },
+      { value: 'lt', label: 'Less than' },
+      { value: 'lte', label: 'Less or equal' },
+    ];
+    const operators = isNumeric ? numberOperators : textOperators;
+
+    // Position: anchor below the header cell that was right-clicked
+    const headerCell = (event.target as HTMLElement).closest('.bg-header-cell') as HTMLElement | null;
+    let anchorX = event.clientX;
+    let anchorY = event.clientY;
+    if (headerCell) {
+      const rect = headerCell.getBoundingClientRect();
+      anchorX = rect.left;
+      anchorY = rect.bottom;
+    }
+
+    // Build the panel
+    const panel = document.createElement('div');
+    panel.className = 'bg-filter-panel';
+    const font = getComputedStyle(event.target as HTMLElement).font;
+    panel.style.cssText = `
+      position: fixed;
+      left: ${anchorX}px;
+      top: ${anchorY}px;
+      z-index: 100;
+      background: var(--bg-filter-panel-bg, #fff);
+      border: 1px solid var(--bg-filter-panel-border, #d0d0d0);
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 12px;
+      min-width: 220px;
+      font: ${font};
+      font-weight: normal;
+    `;
+
+    // Title
+    const title = document.createElement('div');
+    title.className = 'bg-filter-panel__title';
+    title.textContent = `Filter: ${columnName}`;
+    title.style.cssText = 'font-weight: 600; margin-bottom: 8px; font-size: 13px;';
+    panel.appendChild(title);
+
+    // Operator select
+    const select = document.createElement('select');
+    select.className = 'bg-filter-panel__operator';
+    select.style.cssText = `
+      display: block;
+      width: 100%;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+      border: 1px solid var(--bg-filter-panel-input-border, #ccc);
+      border-radius: 4px;
+      font: inherit;
+      font-size: 13px;
+      background: var(--bg-filter-panel-input-bg, #fff);
+      appearance: auto;
+    `;
+    for (const op of operators) {
+      const opt = document.createElement('option');
+      opt.value = op.value;
+      opt.textContent = op.label;
+      select.appendChild(opt);
+    }
+    // Pre-select current operator
+    if (currentFilter?.operator) {
+      select.value = currentFilter.operator;
+    }
+    panel.appendChild(select);
+
+    // Value input
+    const input = document.createElement('input');
+    input.className = 'bg-filter-panel__input';
+    input.type = isNumeric ? 'number' : 'text';
+    input.placeholder = 'Filter value...';
+    input.style.cssText = `
+      display: block;
+      width: 100%;
+      padding: 6px 8px;
+      margin-bottom: 10px;
+      border: 1px solid var(--bg-filter-panel-input-border, #ccc);
+      border-radius: 4px;
+      font: inherit;
+      font-size: 13px;
+      box-sizing: border-box;
+      background: var(--bg-filter-panel-input-bg, #fff);
+    `;
+    // Pre-populate current value
+    if (currentFilter?.value != null) {
+      input.value = String(currentFilter.value);
+    }
+    panel.appendChild(input);
+
+    // Button row
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display: flex; gap: 8px; justify-content: flex-end;';
+
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'bg-filter-panel__btn bg-filter-panel__btn--clear';
+    clearBtn.textContent = 'Clear';
+    clearBtn.style.cssText = `
+      padding: 5px 12px;
+      border: 1px solid var(--bg-filter-panel-btn-border, #ccc);
+      border-radius: 4px;
+      background: var(--bg-filter-panel-btn-bg, #fff);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+    `;
+
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'bg-filter-panel__btn bg-filter-panel__btn--apply';
+    applyBtn.textContent = 'Apply';
+    applyBtn.style.cssText = `
+      padding: 5px 12px;
+      border: 1px solid var(--bg-filter-panel-apply-border, #1a73e8);
+      border-radius: 4px;
+      background: var(--bg-filter-panel-apply-bg, #1a73e8);
+      color: var(--bg-filter-panel-apply-color, #fff);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+    `;
+
+    btnRow.appendChild(clearBtn);
+    btnRow.appendChild(applyBtn);
+    panel.appendChild(btnRow);
+
+    // Actions
+    function applyFilter(): void {
+      const val = input.value;
+      if (val === '') {
+        filteringPlugin!.removeFilter(columnId);
+      } else {
+        filteringPlugin!.setFilter(columnId, val, select.value);
+      }
+      dismissFilterPanel();
+    }
+
+    function clearFilter(): void {
+      filteringPlugin!.removeFilter(columnId);
+      dismissFilterPanel();
+    }
+
+    applyBtn.addEventListener('click', applyFilter);
+    clearBtn.addEventListener('click', clearFilter);
+
+    // Keyboard: Enter → apply, Escape → dismiss
+    input.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        applyFilter();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        dismissFilterPanel();
+      }
+    });
+
+    select.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        dismissFilterPanel();
+      }
+    });
+
+    // Append and focus
+    document.body.appendChild(panel);
+    activeFilterPanel = panel;
+
+    // Ensure panel stays within viewport
+    requestAnimationFrame(() => {
+      const rect = panel.getBoundingClientRect();
+      if (rect.right > window.innerWidth) {
+        panel.style.left = `${Math.max(0, window.innerWidth - rect.width - 8)}px`;
+      }
+      if (rect.bottom > window.innerHeight) {
+        panel.style.top = `${Math.max(0, anchorY - rect.height - 4)}px`;
+      }
+    });
+
+    input.focus();
+
+    // Close on click outside (delayed to avoid immediate dismiss)
+    const closeHandler = (e: MouseEvent) => {
+      if (!panel.contains(e.target as Node)) {
+        dismissFilterPanel();
+        document.removeEventListener('mousedown', closeHandler);
+      }
+    };
+    setTimeout(() => document.addEventListener('mousedown', closeHandler), 0);
   }
 
   // ---------------------------------------------------------------------------
@@ -1370,6 +1599,7 @@ export function createGrid<
       cellContainer?.removeEventListener('mouseover', handleCellMouseOver);
       cellContainer?.removeEventListener('mouseout', handleCellMouseOut);
       dismissTooltip();
+      dismissFilterPanel();
       container?.removeEventListener('keydown', handleKeyDown);
       resizeObserver?.disconnect();
 

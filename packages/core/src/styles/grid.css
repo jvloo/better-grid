@@ -258,3 +258,73 @@
   background: var(--bg-freeze-clip-indicator-bg, rgba(33, 133, 208, 0.6));
   box-shadow: var(--bg-freeze-clip-indicator-shadow, -3px 0 10px 1px rgba(33, 133, 208, 0.18), -1px 0 4px rgba(33, 133, 208, 0.25));
 }
+
+/* ---------------------------------------------------------------------------
+   Filter Panel
+   --------------------------------------------------------------------------- */
+
+.bg-filter-panel {
+  position: fixed;
+  z-index: 100;
+  background: var(--bg-filter-panel-bg, #fff);
+  border: 1px solid var(--bg-filter-panel-border, #d0d0d0);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  min-width: 220px;
+}
+
+.bg-filter-panel__title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.bg-filter-panel__operator,
+.bg-filter-panel__input {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--bg-filter-panel-input-border, #ccc);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 13px;
+  box-sizing: border-box;
+  background: var(--bg-filter-panel-input-bg, #fff);
+}
+
+.bg-filter-panel__operator {
+  margin-bottom: 8px;
+  appearance: auto;
+}
+
+.bg-filter-panel__input {
+  margin-bottom: 10px;
+}
+
+.bg-filter-panel__btn {
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.bg-filter-panel__btn--clear {
+  border: 1px solid var(--bg-filter-panel-btn-border, #ccc);
+  background: var(--bg-filter-panel-btn-bg, #fff);
+}
+
+.bg-filter-panel__btn--clear:hover {
+  background: var(--bg-filter-panel-btn-hover-bg, #f5f5f5);
+}
+
+.bg-filter-panel__btn--apply {
+  border: 1px solid var(--bg-filter-panel-apply-border, #1a73e8);
+  background: var(--bg-filter-panel-apply-bg, #1a73e8);
+  color: var(--bg-filter-panel-apply-color, #fff);
+}
+
+.bg-filter-panel__btn--apply:hover {
+  background: var(--bg-filter-panel-apply-hover-bg, #1565c0);
+}
