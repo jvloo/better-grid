@@ -1046,12 +1046,16 @@ export function createGrid<
       if (pluginRegistry.getPlugin('filtering')) {
         const filterBtn = document.createElement('span');
         filterBtn.className = 'bg-header-cell__filter-btn';
-        filterBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 1h10L6 5.5V9L4 10V5.5z" fill="currentColor"/></svg>';
+        filterBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 1.5h8M2.5 4h5M4 6.5h2M5 6.5V9"/></svg>';
         filterBtn.title = 'Filter';
         filterBtn.addEventListener('mousedown', (e) => {
           e.stopPropagation();
           e.preventDefault();
           showFilterPanel(e, opts.columnId!);
+        });
+        // Prevent click from bubbling to header (which triggers sorting)
+        filterBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
         });
         cell.appendChild(filterBtn);
       }

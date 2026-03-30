@@ -721,7 +721,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.placeholder = 'Search...';
-        searchInput.value = currentLabel;
+        // Start empty so all options are visible; current value is highlighted in the list
+        searchInput.value = '';
         searchInput.style.cssText = `
           border: none;
           border-bottom: 1px solid #e0e0e0;
