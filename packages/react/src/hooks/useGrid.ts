@@ -43,6 +43,19 @@ export function useGrid<
     grid.setColumns(options.columns);
   }, [options.columns, grid]);
 
+  // Sync pinned row prop changes
+  useEffect(() => {
+    if (options.pinnedTopRows) {
+      grid.setPinnedTopRows(options.pinnedTopRows);
+    }
+  }, [options.pinnedTopRows, grid]);
+
+  useEffect(() => {
+    if (options.pinnedBottomRows) {
+      grid.setPinnedBottomRows(options.pinnedBottomRows);
+    }
+  }, [options.pinnedBottomRows, grid]);
+
   // Ref callback for mount/unmount
   const containerRef = useCallback(
     (node: HTMLElement | null) => {

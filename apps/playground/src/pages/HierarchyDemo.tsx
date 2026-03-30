@@ -68,10 +68,24 @@ export function HierarchyDemo() {
     [],
   );
 
+  // Compute totals from root-level departments for the pinned footer row
+  const totalsRow = useMemo<DeptRow>(() => {
+    const roots = deptData.filter((r) => r.parentId === null);
+    return {
+      id: -1,
+      parentId: null,
+      name: 'Total',
+      budget: roots.reduce((sum, r) => sum + r.budget, 0),
+      headcount: roots.reduce((sum, r) => sum + r.headcount, 0),
+      status: '',
+    };
+  }, []);
+
   const { grid, containerRef } = useGrid<DeptRow>({
     data: deptData,
     columns,
     plugins,
+    pinnedBottomRows: [totalsRow],
     hierarchy: {
       getRowId: (row: DeptRow) => row.id,
       getParentId: (row: DeptRow) => row.parentId,

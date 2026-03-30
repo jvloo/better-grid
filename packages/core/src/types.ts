@@ -324,6 +324,8 @@ export interface GridOptions<
   frozenTopRows?: number;
   frozenLeftColumns?: number;
   freezeClip?: boolean | FreezeClipOptions;
+  pinnedTopRows?: TData[];
+  pinnedBottomRows?: TData[];
   headerRows?: HeaderRow[];
   footerRows?: FooterRow[];
   selection?: SelectionOptions;
@@ -350,6 +352,8 @@ export interface GridState<TData = unknown> {
   selection: Selection;
   frozenTopRows: number;
   frozenLeftColumns: number;
+  pinnedTopRows: TData[];
+  pinnedBottomRows: TData[];
   hierarchyState: HierarchyState | null;
   pluginState: Record<string, unknown>;
 }
@@ -439,6 +443,11 @@ export interface GridInstance<
   setData(data: TData[]): void;
   updateRow(rowIndex: number, data: Partial<TData>): void;
   updateCell(rowIndex: number, columnId: string, value: unknown): void;
+
+  getPinnedTopRows(): TData[];
+  setPinnedTopRows(rows: TData[]): void;
+  getPinnedBottomRows(): TData[];
+  setPinnedBottomRows(rows: TData[]): void;
 
   getColumns(): ColumnDef<TData>[];
   setColumns(columns: ColumnDef<TData>[]): void;

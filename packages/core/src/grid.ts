@@ -17,6 +17,7 @@ import type {
   PluginContext,
   HierarchyConfig,
   HierarchyState,
+  CellRenderContext,
 } from './types';
 import { EventEmitter } from './events/emitter';
 import { StateStore } from './state/store';
@@ -64,6 +65,8 @@ export function createGrid<
   let frozenHeaderOverlay: HTMLElement | null = null;
   let frozenCellOverlay: HTMLElement | null = null;
   let selectionLayer: SelectionLayer | null = null;
+  let pinnedTopContainer: HTMLElement | null = null;
+  let pinnedBottomContainer: HTMLElement | null = null;
   let freezeClipHandle: HTMLElement | null = null;
   let freezeClipIndicator: HTMLElement | null = null;
   /** Current clip width in pixels. null = no clip active (full frozen width). */
@@ -100,6 +103,8 @@ export function createGrid<
     selection: createEmptySelection(),
     frozenTopRows: options.frozenTopRows ?? 0,
     frozenLeftColumns: options.frozenLeftColumns ?? 0,
+    pinnedTopRows: options.pinnedTopRows ?? [],
+    pinnedBottomRows: options.pinnedBottomRows ?? [],
     hierarchyState: null,
     pluginState: {},
   };
@@ -275,11 +280,13 @@ export function createGrid<
     //   sizerHeight = totalHeight + sbClientHeight - vpHeight + headerHeight
     const sbClientHeight = fakeScrollbar?.clientHeight ?? viewport.clientHeight;
     const sbClientWidth = fakeScrollbar?.clientWidth ?? viewport.clientWidth;
+    const pinnedTopH = getPinnedTopHeight();
+    const pinnedBottomH = getPinnedBottomHeight();
     const vpHeight = viewport.clientHeight;
     const vpWidth = viewport.clientWidth;
     const clipOffset = getFreezeClipOffset();
     scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth - clipOffset}px`;
-    scrollSizer.style.height = `${measurements.totalHeight + sbClientHeight - vpHeight + headerHeight}px`;
+    scrollSizer.style.height = `${measurements.totalHeight + sbClientHeight - vpHeight + headerHeight + pinnedTopH + pinnedBottomH}px`;
 
     // Cell container sized to full data dimensions (cells at data-space positions).
     // Container-level transform shifts them into the viewport.
@@ -323,7 +330,7 @@ export function createGrid<
       dataScrollTop,
       state.scrollLeft,
       viewportWidth,
-      viewportHeight - headerHeight,
+      viewportHeight - headerHeight - pinnedTopH - pinnedBottomH,
       zoneDims.frozenTopHeight,
       zoneDims.frozenBottomHeight,
       effectiveFrozenLeftWidth,
@@ -421,10 +428,125 @@ export function createGrid<
 
     }
 
+    // Render pinned rows (always re-render — cheap since typically 1-3 rows)
+    if (pinnedTopContainer) {
+      renderPinnedRows(pinnedTopContainer, state.pinnedTopRows, state.columns, measurements);
+      pinnedTopContainer.style.width = `${measurements.totalWidth}px`;
+      pinnedTopContainer.style.transform = `translate3d(${-state.scrollLeft - clipOffset}px, 0, 0)`;
+    }
+    if (pinnedBottomContainer) {
+      renderPinnedRows(pinnedBottomContainer, state.pinnedBottomRows, state.columns, measurements);
+      pinnedBottomContainer.style.width = `${measurements.totalWidth}px`;
+      pinnedBottomContainer.style.transform = `translate3d(${-state.scrollLeft - clipOffset}px, 0, 0)`;
+    }
+
+    // Update cell container top offset (may change when pinned top rows are set dynamically)
+    if (cellContainer) {
+      cellContainer.style.top = `${headerHeight + pinnedTopH}px`;
+    }
+
     // Render selection layer
     selectionLayer?.render(state.selection, measurements);
 
     emitter.emit('render', visibleRange);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pinned row rendering (static, no virtualization)
+  // ---------------------------------------------------------------------------
+
+  // Pinned rows are always re-rendered (cheap: typically 1-3 rows, no virtualization needed)
+
+  function renderPinnedRows(
+    pinnedContainer: HTMLElement,
+    rows: TData[],
+    columns: ColumnDef<TData>[],
+    measurements: LayoutMeasurements,
+  ): void {
+    pinnedContainer.innerHTML = '';
+    const wrapper = pinnedContainer.parentElement;
+    if (rows.length === 0) {
+      if (wrapper) {
+        wrapper.style.display = 'none';
+        wrapper.style.height = '0';
+      }
+      return;
+    }
+    if (wrapper) wrapper.style.display = '';
+
+    const rowH = typeof options.rowHeight === 'number' ? options.rowHeight : DEFAULT_ROW_HEIGHT;
+    let totalH = 0;
+
+    for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+      const rowData = rows[rowIdx]!;
+      const top = rowIdx * rowH;
+      totalH = top + rowH;
+
+      for (let col = 0; col < columns.length; col++) {
+        const column = columns[col]!;
+        const left = snapToDevicePixel(measurements.colOffsets[col]!);
+        const width = snapToDevicePixel(measurements.colOffsets[col + 1]!) - left;
+
+        const cell = document.createElement('div');
+        cell.className = 'bg-cell bg-cell--pinned';
+        cell.style.position = 'absolute';
+        cell.style.transform = `translate3d(${left}px, ${snapToDevicePixel(top)}px, 0)`;
+        cell.style.width = `${width}px`;
+        cell.style.height = `${rowH}px`;
+        cell.style.lineHeight = `${rowH}px`;
+
+        // Apply column-level alignment
+        cell.style.textAlign = column.align ?? '';
+        cell.style.verticalAlign = column.verticalAlign ?? '';
+
+        // Get value
+        const value = column.accessorFn
+          ? column.accessorFn(rowData, rowIdx)
+          : column.accessorKey
+            ? (rowData as Record<string, unknown>)[column.accessorKey]
+            : undefined;
+
+        // Build context for cellType rendering
+        const context: CellRenderContext<TData> = {
+          rowIndex: rowIdx,
+          colIndex: col,
+          row: rowData,
+          column,
+          value,
+          isSelected: false,
+          isActive: false,
+          style: { top, left, width, height: rowH },
+        };
+
+        // Render priority: column renderer > cell type > valueModifier > default text
+        if (column.cellRenderer) {
+          column.cellRenderer(cell, context);
+        } else if (column.cellType && rendering.getCellType(column.cellType)) {
+          rendering.getCellType(column.cellType)!.render(cell, context as CellRenderContext);
+        } else if (column.valueModifier?.format) {
+          cell.textContent = column.valueModifier.format(value);
+        } else {
+          cell.textContent = value != null ? String(value) : '';
+        }
+
+        pinnedContainer.appendChild(cell);
+      }
+    }
+
+    pinnedContainer.style.height = `${totalH}px`;
+    if (wrapper) wrapper.style.height = `${totalH}px`;
+  }
+
+  function getPinnedTopHeight(): number {
+    const state = store.getState();
+    const rowH = typeof options.rowHeight === 'number' ? options.rowHeight : DEFAULT_ROW_HEIGHT;
+    return state.pinnedTopRows.length * rowH;
+  }
+
+  function getPinnedBottomHeight(): number {
+    const state = store.getState();
+    const rowH = typeof options.rowHeight === 'number' ? options.rowHeight : DEFAULT_ROW_HEIGHT;
+    return state.pinnedBottomRows.length * rowH;
   }
 
   // ---------------------------------------------------------------------------
@@ -480,6 +602,13 @@ export function createGrid<
     // Sync frozen cell overlay vertical position (same offset as main cellContainer)
     if (frozenCellOverlay) {
       frozenCellOverlay.style.transform = `translate3d(0, ${-snapToDevicePixel(scrollTop)}px, 0)`;
+    }
+    // Sync pinned row horizontal scroll in the fast path (before rAF render)
+    if (pinnedTopContainer) {
+      pinnedTopContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
+    }
+    if (pinnedBottomContainer) {
+      pinnedBottomContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
     }
 
     emitter.emit('scroll', { scrollTop, scrollLeft });
@@ -1587,15 +1716,51 @@ export function createGrid<
       headerContainer.style.zIndex = '10';
       headerContainer.style.background = '#f8f9fa';
 
+      // Pinned top wrapper (clips overflow, positioned below headers)
+      const pinnedTopWrapper = document.createElement('div');
+      pinnedTopWrapper.className = 'bg-grid__pinned-top';
+      pinnedTopWrapper.style.position = 'absolute';
+      pinnedTopWrapper.style.top = `${headerHeight}px`;
+      pinnedTopWrapper.style.left = '0';
+      pinnedTopWrapper.style.right = '0';
+      pinnedTopWrapper.style.overflow = 'hidden';
+      pinnedTopWrapper.style.zIndex = '4';
+      const pinnedTopH = getPinnedTopHeight();
+      pinnedTopWrapper.style.height = `${pinnedTopH}px`;
+      if (pinnedTopH === 0) pinnedTopWrapper.style.display = 'none';
+
+      pinnedTopContainer = document.createElement('div');
+      pinnedTopContainer.style.position = 'relative';
+      pinnedTopWrapper.appendChild(pinnedTopContainer);
+
       // Cell container (absolute, translated by scroll offsets)
       cellContainer = document.createElement('div');
       cellContainer.className = 'bg-grid__cells';
       cellContainer.style.position = 'absolute';
-      cellContainer.style.top = `${headerHeight}px`;
+      cellContainer.style.top = `${headerHeight + pinnedTopH}px`;
       cellContainer.style.left = '0';
 
+      // Pinned bottom wrapper (clips overflow, positioned at bottom of viewport)
+      const pinnedBottomWrapper = document.createElement('div');
+      pinnedBottomWrapper.className = 'bg-grid__pinned-bottom';
+      pinnedBottomWrapper.style.position = 'absolute';
+      pinnedBottomWrapper.style.bottom = '0';
+      pinnedBottomWrapper.style.left = '0';
+      pinnedBottomWrapper.style.right = '0';
+      pinnedBottomWrapper.style.overflow = 'hidden';
+      pinnedBottomWrapper.style.zIndex = '4';
+      const pinnedBottomH = getPinnedBottomHeight();
+      pinnedBottomWrapper.style.height = `${pinnedBottomH}px`;
+      if (pinnedBottomH === 0) pinnedBottomWrapper.style.display = 'none';
+
+      pinnedBottomContainer = document.createElement('div');
+      pinnedBottomContainer.style.position = 'relative';
+      pinnedBottomWrapper.appendChild(pinnedBottomContainer);
+
       viewport.appendChild(headerContainer);
+      viewport.appendChild(pinnedTopWrapper);
       viewport.appendChild(cellContainer);
+      viewport.appendChild(pinnedBottomWrapper);
 
       // Fake scrollbar — provides native scrollbar UI via an oversized sizer.
       // Sits behind viewport; scrollbar tracks are exposed at the right/bottom
@@ -1733,6 +1898,8 @@ export function createGrid<
       frozenColOverlay = null;
       frozenHeaderOverlay = null;
       frozenCellOverlay = null;
+      pinnedTopContainer = null;
+      pinnedBottomContainer = null;
       freezeClipHandle = null;
       freezeClipIndicator = null;
       selectionLayer = null;
@@ -1784,6 +1951,37 @@ export function createGrid<
         options.onDataChange?.([
           { rowIndex, columnId, oldValue, newValue: value, row: newRow },
         ]);
+      }
+      scheduleRender();
+    },
+
+    getPinnedTopRows: () => store.getState().pinnedTopRows,
+
+    setPinnedTopRows(rows: TData[]): void {
+      store.update('pinnedRows', () => ({ pinnedTopRows: rows }));
+      // Update pinned top wrapper height and cell container top
+      if (pinnedTopContainer?.parentElement) {
+        const rowH = typeof options.rowHeight === 'number' ? options.rowHeight : DEFAULT_ROW_HEIGHT;
+        const h = rows.length * rowH;
+        pinnedTopContainer.parentElement.style.height = `${h}px`;
+        pinnedTopContainer.parentElement.style.display = h === 0 ? 'none' : '';
+        if (cellContainer) {
+          cellContainer.style.top = `${headerHeight + h}px`;
+        }
+      }
+      scheduleRender();
+    },
+
+    getPinnedBottomRows: () => store.getState().pinnedBottomRows,
+
+    setPinnedBottomRows(rows: TData[]): void {
+      store.update('pinnedRows', () => ({ pinnedBottomRows: rows }));
+      // Update pinned bottom wrapper height
+      if (pinnedBottomContainer?.parentElement) {
+        const rowH = typeof options.rowHeight === 'number' ? options.rowHeight : DEFAULT_ROW_HEIGHT;
+        const h = rows.length * rowH;
+        pinnedBottomContainer.parentElement.style.height = `${h}px`;
+        pinnedBottomContainer.parentElement.style.display = h === 0 ? 'none' : '';
       }
       scheduleRender();
     },
