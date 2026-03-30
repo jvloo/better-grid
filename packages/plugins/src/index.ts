@@ -33,3 +33,9 @@ export type { UndoRedoOptions, UndoRedoApi } from './undo-redo';
 
 export { search } from './search';
 export type { SearchOptions, SearchApi } from './search';
+
+export { exportPlugin } from './export';
+export type { ExportOptions, ExportApi, ExportData, ExportCell } from './export';
+
+export { pagination } from './pagination';
+export type { PaginationOptions, PaginationApi } from './pagination';
