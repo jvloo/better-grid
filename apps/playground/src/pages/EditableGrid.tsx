@@ -71,7 +71,7 @@ export function EditableGrid() {
         header: 'Price (currency)',
         width: 150,
         cellType: 'currency',
-        meta: { precision: 2 },
+        precision: 2,
         rules: [{ validate: (v) => (v as number) >= 0 || 'Cannot be negative' }],
       },
 
@@ -202,7 +202,7 @@ export function EditableGrid() {
 { editable: false }           // readonly
 { /* default string */ }      // text input
 { cellType: 'currency',       // text → parses $1,234
-  meta: { precision: 2 } }   // clamp to 2 decimal places
+  precision: 2 }              // clamp to 2 decimal places
 { cellType: 'percent' }       // text → shows 5, stores 0.05
 { cellType: 'bigint' }        // full-precision large integers
 { valueParser: (s) => ...,    // custom parse/format

@@ -50,8 +50,8 @@ export function FormatEdit() {
         width: 110,
         options: ['Electronics', 'Hardware', 'IoT', 'Accessories', 'Software', 'Networking'],
       },
-      { id: 'price', header: 'Price', width: 100, cellType: 'currency', meta: { precision: 2 } },
-      { id: 'cost', header: 'Cost', width: 100, cellType: 'currency', meta: { precision: 2 } },
+      { id: 'price', header: 'Price', width: 100, cellType: 'currency', precision: 2 },
+      { id: 'cost', header: 'Cost', width: 100, cellType: 'currency', precision: 2 },
       { id: 'margin', header: 'Margin', width: 80, cellType: 'percent' },
       { id: 'launchDate', header: 'Launch', width: 120, cellType: 'date' },
       {
@@ -107,10 +107,10 @@ const columns = [
     options: ['Electronics', 'Hardware', 'IoT', 'Accessories', 'Software', 'Networking'] },
   { id: 'price', header: 'Price', width: 100,
     cellType: 'currency',
-    meta: { precision: 2 } },           // → $299.99 (2dp)
+    precision: 2 },                     // → $299.99 (2dp)
   { id: 'cost', header: 'Cost', width: 100,
     cellType: 'currency',
-    meta: { precision: 2 } },           // → $180.00 (2dp)
+    precision: 2 },                     // → $180.00 (2dp)
   { id: 'margin', header: 'Margin', width: 90,
     cellType: 'percent' },              // → 40%
   { id: 'launchDate', header: 'Launch', width: 120,

@@ -137,6 +137,7 @@ export interface ColumnDef<TData = unknown> {
   editable?: boolean;
   editor?: EditorType;
   options?: (string | ColumnOption)[];
+  precision?: number;
 
   // Sorting
   sortable?: boolean;

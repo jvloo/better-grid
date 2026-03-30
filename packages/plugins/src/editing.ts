@@ -13,7 +13,7 @@ export interface EditingOptions {
   cancelOnEscape?: boolean;
   /** Custom labels for boolean dropdown. Default: ['Yes', 'No'] */
   booleanLabels?: [string, string];
-  /** Default decimal precision for number/currency cells. Per-column meta.precision overrides. */
+  /** Default decimal precision for number/currency cells. Per-column `precision` prop overrides. */
   precision?: number;
 }
 
@@ -507,7 +507,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       // -----------------------------------------------------------------------
 
       function getPrecision(column: ColumnDef): number | undefined {
-        // Per-column meta.precision overrides global config precision
+        // First-class column.precision, then legacy meta.precision, then global config
+        if (typeof column.precision === 'number') return column.precision;
         const metaPrecision = column.meta?.precision;
         if (typeof metaPrecision === 'number') return metaPrecision;
         return config.precision;
