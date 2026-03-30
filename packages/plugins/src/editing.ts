@@ -15,6 +15,8 @@ export interface EditingOptions {
   booleanLabels?: [string, string];
   /** Default decimal precision for number/currency cells. Per-column `precision` prop overrides. */
   precision?: number;
+  /** Editor rendering mode. 'float' = floating overlay (default), 'inline' = inside cell bounds */
+  editorMode?: 'float' | 'inline';
 }
 
 /** Dropdown option for columns with meta.options */
@@ -54,6 +56,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
     cancelOnEscape: options?.cancelOnEscape ?? true,
     booleanLabels: options?.booleanLabels ?? (['Yes', 'No'] as [string, string]),
     precision: options?.precision,
+    editorMode: options?.editorMode ?? 'float',
   };
 
   return {
@@ -173,6 +176,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
           if (isDateEditor) {
             activeEditor = createDateInput(cellEl, rawStr);
+          } else if (config.editorMode === 'inline') {
+            activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined);
           } else if (isNumberEditor) {
             activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, column);
           } else {
@@ -419,6 +424,82 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           } as unknown as HTMLInputElement;
           activeEditor = editorShim;
           return editorShim;
+      }
+
+      // -----------------------------------------------------------------------
+      // Inline text input editor (renders inside the cell)
+      // -----------------------------------------------------------------------
+
+      function createInlineTextInput(
+        cellEl: HTMLElement,
+        value: string,
+        cursorAtEnd: boolean,
+        numberColumn?: ColumnDef,
+      ): HTMLInputElement {
+        const cellFont = getComputedStyle(cellEl).font;
+        const cellPadding = getComputedStyle(cellEl).padding;
+
+        // Create a simple input inside the cell
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'bg-cell-editor bg-cell-editor--inline';
+        input.value = value;
+        input.style.cssText = `
+          width: 100%; height: 100%;
+          border: none; outline: none;
+          font: ${cellFont}; padding: ${cellPadding};
+          margin: 0; box-sizing: border-box;
+          background: transparent; color: inherit;
+        `;
+
+        // Number filtering (same as float mode)
+        if (numberColumn) {
+          input.inputMode = 'decimal';
+          const numberPrecision = getPrecision(numberColumn);
+
+          input.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            if (['Backspace', 'Delete', 'Tab', 'Enter', 'Escape',
+                 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                 'Home', 'End'].includes(e.key)) return;
+            if (/^[0-9.\-]$/.test(e.key)) {
+              const text = input.value;
+              const selStart = input.selectionStart ?? text.length;
+              const selEnd = input.selectionEnd ?? text.length;
+              const hasSelection = selStart !== selEnd;
+
+              if (e.key === '.' && text.includes('.') && !hasSelection) { e.preventDefault(); return; }
+              if (e.key === '-') {
+                if (text.includes('-') && !hasSelection) { e.preventDefault(); return; }
+                if (selStart !== 0) { e.preventDefault(); return; }
+              }
+              if (numberPrecision != null && /^[0-9]$/.test(e.key) && !hasSelection) {
+                const dotIndex = text.indexOf('.');
+                if (dotIndex !== -1 && selStart > dotIndex && text.length - dotIndex - 1 >= numberPrecision) {
+                  e.preventDefault(); return;
+                }
+              }
+              return;
+            }
+            e.preventDefault();
+          });
+        }
+
+        cellEl.appendChild(input);
+        input.focus();
+
+        if (cursorAtEnd) {
+          input.setSelectionRange(value.length, value.length);
+        } else {
+          input.select();
+        }
+
+        // Keyboard handling
+        input.addEventListener('keydown', (e) => {
+          handleEditorKeydown(e);
+        });
+
+        return input;
       }
 
       // -----------------------------------------------------------------------
@@ -1091,6 +1172,15 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       }
 
       function cleanupEdit(): void {
+        // Remove inline editor if present
+        if (editingCell) {
+          const cellEl = getCellElement(editingCell);
+          if (cellEl) {
+            const inlineEditor = cellEl.querySelector('.bg-cell-editor--inline');
+            if (inlineEditor) inlineEditor.remove();
+          }
+        }
+
         // Remove dropdown panel if present
         if (activeDropdownPanel) {
           activeDropdownPanel.remove();
