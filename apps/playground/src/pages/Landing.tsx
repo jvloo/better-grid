@@ -188,6 +188,8 @@ export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
               <CompRow feature="Framework agnostic" ag="✓" hs="✓" bg="✓" />
               <CompRow feature="Type-safe plugin DX" ag="✗ (modules)" hs="✗ (monolithic)" bg="✓ ($Infer)" />
               <CompRow feature="TypeScript-first" ag="Partial" hs="Partial" bg="✓ Strict" />
+              <CompRow feature="Free tree data / collapse" ag="Enterprise" hs="✗" bg="✓ (MIT)" />
+              <CompRow feature="Free clipboard (copy/paste)" ag="Enterprise" hs="Non-commercial" bg="✓ (MIT)" />
               <CompRow feature="Free AI filtering" ag="Enterprise ($999)" hs="✗" bg="Planned (free)" />
               <CompRow feature="Core price" ag="Free" hs="$899/dev/yr" bg="Free (MIT)" />
             </tbody>
@@ -205,20 +207,20 @@ export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
             title="Core"
             price="Free forever"
             color="#3b82f6"
-            features={['Virtual scrolling', 'Frozen rows & columns', 'Multi-level headers', 'Cell selection & ranges', 'Keyboard navigation', 'Column resizing', 'CSS theming']}
+            features={['Virtual scrolling (10M+ cells)', 'Frozen rows & columns', 'Pinned rows (footer/totals)', 'Multi-level headers (colSpan)', 'Cell & range selection', 'Keyboard navigation', 'Row hierarchy model', 'Column resizing', 'CSS custom properties']}
           />
           <TierCard
             title="Free Plugins"
             price="MIT License"
             color="#8b5cf6"
             featured
-            features={['formatting() — currency, dates, percent', 'editing() — text, dropdown, boolean', 'sorting() — header click, indicators', 'filtering() — 9 operators, context menu', 'validation() — required, rules, errors']}
+            features={['formatting() — currency, dates, percent', 'editing() — text, number, date, dropdown, autocomplete', 'sorting() — click headers, multi-sort', 'filtering() — 9 operators, header icon', 'validation() — required, custom rules', 'hierarchy() — tree with collapse/expand', 'clipboard() — Ctrl+C/V/X, TSV + HTML']}
           />
           <TierCard
             title="Pro Plugins"
             price="Coming Soon"
             color="#ec4899"
-            features={['clipboard() — copy/paste, fill-down', 'grouping() — collapse/expand', 'undoRedo() — Ctrl+Z/Y', 'export() — CSV, Excel', 'search() — find & highlight', 'formulas() — =SUM, =IF']}
+            features={['clipboard pro — fill-down, fill-series', 'grouping() — auto-group + aggregation', 'undoRedo() — Ctrl+Z/Y history', 'export() — CSV, Excel, PDF, PNG', 'search() — find & highlight', 'formulas() — =SUM, =IF, =VLOOKUP']}
           />
         </div>
       </section>
@@ -229,7 +231,7 @@ export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
           See it in action
         </h2>
         <p style={{ fontSize: 18, color: '#888', marginBottom: 32 }}>
-          11 interactive demos across 4 categories. All running live in your browser.
+          15 interactive demos across 4 categories. All running live in your browser.
         </p>
         <button onClick={onExploreDemos} style={{
           padding: '16px 40px', borderRadius: 8, border: 'none', fontSize: 18, fontWeight: 600, cursor: 'pointer',

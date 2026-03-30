@@ -84,7 +84,7 @@ export function SortFilter() {
       <div style={{ marginBottom: 16, fontSize: 13, color: '#888', lineHeight: 1.6 }}>
         <strong>Sort:</strong> Click any header to sort (asc → desc → none)
         <br />
-        <strong>Filter:</strong> Right-click any header → "Filter..." → type a value (e.g., "Engineering" on Dept)
+        <strong>Filter:</strong> Click the filter icon (funnel) in any header, or right-click → "Filter..." → type a value (e.g., "Engineering" on Dept)
         <br />
         <strong>Combine:</strong> Filter by department, then sort by salary to find top earners per team
       </div>

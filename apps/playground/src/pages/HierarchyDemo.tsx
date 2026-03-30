@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, hierarchy } from '@better-grid/plugins';
+import { formatting, hierarchy, clipboard } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface DeptRow {
@@ -64,6 +64,7 @@ export function HierarchyDemo() {
     () => [
       formatting(),
       hierarchy({ expandColumn: 'name', indentSize: 22 }),
+      clipboard(),
     ],
     [],
   );

@@ -8,15 +8,25 @@ export function ProPreview() {
         Premium plugins for enterprise use cases. Commercial license.
       </p>
 
+      <div style={{ marginBottom: 24, padding: 16, background: '#f0fff4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 16, color: '#166534' }}>Already Free (MIT)</h3>
+        <p style={{ margin: 0, color: '#15803d', lineHeight: 1.5 }}>
+          These features are included in the free tier: <code>hierarchy()</code> — tree data with collapse/expand,
+          <code>clipboard()</code> — Ctrl+C/V/X copy/paste,
+          <code>editing()</code> — text, number, date, dropdown, autocomplete editors.
+          Pro plugins build on top of these with advanced capabilities.
+        </p>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
         <PluginCard
-          name="clipboard()"
-          description="Copy/cut/paste cell ranges with Ctrl+C/V/X. Fill-down with Ctrl+D. HTML table format for Excel compatibility."
+          name="clipboard() pro"
+          description="Fill-down (Ctrl+D), fill-series, Excel-rich paste format. Basic copy/paste is free."
           status="Planned"
         />
         <PluginCard
           name="grouping()"
-          description="Group rows by column values with collapse/expand. Nested grouping. Aggregation rows (sum, count, avg)."
+          description="Auto-group rows by column values. Built-in aggregation (sum, avg, count, min, max). Multi-level grouping. Note: Basic tree data with collapse/expand is free via hierarchy()."
           status="Planned"
         />
         <PluginCard
@@ -26,7 +36,7 @@ export function ProPreview() {
         />
         <PluginCard
           name="export()"
-          description="Export grid data to CSV or Excel (.xlsx). Respects formatting, frozen columns, and hidden rows."
+          description="Export grid data to CSV, Excel (.xlsx), PDF, or PNG. Respects formatting, frozen columns, and hidden rows."
           status="Planned"
         />
         <PluginCard

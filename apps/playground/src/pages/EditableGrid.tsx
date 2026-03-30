@@ -198,7 +198,7 @@ export function EditableGrid() {
       />
       <div style={{ marginTop: 16, fontSize: 13, color: '#888' }}>
         <strong>Columns:</strong> ID (readonly) | Name (text) | Qty (auto-number) | Price (currency, precision: 2) |
-        Rate (percent) | Serial (bigint) | Weight (valueModifier) | Status (string dropdown) | Priority (label/value dropdown) |
+        Rate (percent) | Serial (bigint) | Weight (valueModifier) | Status (autocomplete) | Priority (label/value dropdown) |
         Active (auto boolean dropdown) | Bool-text (forced text) | Date | Notes (text) | Read-only
       </div>
 
@@ -214,7 +214,8 @@ export function EditableGrid() {
     format: (v) => ...,
     parse: (s) => ... } }
 { cellType: 'date' }          // text → date string
-{ options: ['A', 'B'] }       // dropdown (string)
+{ editor: 'autocomplete',      // searchable dropdown
+  options: ['A', 'B'] }
 { options: [                   // dropdown (label/value)
     { label: 'High', value: 1 }
   ]}
