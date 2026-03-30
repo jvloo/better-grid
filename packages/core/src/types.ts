@@ -102,7 +102,7 @@ export interface CellTypeRenderer {
 // ---------------------------------------------------------------------------
 
 /** Built-in cell types for formatting and editing */
-export type CellType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'bigint' | 'select' | 'toggle' | (string & {});
+export type CellType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'bigint' | 'select' | 'boolean' | (string & {});
 
 /** Editor mode override */
 export type EditorType = 'text' | 'dropdown';
