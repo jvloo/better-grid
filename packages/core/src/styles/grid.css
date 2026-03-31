@@ -163,6 +163,16 @@
   background: var(--bg-selection-bg, rgba(33, 133, 208, 0.08));
 }
 
+.bg-cell--merged {
+  background: var(--bg-cell-bg, #fff);
+  overflow: hidden;
+}
+
+.bg-cell--merge-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* Frozen cells need opaque background to cover scrolling cells beneath */
 .bg-grid__frozen-cells .bg-cell {
   background: var(--bg-cell-bg, #fff);

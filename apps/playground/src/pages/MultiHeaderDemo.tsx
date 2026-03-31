@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
-import { formatting, sorting } from '@better-grid/plugins';
+import { formatting, sorting, mergeCells } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface CompanyRow {
@@ -141,10 +141,109 @@ export function MultiHeaderDemo() {
         height={400}
       />
 
-      <div style={{ marginTop: 12, fontSize: 12, color: '#aaa', lineHeight: 1.5 }}>
-        {data.length} companies &bull; {columns.length} columns &bull;
-        2-level grouped headers &bull; Currency and percent formatting
-      </div>
+      <MergeCellsDemo />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Merge Cells Demo — body cell spanning (Pro feature)
+// ---------------------------------------------------------------------------
+
+interface ScheduleRow {
+  day: string;
+  time: string;
+  room: string;
+  subject: string;
+  instructor: string;
+  type: string;
+}
+
+const scheduleData: ScheduleRow[] = [
+  { day: 'Monday', time: '09:00', room: 'A101', subject: 'Mathematics', instructor: 'Dr. Chen', type: 'Lecture' },
+  { day: 'Monday', time: '10:00', room: 'A101', subject: 'Mathematics', instructor: 'Dr. Chen', type: 'Lecture' },
+  { day: 'Monday', time: '11:00', room: 'B202', subject: 'Physics Lab', instructor: 'Prof. Smith', type: 'Lab' },
+  { day: 'Monday', time: '12:00', room: 'B202', subject: 'Physics Lab', instructor: 'Prof. Smith', type: 'Lab' },
+  { day: 'Monday', time: '13:00', room: 'B202', subject: 'Physics Lab', instructor: 'Prof. Smith', type: 'Lab' },
+  { day: 'Monday', time: '14:00', room: 'C303', subject: 'English', instructor: 'Ms. Taylor', type: 'Seminar' },
+  { day: 'Tuesday', time: '09:00', room: 'A101', subject: 'Chemistry', instructor: 'Dr. Park', type: 'Lecture' },
+  { day: 'Tuesday', time: '10:00', room: 'A101', subject: 'Chemistry', instructor: 'Dr. Park', type: 'Lecture' },
+  { day: 'Tuesday', time: '11:00', room: 'D404', subject: 'CS Workshop', instructor: 'Dr. Kumar', type: 'Workshop' },
+  { day: 'Tuesday', time: '12:00', room: 'D404', subject: 'CS Workshop', instructor: 'Dr. Kumar', type: 'Workshop' },
+  { day: 'Tuesday', time: '13:00', room: 'D404', subject: 'CS Workshop', instructor: 'Dr. Kumar', type: 'Workshop' },
+  { day: 'Tuesday', time: '14:00', room: 'D404', subject: 'CS Workshop', instructor: 'Dr. Kumar', type: 'Workshop' },
+  { day: 'Wednesday', time: '09:00', room: 'A101', subject: 'Mathematics', instructor: 'Dr. Chen', type: 'Lecture' },
+  { day: 'Wednesday', time: '10:00', room: 'B202', subject: 'Biology', instructor: 'Prof. Jones', type: 'Lecture' },
+  { day: 'Wednesday', time: '11:00', room: 'B202', subject: 'Biology', instructor: 'Prof. Jones', type: 'Lecture' },
+  { day: 'Wednesday', time: '12:00', room: 'C303', subject: 'History', instructor: 'Dr. Wilson', type: 'Seminar' },
+  { day: 'Wednesday', time: '13:00', room: 'C303', subject: 'History', instructor: 'Dr. Wilson', type: 'Seminar' },
+  { day: 'Wednesday', time: '14:00', room: 'C303', subject: 'History', instructor: 'Dr. Wilson', type: 'Seminar' },
+];
+
+const scheduleColumns: ColumnDef<ScheduleRow>[] = [
+  { id: 'day', header: 'Day', width: 100 },
+  { id: 'time', header: 'Time', width: 70, align: 'center' },
+  { id: 'room', header: 'Room', width: 70, align: 'center' },
+  { id: 'subject', header: 'Subject', width: 150 },
+  { id: 'instructor', header: 'Instructor', width: 130 },
+  { id: 'type', header: 'Type', width: 90 },
+];
+
+function MergeCellsDemo() {
+  // Auto-detect merge ranges: merge consecutive rows with same day, and same subject blocks
+  const mergeConfig = useMemo(() => {
+    const cells: Array<{ row: number; col: number; rowSpan?: number; colSpan?: number }> = [];
+
+    // Merge "Day" column (col 0) for consecutive same-day rows
+    let i = 0;
+    while (i < scheduleData.length) {
+      let j = i + 1;
+      while (j < scheduleData.length && scheduleData[j]!.day === scheduleData[i]!.day) j++;
+      if (j - i > 1) cells.push({ row: i, col: 0, rowSpan: j - i });
+      i = j;
+    }
+
+    // Merge subject blocks (cols 3-5: subject, instructor, type) for consecutive identical rows
+    i = 0;
+    while (i < scheduleData.length) {
+      let j = i + 1;
+      while (j < scheduleData.length &&
+        scheduleData[j]!.subject === scheduleData[i]!.subject &&
+        scheduleData[j]!.instructor === scheduleData[i]!.instructor) j++;
+      if (j - i > 1) {
+        cells.push({ row: i, col: 3, rowSpan: j - i }); // subject
+        cells.push({ row: i, col: 4, rowSpan: j - i }); // instructor
+        cells.push({ row: i, col: 5, rowSpan: j - i }); // type
+      }
+      i = j;
+    }
+
+    return cells;
+  }, []);
+
+  const plugins = useMemo(
+    () => [
+      formatting(),
+      mergeCells({ cells: mergeConfig }),
+    ],
+    [mergeConfig],
+  );
+
+  return (
+    <>
+      <h2 style={{ fontSize: 18, marginBottom: 8, marginTop: 32 }}>Merge Cells <span style={{ fontSize: 11, color: '#999', fontWeight: 400 }}>Pro</span></h2>
+      <p style={{ marginBottom: 8, color: '#888', fontSize: 13, lineHeight: 1.5 }}>
+        Body cell spanning — consecutive identical values merged into a single cell.
+        Day column spans all timeslots, subject blocks span their duration.
+      </p>
+
+      <BetterGrid<ScheduleRow>
+        columns={scheduleColumns}
+        data={scheduleData}
+        plugins={plugins}
+        selection={{ mode: 'range' }}
+        height={400}
+      />
+    </>
   );
 }

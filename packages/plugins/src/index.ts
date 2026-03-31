@@ -39,3 +39,7 @@ export type { ExportOptions, ExportApi, ExportData, ExportCell } from './export'
 
 export { pagination } from './pagination';
 export type { PaginationOptions, PaginationApi } from './pagination';
+
+// Pro plugins (planned for @better-grid/pro, included here during development)
+export { mergeCells } from './merge-cells';
+export type { MergeCellsOptions, MergeCellsApi, MergeCellDef } from './merge-cells';
