@@ -140,7 +140,7 @@ export function App() {
           <NavButton active={page === 'plugin-toggle'} onClick={() => navigatePage('plugin-toggle')} icon="🔌">Plugin Toggle</NavButton>
           <NavButton active={page === 'performance'} onClick={() => navigatePage('performance')} icon="⚡">Performance</NavButton>
 
-          <SectionLabel>Info</SectionLabel>
+          <SectionLabel>Other</SectionLabel>
           <NavButton active={page === 'pro'} onClick={() => navigatePage('pro')} icon="🗺️">Roadmap</NavButton>
         </div>
 
