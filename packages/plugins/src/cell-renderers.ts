@@ -157,18 +157,10 @@ const booleanRenderer: CellTypeRenderer = {
   render(container: HTMLElement, context: CellRenderContext): void {
     container.textContent = '';
     container.style.textAlign = 'center';
-    const display = (context.column.meta?.booleanDisplay as string) ?? 'dot';
+    const display = (context.column.meta?.booleanDisplay as string) ?? 'checkbox';
     const truthy = !!context.value;
 
     if (display === 'yesno') {
-      container.textContent = truthy ? 'Yes' : 'No';
-      container.style.color = truthy ? '#2e7d32' : '#9e9e9e';
-    } else if (display === 'check') {
-      container.textContent = truthy ? '\u2713' : '\u2717';
-      container.style.color = truthy ? '#2e7d32' : '#c62828';
-      container.style.fontWeight = '600';
-    } else {
-      // 'dot' (default) — colored dot + label
       const wrapper = document.createElement('span');
       wrapper.style.cssText = 'display:inline-flex;align-items:center;gap:5px;height:100%;line-height:normal;';
       const dot = document.createElement('span');
@@ -179,6 +171,23 @@ const booleanRenderer: CellTypeRenderer = {
       label.style.fontSize = '12px';
       wrapper.appendChild(dot);
       wrapper.appendChild(label);
+      container.appendChild(wrapper);
+    } else if (display === 'check') {
+      container.textContent = truthy ? '\u2713' : '\u2717';
+      container.style.color = truthy ? '#2e7d32' : '#c62828';
+      container.style.fontWeight = '600';
+    } else {
+      // 'checkbox' (default) — styled checkbox, industry standard
+      const wrapper = document.createElement('span');
+      wrapper.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;height:100%;line-height:normal;';
+      const box = document.createElement('span');
+      if (truthy) {
+        box.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:3px;background:#1a73e8;color:#fff;font-size:11px;line-height:1;';
+        box.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5L4 7.5L8 3"/></svg>';
+      } else {
+        box.style.cssText = 'display:inline-block;width:16px;height:16px;border-radius:3px;border:1.5px solid #d0d0d0;box-sizing:border-box;';
+      }
+      wrapper.appendChild(box);
       container.appendChild(wrapper);
     }
   },
