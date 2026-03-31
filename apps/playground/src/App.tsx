@@ -133,6 +133,7 @@ export function App() {
           <NavButton active={page === 'hierarchy'} onClick={() => navigatePage('hierarchy')} icon="🌳">Hierarchy</NavButton>
           <NavButton active={page === 'frozen-pinned'} onClick={() => navigatePage('frozen-pinned')} icon="📌">Frozen & Pinned</NavButton>
           <NavButton active={page === 'multi-header'} onClick={() => navigatePage('multi-header')} icon="📊">Multi-Header</NavButton>
+          <NavButton active={page === 'merge-cells'} onClick={() => navigatePage('merge-cells')} icon="🔗">Merge Cells</NavButton>
 
           <SectionLabel>Architecture</SectionLabel>
           <NavButton active={page === 'core-only'} onClick={() => navigatePage('core-only')} icon="🧱">Core Only</NavButton>
@@ -140,7 +141,6 @@ export function App() {
           <NavButton active={page === 'performance'} onClick={() => navigatePage('performance')} icon="⚡">Performance</NavButton>
 
           <SectionLabel>Pro</SectionLabel>
-          <NavButton active={page === 'merge-cells'} onClick={() => navigatePage('merge-cells')} icon="🔗">Merge Cells</NavButton>
           <NavButton active={page === 'pro'} onClick={() => navigatePage('pro')} icon="💎">Coming Soon</NavButton>
         </div>
 
