@@ -685,8 +685,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             background: transparent;
             background-image: ${CHEVRON_SVG};
             background-repeat: no-repeat;
-            background-position: right 2px center;
-            padding-right: 18px;
+            background-position: right 6px center;
+            padding-right: 20px;
+            padding-left: ${(getComputedStyle(cellEl).paddingLeft) || '12px'};
+            text-align: ${getComputedStyle(cellEl).textAlign};
           `;
           cellEl.appendChild(input);
         }
