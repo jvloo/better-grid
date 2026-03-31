@@ -13,12 +13,16 @@ export interface FillDragResult {
 }
 
 export class SelectionLayer {
+  private container: HTMLElement;
   private overlay: HTMLElement;
   private rangeBorders: HTMLElement[] = [];
+  private fillHandle: HTMLElement | null = null;
   private fillPreview: HTMLElement | null = null;
   private onFillDrag: ((result: FillDragResult) => void) | null = null;
+  private isEditing = false;
 
   constructor(container: HTMLElement) {
+    this.container = container;
     this.overlay = document.createElement('div');
     this.overlay.className = 'bg-selection-overlay';
     this.overlay.style.position = 'absolute';
@@ -28,16 +32,27 @@ export class SelectionLayer {
     container.appendChild(this.overlay);
   }
 
+  setEditing(editing: boolean): void {
+    this.isEditing = editing;
+    if (this.fillHandle) {
+      this.fillHandle.style.display = editing ? 'none' : 'block';
+    }
+  }
+
   setFillDragHandler(handler: (result: FillDragResult) => void): void {
     this.onFillDrag = handler;
   }
 
   render(selection: Selection, measurements: LayoutMeasurements): void {
-    // Clear previous range borders
+    // Clear previous range borders + fill handle
     for (const el of this.rangeBorders) {
       el.remove();
     }
     this.rangeBorders = [];
+    if (this.fillHandle) {
+      this.fillHandle.remove();
+      this.fillHandle = null;
+    }
 
     const hasMultipleRanges = selection.ranges.length > 1;
 
@@ -95,6 +110,9 @@ export class SelectionLayer {
         handle.style.zIndex = '10';
         handle.style.pointerEvents = 'auto';
 
+        // Hide when editing
+        if (this.isEditing) handle.style.display = 'none';
+
         // Drag-to-fill
         handle.addEventListener('pointerdown', (e) => {
           e.stopPropagation();
@@ -102,8 +120,9 @@ export class SelectionLayer {
           this.startFillDrag(e, lastRange, measurements);
         });
 
-        this.overlay.appendChild(handle);
-        this.rangeBorders.push(handle);
+        // Append to container (not overlay) so z-index is above cell outlines
+        this.container.appendChild(handle);
+        this.fillHandle = handle;
       }
     }
   }
@@ -245,5 +264,6 @@ export class SelectionLayer {
 
   destroy(): void {
     this.overlay.remove();
+    this.fillHandle?.remove();
   }
 }

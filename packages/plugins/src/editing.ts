@@ -139,6 +139,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         cellEl.textContent = '';
         cellEl.classList.add('bg-cell--editing');
 
+        // Hide fill handle during editing
+        const fillHandle = document.querySelector('.bg-fill-handle') as HTMLElement | null;
+        if (fillHandle) fillHandle.style.display = 'none';
+
         if (isAutocomplete) {
           const opts = dropdownOpts ?? [];
           activeEditor = createAutocomplete(cellEl, opts, originalValue, column);
@@ -1261,6 +1265,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         // their target cells (synchronous refresh destroys DOM during mousedown)
         requestAnimationFrame(() => {
           ctx.grid.refresh();
+          // Show fill handle again
+          const fh = document.querySelector('.bg-fill-handle') as HTMLElement | null;
+          if (fh) fh.style.display = 'block';
           // Refocus the grid container so keyboard navigation resumes
           const gridEl = document.querySelector('.bg-grid') as HTMLElement | null;
           gridEl?.focus();
