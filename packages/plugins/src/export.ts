@@ -331,6 +331,16 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
         let sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
         sheetXml += '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
 
+        // Freeze pane (freeze header rows + frozen columns) — must precede cols and sheetData
+        const freezeRow = data.headerRows.length;
+        const freezeCol = data.columns.filter(c => c.frozen).length;
+        if (freezeRow > 0 || freezeCol > 0) {
+          const topLeft = colRef(freezeCol) + (freezeRow + 1);
+          sheetXml += '<sheetViews><sheetView tabSelected="1" workbookViewId="0">';
+          sheetXml += `<pane xSplit="${freezeCol}" ySplit="${freezeRow}" topLeftCell="${topLeft}" state="frozen"/>`;
+          sheetXml += '</sheetView></sheetViews>';
+        }
+
         // Column widths
         sheetXml += '<cols>';
         for (let i = 0; i < colCount; i++) {
@@ -419,16 +429,6 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
             sheetXml += `<mergeCell ref="${mc}"/>`;
           }
           sheetXml += '</mergeCells>';
-        }
-
-        // Freeze pane (freeze header rows + frozen columns)
-        const freezeRow = data.headerRows.length;
-        const freezeCol = data.columns.filter(c => c.frozen).length;
-        if (freezeRow > 0 || freezeCol > 0) {
-          const topLeft = colRef(freezeCol) + (freezeRow + 1);
-          sheetXml += '<sheetViews><sheetView tabSelected="1" workbookViewId="0">';
-          sheetXml += `<pane xSplit="${freezeCol}" ySplit="${freezeRow}" topLeftCell="${topLeft}" state="frozen"/>`;
-          sheetXml += '</sheetView></sheetViews>';
         }
 
         sheetXml += '</worksheet>';
