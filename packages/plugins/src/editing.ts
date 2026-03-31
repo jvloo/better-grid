@@ -236,6 +236,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           ed.className = 'bg-cell-editor';
           ed.contentEditable = 'true';
           ed.textContent = value;
+          // Match the cell exactly: same font, line-height, padding, alignment.
+          // Uses line-height for vertical centering (same as cell), not flexbox.
+          // Only switches to multi-line when content overflows.
           ed.style.cssText = `
             outline:none; margin:0;
             font:${cellFont}; line-height:${cellLineHeight}; color:inherit;
@@ -244,9 +247,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             padding:${cellPadding}; text-align:${cellTextAlign};
             min-height:${cellRect.height - borderW * 2 + 0.5}px;
             max-height:${cellRect.height * 4}px;
-            overflow:auto;
-            white-space:pre-wrap; word-break:break-word;
-            display:flex; align-items:center;
+            overflow:hidden;
+            white-space:nowrap;
           `;
 
           floatBox.appendChild(ed);
@@ -320,16 +322,17 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
               floatBox.style.width = `${fullWidth}px`;
             }
 
-            // When content wraps, switch from flex centering to block flow
-            // Add vertical padding on multi-line to match horizontal padding
-            const horizPadVal = parseFloat(getComputedStyle(cellEl).paddingLeft) || 12;
+            // When content overflows, switch to wrap mode with normal line-height
             if (ed.scrollHeight > cellRect.height) {
-              ed.style.display = 'block';
-              ed.style.lineHeight = '';
-              ed.style.padding = `${horizPadVal}px`;
+              ed.style.whiteSpace = 'pre-wrap';
+              ed.style.wordBreak = 'break-word';
+              ed.style.lineHeight = '1.5';
+              ed.style.overflow = 'auto';
+              ed.style.padding = `${parseFloat(getComputedStyle(cellEl).paddingLeft) || 12}px`;
             } else {
-              ed.style.display = 'flex';
-              ed.style.alignItems = 'center';
+              ed.style.whiteSpace = 'nowrap';
+              ed.style.lineHeight = cellLineHeight;
+              ed.style.overflow = 'hidden';
               ed.style.padding = cellPadding;
             }
           }
