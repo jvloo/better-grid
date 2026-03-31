@@ -49,6 +49,63 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard'> {
         return undefined;
       }
 
+      /** Parse a pasted string value into the column's expected data type */
+      function parsePasteValue(raw: string, column: ColumnDef, oldValue: unknown): unknown {
+        // Custom valueModifier.parse takes priority
+        if (column.valueModifier?.parse) {
+          try {
+            const parsed = column.valueModifier.parse(raw);
+            if (parsed !== undefined) return parsed;
+          } catch { /* fall through */ }
+        }
+
+        const ct = column.cellType;
+
+        // Number types: strip formatting characters, parse to number
+        if (ct === 'number' || ct === 'currency') {
+          const cleaned = raw.replace(/[^0-9.\-]/g, '');
+          if (cleaned === '' || cleaned === '-') return oldValue;
+          const num = Number(cleaned);
+          return isNaN(num) ? oldValue : num;
+        }
+
+        if (ct === 'percent') {
+          const cleaned = raw.replace(/[^0-9.\-]/g, '');
+          if (cleaned === '' || cleaned === '-') return oldValue;
+          const num = Number(cleaned);
+          if (isNaN(num)) return oldValue;
+          // If pasted value looks like "5%" or "5", convert to decimal (0.05)
+          return num > 1 ? num / 100 : num;
+        }
+
+        if (ct === 'bigint') {
+          const cleaned = raw.replace(/[^0-9\-]/g, '');
+          if (cleaned === '' || cleaned === '-') return oldValue;
+          try { return BigInt(cleaned); } catch { return oldValue; }
+        }
+
+        if (ct === 'date') {
+          if (raw.trim() === '') return oldValue;
+          const d = new Date(raw);
+          return isNaN(d.getTime()) ? oldValue : raw;
+        }
+
+        if (ct === 'boolean' || typeof oldValue === 'boolean') {
+          const lower = raw.toLowerCase().trim();
+          if (['yes', 'y', 'true', '1'].includes(lower)) return true;
+          if (['no', 'n', 'false', '0'].includes(lower)) return false;
+          return oldValue;
+        }
+
+        // Infer from existing value type
+        if (typeof oldValue === 'number') {
+          const num = Number(raw.replace(/[^0-9.\-]/g, ''));
+          return isNaN(num) ? raw : num;
+        }
+
+        return raw;
+      }
+
       function escapeHtml(str: string): string {
         return str
           .replace(/&/g, '&amp;')
@@ -240,18 +297,8 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard'> {
             const rawValue = cells[c]!;
             const oldValue = getCellValue(row, column);
 
-            // Parse value using column's valueModifier if available
-            let newValue: unknown;
-            if (column.valueModifier?.parse) {
-              try {
-                const parsed = column.valueModifier.parse(rawValue);
-                newValue = parsed !== undefined ? parsed : rawValue;
-              } catch {
-                newValue = rawValue;
-              }
-            } else {
-              newValue = rawValue;
-            }
+            // Parse pasted string to match column's data type
+            const newValue = parsePasteValue(rawValue, column, oldValue);
 
             ctx.grid.updateCell(rowIndex, column.id, newValue);
             changes.push({ rowIndex, columnId: column.id, oldValue, newValue });
