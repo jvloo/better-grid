@@ -456,7 +456,20 @@ export function createGrid<
         pinnedBottomContainer.style.height = `${pinnedBottomH}px`;
         pinnedBottomContainer.style.width = `${measurements.totalWidth}px`;
         pinnedBottomContainer.style.transform = `translate3d(${-state.scrollLeft - clipOffset}px, 0, 0)`;
-        if (wrapper) { wrapper.style.display = ''; wrapper.style.height = `${pinnedBottomH}px`; }
+        if (wrapper) {
+          wrapper.style.display = '';
+          wrapper.style.height = `${pinnedBottomH}px`;
+          // When content is shorter than viewport, stick to last row instead of viewport bottom
+          const dataBottom = headerHeight + pinnedTopH + measurements.totalHeight;
+          const viewportH = viewport!.clientHeight;
+          if (dataBottom + pinnedBottomH < viewportH) {
+            wrapper.style.bottom = 'auto';
+            wrapper.style.top = `${dataBottom}px`;
+          } else {
+            wrapper.style.top = '';
+            wrapper.style.bottom = '0';
+          }
+        }
       } else if (wrapper) {
         wrapper.style.display = 'none'; wrapper.style.height = '0';
       }
@@ -471,6 +484,16 @@ export function createGrid<
       renderPinnedRows(frozenPinnedBottomContainer, state.pinnedBottomRows, state.columns, measurements, 0, frozenCols);
       frozenPinnedBottomContainer.style.height = `${pinnedBottomH}px`;
       frozenPinnedBottomContainer.style.display = pinnedBottomH > 0 ? '' : 'none';
+      // Match main pinned bottom position
+      const dataBottom = headerHeight + pinnedTopH + measurements.totalHeight;
+      const viewportH = viewport!.clientHeight;
+      if (dataBottom + pinnedBottomH < viewportH) {
+        frozenPinnedBottomContainer.style.bottom = 'auto';
+        frozenPinnedBottomContainer.style.top = `${dataBottom}px`;
+      } else {
+        frozenPinnedBottomContainer.style.top = '';
+        frozenPinnedBottomContainer.style.bottom = '0';
+      }
     }
 
     // Update cell container top offset (may change when pinned top rows are set dynamically)
