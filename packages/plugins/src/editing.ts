@@ -639,7 +639,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           pill.style.cssText = `display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;color:${badgeMatch.color ?? '#666'};background:${badgeMatch.bg ?? '#f5f5f5'};`;
           const chevron = document.createElement('span');
           chevron.innerHTML = `<svg width="8" height="5" style="opacity:0.5"><path d="M0 0l4 5 4-5z" fill="currentColor"/></svg>`;
-          chevron.style.marginLeft = 'auto';
+          chevron.style.cssText = 'margin-left:auto;display:inline-flex;align-items:center;';
           badgeEl.appendChild(pill);
           badgeEl.appendChild(chevron);
           badgeEl.addEventListener('mousedown', () => input.focus());

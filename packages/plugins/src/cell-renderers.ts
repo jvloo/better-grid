@@ -169,14 +169,17 @@ const booleanRenderer: CellTypeRenderer = {
       container.style.fontWeight = '600';
     } else {
       // 'dot' (default) — colored dot + label
+      const wrapper = document.createElement('span');
+      wrapper.style.cssText = 'display:inline-flex;align-items:center;gap:5px;height:100%;line-height:normal;';
       const dot = document.createElement('span');
-      dot.style.cssText = `display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;background:${truthy ? '#22c55e' : '#d1d5db'};`;
+      dot.style.cssText = `display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${truthy ? '#22c55e' : '#d1d5db'};`;
       const label = document.createElement('span');
       label.textContent = truthy ? 'Yes' : 'No';
       label.style.color = truthy ? '#2e7d32' : '#9e9e9e';
       label.style.fontSize = '12px';
-      container.appendChild(dot);
-      container.appendChild(label);
+      wrapper.appendChild(dot);
+      wrapper.appendChild(label);
+      container.appendChild(wrapper);
     }
   },
   getStringValue(context: CellRenderContext): string {
