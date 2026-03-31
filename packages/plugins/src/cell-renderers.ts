@@ -5,42 +5,6 @@
 import type { GridPlugin, PluginContext, CellTypeRenderer, CellRenderContext } from '@better-grid/core';
 
 // ---------------------------------------------------------------------------
-// Checkbox
-// ---------------------------------------------------------------------------
-
-const checkboxRenderer: CellTypeRenderer = {
-  render(container: HTMLElement, context: CellRenderContext): void | (() => void) {
-    container.textContent = '';
-    container.style.textAlign = 'center';
-    container.style.cursor = 'pointer';
-
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.checked = !!context.value;
-    input.style.cursor = 'pointer';
-    input.style.pointerEvents = 'none'; // let the container handle clicks
-
-    container.appendChild(input);
-
-    const onClick = (e: MouseEvent) => {
-      e.stopPropagation();
-      const newValue = !context.value;
-      context.column.meta?.__grid &&
-        (context.column.meta.__grid as { updateCell: (r: number, c: string, v: unknown) => void })
-          .updateCell(context.rowIndex, context.column.id, newValue);
-    };
-    container.addEventListener('click', onClick);
-
-    return () => {
-      container.removeEventListener('click', onClick);
-    };
-  },
-  getStringValue(context: CellRenderContext): string {
-    return context.value ? 'true' : 'false';
-  },
-};
-
-// ---------------------------------------------------------------------------
 // Badge
 // ---------------------------------------------------------------------------
 
@@ -483,37 +447,6 @@ export function cellRenderers(): GridPlugin<'cell-renderers'> {
     init(ctx: PluginContext) {
       const unregs: (() => void)[] = [];
 
-      // Inject grid reference into checkbox renderer via a shared approach:
-      // We wrap the checkbox renderer to capture the grid instance from ctx.
-      const checkboxWithGrid: CellTypeRenderer = {
-        ...checkboxRenderer,
-        render(container: HTMLElement, context: CellRenderContext): void | (() => void) {
-          container.textContent = '';
-          container.style.textAlign = 'center';
-          container.style.cursor = 'pointer';
-
-          const input = document.createElement('input');
-          input.type = 'checkbox';
-          input.checked = !!context.value;
-          input.style.cursor = 'pointer';
-          input.style.pointerEvents = 'none';
-
-          container.appendChild(input);
-
-          const onClick = (e: MouseEvent) => {
-            e.stopPropagation();
-            const newValue = !context.value;
-            ctx.grid.updateCell(context.rowIndex, context.column.id, newValue);
-          };
-          container.addEventListener('click', onClick);
-
-          return () => {
-            container.removeEventListener('click', onClick);
-          };
-        },
-      };
-
-      unregs.push(ctx.registerCellType('checkbox', checkboxWithGrid));
       unregs.push(ctx.registerCellType('badge', badgeRenderer));
       unregs.push(ctx.registerCellType('progress', progressRenderer));
 
