@@ -110,6 +110,7 @@ const progressRenderer: CellTypeRenderer = {
     wrapper.style.alignItems = 'center';
     wrapper.style.gap = '6px';
     wrapper.style.width = '100%';
+    wrapper.style.height = '100%';
     wrapper.style.pointerEvents = 'none';
 
     const track = document.createElement('div');
@@ -154,17 +155,28 @@ const progressRenderer: CellTypeRenderer = {
 
 const booleanRenderer: CellTypeRenderer = {
   render(container: HTMLElement, context: CellRenderContext): void {
+    container.textContent = '';
     container.style.textAlign = 'center';
-    const display = (context.column.meta?.booleanDisplay as string) ?? 'check';
+    const display = (context.column.meta?.booleanDisplay as string) ?? 'dot';
     const truthy = !!context.value;
 
     if (display === 'yesno') {
       container.textContent = truthy ? 'Yes' : 'No';
-      container.style.color = truthy ? '#2e7d32' : '#c62828';
-    } else {
+      container.style.color = truthy ? '#2e7d32' : '#9e9e9e';
+    } else if (display === 'check') {
       container.textContent = truthy ? '\u2713' : '\u2717';
       container.style.color = truthy ? '#2e7d32' : '#c62828';
       container.style.fontWeight = '600';
+    } else {
+      // 'dot' (default) — colored dot + label
+      const dot = document.createElement('span');
+      dot.style.cssText = `display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;background:${truthy ? '#22c55e' : '#d1d5db'};`;
+      const label = document.createElement('span');
+      label.textContent = truthy ? 'Yes' : 'No';
+      label.style.color = truthy ? '#2e7d32' : '#9e9e9e';
+      label.style.fontSize = '12px';
+      container.appendChild(dot);
+      container.appendChild(label);
     }
   },
   getStringValue(context: CellRenderContext): string {

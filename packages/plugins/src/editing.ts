@@ -143,7 +143,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           const opts = dropdownOpts ?? [];
           activeEditor = createAutocomplete(cellEl, opts, originalValue, column);
         } else if (dropdownOpts) {
-          activeEditor = createDropdown(cellEl, dropdownOpts, originalValue);
+          activeEditor = createDropdown(cellEl, dropdownOpts, originalValue, column);
         } else {
           // Determine display string for the editor
           let rawStr = originalValue != null ? String(originalValue) : '';
@@ -608,6 +608,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         cellEl: HTMLElement,
         opts: DropdownOption[],
         currentValue: unknown,
+        column?: ColumnDef,
       ): HTMLInputElement {
         activeDropdownOptions = opts;
 
@@ -655,11 +656,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
         let selectedIndex = opts.findIndex((o) => o.value === currentValue || String(o.value) === String(currentValue));
 
+        // Check if badge styling should be applied to dropdown items
+        const isBadge = column?.cellType === 'badge';
+        const badgeOptions = isBadge ? column?.options as Array<{ label: string; value: unknown; color?: string; bg?: string }> | undefined : undefined;
+
         for (let i = 0; i < opts.length; i++) {
           const opt = opts[i]!;
           const item = document.createElement('div');
           item.className = 'bg-dropdown-item' + (i === selectedIndex ? ' bg-dropdown-item--selected' : '');
-          item.textContent = opt.label;
           item.style.cssText = `
             padding: 6px 12px;
             cursor: pointer;
@@ -667,6 +671,17 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             font: inherit;
             ${i === selectedIndex ? 'background: var(--bg-dropdown-selected-bg, #e8f0fe); font-weight: 500;' : ''}
           `;
+
+          // Render badge pill inside dropdown item if column is badge type
+          const badgeMatch = badgeOptions?.find(b => b.value === opt.value || String(b.value) === String(opt.value));
+          if (badgeMatch) {
+            const badge = document.createElement('span');
+            badge.textContent = opt.label;
+            badge.style.cssText = `display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;color:${badgeMatch.color ?? '#666'};background:${badgeMatch.bg ?? '#f5f5f5'};`;
+            item.appendChild(badge);
+          } else {
+            item.textContent = opt.label;
+          }
           item.addEventListener('mouseenter', () => {
             item.style.background = 'var(--bg-dropdown-hover-bg, #f0f0f0)';
           });
@@ -1311,6 +1326,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           if (editingCell || !cell) return false;
           if (event.key.length !== 1) return false;
           if (event.ctrlKey || event.altKey || event.metaKey) return false;
+          // Don't intercept typing in inputs, textareas, or contenteditable elements
+          const tag = (event.target as HTMLElement)?.tagName;
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return false;
+          if ((event.target as HTMLElement)?.isContentEditable) return false;
           const column = ctx.grid.getState().columns[cell.colIndex];
           if (column?.editable === false) return false;
           startEdit(cell, event.key);
