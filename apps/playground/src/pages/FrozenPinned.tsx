@@ -163,9 +163,8 @@ export function FrozenPinned() {
       <div style={{ marginBottom: 16, fontSize: 13, color: '#888', lineHeight: 1.6 }}>
         <strong>Frozen:</strong> #, Region, Product (3 columns) stay locked on the left &bull;
         <strong> Pinned:</strong> TOTAL row pinned to bottom &bull;
-        <strong> Freeze Clip:</strong> Drag the handle at the frozen boundary to clip columns &bull;
         <strong> Headers:</strong> Months grouped into Q1-Q4 spans &bull;
-        <strong> Plugins:</strong> Formatting (USD), Sorting, Clipboard
+        <strong> Plugins:</strong> Formatting (USD), Sorting
       </div>
 
       <BetterGrid<SalesRow>
@@ -173,16 +172,30 @@ export function FrozenPinned() {
         data={sampleData}
         headerRows={headerRows}
         frozenLeftColumns={3}
-        freezeClip={true}
         pinnedBottomRows={[totalsRow]}
         selection={{ mode: 'range' }}
         plugins={plugins}
-        height={480}
+        height={400}
+      />
+
+      <h2 style={{ fontSize: 18, marginBottom: 8, marginTop: 32 }}>Freeze Clip</h2>
+      <p style={{ marginBottom: 8, color: '#888', fontSize: 13, lineHeight: 1.5 }}>
+        When many columns are frozen, drag the handle at the frozen boundary to clip them and
+        reclaim horizontal space. Double-click the handle to restore all frozen columns.
+      </p>
+
+      <BetterGrid<SalesRow>
+        columns={columns}
+        data={sampleData.slice(0, 8)}
+        frozenLeftColumns={6}
+        freezeClip={{ minVisible: 1 }}
+        selection={{ mode: 'range' }}
+        plugins={plugins}
+        height={360}
       />
 
       <div style={{ marginTop: 12, fontSize: 12, color: '#aaa', lineHeight: 1.5 }}>
-        {sampleData.length} rows + 1 pinned footer &bull; {columns.length} columns &bull;
-        3 frozen left columns &bull; Multi-header with Q1-Q4 grouping
+        6 frozen columns (#, Region, Product, Jan, Feb, Mar) &bull; Drag the clip handle to hide frozen columns &bull; Double-click to expand
       </div>
     </div>
   );
