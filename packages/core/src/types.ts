@@ -482,6 +482,7 @@ export interface GridInstance<
   getPlugin<T>(pluginId: string): T | undefined;
   getState(): GridState<TData>;
   getContainer(): HTMLElement | null;
+  getHeaderRows(): HeaderRow[] | undefined;
 
   batch(fn: () => void): void;
   refresh(): void;

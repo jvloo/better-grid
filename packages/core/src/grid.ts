@@ -2283,6 +2283,7 @@ export function createGrid<
     getPlugin: <T,>(id: string) => pluginRegistry.getPlugin<T>(id),
     getState: () => store.getState(),
     getContainer: () => container,
+    getHeaderRows: () => headerRows,
 
     batch(fn: () => void): void {
       store.batch(fn);

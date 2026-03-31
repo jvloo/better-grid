@@ -164,9 +164,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
         const headerRows: ExportHeaderCell[][] = [];
         if (includeH) {
           // Use multi-level headerRows if available
-          const gridOpts = ctx.grid as unknown as { _options?: { headerRows?: HeaderRow[] } };
-          const multiHeaders = (gridOpts._options as { headerRows?: HeaderRow[] } | undefined)?.headerRows
-            ?? (state as unknown as { headerRows?: HeaderRow[] }).headerRows;
+          const multiHeaders = ctx.grid.getHeaderRows();
 
           if (multiHeaders && multiHeaders.length > 0) {
             for (const hr of multiHeaders) {
