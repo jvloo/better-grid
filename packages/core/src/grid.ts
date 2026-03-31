@@ -381,11 +381,16 @@ export function createGrid<
       // Update frozen overlay width and clip scroll container
       const frozenWidth = measurements.colOffsets[frozenCols]!;
       frozenColOverlay!.style.width = `${frozenWidth}px`;
-      // Match viewport height so frozen pinned rows align with main pinned rows
+      // When content is shorter than viewport, constrain height so shadow
+      // doesn't extend past data. Otherwise let CSS bottom handle it.
       const contentHeight = measurements.totalHeight + headerHeight + pinnedTopH + pinnedBottomH;
-      const frozenH = Math.min(contentHeight, viewport!.clientHeight);
-      frozenColOverlay!.style.height = `${frozenH}px`;
-      frozenColOverlay!.style.bottom = 'auto';
+      if (contentHeight < viewport!.clientHeight) {
+        frozenColOverlay!.style.height = `${contentHeight}px`;
+        frozenColOverlay!.style.bottom = 'auto';
+      } else {
+        frozenColOverlay!.style.height = '';
+        frozenColOverlay!.style.bottom = 'var(--bg-scrollbar-size, 10px)';
+      }
     }
 
     // Freeze clip: constrain frozen overlay width when clip is active
@@ -1831,7 +1836,8 @@ export function createGrid<
         frozenColOverlay.style.position = 'absolute';
         frozenColOverlay.style.top = '0';
         frozenColOverlay.style.left = '0';
-        // height set dynamically in render() to match content
+        // Match viewport bottom so pinned rows align pixel-perfectly
+        frozenColOverlay.style.bottom = 'var(--bg-scrollbar-size, 10px)';
         frozenColOverlay.style.overflow = 'hidden';
         frozenColOverlay.style.zIndex = '8';
 
