@@ -1858,6 +1858,7 @@ export function createGrid<
 
       // Selection layer (inside cell container so offsets align with cells)
       selectionLayer = new SelectionLayer(cellContainer);
+      selectionLayer.setFillHandleEnabled(options.selection?.fillHandle !== false);
 
       // Fill handle drag → copy source values to target rows
       selectionLayer.setFillDragHandler(({ sourceRange, targetRange }) => {

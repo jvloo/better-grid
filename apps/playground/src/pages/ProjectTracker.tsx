@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, sorting, filtering, validation, clipboard, cellRenderers, undoRedo } from '@better-grid/plugins';
+import { formatting, editing, sorting, filtering, validation, cellRenderers, undoRedo } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface TaskRow {
@@ -143,7 +143,6 @@ export function ProjectTracker() {
       sorting(),
       filtering(),
       validation({ validateOn: 'commit' }),
-      clipboard(),
       cellRenderers(),
       undoRedo(),
     ],

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, validation, cellRenderers, clipboard } from '@better-grid/plugins';
+import { formatting, editing, validation, cellRenderers } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface EditorRow {
@@ -121,7 +121,6 @@ export function EditorTypes() {
       editing({ editTrigger: 'dblclick', editorMode: 'float' }),
       validation({ validateOn: 'commit' }),
       cellRenderers(),
-      clipboard(),
     ],
     [],
   );
@@ -132,7 +131,6 @@ export function EditorTypes() {
       editing({ editTrigger: 'dblclick', editorMode: 'inline' }),
       validation({ validateOn: 'commit' }),
       cellRenderers(),
-      clipboard(),
     ],
     [],
   );

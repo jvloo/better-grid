@@ -216,6 +216,8 @@ export interface FooterRow {
 export interface SelectionOptions {
   mode: 'cell' | 'row' | 'range' | 'none';
   multiRange?: boolean;
+  /** Show fill handle at bottom-right of selection. Default: true */
+  fillHandle?: boolean;
 }
 
 // ---------------------------------------------------------------------------

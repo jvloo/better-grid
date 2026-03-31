@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
-import { formatting, editing, sorting, filtering, hierarchy, clipboard, cellRenderers, validation } from '@better-grid/plugins';
+import { formatting, editing, sorting, filtering, hierarchy, cellRenderers, validation } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface BudgetRow {
@@ -60,17 +60,13 @@ export function FinanceDashboard() {
         id: 'status',
         accessorKey: 'status',
         header: 'Status',
-        width: 110,
-        cellRenderer: (container: HTMLElement, ctx: { value: unknown }) => {
-          const val = ctx.value as string;
-          const colors: Record<string, { bg: string; fg: string }> = {
-            'On Track': { bg: '#e8f5e9', fg: '#2e7d32' },
-            'Over Budget': { bg: '#ffebee', fg: '#c62828' },
-            'Under Budget': { bg: '#e3f2fd', fg: '#1565c0' },
-          };
-          const c = colors[val] ?? { bg: '#f5f5f5', fg: '#666' };
-          container.innerHTML = `<span style="pointer-events:none;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:${c.bg};color:${c.fg}">${val}</span>`;
-        },
+        width: 120,
+        cellType: 'badge',
+        options: [
+          { label: 'On Track', value: 'On Track', color: '#2e7d32', bg: '#e8f5e9' },
+          { label: 'Over Budget', value: 'Over Budget', color: '#c62828', bg: '#ffebee' },
+          { label: 'Under Budget', value: 'Under Budget', color: '#1565c0', bg: '#e3f2fd' },
+        ],
       },
       { id: 'q1Actual', accessorKey: 'q1Actual', header: 'Actual', width: 100, cellType: 'currency', precision: 0, align: 'right' },
       { id: 'q1Budget', accessorKey: 'q1Budget', header: 'Budget', width: 100, cellType: 'currency', precision: 0, align: 'right' },
@@ -82,7 +78,7 @@ export function FinanceDashboard() {
       { id: 'q4Budget', accessorKey: 'q4Budget', header: 'Budget', width: 100, cellType: 'currency', precision: 0, align: 'right' },
       { id: 'ytdActual', accessorKey: 'ytdActual', header: 'Actual', width: 110, cellType: 'currency', precision: 0, align: 'right' },
       { id: 'ytdBudget', accessorKey: 'ytdBudget', header: 'Budget', width: 110, cellType: 'currency', precision: 0, align: 'right' },
-      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 110, cellType: 'change', align: 'right' },
+      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 120, cellType: 'change' },
     ],
     [],
   );
@@ -156,7 +152,6 @@ export function FinanceDashboard() {
       sorting(),
       filtering(),
       hierarchy({ expandColumn: 'department', indentSize: 22 }),
-      clipboard(),
       cellRenderers(),
       validation(),
     ],

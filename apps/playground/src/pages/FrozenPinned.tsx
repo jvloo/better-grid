@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
-import { formatting, sorting, clipboard } from '@better-grid/plugins';
+import { formatting, sorting } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface SalesRow {
@@ -149,7 +149,6 @@ export function FrozenPinned() {
     () => [
       formatting({ locale: 'en-US', currencyCode: 'USD' }),
       sorting(),
-      clipboard(),
     ],
     [],
   );

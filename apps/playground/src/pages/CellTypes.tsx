@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, cellRenderers, sorting, clipboard } from '@better-grid/plugins';
+import { formatting, cellRenderers, sorting } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface CellTypeRow {
@@ -109,7 +109,6 @@ export function CellTypes() {
       formatting({ locale: 'en-US', currencyCode: 'USD' }),
       cellRenderers(),
       sorting(),
-      clipboard(),
     ],
     [],
   );

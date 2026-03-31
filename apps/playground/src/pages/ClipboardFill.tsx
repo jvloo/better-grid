@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, clipboard, cellRenderers } from '@better-grid/plugins';
+import { formatting, editing, clipboard, cellRenderers, validation } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface DataRow {
@@ -43,6 +43,7 @@ export function ClipboardFill() {
       formatting({ locale: 'en-US', currencyCode: 'USD' }),
       cellRenderers(),
       editing({ editTrigger: 'dblclick', editorMode: 'inline' }),
+      validation({ validateOn: 'commit' }),
       clipboard(),
     ],
     [],

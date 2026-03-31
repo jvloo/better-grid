@@ -20,6 +20,7 @@ export class SelectionLayer {
   private fillPreview: HTMLElement | null = null;
   private onFillDrag: ((result: FillDragResult) => void) | null = null;
   private isEditing = false;
+  private fillHandleEnabled = true;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -30,6 +31,10 @@ export class SelectionLayer {
     this.overlay.style.pointerEvents = 'none';
     this.overlay.style.zIndex = '2';
     container.appendChild(this.overlay);
+  }
+
+  setFillHandleEnabled(enabled: boolean): void {
+    this.fillHandleEnabled = enabled;
   }
 
   setEditing(editing: boolean): void {
@@ -92,6 +97,7 @@ export class SelectionLayer {
     }
 
     // Fill handle at bottom-right corner of last range (or active cell)
+    if (!this.fillHandleEnabled) return;
     const lastRange = selection.ranges[selection.ranges.length - 1];
     if (lastRange && measurements.rowOffsets && measurements.colOffsets) {
       const bottom = measurements.rowOffsets[lastRange.endRow + 1];
