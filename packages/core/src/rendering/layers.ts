@@ -4,12 +4,19 @@
 // This layer only renders the range highlight rectangles.
 // ============================================================================
 
-import type { Selection } from '../types';
+import type { Selection, CellRange } from '../types';
 import type { LayoutMeasurements } from '../virtualization/engine';
+
+export interface FillDragResult {
+  sourceRange: CellRange;
+  targetRange: CellRange;
+}
 
 export class SelectionLayer {
   private overlay: HTMLElement;
   private rangeBorders: HTMLElement[] = [];
+  private fillPreview: HTMLElement | null = null;
+  private onFillDrag: ((result: FillDragResult) => void) | null = null;
 
   constructor(container: HTMLElement) {
     this.overlay = document.createElement('div');
@@ -19,6 +26,10 @@ export class SelectionLayer {
     this.overlay.style.pointerEvents = 'none';
     this.overlay.style.zIndex = '2';
     container.appendChild(this.overlay);
+  }
+
+  setFillDragHandler(handler: (result: FillDragResult) => void): void {
+    this.onFillDrag = handler;
   }
 
   render(selection: Selection, measurements: LayoutMeasurements): void {
@@ -83,10 +94,96 @@ export class SelectionLayer {
         handle.style.cursor = 'crosshair';
         handle.style.zIndex = '5';
         handle.style.pointerEvents = 'auto';
+
+        // Drag-to-fill
+        handle.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          this.startFillDrag(e, lastRange, measurements);
+        });
+
         this.overlay.appendChild(handle);
         this.rangeBorders.push(handle);
       }
     }
+  }
+
+  private startFillDrag(
+    startEvent: PointerEvent,
+    sourceRange: CellRange,
+    measurements: LayoutMeasurements,
+  ): void {
+    const rowOffsets = measurements.rowOffsets;
+    const rowCount = rowOffsets.length - 1;
+    let currentEndRow = sourceRange.endRow;
+
+    // Create preview overlay
+    const preview = document.createElement('div');
+    preview.className = 'bg-fill-preview';
+    preview.style.position = 'absolute';
+    preview.style.pointerEvents = 'none';
+    preview.style.boxSizing = 'border-box';
+    preview.style.border = '2px dashed var(--bg-active-border, #1a73e8)';
+    preview.style.background = 'rgba(33, 133, 208, 0.05)';
+    preview.style.zIndex = '4';
+    this.overlay.appendChild(preview);
+    this.fillPreview = preview;
+
+    const overlayRect = this.overlay.getBoundingClientRect();
+
+    const onPointerMove = (e: PointerEvent) => {
+      const relativeY = e.clientY - overlayRect.top;
+      // Find which row the cursor is over
+      let targetRow = sourceRange.endRow;
+      for (let r = 0; r < rowCount; r++) {
+        if (rowOffsets[r]! <= relativeY && relativeY < rowOffsets[r + 1]!) {
+          targetRow = r;
+          break;
+        }
+      }
+      // Only extend downward from source range
+      if (targetRow <= sourceRange.endRow) {
+        targetRow = sourceRange.endRow;
+      }
+      currentEndRow = Math.min(targetRow, rowCount - 1);
+
+      // Update preview rect (covers only the extension area below the source)
+      if (currentEndRow > sourceRange.endRow) {
+        const top = rowOffsets[sourceRange.endRow + 1]!;
+        const left = measurements.colOffsets[sourceRange.startCol]!;
+        const bottom = rowOffsets[currentEndRow + 1]!;
+        const right = measurements.colOffsets[sourceRange.endCol + 1]!;
+        preview.style.display = 'block';
+        preview.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+        preview.style.width = `${right - left}px`;
+        preview.style.height = `${bottom - top}px`;
+      } else {
+        preview.style.display = 'none';
+      }
+    };
+
+    const onPointerUp = () => {
+      document.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerup', onPointerUp);
+      preview.remove();
+      this.fillPreview = null;
+
+      // If dragged below source range, trigger fill
+      if (currentEndRow > sourceRange.endRow && this.onFillDrag) {
+        this.onFillDrag({
+          sourceRange,
+          targetRange: {
+            startRow: sourceRange.endRow + 1,
+            endRow: currentEndRow,
+            startCol: sourceRange.startCol,
+            endCol: sourceRange.endCol,
+          },
+        });
+      }
+    };
+
+    document.addEventListener('pointermove', onPointerMove);
+    document.addEventListener('pointerup', onPointerUp);
   }
 
   destroy(): void {

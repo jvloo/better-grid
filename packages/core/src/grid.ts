@@ -1859,6 +1859,41 @@ export function createGrid<
       // Selection layer (inside cell container so offsets align with cells)
       selectionLayer = new SelectionLayer(cellContainer);
 
+      // Fill handle drag → copy source values to target rows
+      selectionLayer.setFillDragHandler(({ sourceRange, targetRange }) => {
+        const state = store.getState();
+        const columns = state.columns;
+        for (let row = targetRange.startRow; row <= targetRange.endRow; row++) {
+          for (let col = sourceRange.startCol; col <= sourceRange.endCol; col++) {
+            const column = columns[col];
+            if (!column || column.editable === false) continue;
+            // Copy from the corresponding source row (cycle through source rows)
+            const sourceRowCount = sourceRange.endRow - sourceRange.startRow + 1;
+            const sourceRowIdx = sourceRange.startRow + ((row - targetRange.startRow) % sourceRowCount);
+            const sourceRow = state.data[sourceRowIdx];
+            if (!sourceRow) continue;
+            let value: unknown;
+            if (column.accessorKey) {
+              value = (sourceRow as Record<string, unknown>)[column.accessorKey];
+            }
+            if (value !== undefined) {
+              instance.updateCell(row, column.id, value);
+            }
+          }
+        }
+        // Extend selection to include filled rows
+        store.setSelection({
+          active: store.getState().selection.active,
+          ranges: [{
+            startRow: sourceRange.startRow,
+            endRow: targetRange.endRow,
+            startCol: sourceRange.startCol,
+            endCol: sourceRange.endCol,
+          }],
+        });
+        scheduleRender();
+      });
+
       // Events — scroll on fakeScrollbar, wheel forwarded from viewport
       fakeScrollbar.addEventListener('scroll', handleScroll, { passive: true });
       viewport.addEventListener('wheel', handleWheel, { passive: false });
