@@ -50,11 +50,11 @@ const badgeRenderer: CellTypeRenderer = {
 
     const span = document.createElement('span');
     span.style.display = 'inline-block';
-    span.style.padding = '2px 10px';
+    span.style.padding = '2px 8px';
     span.style.borderRadius = '12px';
     span.style.fontSize = '12px';
-    span.style.fontWeight = '500';
     span.style.lineHeight = 'normal';
+    span.style.pointerEvents = 'none';
 
     const options = context.column.options as
       | Array<{ label: string; value: string | number | boolean; color?: string; bg?: string }>
@@ -63,12 +63,12 @@ const badgeRenderer: CellTypeRenderer = {
 
     if (match) {
       span.textContent = match.label;
-      span.style.color = match.color ?? '#fff';
-      span.style.backgroundColor = match.bg ?? '#6b7280';
+      span.style.color = match.color ?? '#666';
+      span.style.backgroundColor = match.bg ?? '#f5f5f5';
     } else {
       span.textContent = context.value != null ? String(context.value) : '';
-      span.style.color = '#374151';
-      span.style.backgroundColor = '#e5e7eb';
+      span.style.color = '#666';
+      span.style.backgroundColor = '#f5f5f5';
     }
 
     container.appendChild(span);
@@ -104,34 +104,40 @@ const progressRenderer: CellTypeRenderer = {
     else if (pct > lowThreshold) barColor = '#eab308';
     else barColor = '#ef4444';
 
+    // Thin bar + side text (matching TaskTracker pattern)
     const wrapper = document.createElement('div');
-    wrapper.style.height = '20px';
-    wrapper.style.borderRadius = '4px';
-    wrapper.style.background = '#e5e7eb';
-    wrapper.style.overflow = 'hidden';
-    wrapper.style.position = 'relative';
+    wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.gap = '6px';
     wrapper.style.width = '100%';
+    wrapper.style.pointerEvents = 'none';
+
+    const track = document.createElement('div');
+    track.style.flex = '1';
+    track.style.height = '6px';
+    track.style.background = '#eee';
+    track.style.borderRadius = '3px';
+    track.style.overflow = 'hidden';
 
     const bar = document.createElement('div');
-    bar.style.height = '100%';
     bar.style.width = `${pct}%`;
+    bar.style.height = '100%';
     bar.style.backgroundColor = barColor;
-    bar.style.borderRadius = '4px';
-    bar.style.transition = 'width 0.2s ease';
+    bar.style.borderRadius = '3px';
+
+    track.appendChild(bar);
 
     const text = document.createElement('span');
     text.textContent = `${Math.round(pct)}%`;
-    text.style.position = 'absolute';
-    text.style.inset = '0';
-    text.style.display = 'flex';
-    text.style.alignItems = 'center';
-    text.style.justifyContent = 'center';
     text.style.fontSize = '11px';
     text.style.fontWeight = '600';
     text.style.color = '#1f2937';
     text.style.lineHeight = 'normal';
 
-    wrapper.appendChild(bar);
+    text.style.color = '#888';
+    text.style.minWidth = '28px';
+
+    wrapper.appendChild(track);
     wrapper.appendChild(text);
     container.appendChild(wrapper);
   },
@@ -154,10 +160,11 @@ const booleanRenderer: CellTypeRenderer = {
 
     if (display === 'yesno') {
       container.textContent = truthy ? 'Yes' : 'No';
-      container.style.color = truthy ? '#16a34a' : '#9ca3af';
+      container.style.color = truthy ? '#2e7d32' : '#c62828';
     } else {
       container.textContent = truthy ? '\u2713' : '\u2717';
-      container.style.color = truthy ? '#16a34a' : '#9ca3af';
+      container.style.color = truthy ? '#2e7d32' : '#c62828';
+      container.style.fontWeight = '600';
     }
   },
   getStringValue(context: CellRenderContext): string {

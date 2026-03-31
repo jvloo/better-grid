@@ -107,9 +107,12 @@ export function search(options?: SearchOptions): GridPlugin<'search'> {
           }],
         });
 
-        // Scroll into view — the grid should auto-scroll to the active cell
+        // Scroll the matched cell into view
+        if (typeof ctx.grid.scrollTo === 'function') {
+          ctx.grid.scrollTo(match.rowIndex, match.colIndex);
+        }
         ctx.grid.refresh();
-        applyHighlights();
+        requestAnimationFrame(applyHighlights);
       }
 
       function nextMatch(): void {

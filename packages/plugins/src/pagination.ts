@@ -195,7 +195,9 @@ export function pagination(options?: PaginationOptions): GridPlugin<'pagination'
       }
 
       // Initialize after a small delay to let the grid mount
+      // Guard against React StrictMode double-init
       setTimeout(() => {
+        if (paginationBar) return; // already initialized
         init();
         createPaginationBar();
       }, 0);

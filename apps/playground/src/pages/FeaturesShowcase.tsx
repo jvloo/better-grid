@@ -69,9 +69,9 @@ export function FeaturesShowcase() {
         id: 'status', accessorKey: 'status', header: 'Status', width: 110,
         cellType: 'badge',
         options: [
-          { label: 'Active', value: 'active', color: '#fff', bg: '#22c55e' },
-          { label: 'Completed', value: 'completed', color: '#fff', bg: '#3b82f6' },
-          { label: 'On Hold', value: 'on-hold', color: '#fff', bg: '#f59e0b' },
+          { label: 'Active', value: 'active', color: '#2e7d32', bg: '#e8f5e9' },
+          { label: 'Completed', value: 'completed', color: '#1565c0', bg: '#e3f2fd' },
+          { label: 'On Hold', value: 'on-hold', color: '#e65100', bg: '#fff3e0' },
         ],
       },
       { id: 'progress', accessorKey: 'progress', header: 'Progress', width: 130, cellType: 'progress' },
@@ -86,9 +86,9 @@ export function FeaturesShowcase() {
         id: 'priority', accessorKey: 'priority', header: 'Priority', width: 100,
         cellType: 'badge',
         options: [
-          { label: 'High', value: 'High', color: '#fff', bg: '#ef4444' },
-          { label: 'Medium', value: 'Medium', color: '#fff', bg: '#f59e0b' },
-          { label: 'Low', value: 'Low', color: '#fff', bg: '#6b7280' },
+          { label: 'High', value: 'High', color: '#c62828', bg: '#ffebee' },
+          { label: 'Medium', value: 'Medium', color: '#e65100', bg: '#fff3e0' },
+          { label: 'Low', value: 'Low', color: '#666', bg: '#f5f5f5' },
         ],
       },
     ],
@@ -119,7 +119,7 @@ export function FeaturesShowcase() {
   });
 
   const handleExport = useCallback(() => {
-    const api = grid.getPluginApi<{ exportToCsv: () => void }>('export');
+    const api = grid.getPlugin<{ exportToCsv: () => void }>('export');
     api?.exportToCsv();
   }, [grid]);
 
@@ -129,7 +129,8 @@ export function FeaturesShowcase() {
         <div>
           <h1 style={{ fontSize: 24, margin: 0 }}>Features Showcase</h1>
           <p style={{ margin: '4px 0 0', color: '#666', fontSize: 13 }}>
-            All plugins active: cellRenderers, inline editing, sorting, filtering, clipboard (Ctrl+C/V/D), undo/redo (Ctrl+Z/Y), search (Ctrl+F), export, pagination.
+            All plugins active. Try: <strong>Ctrl+F</strong> search, <strong>Ctrl+Z/Y</strong> undo/redo, <strong>Ctrl+C/V</strong> clipboard.
+            Select a range (click + shift+click), then <strong>Ctrl+D</strong> fill-down or <strong>Ctrl+Shift+D</strong> fill-series.
           </p>
         </div>
         <button
