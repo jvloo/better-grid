@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { BetterGrid } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
-import { formatting, sorting, mergeCells } from '@better-grid/plugins';
-import type { MergeCellDef } from '@better-grid/plugins';
+import { formatting, sorting } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface SalesRow {
@@ -63,25 +62,6 @@ const sampleData: SalesRow[] = products.map((product, i) => {
     total: jan + feb + mar + apr + may + jun + jul + aug + sep + oct + nov + dec,
   };
 });
-
-// Sort by region for natural grouping + merge
-sampleData.sort((a, b) => a.region.localeCompare(b.region));
-// Re-number ids after sort
-sampleData.forEach((r, i) => { r.id = i + 1; });
-
-function computeRegionMerges(rows: SalesRow[]): MergeCellDef[] {
-  const merges: MergeCellDef[] = [];
-  let i = 0;
-  while (i < rows.length) {
-    let j = i + 1;
-    while (j < rows.length && rows[j]!.region === rows[i]!.region) j++;
-    if (j - i > 1) merges.push({ row: i, col: 1, rowSpan: j - i }); // col 1 = region
-    i = j;
-  }
-  return merges;
-}
-
-const regionMerges = computeRegionMerges(sampleData);
 
 const monthKeys = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] as const;
 
@@ -256,7 +236,6 @@ export function FrozenPinned() {
     () => [
       formatting({ locale: 'en-US', currencyCode: 'USD' }),
       sorting(),
-      mergeCells({ cells: regionMerges }),
     ],
     [],
   );
