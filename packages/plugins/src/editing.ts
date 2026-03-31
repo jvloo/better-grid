@@ -407,7 +407,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             if (!floatActive) return;
             if (floatBox.contains(e.target as Node)) return;
             cleanupFloat();
-            if (editingCell) commitEdit();
+            if (editingCell) {
+              commitEdit();
+              // Clear multi-range selection so the next click starts fresh
+              ctx.grid.clearSelection();
+            }
           }
           // Delay to avoid the dblclick that opened the editor
           setTimeout(() => document.addEventListener('mousedown', onOutsideClick, true), 0);
