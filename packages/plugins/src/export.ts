@@ -87,7 +87,8 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
 
       function resolveType(column: ColumnDef, value: unknown): ExportCell['type'] {
         const ct = column.cellType;
-        if (ct === 'currency' || ct === 'number' || ct === 'bigint') return 'number';
+        if (ct === 'currency') return 'currency';
+        if (ct === 'number' || ct === 'bigint') return 'number';
         if (ct === 'percent') return 'percent';
         if (ct === 'date') return 'date';
         if (ct === 'boolean') return 'boolean';
@@ -288,10 +289,59 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
       function buildXlsx(data: ExportData): Uint8Array {
         const colCount = data.columns.length;
 
-        // Build styles
-        const styles = buildStyles();
+        // ── Dynamic style registry ──
+        // Each unique combo of (numFmtId, fontId, fillId, hAlign, vAlign) gets an xf entry.
+        // Font 0 = normal, 1 = bold. Fill 0 = none, 1 = gray125, 2 = light gray.
+        const NUM_FMT_GENERAL = 0;
+        const NUM_FMT_NUMBER = 164;  // #,##0
+        const NUM_FMT_CURRENCY = 165; // $#,##0.00
+        const NUM_FMT_PERCENT = 10;   // 0.00% (built-in)
+        const NUM_FMT_DATE = 166;     // yyyy-mm-dd
 
-        // Build shared strings
+        type StyleKey = string;
+        const styleMap = new Map<StyleKey, number>();
+        const styleEntries: { numFmtId: number; fontId: number; fillId: number; hAlign: string; vAlign: string }[] = [];
+
+        function getStyleId(numFmtId: number, fontId: number, fillId: number, hAlign?: string, vAlign?: string): number {
+          const ha = hAlign ?? '';
+          const va = vAlign ?? '';
+          const key = `${numFmtId}:${fontId}:${fillId}:${ha}:${va}`;
+          const existing = styleMap.get(key);
+          if (existing !== undefined) return existing;
+          const id = styleEntries.length;
+          styleEntries.push({ numFmtId, fontId, fillId, hAlign: ha, vAlign: va });
+          styleMap.set(key, id);
+          return id;
+        }
+
+        // Pre-register base style (index 0 = default)
+        getStyleId(NUM_FMT_GENERAL, 0, 0);
+
+        function cellStyleId(cell: ExportCell, colIdx: number): number {
+          const col = data.columns[colIdx];
+          const hAlign = cell.align ?? col?.align ?? '';
+          // Map CSS vertical-align to Excel: top→top, middle→center, bottom→bottom
+          const rawVa = col?.align === 'center' ? '' : ''; // vertical align from column not commonly used
+          const vAlign = rawVa === 'middle' ? 'center' : rawVa;
+
+          let numFmt = NUM_FMT_GENERAL;
+          switch (cell.type) {
+            case 'currency': numFmt = NUM_FMT_CURRENCY; break;
+            case 'percent': numFmt = NUM_FMT_PERCENT; break;
+            case 'date': numFmt = NUM_FMT_DATE; break;
+            case 'number': numFmt = NUM_FMT_NUMBER; break;
+          }
+
+          const fontId = cell.pinned ? 1 : 0;
+          const fillId = cell.pinned ? 2 : 0;
+          return getStyleId(numFmt, fontId, fillId, hAlign, vAlign);
+        }
+
+        function headerStyleId(hAlign?: string): number {
+          return getStyleId(NUM_FMT_GENERAL, 1, 2, hAlign ?? 'center');
+        }
+
+        // ── Shared strings ──
         const strings: string[] = [];
         const stringMap = new Map<string, number>();
         function addString(s: string): number {
@@ -303,33 +353,26 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
           return idx;
         }
 
-        // Style indices:
-        // 0 = default, 1 = header (bold, gray bg), 2 = number, 3 = currency,
-        // 4 = percent, 5 = date, 6 = pinned (bold, gray bg), 7 = frozen bg
-        const STYLE_DEFAULT = 0;
-        const STYLE_HEADER = 1;
-        const STYLE_NUMBER = 2;
-        const STYLE_CURRENCY = 3;
-        const STYLE_PERCENT = 4;
-        const STYLE_DATE = 5;
-        const STYLE_PINNED = 6;
-
-        function cellStyleId(cell: ExportCell): number {
-          if (cell.pinned) return STYLE_PINNED;
-          switch (cell.type) {
-            case 'currency': return STYLE_CURRENCY;
-            case 'percent': return STYLE_PERCENT;
-            case 'date': return STYLE_DATE;
-            case 'number': return STYLE_NUMBER;
-            default: return STYLE_DEFAULT;
+        // ── Data validations (dropdown columns) ──
+        const validations: { col: number; options: string[] }[] = [];
+        for (let i = 0; i < data.columns.length; i++) {
+          const col = data.columns[i]!;
+          // Check if the source column has options (for dropdown)
+          const state = ctx.grid.getState();
+          const colDef = state.columns[i];
+          if (colDef?.options && Array.isArray(colDef.options) && colDef.options.length > 0) {
+            const opts = colDef.options.map(o =>
+              typeof o === 'object' && o !== null && 'label' in o ? o.label : String(o)
+            );
+            validations.push({ col: i, options: opts });
           }
         }
 
-        // Build sheet XML
+        // ── Build sheet XML ──
         let sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
         sheetXml += '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
 
-        // Freeze pane (freeze header rows + frozen columns) — must precede cols and sheetData
+        // Freeze pane
         const freezeRow = data.headerRows.length;
         const freezeCol = data.columns.filter(c => c.frozen).length;
         if (freezeRow > 0 || freezeCol > 0) {
@@ -359,15 +402,12 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
           for (const cell of hr) {
             const ref = colRef(colNum - 1) + rowNum;
             const si = addString(cell.value);
-            sheetXml += `<c r="${ref}" t="s" s="${STYLE_HEADER}"><v>${si}</v></c>`;
-
-            // Track merges
+            const sid = headerStyleId();
+            sheetXml += `<c r="${ref}" t="s" s="${sid}"><v>${si}</v></c>`;
             const cs = cell.colSpan ?? 1;
             const rs = cell.rowSpan ?? 1;
             if (cs > 1 || rs > 1) {
-              const endCol = colNum + cs - 1;
-              const endRow = rowNum + rs - 1;
-              mergeCells.push(`${ref}:${colRef(endCol - 1)}${endRow}`);
+              mergeCells.push(`${ref}:${colRef(colNum + cs - 2)}${rowNum + rs - 1}`);
             }
             colNum += cs;
           }
@@ -375,29 +415,23 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
           rowNum++;
         }
 
-        // Helper to write a data row
+        // Data row writer
         function writeRow(cells: ExportCell[]): void {
           sheetXml += `<row r="${rowNum}">`;
           for (let c = 0; c < cells.length; c++) {
             const cell = cells[c]!;
             const ref = colRef(c) + rowNum;
-            const sid = cellStyleId(cell);
+            const sid = cellStyleId(cell, c);
             const val = cell.value;
 
             if (typeof val === 'number' && !isNaN(val)) {
-              if (cell.type === 'percent') {
-                // Excel stores percent as decimal (0.05 = 5%)
-                sheetXml += `<c r="${ref}" s="${sid}"><v>${val}</v></c>`;
-              } else {
-                sheetXml += `<c r="${ref}" s="${sid}"><v>${val}</v></c>`;
-              }
+              sheetXml += `<c r="${ref}" s="${sid}"><v>${val}</v></c>`;
             } else if (typeof val === 'boolean') {
               sheetXml += `<c r="${ref}" t="b" s="${sid}"><v>${val ? 1 : 0}</v></c>`;
             } else if (cell.type === 'date' && typeof val === 'string' && val) {
-              // Convert ISO date to Excel serial number
               const serial = dateToExcelSerial(val);
               if (serial) {
-                sheetXml += `<c r="${ref}" s="${STYLE_DATE}"><v>${serial}</v></c>`;
+                sheetXml += `<c r="${ref}" s="${sid}"><v>${serial}</v></c>`;
               } else {
                 const si = addString(cell.formattedValue);
                 sheetXml += `<c r="${ref}" t="s" s="${sid}"><v>${si}</v></c>`;
@@ -411,11 +445,8 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
           rowNum++;
         }
 
-        // Pinned top rows
         for (const row of data.pinnedTopRows) writeRow(row);
-        // Data rows
         for (const row of data.rows) writeRow(row);
-        // Pinned bottom rows
         for (const row of data.pinnedBottomRows) writeRow(row);
 
         sheetXml += '</sheetData>';
@@ -423,10 +454,22 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
         // Merge cells
         if (mergeCells.length > 0) {
           sheetXml += `<mergeCells count="${mergeCells.length}">`;
-          for (const mc of mergeCells) {
-            sheetXml += `<mergeCell ref="${mc}"/>`;
-          }
+          for (const mc of mergeCells) sheetXml += `<mergeCell ref="${mc}"/>`;
           sheetXml += '</mergeCells>';
+        }
+
+        // Data validations (dropdown lists)
+        if (validations.length > 0) {
+          const dataRowStart = freezeRow + 1;
+          const dataRowEnd = rowNum - 1;
+          sheetXml += `<dataValidations count="${validations.length}">`;
+          for (const v of validations) {
+            const colLetter = colRef(v.col);
+            const sqref = `${colLetter}${dataRowStart}:${colLetter}${dataRowEnd}`;
+            const formula = escapeXml('"' + v.options.join(',') + '"');
+            sheetXml += `<dataValidation type="list" allowBlank="1" showDropDown="0" sqref="${sqref}"><formula1>${formula}</formula1></dataValidation>`;
+          }
+          sheetXml += '</dataValidations>';
         }
 
         sheetXml += '</worksheet>';
@@ -439,13 +482,16 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
         }
         ssXml += '</sst>';
 
+        // Build dynamic styles XML
+        const stylesXml = buildDynamicStyles(styleEntries);
+
         // Package into ZIP (minimal .xlsx)
         return createZip({
           '[Content_Types].xml': contentTypesXml(),
           '_rels/.rels': relsXml(),
           'xl/_rels/workbook.xml.rels': wbRelsXml(),
           'xl/workbook.xml': workbookXml(),
-          'xl/styles.xml': styles,
+          'xl/styles.xml': stylesXml,
           'xl/sharedStrings.xml': ssXml,
           'xl/worksheets/sheet1.xml': sheetXml,
         });
@@ -510,37 +556,56 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
 </workbook>`;
       }
 
-      function buildStyles(): string {
-        return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <numFmts count="3">
-    <numFmt numFmtId="164" formatCode="#,##0"/>
-    <numFmt numFmtId="165" formatCode="$#,##0.00"/>
-    <numFmt numFmtId="166" formatCode="yyyy-mm-dd"/>
-  </numFmts>
-  <fonts count="2">
-    <font><sz val="11"/><name val="Calibri"/></font>
-    <font><b/><sz val="11"/><name val="Calibri"/></font>
-  </fonts>
-  <fills count="3">
-    <fill><patternFill patternType="none"/></fill>
-    <fill><patternFill patternType="gray125"/></fill>
-    <fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/></patternFill></fill>
-  </fills>
-  <borders count="1">
-    <border><left/><right/><top/><bottom/><diagonal/></border>
-  </borders>
-  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  <cellXfs count="7">
-    <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
-    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" applyFont="1" applyFill="1"/>
-    <xf numFmtId="164" fontId="0" fillId="0" borderId="0" applyNumberFormat="1"/>
-    <xf numFmtId="165" fontId="0" fillId="0" borderId="0" applyNumberFormat="1"/>
-    <xf numFmtId="10" fontId="0" fillId="0" borderId="0" applyNumberFormat="1"/>
-    <xf numFmtId="166" fontId="0" fillId="0" borderId="0" applyNumberFormat="1"/>
-    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" applyFont="1" applyFill="1"/>
-  </cellXfs>
-</styleSheet>`;
+      function buildDynamicStyles(entries: { numFmtId: number; fontId: number; fillId: number; hAlign: string; vAlign: string }[]): string {
+        let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+        xml += '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+
+        // Custom number formats (164+)
+        xml += '<numFmts count="3">';
+        xml += '<numFmt numFmtId="164" formatCode="#,##0"/>';
+        xml += '<numFmt numFmtId="165" formatCode="$#,##0.00"/>';
+        xml += '<numFmt numFmtId="166" formatCode="yyyy-mm-dd"/>';
+        xml += '</numFmts>';
+
+        // Fonts: 0=normal, 1=bold
+        xml += '<fonts count="2">';
+        xml += '<font><sz val="11"/><name val="Calibri"/></font>';
+        xml += '<font><b/><sz val="11"/><name val="Calibri"/></font>';
+        xml += '</fonts>';
+
+        // Fills: 0=none, 1=gray125(required), 2=light gray solid
+        xml += '<fills count="3">';
+        xml += '<fill><patternFill patternType="none"/></fill>';
+        xml += '<fill><patternFill patternType="gray125"/></fill>';
+        xml += '<fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/></patternFill></fill>';
+        xml += '</fills>';
+
+        xml += '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>';
+        xml += '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>';
+
+        // Dynamic cellXfs — one entry per unique style combo
+        xml += `<cellXfs count="${entries.length}">`;
+        for (const e of entries) {
+          const applyNum = e.numFmtId !== 0 ? ' applyNumberFormat="1"' : '';
+          const applyFont = e.fontId !== 0 ? ' applyFont="1"' : '';
+          const applyFill = e.fillId !== 0 ? ' applyFill="1"' : '';
+          const hasAlign = e.hAlign || e.vAlign;
+
+          if (hasAlign) {
+            xml += `<xf numFmtId="${e.numFmtId}" fontId="${e.fontId}" fillId="${e.fillId}" borderId="0"${applyNum}${applyFont}${applyFill} applyAlignment="1">`;
+            xml += '<alignment';
+            if (e.hAlign) xml += ` horizontal="${e.hAlign}"`;
+            if (e.vAlign) xml += ` vertical="${e.vAlign}"`;
+            xml += '/>';
+            xml += '</xf>';
+          } else {
+            xml += `<xf numFmtId="${e.numFmtId}" fontId="${e.fontId}" fillId="${e.fillId}" borderId="0"${applyNum}${applyFont}${applyFill}/>`;
+          }
+        }
+        xml += '</cellXfs>';
+
+        xml += '</styleSheet>';
+        return xml;
       }
 
       // ─── Minimal ZIP implementation ───────────────────────────────────
