@@ -65,13 +65,18 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
     init(ctx: PluginContext) {
       let editingCell: CellPosition | null = null;
       let activeEditor: HTMLInputElement | null = null;
+      let activeFloatBox: HTMLElement | null = null;
       let activeDropdownPanel: HTMLElement | null = null;
       let activeDropdownOptions: DropdownOption[] | null = null;
       let originalValue: unknown = null;
 
+      function getGridContainer(): HTMLElement {
+        return ctx.grid.getContainer() ?? document.body;
+      }
+
       function getCellElement(pos: CellPosition): HTMLElement | null {
         const selector = `.bg-cell[data-row="${pos.rowIndex}"][data-col="${pos.colIndex}"]`;
-        return document.querySelector(selector);
+        return getGridContainer().querySelector(selector);
       }
 
       // -----------------------------------------------------------------------
@@ -140,7 +145,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         cellEl.classList.add('bg-cell--editing');
 
         // Hide fill handle during editing
-        const fillHandle = document.querySelector('.bg-fill-handle') as HTMLElement | null;
+        const fillHandle = getGridContainer().querySelector('.bg-fill-handle') as HTMLElement | null;
         if (fillHandle) fillHandle.style.display = 'none';
 
         if (isAutocomplete) {
@@ -315,6 +320,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           }
 
           document.body.appendChild(floatBox);
+          activeFloatBox = floatBox;
 
           function autoSize(): void {
             measureSpan.textContent = ed.textContent || ' ';
@@ -416,6 +422,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             floatActive = false;
             measureSpan.remove();
             floatBox.remove();
+            activeFloatBox = null;
             if (scrollEl) scrollEl.removeEventListener('scroll', onScroll);
             document.removeEventListener('mousedown', onOutsideClick, true);
           }
@@ -584,6 +591,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
         floatBox.appendChild(input);
         document.body.appendChild(floatBox);
+        activeFloatBox = floatBox;
 
         input.focus();
 
@@ -617,6 +625,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           if (!active) return;
           active = false;
           floatBox.remove();
+          activeFloatBox = null;
           document.removeEventListener('mousedown', onOutsideClick, true);
         }
 
@@ -1262,7 +1271,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         }
 
         // Remove floating edit box if present
-        document.querySelectorAll('.bg-cell-editor-float').forEach(el => el.remove());
+        if (activeFloatBox) {
+          activeFloatBox.remove();
+          activeFloatBox = null;
+        }
 
         if (activeEditor) {
           activeEditor.removeEventListener('keydown', handleEditorKeydown);
@@ -1287,11 +1299,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         requestAnimationFrame(() => {
           ctx.grid.refresh();
           // Show fill handle again
-          const fh = document.querySelector('.bg-fill-handle') as HTMLElement | null;
+          const gc = getGridContainer();
+          const fh = gc.querySelector('.bg-fill-handle') as HTMLElement | null;
           if (fh) fh.style.display = 'block';
           // Refocus the grid container so keyboard navigation resumes
-          const gridEl = document.querySelector('.bg-grid') as HTMLElement | null;
-          gridEl?.focus();
+          gc.focus();
         });
       }
 

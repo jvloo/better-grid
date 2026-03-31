@@ -67,6 +67,8 @@ export function createGrid<
   let selectionLayer: SelectionLayer | null = null;
   let pinnedTopContainer: HTMLElement | null = null;
   let pinnedBottomContainer: HTMLElement | null = null;
+  let frozenPinnedTopContainer: HTMLElement | null = null;
+  let frozenPinnedBottomContainer: HTMLElement | null = null;
   let freezeClipHandle: HTMLElement | null = null;
   let freezeClipIndicator: HTMLElement | null = null;
   /** Current clip width in pixels. null = no clip active (full frozen width). */
@@ -379,9 +381,10 @@ export function createGrid<
       // Update frozen overlay width and clip scroll container
       const frozenWidth = measurements.colOffsets[frozenCols]!;
       frozenColOverlay!.style.width = `${frozenWidth}px`;
-      // Match content height so shadow doesn't extend past data
-      const contentHeight = measurements.totalHeight + headerHeight;
-      frozenColOverlay!.style.height = `${Math.min(contentHeight, viewport!.clientHeight)}px`;
+      // Match content height including pinned rows so frozen overlay covers full viewport
+      const contentHeight = measurements.totalHeight + headerHeight + pinnedTopH + pinnedBottomH;
+      const frozenH = Math.min(contentHeight, viewport!.clientHeight + pinnedBottomH);
+      frozenColOverlay!.style.height = `${frozenH}px`;
       frozenColOverlay!.style.bottom = 'auto';
     }
 
@@ -430,19 +433,48 @@ export function createGrid<
 
     // Render pinned rows (always re-render — cheap since typically 1-3 rows)
     if (pinnedTopContainer) {
-      renderPinnedRows(pinnedTopContainer, state.pinnedTopRows, state.columns, measurements);
-      pinnedTopContainer.style.width = `${measurements.totalWidth}px`;
-      pinnedTopContainer.style.transform = `translate3d(${-state.scrollLeft - clipOffset}px, 0, 0)`;
+      const wrapper = pinnedTopContainer.parentElement;
+      if (pinnedTopH > 0) {
+        renderPinnedRows(pinnedTopContainer, state.pinnedTopRows, state.columns, measurements, frozenCols);
+        pinnedTopContainer.style.height = `${pinnedTopH}px`;
+        pinnedTopContainer.style.width = `${measurements.totalWidth}px`;
+        pinnedTopContainer.style.transform = `translate3d(${-state.scrollLeft - clipOffset}px, 0, 0)`;
+        if (wrapper) { wrapper.style.display = ''; wrapper.style.height = `${pinnedTopH}px`; }
+      } else if (wrapper) {
+        wrapper.style.display = 'none'; wrapper.style.height = '0';
+      }
     }
     if (pinnedBottomContainer) {
-      renderPinnedRows(pinnedBottomContainer, state.pinnedBottomRows, state.columns, measurements);
-      pinnedBottomContainer.style.width = `${measurements.totalWidth}px`;
-      pinnedBottomContainer.style.transform = `translate3d(${-state.scrollLeft - clipOffset}px, 0, 0)`;
+      const wrapper = pinnedBottomContainer.parentElement;
+      if (pinnedBottomH > 0) {
+        renderPinnedRows(pinnedBottomContainer, state.pinnedBottomRows, state.columns, measurements, frozenCols);
+        pinnedBottomContainer.style.height = `${pinnedBottomH}px`;
+        pinnedBottomContainer.style.width = `${measurements.totalWidth}px`;
+        pinnedBottomContainer.style.transform = `translate3d(${-state.scrollLeft - clipOffset}px, 0, 0)`;
+        if (wrapper) { wrapper.style.display = ''; wrapper.style.height = `${pinnedBottomH}px`; }
+      } else if (wrapper) {
+        wrapper.style.display = 'none'; wrapper.style.height = '0';
+      }
+    }
+    // Render frozen pinned rows (frozen columns only, no horizontal scroll)
+    if (frozenPinnedTopContainer && frozenCols > 0) {
+      renderPinnedRows(frozenPinnedTopContainer, state.pinnedTopRows, state.columns, measurements, 0, frozenCols);
+      frozenPinnedTopContainer.style.height = `${pinnedTopH}px`;
+      frozenPinnedTopContainer.style.display = pinnedTopH > 0 ? '' : 'none';
+    }
+    if (frozenPinnedBottomContainer && frozenCols > 0) {
+      renderPinnedRows(frozenPinnedBottomContainer, state.pinnedBottomRows, state.columns, measurements, 0, frozenCols);
+      frozenPinnedBottomContainer.style.height = `${pinnedBottomH}px`;
+      frozenPinnedBottomContainer.style.display = pinnedBottomH > 0 ? '' : 'none';
     }
 
     // Update cell container top offset (may change when pinned top rows are set dynamically)
     if (cellContainer) {
       cellContainer.style.top = `${headerHeight + pinnedTopH}px`;
+    }
+    // Update frozen cell overlay top offset to match
+    if (frozenCellOverlay) {
+      frozenCellOverlay.style.top = `${headerHeight + pinnedTopH}px`;
     }
 
     // Render selection layer
@@ -462,27 +494,21 @@ export function createGrid<
     rows: TData[],
     columns: ColumnDef<TData>[],
     measurements: LayoutMeasurements,
+    startCol?: number,
+    endCol?: number,
   ): void {
     pinnedContainer.innerHTML = '';
-    const wrapper = pinnedContainer.parentElement;
-    if (rows.length === 0) {
-      if (wrapper) {
-        wrapper.style.display = 'none';
-        wrapper.style.height = '0';
-      }
-      return;
-    }
-    if (wrapper) wrapper.style.display = '';
+    const colStart = startCol ?? 0;
+    const colEnd = endCol ?? columns.length;
+    if (rows.length === 0) return;
 
     const rowH = typeof options.rowHeight === 'number' ? options.rowHeight : DEFAULT_ROW_HEIGHT;
-    let totalH = 0;
 
     for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
       const rowData = rows[rowIdx]!;
       const top = rowIdx * rowH;
-      totalH = top + rowH;
 
-      for (let col = 0; col < columns.length; col++) {
+      for (let col = colStart; col < colEnd; col++) {
         const column = columns[col]!;
         const left = snapToDevicePixel(measurements.colOffsets[col]!);
         const width = snapToDevicePixel(measurements.colOffsets[col + 1]!) - left;
@@ -532,9 +558,6 @@ export function createGrid<
         pinnedContainer.appendChild(cell);
       }
     }
-
-    pinnedContainer.style.height = `${totalH}px`;
-    if (wrapper) wrapper.style.height = `${totalH}px`;
   }
 
   function getPinnedTopHeight(): number {
@@ -1812,18 +1835,51 @@ export function createGrid<
         // Frozen header row
         frozenHeaderOverlay = document.createElement('div');
         frozenHeaderOverlay.className = 'bg-grid__frozen-headers';
-        frozenHeaderOverlay.style.position = 'relative';
+        frozenHeaderOverlay.style.position = 'absolute';
+        frozenHeaderOverlay.style.top = '0';
+        frozenHeaderOverlay.style.left = '0';
+        frozenHeaderOverlay.style.right = '0';
         frozenHeaderOverlay.style.height = `${headerHeight}px`;
         frozenHeaderOverlay.style.zIndex = '12';
         frozenHeaderOverlay.style.background = 'var(--bg-header-bg, #f8f9fa)';
 
-        // Frozen data cells
+        // Frozen pinned top rows (between header and data cells)
+        frozenPinnedTopContainer = document.createElement('div');
+        frozenPinnedTopContainer.className = 'bg-grid__frozen-pinned-top';
+        frozenPinnedTopContainer.style.position = 'absolute';
+        frozenPinnedTopContainer.style.top = `${headerHeight}px`;
+        frozenPinnedTopContainer.style.left = '0';
+        frozenPinnedTopContainer.style.right = '0';
+        frozenPinnedTopContainer.style.zIndex = '5';
+        const fpTopH = getPinnedTopHeight();
+        frozenPinnedTopContainer.style.height = `${fpTopH}px`;
+        if (fpTopH === 0) frozenPinnedTopContainer.style.display = 'none';
+
+        // Frozen data cells (scrolls vertically via transform)
         frozenCellOverlay = document.createElement('div');
         frozenCellOverlay.className = 'bg-grid__frozen-cells';
-        frozenCellOverlay.style.position = 'relative';
+        frozenCellOverlay.style.position = 'absolute';
+        frozenCellOverlay.style.top = `${headerHeight + fpTopH}px`;
+        frozenCellOverlay.style.left = '0';
+        frozenCellOverlay.style.right = '0';
+        frozenCellOverlay.style.overflow = 'hidden';
+
+        // Frozen pinned bottom rows (fixed at bottom of viewport)
+        frozenPinnedBottomContainer = document.createElement('div');
+        frozenPinnedBottomContainer.className = 'bg-grid__frozen-pinned-bottom';
+        frozenPinnedBottomContainer.style.position = 'absolute';
+        frozenPinnedBottomContainer.style.bottom = '0';
+        frozenPinnedBottomContainer.style.left = '0';
+        frozenPinnedBottomContainer.style.right = '0';
+        frozenPinnedBottomContainer.style.zIndex = '5';
+        const fpBottomH = getPinnedBottomHeight();
+        frozenPinnedBottomContainer.style.height = `${fpBottomH}px`;
+        if (fpBottomH === 0) frozenPinnedBottomContainer.style.display = 'none';
 
         frozenColOverlay.appendChild(frozenHeaderOverlay);
+        frozenColOverlay.appendChild(frozenPinnedTopContainer);
         frozenColOverlay.appendChild(frozenCellOverlay);
+        frozenColOverlay.appendChild(frozenPinnedBottomContainer);
       }
 
       container.appendChild(viewport);
@@ -2021,6 +2077,8 @@ export function createGrid<
       frozenCellOverlay = null;
       pinnedTopContainer = null;
       pinnedBottomContainer = null;
+      frozenPinnedTopContainer = null;
+      frozenPinnedBottomContainer = null;
       freezeClipHandle = null;
       freezeClipIndicator = null;
       selectionLayer = null;
@@ -2222,6 +2280,7 @@ export function createGrid<
 
     getPlugin: <T,>(id: string) => pluginRegistry.getPlugin<T>(id),
     getState: () => store.getState(),
+    getContainer: () => container,
 
     batch(fn: () => void): void {
       store.batch(fn);

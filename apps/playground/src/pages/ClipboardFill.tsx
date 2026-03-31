@@ -24,6 +24,16 @@ const data: DataRow[] = [
   { id: 8, month: 'August', revenue: 170000, cost: 88000, profit: 82000, growth: 0.06 },
   { id: 9, month: 'September', revenue: 180000, cost: 92000, profit: 88000, growth: 0.06 },
   { id: 10, month: 'October', revenue: 190000, cost: 97000, profit: 93000, growth: 0.06 },
+  { id: 11, month: 'November', revenue: 200000, cost: 101000, profit: 99000, growth: 0.05 },
+  { id: 12, month: 'December', revenue: 215000, cost: 106000, profit: 109000, growth: 0.08 },
+  { id: 13, month: 'January Y2', revenue: 195000, cost: 99000, profit: 96000, growth: -0.09 },
+  { id: 14, month: 'February Y2', revenue: 205000, cost: 103000, profit: 102000, growth: 0.05 },
+  { id: 15, month: 'March Y2', revenue: 220000, cost: 108000, profit: 112000, growth: 0.07 },
+  { id: 16, month: 'April Y2', revenue: 230000, cost: 113000, profit: 117000, growth: 0.05 },
+  { id: 17, month: 'May Y2', revenue: 240000, cost: 117000, profit: 123000, growth: 0.04 },
+  { id: 18, month: 'June Y2', revenue: 255000, cost: 122000, profit: 133000, growth: 0.06 },
+  { id: 19, month: 'July Y2', revenue: 265000, cost: 127000, profit: 138000, growth: 0.04 },
+  { id: 20, month: 'August Y2', revenue: 275000, cost: 132000, profit: 143000, growth: 0.04 },
 ];
 
 export function ClipboardFill() {

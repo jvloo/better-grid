@@ -29,6 +29,16 @@ const initialData: EditorRow[] = [
   { id: 8, name: 'Dev Board H', price: 5495, quantity: 60, rate: 0.10, startDate: '2026-08-22', category: 'Hardware', assignee: 'Charlie', weight: 0.22, active: true, notes: 'Rev 3.1' },
   { id: 9, name: 'Analytics I', price: 19900, quantity: 5, rate: 0.04, startDate: '2026-09-03', category: 'Software', assignee: 'Diana', weight: 0.0, active: false, notes: 'Trial' },
   { id: 10, name: 'Support J', price: 7500, quantity: 12, rate: 0.09, startDate: '2026-10-15', category: 'Services', assignee: 'Eve', weight: 0.0, active: true, notes: 'Quarterly' },
+  { id: 11, name: 'Adapter K', price: 2250, quantity: 200, rate: 0.06, startDate: '2026-11-01', category: 'Electronics', assignee: 'Alice', weight: 0.15, active: true, notes: 'New supplier' },
+  { id: 12, name: 'Firmware L', price: 34900, quantity: 3, rate: 0.02, startDate: '2026-11-20', category: 'Software', assignee: 'Bob', weight: 0.0, active: false, notes: 'Beta' },
+  { id: 13, name: 'Enclosure M', price: 8900, quantity: 45, rate: 0.11, startDate: '2026-12-05', category: 'Hardware', assignee: 'Charlie', weight: 3.2, active: true, notes: '' },
+  { id: 14, name: 'Hosting N', price: 12000, quantity: 1, rate: 0.18, startDate: '2027-01-10', category: 'Services', assignee: 'Diana', weight: 0.0, active: true, notes: 'Monthly' },
+  { id: 15, name: 'Antenna O', price: 4100, quantity: 150, rate: 0.07, startDate: '2027-01-25', category: 'Electronics', assignee: 'Eve', weight: 0.45, active: false, notes: 'Outdoor' },
+  { id: 16, name: 'API Suite P', price: 59900, quantity: 2, rate: 0.05, startDate: '2027-02-14', category: 'Software', assignee: 'Alice', weight: 0.0, active: true, notes: 'Enterprise' },
+  { id: 17, name: 'Heat Sink Q', price: 1850, quantity: 400, rate: 0.13, startDate: '2027-03-01', category: 'Hardware', assignee: 'Bob', weight: 0.08, active: true, notes: '' },
+  { id: 18, name: 'Training R', price: 15000, quantity: 8, rate: 0.16, startDate: '2027-03-18', category: 'Services', assignee: 'Charlie', weight: 0.0, active: false, notes: 'On-site' },
+  { id: 19, name: 'Fuse Pack S', price: 950, quantity: 1000, rate: 0.03, startDate: '2027-04-05', category: 'Electronics', assignee: 'Diana', weight: 0.02, active: true, notes: 'Bulk' },
+  { id: 20, name: 'Debugger T', price: 27500, quantity: 15, rate: 0.08, startDate: '2027-04-22', category: 'Software', assignee: 'Eve', weight: 0.0, active: true, notes: 'Pro license' },
 ];
 
 function makeColumns(): ColumnDef<EditorRow>[] {

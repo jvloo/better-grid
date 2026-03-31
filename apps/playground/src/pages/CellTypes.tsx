@@ -34,6 +34,11 @@ const data: CellTypeRow[] = [
   { id: 13, name: 'PoE Switch', status: 'active', progress: 67, active: true, rating: 4, change: 7.2, changeInd: 1.8, amount: 24900, pct: 0.34, date: '2025-12-05' },
   { id: 14, name: 'Thermal Cam', status: 'pending', progress: 38, active: false, rating: 3, change: -1.5, changeInd: -0.3, amount: 84900, pct: 0.32, date: '2025-11-30' },
   { id: 15, name: 'Edge Gateway', status: 'active', progress: 78, active: true, rating: 4, change: 21.3, changeInd: 6.0, amount: 34900, pct: 0.38, date: '2026-02-14' },
+  { id: 16, name: 'Power Strip', status: 'pending', progress: 52, active: true, rating: 3, change: 4.8, changeInd: 1.2, amount: 3299, pct: 0.27, date: '2026-03-22' },
+  { id: 17, name: 'Signal Amp', status: 'active', progress: 95, active: true, rating: 5, change: 28.7, changeInd: 9.4, amount: 12450, pct: 0.56, date: '2026-04-18' },
+  { id: 18, name: 'Rack Server', status: 'inactive', progress: 15, active: false, rating: 2, change: -12.4, changeInd: -3.6, amount: 149900, pct: 0.92, date: '2026-05-02' },
+  { id: 19, name: 'KVM Switch', status: 'active', progress: 81, active: true, rating: 4, change: 15.9, changeInd: 4.3, amount: 8750, pct: 0.44, date: '2026-06-15' },
+  { id: 20, name: 'Fiber Module', status: 'pending', progress: 40, active: false, rating: 3, change: -0.8, changeInd: -0.2, amount: 22500, pct: 0.31, date: '2026-07-08' },
 ];
 
 const columns: ColumnDef<CellTypeRow>[] = [
