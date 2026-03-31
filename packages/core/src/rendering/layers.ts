@@ -92,7 +92,7 @@ export class SelectionLayer {
         handle.style.borderRadius = '1px';
         handle.style.transform = `translate3d(${right - 4}px, ${bottom - 4}px, 0)`;
         handle.style.cursor = 'crosshair';
-        handle.style.zIndex = '5';
+        handle.style.zIndex = '10';
         handle.style.pointerEvents = 'auto';
 
         // Drag-to-fill
