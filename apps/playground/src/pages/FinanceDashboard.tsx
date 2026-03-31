@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
-import { formatting, editing, sorting, filtering, hierarchy, cellRenderers, validation } from '@better-grid/plugins';
+import { formatting, editing, sorting, filtering, hierarchy, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface BudgetRow {
@@ -154,6 +154,9 @@ export function FinanceDashboard() {
       hierarchy({ expandColumn: 'department', indentSize: 22 }),
       cellRenderers(),
       validation(),
+      clipboard(),
+      undoRedo({ maxHistory: 50 }),
+      exportPlugin({ filename: 'budget-report' }),
     ],
     [],
   );
@@ -170,46 +173,49 @@ export function FinanceDashboard() {
       getParentId: (row: BudgetRow) => row.parentId,
       defaultExpanded: true,
     },
-    selection: { mode: 'range' },
+    selection: { mode: 'range', fillHandle: true },
     rowHeight: 36,
   });
 
-  const handleExpandAll = useCallback(() => {
-    grid.expandAll();
+  const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
+  const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
+  const handleExport = useCallback(() => {
+    const api = grid.getPlugin<{ exportToCsv: () => void }>('export');
+    api?.exportToCsv();
+  }, [grid]);
+  const handleUndo = useCallback(() => {
+    const api = grid.getPlugin<{ undo: () => void }>('undoRedo');
+    api?.undo();
+  }, [grid]);
+  const handleRedo = useCallback(() => {
+    const api = grid.getPlugin<{ redo: () => void }>('undoRedo');
+    api?.redo();
   }, [grid]);
 
-  const handleCollapseAll = useCallback(() => {
-    grid.collapseAll();
-  }, [grid]);
+  const btnStyle = {
+    padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6,
+    background: '#fff', cursor: 'pointer', fontSize: 12,
+  } as const;
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>Finance Dashboard</h1>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={handleExpandAll}
-            style={{
-              padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6,
-              background: '#fff', cursor: 'pointer', fontSize: 12,
-            }}
-          >
-            Expand All
-          </button>
-          <button
-            onClick={handleCollapseAll}
-            style={{
-              padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6,
-              background: '#fff', cursor: 'pointer', fontSize: 12,
-            }}
-          >
-            Collapse All
-          </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={handleExpandAll} style={btnStyle}>Expand All</button>
+          <button onClick={handleCollapseAll} style={btnStyle}>Collapse All</button>
+          <button onClick={handleUndo} style={btnStyle}>Undo</button>
+          <button onClick={handleRedo} style={btnStyle}>Redo</button>
+          <button onClick={handleExport} style={btnStyle}>Export CSV</button>
         </div>
       </div>
       <p style={{ margin: '0 0 12px', color: '#666', fontSize: 13, lineHeight: 1.5 }}>
         Real-time budget tracking across departments. Hierarchical rows, frozen columns, quarterly breakdowns, and YTD variance analysis.
       </p>
+      <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
+        <strong>Plugins:</strong> formatting, editing, sorting, filtering, hierarchy, cellRenderers, validation, clipboard, undoRedo, export &bull;
+        <strong> Core:</strong> frozenLeftColumns, headerRows, pinnedBottomRows, fillHandle, hierarchy
+      </div>
       <div
         ref={containerRef}
         style={{

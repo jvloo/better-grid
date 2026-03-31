@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
-import { BetterGrid } from '@better-grid/react';
+import { useMemo, useState, useCallback } from 'react';
+import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, sorting, filtering, validation, cellRenderers, undoRedo } from '@better-grid/plugins';
+import { formatting, editing, sorting, filtering, validation, cellRenderers, undoRedo, clipboard, search, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface TaskRow {
@@ -18,7 +18,7 @@ interface TaskRow {
   tags: string;
 }
 
-const data: TaskRow[] = [
+const initialData: TaskRow[] = [
   { id: 1, task: 'Setup CI/CD pipeline', assignee: 'Alice', priority: 'High', status: 'Done', dueDate: '2026-03-01', estimate: 8, progress: 1, rating: 5, active: true, tags: 'devops' },
   { id: 2, task: 'Design landing page', assignee: 'Bob', priority: 'Medium', status: 'In Progress', dueDate: '2026-03-15', estimate: 16, progress: 0.6, rating: 4, active: true, tags: 'design' },
   { id: 3, task: 'Implement auth module', assignee: 'Carol', priority: 'High', status: 'In Progress', dueDate: '2026-03-10', estimate: 24, progress: 0.35, rating: 3, active: true, tags: 'backend' },
@@ -41,32 +41,37 @@ const data: TaskRow[] = [
   { id: 20, task: 'Log aggregation pipeline', assignee: 'David', priority: 'Low', status: 'Todo', dueDate: '2026-04-25', estimate: 16, progress: 0, rating: 2, active: false, tags: 'devops' },
 ];
 
+function makeSummary(rows: TaskRow[]): TaskRow {
+  const total = rows.length;
+  const done = rows.filter(r => r.status === 'Done').length;
+  const avgProgress = rows.reduce((s, r) => s + r.progress, 0) / total;
+  const totalEstimate = rows.reduce((s, r) => s + r.estimate, 0);
+  const avgRating = Math.round(rows.reduce((s, r) => s + r.rating, 0) / total * 10) / 10;
+  return {
+    id: -1, task: `${total} tasks`, assignee: `${done} done`, priority: '', status: '',
+    dueDate: '', estimate: totalEstimate, progress: avgProgress, rating: avgRating,
+    active: true, tags: '',
+  };
+}
+
 export function ProjectTracker() {
+  const [data, setData] = useState(initialData);
+  const summaryRow = useMemo(() => makeSummary(data), [data]);
+
   const columns = useMemo<ColumnDef<TaskRow>[]>(
     () => [
       {
-        id: 'task',
-        header: 'Task',
-        width: 200,
-        required: true,
-        sortable: true,
+        id: 'task', header: 'Task', width: 200,
+        required: true, sortable: true,
       },
       {
-        id: 'assignee',
-        header: 'Assignee',
-        width: 120,
-        editor: 'autocomplete',
-        options: ['Alice', 'Bob', 'Carol', 'David', 'Emma'],
-        meta: { allowCreate: true },
-        sortable: true,
+        id: 'assignee', header: 'Assignee', width: 120,
+        editor: 'autocomplete', options: ['Alice', 'Bob', 'Carol', 'David', 'Emma'],
+        meta: { allowCreate: true }, sortable: true,
       },
       {
-        id: 'priority',
-        header: 'Priority',
-        width: 90,
-        cellType: 'badge',
-        editor: 'dropdown',
-        sortable: true,
+        id: 'priority', header: 'Priority', width: 90,
+        cellType: 'badge', editor: 'dropdown', sortable: true,
         options: [
           { label: 'High', value: 'High', color: '#c62828', bg: '#ffebee' },
           { label: 'Medium', value: 'Medium', color: '#e65100', bg: '#fff3e0' },
@@ -74,12 +79,8 @@ export function ProjectTracker() {
         ],
       },
       {
-        id: 'status',
-        header: 'Status',
-        width: 120,
-        cellType: 'badge',
-        editor: 'dropdown',
-        sortable: true,
+        id: 'status', header: 'Status', width: 120,
+        cellType: 'badge', editor: 'dropdown', sortable: true,
         options: [
           { label: 'Todo', value: 'Todo', color: '#666', bg: '#f5f5f5' },
           { label: 'In Progress', value: 'In Progress', color: '#1565c0', bg: '#e3f2fd' },
@@ -88,48 +89,32 @@ export function ProjectTracker() {
         ],
       },
       {
-        id: 'dueDate',
-        header: 'Due Date',
-        width: 110,
-        cellType: 'date',
-        sortable: true,
+        id: 'dueDate', header: 'Due Date', width: 110,
+        cellType: 'date', sortable: true,
       },
       {
-        id: 'estimate',
-        header: 'Est',
-        width: 80,
-        align: 'right',
-        precision: 0,
-        sortable: true,
+        id: 'estimate', header: 'Est', width: 80,
+        align: 'right', precision: 0, sortable: true,
+        rules: [{ validate: (v) => (v as number) >= 0 || 'Must be >= 0' }],
         cellRenderer: (container, ctx) => {
           const val = ctx.value as number;
           container.textContent = val != null ? `${val}h` : '';
         },
       },
       {
-        id: 'progress',
-        header: 'Progress',
-        width: 120,
-        cellType: 'progress',
-        sortable: true,
+        id: 'progress', header: 'Progress', width: 120,
+        cellType: 'progress', sortable: true,
       },
       {
-        id: 'rating',
-        header: 'Rating',
-        width: 110,
-        cellType: 'rating',
-        sortable: true,
+        id: 'rating', header: 'Rating', width: 110,
+        cellType: 'rating', sortable: true,
       },
       {
-        id: 'active',
-        header: 'Active',
-        width: 70,
+        id: 'active', header: 'Active', width: 70,
         cellType: 'boolean',
       },
       {
-        id: 'tags',
-        header: 'Tags',
-        width: 100,
+        id: 'tags', header: 'Tags', width: 100,
         sortable: true,
       },
     ],
@@ -144,30 +129,73 @@ export function ProjectTracker() {
       filtering(),
       validation({ validateOn: 'commit' }),
       cellRenderers(),
-      undoRedo(),
+      undoRedo({ maxHistory: 50 }),
+      clipboard(),
+      search({ caseSensitive: false }),
+      exportPlugin({ filename: 'project-tasks' }),
     ],
     [],
   );
 
+  const { grid, containerRef } = useGrid<TaskRow>({
+    data,
+    columns,
+    plugins,
+    frozenLeftColumns: 2,
+    pinnedBottomRows: [summaryRow],
+    selection: { mode: 'range', fillHandle: true },
+    onDataChange: (changes) => {
+      setData(prev => {
+        const next = [...prev];
+        for (const c of changes) next[c.rowIndex] = c.row as TaskRow;
+        return next;
+      });
+    },
+  });
+
+  const btnStyle = {
+    padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6,
+    background: '#fff', cursor: 'pointer', fontSize: 12,
+  } as const;
+
+  const handleExport = useCallback(() => {
+    grid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv();
+  }, [grid]);
+  const handleUndo = useCallback(() => {
+    grid.getPlugin<{ undo: () => void }>('undoRedo')?.undo();
+  }, [grid]);
+  const handleRedo = useCallback(() => {
+    grid.getPlugin<{ redo: () => void }>('undoRedo')?.redo();
+  }, [grid]);
+
   return (
     <div>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Project Tracker</h1>
+      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>Project Tracker</h1>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={handleUndo} style={btnStyle}>Undo</button>
+          <button onClick={handleRedo} style={btnStyle}>Redo</button>
+          <button onClick={handleExport} style={btnStyle}>Export CSV</button>
+        </div>
+      </div>
       <p style={{ marginBottom: 8, color: '#666', lineHeight: 1.5 }}>
-        Project management board with status badges, progress bars, star ratings, and inline editing. Try Ctrl+Z to undo edits.
+        Sprint board with badges, progress bars, star ratings, and inline editing. Ctrl+F to search, Ctrl+Z/Y to undo/redo.
       </p>
-      <div style={{ marginBottom: 16, fontSize: 13, color: '#888', lineHeight: 1.6 }}>
-        <strong>Edit:</strong> Double-click any cell &bull; Assignee → autocomplete (type to create new) &bull; Priority/Status → dropdown badges
-        <br />
-        <strong>Explore:</strong> Sort by any column header &bull; Right-click → filter &bull; Ctrl+Z / Ctrl+Y to undo/redo
+      <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
+        <strong>Plugins:</strong> formatting, editing, sorting, filtering, validation, cellRenderers, undoRedo, clipboard, search, export &bull;
+        <strong> Core:</strong> frozenLeftColumns, pinnedBottomRows, fillHandle
       </div>
 
-      <BetterGrid<TaskRow>
-        columns={columns}
-        data={data}
-        frozenLeftColumns={2}
-        selection={{ mode: 'range' }}
-        plugins={plugins}
-        height={520}
+      <div
+        ref={containerRef}
+        style={{
+          height: 540,
+          width: '100%',
+          position: 'relative',
+          overflow: 'hidden',
+          border: '1px solid #e0e0e0',
+          borderRadius: 8,
+        }}
       />
     </div>
   );

@@ -14,6 +14,8 @@ import { CoreOnly } from './pages/CoreOnly';
 import { PluginToggle } from './pages/PluginToggle';
 import { PerformanceDemo } from './pages/PerformanceDemo';
 import { ProPreview } from './pages/ProPreview';
+import { HRDirectory } from './pages/HRDirectory';
+import { InventoryTracker } from './pages/InventoryTracker';
 
 type View = 'landing' | 'demos';
 type Page =
@@ -30,10 +32,12 @@ type Page =
   | 'core-only'
   | 'plugin-toggle'
   | 'performance'
+  | 'hr-directory'
+  | 'inventory'
   | 'pro';
 
 const VALID_PAGES = new Set<Page>([
-  'finance', 'project-tracker', 'editors', 'cell-types', 'clipboard',
+  'finance', 'project-tracker', 'hr-directory', 'inventory', 'editors', 'cell-types', 'clipboard',
   'sort-filter', 'search-export', 'hierarchy', 'frozen-pinned', 'multi-header',
   'core-only', 'plugin-toggle', 'performance', 'pro',
 ]);
@@ -111,6 +115,8 @@ export function App() {
           <SectionLabel>Use Cases</SectionLabel>
           <NavButton active={page === 'finance'} onClick={() => navigatePage('finance')} icon="💰">Finance Dashboard</NavButton>
           <NavButton active={page === 'project-tracker'} onClick={() => navigatePage('project-tracker')} icon="📋">Project Tracker</NavButton>
+          <NavButton active={page === 'hr-directory'} onClick={() => navigatePage('hr-directory')} icon="👥">HR Directory</NavButton>
+          <NavButton active={page === 'inventory'} onClick={() => navigatePage('inventory')} icon="📦">Inventory Tracker</NavButton>
 
           <SectionLabel>Editing</SectionLabel>
           <NavButton active={page === 'editors'} onClick={() => navigatePage('editors')} icon="✏️">Editor Types</NavButton>
@@ -145,6 +151,8 @@ export function App() {
         <div style={{ maxWidth: 1200 }}>
           {page === 'finance' && <FinanceDashboard />}
           {page === 'project-tracker' && <ProjectTracker />}
+          {page === 'hr-directory' && <HRDirectory />}
+          {page === 'inventory' && <InventoryTracker />}
           {page === 'editors' && <EditorTypes />}
           {page === 'cell-types' && <CellTypes />}
           {page === 'clipboard' && <ClipboardFill />}
