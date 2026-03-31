@@ -1973,51 +1973,16 @@ export function createGrid<
           return vals;
         }
 
-        // Detect numeric step from source values
-        function detectStep(values: unknown[]): number | null {
-          if (values.length < 2) return null;
-          const nums = values.filter((v): v is number => typeof v === 'number');
-          if (nums.length !== values.length) return null;
-          const step = nums[1]! - nums[0]!;
-          for (let i = 2; i < nums.length; i++) {
-            if (Math.abs((nums[i]! - nums[i - 1]!) - step) > 1e-10) return null;
-          }
-          return step;
-        }
-
         if (isVertical) {
-          // Fill rows — detect series per column
+          // Fill rows — cycle source values (series detection is Pro)
           for (let col = targetRange.startCol; col <= targetRange.endCol; col++) {
             const column = columns[col];
             if (!column || column.editable === false) continue;
 
             const sourceVals = getSourceValues(col);
-            const step = detectStep(sourceVals);
-            const isDown = targetRange.startRow > sourceRange.endRow;
-
             for (let row = targetRange.startRow; row <= targetRange.endRow; row++) {
-              const offset = isDown
-                ? row - sourceRange.endRow
-                : sourceRange.startRow - row;
-              let value: unknown;
-
-              if (step !== null && sourceVals.length >= 2) {
-                // Series: continue the pattern
-                const lastVal = isDown
-                  ? (sourceVals[sourceVals.length - 1] as number)
-                  : (sourceVals[0] as number);
-                value = isDown
-                  ? lastVal + step * offset
-                  : lastVal - step * offset;
-              } else {
-                // Copy: cycle through source values
-                const srcIdx = (row - targetRange.startRow) % sourceRowCount;
-                const srcRow = state.data[sourceRange.startRow + srcIdx];
-                if (srcRow && column.accessorKey) {
-                  value = (srcRow as Record<string, unknown>)[column.accessorKey];
-                }
-              }
-
+              const srcIdx = (row - targetRange.startRow) % sourceRowCount;
+              const value = sourceVals[srcIdx];
               if (value !== undefined) {
                 instance.updateCell(row, column.id, value);
               }

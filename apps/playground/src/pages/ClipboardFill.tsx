@@ -71,8 +71,8 @@ export function ClipboardFill() {
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Clipboard & Fill Handle</h1>
       <p style={{ marginBottom: 8, color: '#666', lineHeight: 1.5 }}>
-        Copy, paste, fill-down, and fill-series. Select a range of revenue cells (100K&ndash;120K),
-        then drag the fill handle down to auto-continue the series.
+        Copy, paste, and drag-to-fill. Select cells and use clipboard shortcuts, or drag the
+        fill handle to repeat values across rows or columns.
       </p>
 
       <div style={{
@@ -83,11 +83,9 @@ export function ClipboardFill() {
         <br />
         <strong>Clipboard:</strong> Select cells &rarr; <code>Ctrl+C</code> copy, <code>Ctrl+V</code> paste, <code>Ctrl+X</code> cut
         <br />
-        <strong>Fill Down:</strong> Select range &rarr; <code>Ctrl+D</code> fills first row&apos;s values down
-        <br />
-        <strong>Fill Series:</strong> Select range &rarr; <code>Ctrl+Shift+D</code> detects number patterns and continues
-        <br />
         <strong>Fill Handle:</strong> Drag the blue square at bottom-right of selection to fill
+        <br />
+        <span style={{ color: '#999' }}>Fill Down (Ctrl+D), Fill Series (Ctrl+Shift+D) &rarr; Pro</span>
       </div>
 
       <div
