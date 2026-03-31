@@ -200,6 +200,7 @@ export function pagination(options?: PaginationOptions): GridPlugin<'pagination'
         if (paginationBar) return; // already initialized
         init();
         createPaginationBar();
+        updatePaginationBar(); // populate info after bar is created
       }, 0);
 
       const api: PaginationApi = {
