@@ -207,6 +207,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           const cellPadding = cellComputed.padding;
           const cellFont = cellComputed.font;
           const cellTextAlign = cellComputed.textAlign;
+          const cellLineHeight = cellComputed.lineHeight;
+          const cellLetterSpacing = cellComputed.letterSpacing;
           const maxRightWidth = gridRect ? gridRect.right - cellRect.left : cellRect.width;
           const fullWidth = gridRect?.width ?? cellRect.width;
           const gridLeft = gridRect?.left ?? cellRect.left;
@@ -236,7 +238,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           ed.textContent = value;
           ed.style.cssText = `
             outline:none; margin:0;
-            font:${cellFont}; line-height:1.5; color:inherit;
+            font:${cellFont}; line-height:${cellLineHeight}; color:inherit;
+            letter-spacing:${cellLetterSpacing};
             background:transparent; box-sizing:border-box;
             padding:${cellPadding}; text-align:${cellTextAlign};
             min-height:${cellRect.height - borderW * 2 + 0.5}px;
@@ -445,8 +448,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         // Capture computed styles BEFORE clearing cell content
         const computed = getComputedStyle(cellEl);
         const cellFont = computed.font;
-        const cellPadding = computed.padding;
         const cellTextAlign = computed.textAlign;
+        const cellLetterSpacing = computed.letterSpacing;
 
         // Create a simple input inside the cell
         // The cell already has padding, so the input uses padding: 0 to avoid double padding
@@ -458,7 +461,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           width: 100%; height: 100%;
           border: none; outline: none;
           font: ${cellFont}; padding: 0;
-          text-align: ${cellTextAlign};
+          text-align: ${cellTextAlign}; letter-spacing: ${cellLetterSpacing};
           margin: 0; box-sizing: border-box;
           background: transparent; color: inherit;
         `;
