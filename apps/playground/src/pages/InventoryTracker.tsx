@@ -1,8 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, sorting, filtering, cellRenderers, validation, clipboard, undoRedo, exportPlugin, mergeCells } from '@better-grid/plugins';
-import type { MergeCellDef } from '@better-grid/plugins';
+import { formatting, editing, sorting, filtering, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface StockRow {
@@ -72,22 +71,6 @@ const initialData: StockRow[] = items.map((name, i) => {
   };
 });
 
-// Sort by category for natural grouping, then by name within
-initialData.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
-
-// Auto-detect merge ranges for category column
-function computeCategoryMerges(rows: StockRow[]): MergeCellDef[] {
-  const merges: MergeCellDef[] = [];
-  let i = 0;
-  while (i < rows.length) {
-    let j = i + 1;
-    while (j < rows.length && rows[j]!.category === rows[i]!.category) j++;
-    if (j - i > 1) merges.push({ row: i, col: 2, rowSpan: j - i }); // col 2 = category
-    i = j;
-  }
-  return merges;
-}
-
 export function InventoryTracker() {
   const [data, setData] = useState(initialData);
 
@@ -126,8 +109,6 @@ export function InventoryTracker() {
     [],
   );
 
-  const categoryMerges = useMemo(() => computeCategoryMerges(data), [data]);
-
   const plugins = useMemo(
     () => [
       formatting({ locale: 'en-US', currencyCode: 'USD' }),
@@ -139,9 +120,8 @@ export function InventoryTracker() {
       clipboard(),
       undoRedo({ maxHistory: 50 }),
       exportPlugin({ filename: 'inventory-report' }),
-      mergeCells({ cells: categoryMerges }),
     ],
-    [categoryMerges],
+    [],
   );
 
   const { grid, containerRef } = useGrid<StockRow>({
@@ -186,7 +166,7 @@ export function InventoryTracker() {
         Drag the freeze clip handle to adjust frozen columns.
       </p>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
-        <strong>Plugins:</strong> formatting, editing, sorting, filtering, validation, cellRenderers, clipboard, undoRedo, export, mergeCells &bull;
+        <strong>Plugins:</strong> formatting, editing, sorting, filtering, validation, cellRenderers, clipboard, undoRedo, export &bull;
         <strong> Core:</strong> frozenLeftColumns, freezeClip, fillHandle, cellStyle (conditional)
       </div>
 
