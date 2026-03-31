@@ -236,17 +236,23 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           ed.className = 'bg-cell-editor';
           ed.contentEditable = 'true';
           ed.textContent = value;
-          // Match the cell exactly: same font, line-height, padding, alignment.
-          // Uses line-height for vertical centering (same as cell), not flexbox.
-          // Only switches to multi-line when content overflows.
+          // Match cell position exactly. Use normal line-height + vertical padding
+          // for centering, so text selection highlight doesn't span full cell height.
+          const fontSize = parseFloat(cellComputed.fontSize) || 14;
+          const contentLineHeight = Math.round(fontSize * 1.4);
+          const editorHeight = cellRect.height - borderW * 2;
+          const vertPad = Math.max(0, Math.floor((editorHeight - contentLineHeight) / 2));
+          const hPad = parseFloat(cellComputed.paddingLeft) || 12;
+
           ed.style.cssText = `
             outline:none; margin:0;
-            font:${cellFont}; line-height:${cellLineHeight}; color:inherit;
-            letter-spacing:${cellLetterSpacing};
+            font-family:${cellComputed.fontFamily}; font-size:${cellComputed.fontSize};
+            font-weight:${cellComputed.fontWeight}; line-height:${contentLineHeight}px;
+            color:inherit; letter-spacing:${cellLetterSpacing};
             background:transparent; box-sizing:border-box;
-            padding:${cellPadding}; text-align:${cellTextAlign};
-            min-height:${cellRect.height - borderW * 2 + 0.5}px;
-            max-height:${cellRect.height * 4}px;
+            padding:${vertPad}px ${hPad}px; text-align:${cellTextAlign};
+            min-height:${editorHeight}px;
+            max-height:${editorHeight * 4}px;
             overflow:hidden;
             white-space:nowrap;
           `;
@@ -322,18 +328,18 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
               floatBox.style.width = `${fullWidth}px`;
             }
 
-            // When content overflows, switch to wrap mode with normal line-height
-            if (ed.scrollHeight > cellRect.height) {
+            // When content overflows, switch to wrap mode
+            if (ed.scrollHeight > editorHeight) {
               ed.style.whiteSpace = 'pre-wrap';
               ed.style.wordBreak = 'break-word';
               ed.style.lineHeight = '1.5';
               ed.style.overflow = 'auto';
-              ed.style.padding = `${parseFloat(getComputedStyle(cellEl).paddingLeft) || 12}px`;
+              ed.style.padding = `${hPad}px`;
             } else {
               ed.style.whiteSpace = 'nowrap';
-              ed.style.lineHeight = cellLineHeight;
+              ed.style.lineHeight = `${contentLineHeight}px`;
               ed.style.overflow = 'hidden';
-              ed.style.padding = cellPadding;
+              ed.style.padding = `${vertPad}px ${hPad}px`;
             }
           }
 
