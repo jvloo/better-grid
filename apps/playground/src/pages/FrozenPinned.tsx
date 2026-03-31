@@ -163,6 +163,7 @@ export function FrozenPinned() {
       <div style={{ marginBottom: 16, fontSize: 13, color: '#888', lineHeight: 1.6 }}>
         <strong>Frozen:</strong> #, Region, Product (3 columns) stay locked on the left &bull;
         <strong> Pinned:</strong> TOTAL row pinned to bottom &bull;
+        <strong> Freeze Clip:</strong> Drag the handle at the frozen boundary to clip columns &bull;
         <strong> Headers:</strong> Months grouped into Q1-Q4 spans &bull;
         <strong> Plugins:</strong> Formatting (USD), Sorting, Clipboard
       </div>
@@ -172,6 +173,7 @@ export function FrozenPinned() {
         data={sampleData}
         headerRows={headerRows}
         frozenLeftColumns={3}
+        freezeClip={true}
         pinnedBottomRows={[totalsRow]}
         selection={{ mode: 'range' }}
         plugins={plugins}

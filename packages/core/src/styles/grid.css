@@ -144,6 +144,9 @@
 .bg-cell {
   box-sizing: border-box;
   display: block;
+  /* Anchor to container origin — transform handles actual positioning */
+  top: 0;
+  left: 0;
   padding: var(--bg-cell-padding, 0 12px);
   border-right: 1px solid var(--bg-cell-border-color, #e8e8e8);
   border-bottom: 1px solid var(--bg-cell-border-color, #e8e8e8);
