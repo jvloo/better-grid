@@ -140,8 +140,8 @@ export function App() {
           <NavButton active={page === 'plugin-toggle'} onClick={() => navigatePage('plugin-toggle')} icon="🔌">Plugin Toggle</NavButton>
           <NavButton active={page === 'performance'} onClick={() => navigatePage('performance')} icon="⚡">Performance</NavButton>
 
-          <SectionLabel>Pro</SectionLabel>
-          <NavButton active={page === 'pro'} onClick={() => navigatePage('pro')} icon="💎">Coming Soon</NavButton>
+          <SectionLabel>Info</SectionLabel>
+          <NavButton active={page === 'pro'} onClick={() => navigatePage('pro')} icon="🗺️">Roadmap</NavButton>
         </div>
 
         <div style={{ padding: '8px 16px', borderTop: '1px solid #1a1a1a', fontSize: 10, color: '#444' }}>
