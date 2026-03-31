@@ -682,10 +682,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
         let selectedIndex = opts.findIndex((o) => o.value === currentValue || String(o.value) === String(currentValue));
 
-        // Check if badge styling should be applied to dropdown items
-        const isBadge = column?.cellType === 'badge';
-        const badgeOptions = isBadge ? column?.options as Array<{ label: string; value: unknown; color?: string; bg?: string }> | undefined : undefined;
-
         for (let i = 0; i < opts.length; i++) {
           const opt = opts[i]!;
           const item = document.createElement('div');
