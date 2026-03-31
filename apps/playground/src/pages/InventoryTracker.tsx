@@ -128,7 +128,7 @@ export function InventoryTracker() {
     data,
     columns,
     plugins,
-    frozenLeftColumns: 3,
+    frozenLeftColumns: 5,
     freezeClip: { minVisible: 1 },
     selection: { mode: 'range', fillHandle: true },
     onDataChange: (changes) => {
@@ -145,8 +145,11 @@ export function InventoryTracker() {
     background: '#fff', cursor: 'pointer', fontSize: 12,
   } as const;
 
-  const handleExport = useCallback(() => {
+  const handleExportCsv = useCallback(() => {
     grid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv();
+  }, [grid]);
+  const handleExportExcel = useCallback(() => {
+    grid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
   }, [grid]);
 
   return (
@@ -154,7 +157,8 @@ export function InventoryTracker() {
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>Inventory Tracker</h1>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={handleExport} style={btnStyle}>Export CSV</button>
+          <button onClick={handleExportCsv} style={btnStyle}>CSV</button>
+          <button onClick={handleExportExcel} style={btnStyle}>Excel</button>
         </div>
       </div>
       <p style={{ marginBottom: 8, color: '#666', lineHeight: 1.5 }}>

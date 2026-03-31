@@ -179,9 +179,11 @@ export function FinanceDashboard() {
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
   const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
-  const handleExport = useCallback(() => {
-    const api = grid.getPlugin<{ exportToCsv: () => void }>('export');
-    api?.exportToCsv();
+  const handleExportCsv = useCallback(() => {
+    grid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv();
+  }, [grid]);
+  const handleExportExcel = useCallback(() => {
+    grid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
   }, [grid]);
   const handleUndo = useCallback(() => {
     const api = grid.getPlugin<{ undo: () => void }>('undoRedo');
@@ -206,7 +208,8 @@ export function FinanceDashboard() {
           <button onClick={handleCollapseAll} style={btnStyle}>Collapse All</button>
           <button onClick={handleUndo} style={btnStyle}>Undo</button>
           <button onClick={handleRedo} style={btnStyle}>Redo</button>
-          <button onClick={handleExport} style={btnStyle}>Export CSV</button>
+          <button onClick={handleExportCsv} style={btnStyle}>CSV</button>
+          <button onClick={handleExportExcel} style={btnStyle}>Excel</button>
         </div>
       </div>
       <p style={{ margin: '0 0 12px', color: '#666', fontSize: 13, lineHeight: 1.5 }}>

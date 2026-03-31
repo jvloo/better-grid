@@ -158,8 +158,11 @@ export function ProjectTracker() {
     background: '#fff', cursor: 'pointer', fontSize: 12,
   } as const;
 
-  const handleExport = useCallback(() => {
+  const handleExportCsv = useCallback(() => {
     grid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv();
+  }, [grid]);
+  const handleExportExcel = useCallback(() => {
+    grid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
   }, [grid]);
   const handleUndo = useCallback(() => {
     grid.getPlugin<{ undo: () => void }>('undoRedo')?.undo();
@@ -175,7 +178,8 @@ export function ProjectTracker() {
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={handleUndo} style={btnStyle}>Undo</button>
           <button onClick={handleRedo} style={btnStyle}>Redo</button>
-          <button onClick={handleExport} style={btnStyle}>Export CSV</button>
+          <button onClick={handleExportCsv} style={btnStyle}>CSV</button>
+          <button onClick={handleExportExcel} style={btnStyle}>Excel</button>
         </div>
       </div>
       <p style={{ marginBottom: 8, color: '#666', lineHeight: 1.5 }}>

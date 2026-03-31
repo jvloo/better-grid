@@ -14,6 +14,7 @@ export interface FillDragResult {
 
 export class SelectionLayer {
   private container: HTMLElement;
+  private gridRoot: HTMLElement;
   private overlay: HTMLElement;
   private rangeBorders: HTMLElement[] = [];
   private fillHandle: HTMLElement | null = null;
@@ -22,8 +23,9 @@ export class SelectionLayer {
   private isEditing = false;
   private fillHandleEnabled = true;
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, gridRoot?: HTMLElement) {
     this.container = container;
+    this.gridRoot = gridRoot ?? container;
     this.overlay = document.createElement('div');
     this.overlay.className = 'bg-selection-overlay';
     this.overlay.style.position = 'absolute';
@@ -111,10 +113,17 @@ export class SelectionLayer {
         handle.style.background = 'var(--bg-active-border, #1a73e8)';
         handle.style.border = '1px solid #fff';
         handle.style.borderRadius = '1px';
-        handle.style.transform = `translate3d(${right - 4}px, ${bottom - 4}px, 0)`;
         handle.style.cursor = 'crosshair';
-        handle.style.zIndex = '10';
+        handle.style.zIndex = '20';
         handle.style.pointerEvents = 'auto';
+
+        // Position relative to the grid root (above frozen overlay z-index 8)
+        // by computing the cell container's offset from the grid root.
+        const containerRect = this.container.getBoundingClientRect();
+        const rootRect = this.gridRoot.getBoundingClientRect();
+        const offsetX = containerRect.left - rootRect.left;
+        const offsetY = containerRect.top - rootRect.top;
+        handle.style.transform = `translate3d(${right - 4 + offsetX}px, ${bottom - 4 + offsetY}px, 0)`;
 
         // Hide when editing
         if (this.isEditing) handle.style.display = 'none';
@@ -126,8 +135,8 @@ export class SelectionLayer {
           this.startFillDrag(e, lastRange, measurements);
         });
 
-        // Append to container (not overlay) so z-index is above cell outlines
-        this.container.appendChild(handle);
+        // Append to grid root so z-index is above frozen overlay
+        this.gridRoot.appendChild(handle);
         this.fillHandle = handle;
       }
     }
