@@ -20,7 +20,7 @@ export interface ExportCell {
   colSpan?: number;
   rowSpan?: number;
   /** Column type hint for downstream processors (ExcelJS, etc.) */
-  type?: 'text' | 'number' | 'currency' | 'percent' | 'date' | 'boolean';
+  type?: 'text' | 'number' | 'currency' | 'percent' | 'date' | 'boolean' | 'change';
   /** Column alignment */
   align?: 'left' | 'center' | 'right';
   /** Inline styles from cellStyle function (if any) */
@@ -88,6 +88,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
       function resolveType(column: ColumnDef, value: unknown): ExportCell['type'] {
         const ct = column.cellType;
         if (ct === 'currency') return 'currency';
+        if (ct === 'change' || ct === 'changeIndicator') return 'change';
         if (ct === 'number' || ct === 'bigint') return 'number';
         if (ct === 'percent') return 'percent';
         if (ct === 'date') return 'date';
@@ -297,6 +298,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
         const NUM_FMT_CURRENCY = 165; // $#,##0.00
         const NUM_FMT_PERCENT = 10;   // 0.00% (built-in)
         const NUM_FMT_DATE = 166;     // yyyy-mm-dd
+        const NUM_FMT_CHANGE = 167;   // [Green]+#,##0;[Red]-#,##0;0
 
         type StyleKey = string;
         const styleMap = new Map<StyleKey, number>();
@@ -330,6 +332,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
             case 'percent': numFmt = NUM_FMT_PERCENT; break;
             case 'date': numFmt = NUM_FMT_DATE; break;
             case 'number': numFmt = NUM_FMT_NUMBER; break;
+            case 'change': numFmt = NUM_FMT_CHANGE; break;
           }
 
           const fontId = cell.pinned ? 1 : 0;
@@ -561,10 +564,11 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
         xml += '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
 
         // Custom number formats (164+)
-        xml += '<numFmts count="3">';
+        xml += '<numFmts count="4">';
         xml += '<numFmt numFmtId="164" formatCode="#,##0"/>';
         xml += '<numFmt numFmtId="165" formatCode="$#,##0.00"/>';
         xml += '<numFmt numFmtId="166" formatCode="yyyy-mm-dd"/>';
+        xml += '<numFmt numFmtId="167" formatCode="[Green]+#,##0;[Red]-#,##0;0"/>';
         xml += '</numFmts>';
 
         // Fonts: 0=normal, 1=bold
