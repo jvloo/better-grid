@@ -407,11 +407,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             if (!floatActive) return;
             if (floatBox.contains(e.target as Node)) return;
             cleanupFloat();
-            if (editingCell) {
-              commitEdit();
-              // Clear multi-range selection so the next click starts fresh
-              ctx.grid.clearSelection();
-            }
+            if (editingCell) commitEdit();
           }
           // Delay to avoid the dblclick that opened the editor
           setTimeout(() => document.addEventListener('mousedown', onOutsideClick, true), 0);
@@ -503,14 +499,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           handleEditorKeydown(e);
         });
 
-        // Commit on click outside the cell (same as float editor)
+        // Commit on click outside the cell
         function onOutsideClick(e: MouseEvent): void {
           if (cellEl.contains(e.target as Node)) return;
           document.removeEventListener('mousedown', onOutsideClick, true);
           if (editingCell) {
             commitEdit();
-            ctx.grid.clearSelection();
           }
+          // Don't clearSelection — let handlePointerDown select the clicked cell
         }
         setTimeout(() => document.addEventListener('mousedown', onOutsideClick, true), 0);
 
@@ -1261,11 +1257,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         editingCell = null;
         originalValue = null;
 
-        ctx.grid.refresh();
-
-        // Refocus the grid container so keyboard navigation resumes
-        const gridEl = document.querySelector('.bg-grid') as HTMLElement | null;
-        gridEl?.focus();
+        // Defer refresh so any in-progress pointer events can still find
+        // their target cells (synchronous refresh destroys DOM during mousedown)
+        requestAnimationFrame(() => {
+          ctx.grid.refresh();
+          // Refocus the grid container so keyboard navigation resumes
+          const gridEl = document.querySelector('.bg-grid') as HTMLElement | null;
+          gridEl?.focus();
+        });
       }
 
       // -----------------------------------------------------------------------
