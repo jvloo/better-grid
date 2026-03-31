@@ -114,10 +114,16 @@ export class SelectionLayer {
     measurements: LayoutMeasurements,
   ): void {
     const rowOffsets = measurements.rowOffsets;
+    const colOffsets = measurements.colOffsets;
     const rowCount = rowOffsets.length - 1;
-    let currentEndRow = sourceRange.endRow;
+    const colCount = colOffsets.length - 1;
+    const startX = startEvent.clientX;
+    const startY = startEvent.clientY;
 
-    // Create preview overlay
+    let direction: 'none' | 'down' | 'up' | 'right' | 'left' = 'none';
+    let targetRow = sourceRange.endRow;
+    let targetCol = sourceRange.endCol;
+
     const preview = document.createElement('div');
     preview.className = 'bg-fill-preview';
     preview.style.position = 'absolute';
@@ -126,40 +132,86 @@ export class SelectionLayer {
     preview.style.border = '2px dashed var(--bg-active-border, #1a73e8)';
     preview.style.background = 'rgba(33, 133, 208, 0.05)';
     preview.style.zIndex = '4';
+    preview.style.display = 'none';
     this.overlay.appendChild(preview);
     this.fillPreview = preview;
 
     const overlayRect = this.overlay.getBoundingClientRect();
 
-    const onPointerMove = (e: PointerEvent) => {
-      const relativeY = e.clientY - overlayRect.top;
-      // Find which row the cursor is over
-      let targetRow = sourceRange.endRow;
+    const findRow = (clientY: number): number => {
+      const y = clientY - overlayRect.top;
       for (let r = 0; r < rowCount; r++) {
-        if (rowOffsets[r]! <= relativeY && relativeY < rowOffsets[r + 1]!) {
-          targetRow = r;
-          break;
-        }
+        if (rowOffsets[r]! <= y && y < rowOffsets[r + 1]!) return r;
       }
-      // Only extend downward from source range
-      if (targetRow <= sourceRange.endRow) {
-        targetRow = sourceRange.endRow;
-      }
-      currentEndRow = Math.min(targetRow, rowCount - 1);
+      return y < rowOffsets[0]! ? 0 : rowCount - 1;
+    };
 
-      // Update preview rect (covers only the extension area below the source)
-      if (currentEndRow > sourceRange.endRow) {
-        const top = rowOffsets[sourceRange.endRow + 1]!;
-        const left = measurements.colOffsets[sourceRange.startCol]!;
-        const bottom = rowOffsets[currentEndRow + 1]!;
-        const right = measurements.colOffsets[sourceRange.endCol + 1]!;
-        preview.style.display = 'block';
-        preview.style.transform = `translate3d(${left}px, ${top}px, 0)`;
-        preview.style.width = `${right - left}px`;
-        preview.style.height = `${bottom - top}px`;
+    const findCol = (clientX: number): number => {
+      const x = clientX - overlayRect.left;
+      for (let c = 0; c < colCount; c++) {
+        if (colOffsets[c]! <= x && x < colOffsets[c + 1]!) return c;
+      }
+      return x < colOffsets[0]! ? 0 : colCount - 1;
+    };
+
+    const updatePreview = () => {
+      let top: number, left: number, bottom: number, right: number;
+
+      if (direction === 'down' && targetRow > sourceRange.endRow) {
+        top = rowOffsets[sourceRange.endRow + 1]!;
+        left = colOffsets[sourceRange.startCol]!;
+        bottom = rowOffsets[targetRow + 1]!;
+        right = colOffsets[sourceRange.endCol + 1]!;
+      } else if (direction === 'up' && targetRow < sourceRange.startRow) {
+        top = rowOffsets[targetRow]!;
+        left = colOffsets[sourceRange.startCol]!;
+        bottom = rowOffsets[sourceRange.startRow]!;
+        right = colOffsets[sourceRange.endCol + 1]!;
+      } else if (direction === 'right' && targetCol > sourceRange.endCol) {
+        top = rowOffsets[sourceRange.startRow]!;
+        left = colOffsets[sourceRange.endCol + 1]!;
+        bottom = rowOffsets[sourceRange.endRow + 1]!;
+        right = colOffsets[targetCol + 1]!;
+      } else if (direction === 'left' && targetCol < sourceRange.startCol) {
+        top = rowOffsets[sourceRange.startRow]!;
+        left = colOffsets[targetCol]!;
+        bottom = rowOffsets[sourceRange.endRow + 1]!;
+        right = colOffsets[sourceRange.startCol]!;
       } else {
         preview.style.display = 'none';
+        return;
       }
+
+      preview.style.display = 'block';
+      preview.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+      preview.style.width = `${right - left}px`;
+      preview.style.height = `${bottom - top}px`;
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      // Lock direction based on dominant axis (once threshold reached)
+      if (direction === 'none' && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+        if (Math.abs(dy) >= Math.abs(dx)) {
+          direction = dy > 0 ? 'down' : 'up';
+        } else {
+          direction = dx > 0 ? 'right' : 'left';
+        }
+      }
+
+      if (direction === 'down' || direction === 'up') {
+        targetRow = findRow(e.clientY);
+        if (direction === 'down') targetRow = Math.max(targetRow, sourceRange.endRow);
+        if (direction === 'up') targetRow = Math.min(targetRow, sourceRange.startRow);
+      } else if (direction === 'right' || direction === 'left') {
+        targetCol = findCol(e.clientX);
+        if (direction === 'right') targetCol = Math.max(targetCol, sourceRange.endCol);
+        if (direction === 'left') targetCol = Math.min(targetCol, sourceRange.startCol);
+      }
+
+      updatePreview();
     };
 
     const onPointerUp = () => {
@@ -168,17 +220,22 @@ export class SelectionLayer {
       preview.remove();
       this.fillPreview = null;
 
-      // If dragged below source range, trigger fill
-      if (currentEndRow > sourceRange.endRow && this.onFillDrag) {
-        this.onFillDrag({
-          sourceRange,
-          targetRange: {
-            startRow: sourceRange.endRow + 1,
-            endRow: currentEndRow,
-            startCol: sourceRange.startCol,
-            endCol: sourceRange.endCol,
-          },
-        });
+      if (!this.onFillDrag) return;
+
+      let target: CellRange | null = null;
+
+      if (direction === 'down' && targetRow > sourceRange.endRow) {
+        target = { startRow: sourceRange.endRow + 1, endRow: targetRow, startCol: sourceRange.startCol, endCol: sourceRange.endCol };
+      } else if (direction === 'up' && targetRow < sourceRange.startRow) {
+        target = { startRow: targetRow, endRow: sourceRange.startRow - 1, startCol: sourceRange.startCol, endCol: sourceRange.endCol };
+      } else if (direction === 'right' && targetCol > sourceRange.endCol) {
+        target = { startRow: sourceRange.startRow, endRow: sourceRange.endRow, startCol: sourceRange.endCol + 1, endCol: targetCol };
+      } else if (direction === 'left' && targetCol < sourceRange.startCol) {
+        target = { startRow: sourceRange.startRow, endRow: sourceRange.endRow, startCol: targetCol, endCol: sourceRange.startCol - 1 };
+      }
+
+      if (target) {
+        this.onFillDrag({ sourceRange, targetRange: target });
       }
     };
 

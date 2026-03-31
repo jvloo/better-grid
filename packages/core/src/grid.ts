@@ -1863,32 +1863,39 @@ export function createGrid<
       selectionLayer.setFillDragHandler(({ sourceRange, targetRange }) => {
         const state = store.getState();
         const columns = state.columns;
+        const sourceRowCount = sourceRange.endRow - sourceRange.startRow + 1;
+        const sourceColCount = sourceRange.endCol - sourceRange.startCol + 1;
+
         for (let row = targetRange.startRow; row <= targetRange.endRow; row++) {
-          for (let col = sourceRange.startCol; col <= sourceRange.endCol; col++) {
+          for (let col = targetRange.startCol; col <= targetRange.endCol; col++) {
             const column = columns[col];
             if (!column || column.editable === false) continue;
-            // Copy from the corresponding source row (cycle through source rows)
-            const sourceRowCount = sourceRange.endRow - sourceRange.startRow + 1;
+
+            // Map to corresponding source cell (cycle through source rows/cols)
             const sourceRowIdx = sourceRange.startRow + ((row - targetRange.startRow) % sourceRowCount);
+            const sourceColIdx = sourceRange.startCol + ((col - targetRange.startCol) % sourceColCount);
             const sourceRow = state.data[sourceRowIdx];
-            if (!sourceRow) continue;
+            const sourceCol = columns[sourceColIdx];
+            if (!sourceRow || !sourceCol) continue;
+
             let value: unknown;
-            if (column.accessorKey) {
-              value = (sourceRow as Record<string, unknown>)[column.accessorKey];
+            if (sourceCol.accessorKey) {
+              value = (sourceRow as Record<string, unknown>)[sourceCol.accessorKey];
             }
             if (value !== undefined) {
               instance.updateCell(row, column.id, value);
             }
           }
         }
-        // Extend selection to include filled rows
+
+        // Extend selection to include filled area
         store.setSelection({
           active: store.getState().selection.active,
           ranges: [{
-            startRow: sourceRange.startRow,
-            endRow: targetRange.endRow,
-            startCol: sourceRange.startCol,
-            endCol: sourceRange.endCol,
+            startRow: Math.min(sourceRange.startRow, targetRange.startRow),
+            endRow: Math.max(sourceRange.endRow, targetRange.endRow),
+            startCol: Math.min(sourceRange.startCol, targetRange.startCol),
+            endCol: Math.max(sourceRange.endCol, targetRange.endCol),
           }],
         });
         scheduleRender();
