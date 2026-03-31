@@ -617,20 +617,46 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         input.type = 'text';
         input.className = 'bg-cell-editor bg-cell-editor--dropdown-trigger';
         input.readOnly = true;
-        input.style.cssText = INPUT_CSS + `
-          cursor: pointer;
-          background: transparent;
-          background-image: ${CHEVRON_SVG};
-          background-repeat: no-repeat;
-          background-position: right 2px center;
-          padding-right: 18px;
-        `;
 
-        // Show the current label
         const currentOpt = opts.find((o) => o.value === currentValue || String(o.value) === String(currentValue));
         input.value = currentOpt?.label ?? String(currentValue ?? '');
 
-        cellEl.appendChild(input);
+        // Badge columns: show badge pill in cell during edit mode
+        const isBadge = column?.cellType === 'badge';
+        const badgeOptions = isBadge ? column?.options as Array<{ label: string; value: unknown; color?: string; bg?: string }> | undefined : undefined;
+        const badgeMatch = badgeOptions?.find(b => b.value === currentValue || String(b.value) === String(currentValue));
+
+        if (badgeMatch) {
+          // Render badge + chevron as the trigger instead of plain input
+          input.style.cssText = 'position:absolute;opacity:0;width:0;height:0;pointer-events:none;';
+          const badgeEl = document.createElement('span');
+          badgeEl.className = 'bg-cell-editor--badge-trigger';
+          badgeEl.style.cssText = `
+            display:inline-flex;align-items:center;gap:6px;cursor:pointer;width:100%;
+          `;
+          const pill = document.createElement('span');
+          pill.textContent = badgeMatch.label ?? String(currentValue);
+          pill.style.cssText = `display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;color:${badgeMatch.color ?? '#666'};background:${badgeMatch.bg ?? '#f5f5f5'};`;
+          const chevron = document.createElement('span');
+          chevron.innerHTML = `<svg width="8" height="5" style="opacity:0.5"><path d="M0 0l4 5 4-5z" fill="currentColor"/></svg>`;
+          chevron.style.marginLeft = 'auto';
+          badgeEl.appendChild(pill);
+          badgeEl.appendChild(chevron);
+          badgeEl.addEventListener('mousedown', () => input.focus());
+          cellEl.appendChild(badgeEl);
+          cellEl.appendChild(input);
+        } else {
+          input.style.cssText = INPUT_CSS + `
+            cursor: pointer;
+            background: transparent;
+            background-image: ${CHEVRON_SVG};
+            background-repeat: no-repeat;
+            background-position: right 2px center;
+            padding-right: 18px;
+          `;
+          cellEl.appendChild(input);
+        }
+
         input.focus();
 
         // Create the floating dropdown panel
