@@ -15,12 +15,13 @@ import { Benchmark } from './pages/Benchmark';
 import { FreezeClipDemo } from './pages/FreezeClipDemo';
 import { ProPreview } from './pages/ProPreview';
 import { HierarchyDemo } from './pages/HierarchyDemo';
+import { FeaturesShowcase } from './pages/FeaturesShowcase';
 
 type View = 'landing' | 'demos';
-type Page = 'financial' | 'task-tracker' | 'toggle' | 'perf' | 'benchmark' | 'format-edit' | 'sort-filter' | 'validation' | 'editor-ref' | 'core' | 'multi-header' | 'mixed-header' | 'freeze-clip' | 'hierarchy' | 'pro';
+type Page = 'financial' | 'task-tracker' | 'features-showcase' | 'toggle' | 'perf' | 'benchmark' | 'format-edit' | 'sort-filter' | 'validation' | 'editor-ref' | 'core' | 'multi-header' | 'mixed-header' | 'freeze-clip' | 'hierarchy' | 'pro';
 
 const VALID_PAGES = new Set<Page>([
-  'financial', 'task-tracker', 'toggle', 'perf', 'benchmark', 'format-edit', 'sort-filter',
+  'financial', 'task-tracker', 'features-showcase', 'toggle', 'perf', 'benchmark', 'format-edit', 'sort-filter',
   'validation', 'editor-ref', 'core', 'multi-header', 'mixed-header', 'freeze-clip', 'hierarchy', 'pro',
 ]);
 
@@ -97,6 +98,7 @@ export function App() {
           <SectionLabel>Showcase</SectionLabel>
           <NavButton active={page === 'financial'} onClick={() => navigatePage('financial')} icon="📊">Budget Planning</NavButton>
           <NavButton active={page === 'task-tracker'} onClick={() => navigatePage('task-tracker')} icon="✅">Task Tracker</NavButton>
+          <NavButton active={page === 'features-showcase'} onClick={() => navigatePage('features-showcase')} icon="🎯">Features Showcase</NavButton>
 
           <SectionLabel>Interactive</SectionLabel>
           <NavButton active={page === 'toggle'} onClick={() => navigatePage('toggle')} icon="🔌">Plugin Toggle</NavButton>
@@ -130,6 +132,7 @@ export function App() {
         <div style={{ maxWidth: 1200 }}>
           {page === 'financial' && <ComplexGrid />}
           {page === 'task-tracker' && <TaskTracker />}
+          {page === 'features-showcase' && <FeaturesShowcase />}
           {page === 'toggle' && <PluginToggle />}
           {page === 'perf' && <LargeDataset />}
           {page === 'benchmark' && <Benchmark />}
