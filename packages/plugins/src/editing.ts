@@ -440,8 +440,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         cursorAtEnd: boolean,
         numberColumn?: ColumnDef,
       ): HTMLInputElement {
-        const cellFont = getComputedStyle(cellEl).font;
-        const cellPadding = getComputedStyle(cellEl).padding;
+        // Capture computed styles BEFORE clearing cell content
+        const computed = getComputedStyle(cellEl);
+        const cellFont = computed.font;
+        const cellPadding = computed.padding;
+        const cellTextAlign = computed.textAlign;
 
         // Create a simple input inside the cell
         const input = document.createElement('input');
@@ -452,6 +455,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           width: 100%; height: 100%;
           border: none; outline: none;
           font: ${cellFont}; padding: ${cellPadding};
+          text-align: ${cellTextAlign};
           margin: 0; box-sizing: border-box;
           background: transparent; color: inherit;
         `;
