@@ -75,6 +75,93 @@ const totalsRow: SalesRow = {
   total: sampleData.reduce((sum, r) => sum + r.total, 0),
 };
 
+// ---------------------------------------------------------------------------
+// Freeze Clip — Budget line items (inspired by development management tables)
+// ---------------------------------------------------------------------------
+
+interface BudgetRow {
+  code: string;
+  description: string;
+  category: string;
+  type: string;
+  rate: number;
+  startDate: string;
+  endDate: string;
+  [month: string]: string | number;
+}
+
+const budgetMonths = ['jan26', 'feb26', 'mar26', 'apr26', 'may26', 'jun26', 'jul26', 'aug26', 'sep26', 'oct26', 'nov26', 'dec26',
+  'jan27', 'feb27', 'mar27', 'apr27', 'may27', 'jun27', 'jul27', 'aug27', 'sep27', 'oct27', 'nov27', 'dec27'] as const;
+const budgetMonthLabels = ['Jan 26', 'Feb 26', 'Mar 26', 'Apr 26', 'May 26', 'Jun 26', 'Jul 26', 'Aug 26', 'Sep 26', 'Oct 26', 'Nov 26', 'Dec 26',
+  'Jan 27', 'Feb 27', 'Mar 27', 'Apr 27', 'May 27', 'Jun 27', 'Jul 27', 'Aug 27', 'Sep 27', 'Oct 27', 'Nov 27', 'Dec 27'];
+
+const budgetItems = [
+  { code: 'SAL-001', desc: 'Base Salary - Engineering', cat: 'Manpower', type: 'Fixed', rate: 0.03 },
+  { code: 'SAL-002', desc: 'Base Salary - Operations', cat: 'Manpower', type: 'Fixed', rate: 0.03 },
+  { code: 'SAL-003', desc: 'Contract Staff - Dev', cat: 'Manpower', type: 'Variable', rate: 0.05 },
+  { code: 'UTL-001', desc: 'Electricity & Water', cat: 'Utilities', type: 'Variable', rate: 0.02 },
+  { code: 'UTL-002', desc: 'Internet & Telecom', cat: 'Utilities', type: 'Fixed', rate: 0.01 },
+  { code: 'RNT-001', desc: 'Office Lease - HQ', cat: 'Rental', type: 'Fixed', rate: 0.04 },
+  { code: 'RNT-002', desc: 'Co-working Space', cat: 'Rental', type: 'Variable', rate: 0.02 },
+  { code: 'MKT-001', desc: 'Digital Advertising', cat: 'Marketing', type: 'Variable', rate: 0.08 },
+  { code: 'MKT-002', desc: 'Events & Sponsorship', cat: 'Marketing', type: 'Variable', rate: 0.06 },
+  { code: 'SFW-001', desc: 'Cloud Infrastructure', cat: 'Software', type: 'Variable', rate: 0.04 },
+  { code: 'SFW-002', desc: 'SaaS Licenses', cat: 'Software', type: 'Fixed', rate: 0.02 },
+  { code: 'TRV-001', desc: 'Business Travel', cat: 'Travel', type: 'Variable', rate: 0.03 },
+  { code: 'PRF-001', desc: 'Legal & Audit Fees', cat: 'Professional', type: 'Fixed', rate: 0.01 },
+  { code: 'PRF-002', desc: 'Consulting Services', cat: 'Professional', type: 'Variable', rate: 0.05 },
+  { code: 'DEP-001', desc: 'Equipment Depreciation', cat: 'Depreciation', type: 'Fixed', rate: 0.00 },
+];
+
+const rng2 = seededRandom(42);
+const budgetData: BudgetRow[] = budgetItems.map((item) => {
+  const base = Math.round(rng2() * 40000 + 5000);
+  const row: BudgetRow = {
+    code: item.code,
+    description: item.desc,
+    category: item.cat,
+    type: item.type,
+    rate: item.rate,
+    startDate: '2026-01-01',
+    endDate: '2027-12-31',
+  };
+  budgetMonths.forEach((m, i) => {
+    row[m] = Math.round(base * (1 + item.rate * i) + (rng2() - 0.5) * base * 0.1);
+  });
+  return row;
+});
+
+const budgetTotals: BudgetRow = {
+  code: '',
+  description: 'TOTAL',
+  category: '',
+  type: '',
+  rate: 0,
+  startDate: '',
+  endDate: '',
+  ...Object.fromEntries(
+    budgetMonths.map((m) => [m, budgetData.reduce((sum, r) => sum + (r[m] as number), 0)]),
+  ),
+};
+
+const budgetColumns: ColumnDef<BudgetRow>[] = [
+  { id: 'code', header: 'Code', width: 80 },
+  { id: 'description', header: 'Description', width: 200 },
+  { id: 'category', header: 'Category', width: 100 },
+  { id: 'type', header: 'Type', width: 80 },
+  { id: 'rate', header: 'Esc. Rate', width: 80, cellType: 'percent' as const },
+  { id: 'startDate', header: 'Start', width: 100, cellType: 'date' as const },
+  { id: 'endDate', header: 'End', width: 100, cellType: 'date' as const },
+  ...budgetMonths.map((m, i) => ({
+    id: m,
+    accessorKey: m,
+    header: budgetMonthLabels[i]!,
+    width: 90,
+    cellType: 'currency' as const,
+    precision: 0,
+  })),
+];
+
 export function FrozenPinned() {
   const headerRows = useMemo<HeaderRow[]>(
     () => [
@@ -180,22 +267,25 @@ export function FrozenPinned() {
 
       <h2 style={{ fontSize: 18, marginBottom: 8, marginTop: 32 }}>Freeze Clip</h2>
       <p style={{ marginBottom: 8, color: '#888', fontSize: 13, lineHeight: 1.5 }}>
-        When many columns are frozen, drag the handle at the frozen boundary to clip them and
-        reclaim horizontal space. Double-click the handle to restore all frozen columns.
+        Development budgets often freeze many info columns (code, description, category, rates)
+        that eat horizontal space. Drag the clip handle to collapse frozen columns and see more
+        monthly data. Double-click to restore.
       </p>
 
-      <BetterGrid<SalesRow>
-        columns={columns}
-        data={sampleData.slice(0, 8)}
-        frozenLeftColumns={6}
-        freezeClip={{ minVisible: 1 }}
+      <BetterGrid<BudgetRow>
+        columns={budgetColumns}
+        data={budgetData}
+        frozenLeftColumns={7}
+        freezeClip={{ minVisible: 2 }}
+        pinnedBottomRows={[budgetTotals]}
         selection={{ mode: 'range' }}
         plugins={plugins}
-        height={360}
+        height={380}
       />
 
       <div style={{ marginTop: 12, fontSize: 12, color: '#aaa', lineHeight: 1.5 }}>
-        6 frozen columns (#, Region, Product, Jan, Feb, Mar) &bull; Drag the clip handle to hide frozen columns &bull; Double-click to expand
+        7 frozen columns (Code, Description, Category, Type, Rate, Start, End) totalling ~750px &bull;
+        Drag handle to clip &bull; Double-click to expand &bull; minVisible: 2
       </div>
     </div>
   );
