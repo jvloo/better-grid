@@ -632,7 +632,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           const badgeEl = document.createElement('span');
           badgeEl.className = 'bg-cell-editor--badge-trigger';
           badgeEl.style.cssText = `
-            display:inline-flex;align-items:center;gap:6px;cursor:pointer;width:100%;
+            display:inline-flex;align-items:center;gap:6px;cursor:pointer;width:100%;height:100%;line-height:normal;
           `;
           const pill = document.createElement('span');
           pill.textContent = badgeMatch.label ?? String(currentValue);
