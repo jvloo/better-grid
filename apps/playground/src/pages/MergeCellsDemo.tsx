@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
-import { BetterGrid } from '@better-grid/react';
+import { useMemo, useCallback } from 'react';
+import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, mergeCells } from '@better-grid/plugins';
+import { formatting, mergeCells, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface ScheduleRow {
@@ -85,31 +85,55 @@ export function MergeCellsDemo() {
     () => [
       formatting(),
       mergeCells({ cells: mergeConfig }),
+      exportPlugin({ filename: 'schedule' }),
     ],
     [mergeConfig],
   );
 
+  const { grid, containerRef } = useGrid<ScheduleRow>({
+    data: scheduleData,
+    columns,
+    plugins,
+    selection: { mode: 'range' },
+  });
+
+  const handleExcel = useCallback(() => {
+    grid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
+  }, [grid]);
+
+  const btnStyle = {
+    padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6,
+    background: '#fff', cursor: 'pointer', fontSize: 12,
+  } as const;
+
   return (
     <div>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>
-        Merge Cells <span style={{ fontSize: 12, color: '#999', fontWeight: 400 }}>Pro</span>
-      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+        <h1 style={{ margin: 0, fontSize: 24 }}>
+          Merge Cells <span style={{ fontSize: 12, color: '#999', fontWeight: 400 }}>Pro</span>
+        </h1>
+        <button onClick={handleExcel} style={btnStyle}>Excel</button>
+      </div>
       <p style={{ marginBottom: 8, color: '#666', lineHeight: 1.5 }}>
         Body cell spanning — consecutive identical values merged into a single cell.
         Day column spans all timeslots, subject/instructor/type blocks span their duration.
       </p>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
-        <strong>Plugin:</strong> mergeCells (Pro) &bull;
+        <strong>Plugin:</strong> mergeCells (Pro), export &bull;
         <strong> Config:</strong> Static array of {'{'} row, col, rowSpan, colSpan {'}'} &bull;
         <strong> API:</strong> addMerge, removeMerge, clearMerges, getMergeAt
       </div>
 
-      <BetterGrid<ScheduleRow>
-        columns={columns}
-        data={scheduleData}
-        plugins={plugins}
-        selection={{ mode: 'range' }}
-        height={520}
+      <div
+        ref={containerRef}
+        style={{
+          height: 520,
+          width: '100%',
+          position: 'relative',
+          overflow: 'hidden',
+          border: '1px solid #e0e0e0',
+          borderRadius: 8,
+        }}
       />
     </div>
   );

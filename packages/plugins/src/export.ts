@@ -37,6 +37,13 @@ export interface ExportHeaderCell {
   rowSpan?: number;
 }
 
+export interface ExportMerge {
+  row: number;
+  col: number;
+  rowSpan: number;
+  colSpan: number;
+}
+
 export interface ExportData {
   /** Multi-level header rows (with colSpan/rowSpan). Falls back to single row from column headers. */
   headerRows: ExportHeaderCell[][];
@@ -55,6 +62,8 @@ export interface ExportData {
     width?: number;
     frozen?: boolean;
   }[];
+  /** Body cell merges from mergeCells plugin (if active) */
+  merges: ExportMerge[];
 }
 
 export interface ExportApi {
@@ -211,7 +220,13 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
           columns.map((col, ci) => buildExportCell(row, col, ci, true))
         );
 
-        return { headerRows, rows, pinnedTopRows, pinnedBottomRows, columns: columnMeta };
+        // Read merges from mergeCells plugin if active
+        const mergeApi = ctx.getPluginApi<{ getMerges: () => Array<{ row: number; col: number; rowSpan?: number; colSpan?: number }> }>('mergeCells');
+        const merges: ExportMerge[] = mergeApi
+          ? mergeApi.getMerges().map(m => ({ row: m.row, col: m.col, rowSpan: m.rowSpan ?? 1, colSpan: m.colSpan ?? 1 }))
+          : [];
+
+        return { headerRows, rows, pinnedTopRows, pinnedBottomRows, columns: columnMeta, merges };
       }
 
       // ─── CSV ───────────────────────────────────────────────────────────
@@ -396,7 +411,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
         sheetXml += '<sheetData>';
 
         let rowNum = 1;
-        const mergeCells: string[] = [];
+        const mergeCellRefs: string[] = [];
 
         // Header rows
         for (const hr of data.headerRows) {
@@ -410,7 +425,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
             const cs = cell.colSpan ?? 1;
             const rs = cell.rowSpan ?? 1;
             if (cs > 1 || rs > 1) {
-              mergeCells.push(`${ref}:${colRef(colNum + cs - 2)}${rowNum + rs - 1}`);
+              mergeCellRefs.push(`${ref}:${colRef(colNum + cs - 2)}${rowNum + rs - 1}`);
             }
             colNum += cs;
           }
@@ -454,10 +469,18 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
 
         sheetXml += '</sheetData>';
 
-        // Merge cells
-        if (mergeCells.length > 0) {
-          sheetXml += `<mergeCells count="${mergeCells.length}">`;
-          for (const mc of mergeCells) sheetXml += `<mergeCell ref="${mc}"/>`;
+        // Add body merges from mergeCells plugin (offset by header + pinned top rows)
+        const bodyRowOffset = data.headerRows.length + data.pinnedTopRows.length;
+        for (const m of data.merges) {
+          const startRef = colRef(m.col) + (m.row + bodyRowOffset + 1);
+          const endRef = colRef(m.col + m.colSpan - 1) + (m.row + m.rowSpan + bodyRowOffset);
+          mergeCellRefs.push(`${startRef}:${endRef}`);
+        }
+
+        // Merge cells (headers + body)
+        if (mergeCellRefs.length > 0) {
+          sheetXml += `<mergeCells count="${mergeCellRefs.length}">`;
+          for (const mc of mergeCellRefs) sheetXml += `<mergeCell ref="${mc}"/>`;
           sheetXml += '</mergeCells>';
         }
 
