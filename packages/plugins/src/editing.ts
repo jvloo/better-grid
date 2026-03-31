@@ -503,6 +503,17 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           handleEditorKeydown(e);
         });
 
+        // Commit on click outside the cell (same as float editor)
+        function onOutsideClick(e: MouseEvent): void {
+          if (cellEl.contains(e.target as Node)) return;
+          document.removeEventListener('mousedown', onOutsideClick, true);
+          if (editingCell) {
+            commitEdit();
+            ctx.grid.clearSelection();
+          }
+        }
+        setTimeout(() => document.addEventListener('mousedown', onOutsideClick, true), 0);
+
         return input;
       }
 
