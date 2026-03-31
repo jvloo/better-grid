@@ -381,9 +381,9 @@ export function createGrid<
       // Update frozen overlay width and clip scroll container
       const frozenWidth = measurements.colOffsets[frozenCols]!;
       frozenColOverlay!.style.width = `${frozenWidth}px`;
-      // Match content height including pinned rows so frozen overlay covers full viewport
+      // Match viewport height so frozen pinned rows align with main pinned rows
       const contentHeight = measurements.totalHeight + headerHeight + pinnedTopH + pinnedBottomH;
-      const frozenH = Math.min(contentHeight, viewport!.clientHeight + pinnedBottomH);
+      const frozenH = Math.min(contentHeight, viewport!.clientHeight);
       frozenColOverlay!.style.height = `${frozenH}px`;
       frozenColOverlay!.style.bottom = 'auto';
     }
@@ -545,7 +545,10 @@ export function createGrid<
         };
 
         // Render priority: column renderer > cell type > valueModifier > default text
-        if (column.cellRenderer) {
+        const hidden = column.hideZero && value === 0;
+        if (hidden) {
+          // skip
+        } else if (column.cellRenderer) {
           column.cellRenderer(cell, context);
         } else if (column.cellType && rendering.getCellType(column.cellType)) {
           rendering.getCellType(column.cellType)!.render(cell, context as CellRenderContext);

@@ -240,9 +240,19 @@
 }
 
 .bg-grid__pinned-top .bg-cell,
-.bg-grid__pinned-bottom .bg-cell {
+.bg-grid__pinned-bottom .bg-cell,
+.bg-grid__frozen-pinned-top .bg-cell,
+.bg-grid__frozen-pinned-bottom .bg-cell {
   background: var(--bg-pinned-bg, #fafafa);
   font-weight: 500;
+}
+
+.bg-grid__frozen-pinned-top {
+  border-bottom: 2px solid var(--bg-pinned-border, #d0d0d0);
+}
+
+.bg-grid__frozen-pinned-bottom {
+  border-top: 2px solid var(--bg-pinned-border, #d0d0d0);
 }
 
 /* ---------------------------------------------------------------------------

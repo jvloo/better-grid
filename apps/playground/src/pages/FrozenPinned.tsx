@@ -117,7 +117,7 @@ export function FrozenPinned() {
 
   const columns = useMemo<ColumnDef<SalesRow>[]>(
     () => [
-      { id: 'id', header: '#', width: 40, sortable: true },
+      { id: 'id', header: '#', width: 40, sortable: true, hideZero: true },
       { id: 'region', header: 'Region', width: 130, sortable: true },
       { id: 'product', header: 'Product', width: 130, sortable: true },
       ...monthKeys.map((m) => ({
