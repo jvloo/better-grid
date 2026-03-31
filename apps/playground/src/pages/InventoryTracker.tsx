@@ -129,7 +129,7 @@ export function InventoryTracker() {
     columns,
     plugins,
     frozenLeftColumns: 5,
-    freezeClip: { minVisible: 1 },
+    freezeClip: { minVisible: 2 },
     selection: { mode: 'range', fillHandle: true },
     onDataChange: (changes) => {
       setData(prev => {

@@ -2,7 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import {
-  formatting, sorting, filtering, cellRenderers,
+  formatting, cellRenderers,
   search, exportPlugin, pagination,
 } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
@@ -70,8 +70,6 @@ export function SearchExport() {
     () => [
       formatting({ locale: 'en-US', currencyCode: 'USD' }),
       cellRenderers(),
-      sorting(),
-      filtering(),
       search(),
       exportPlugin({ filename: 'employees' }),
       pagination({ pageSize: 10 }),
@@ -87,9 +85,11 @@ export function SearchExport() {
     selection: { mode: 'range' },
   });
 
-  const handleExport = useCallback(() => {
-    const api = grid.getPlugin<{ exportToCsv: () => void }>('export');
-    api?.exportToCsv();
+  const handleExportCsv = useCallback(() => {
+    grid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv();
+  }, [grid]);
+  const handleExportExcel = useCallback(() => {
+    grid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
   }, [grid]);
 
   const handleSearch = useCallback(() => {
@@ -114,13 +114,22 @@ export function SearchExport() {
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <button
-          onClick={handleExport}
+          onClick={handleExportCsv}
           style={{
             padding: '8px 16px', border: '1px solid #d0d0d0', borderRadius: 6,
             background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500,
           }}
         >
-          Export CSV
+          CSV
+        </button>
+        <button
+          onClick={handleExportExcel}
+          style={{
+            padding: '8px 16px', border: '1px solid #d0d0d0', borderRadius: 6,
+            background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+          }}
+        >
+          Excel
         </button>
         <button
           onClick={handleSearch}

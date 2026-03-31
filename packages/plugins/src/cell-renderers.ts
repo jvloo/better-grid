@@ -489,7 +489,8 @@ export function cellRenderers(): GridPlugin<'cell-renderers'> {
             wrapper.appendChild(box);
             container.appendChild(wrapper);
 
-            // Only the checkbox box toggles — clicks elsewhere on the cell go to normal selection
+            // Only toggle if column is editable (not explicitly false)
+            if (context.column.editable === false) return;
             const onClick = (e: MouseEvent) => {
               e.stopPropagation();
               e.preventDefault();

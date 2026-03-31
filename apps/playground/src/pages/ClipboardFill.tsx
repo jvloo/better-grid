@@ -64,7 +64,7 @@ export function ClipboardFill() {
     columns,
     plugins,
     rowHeight: 36,
-    selection: { mode: 'range' },
+    selection: { mode: 'range', fillHandle: true },
   });
 
   return (

@@ -50,7 +50,7 @@ export class SelectionLayer {
     this.onFillDrag = handler;
   }
 
-  render(selection: Selection, measurements: LayoutMeasurements): void {
+  render(selection: Selection, measurements: LayoutMeasurements, readonlyColumns?: Set<number>): void {
     // Clear previous range borders + fill handle
     for (const el of this.rangeBorders) {
       el.remove();
@@ -99,8 +99,16 @@ export class SelectionLayer {
     }
 
     // Fill handle at bottom-right corner of last range (or active cell)
+    // Skip if all columns in the range are readonly
     if (!this.fillHandleEnabled) return;
     const lastRange = selection.ranges[selection.ranges.length - 1];
+    if (lastRange && readonlyColumns && readonlyColumns.size > 0) {
+      let allReadonly = true;
+      for (let c = lastRange.startCol; c <= lastRange.endCol; c++) {
+        if (!readonlyColumns.has(c)) { allReadonly = false; break; }
+      }
+      if (allReadonly) return;
+    }
     if (lastRange && measurements.rowOffsets && measurements.colOffsets) {
       const bottom = measurements.rowOffsets[lastRange.endRow + 1];
       const right = measurements.colOffsets[lastRange.endCol + 1];

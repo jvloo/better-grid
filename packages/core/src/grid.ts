@@ -506,7 +506,12 @@ export function createGrid<
     }
 
     // Render selection layer
-    selectionLayer?.render(state.selection, measurements);
+    // Compute readonly column set for fill handle visibility
+    const readonlyCols = new Set<number>();
+    for (let i = 0; i < state.columns.length; i++) {
+      if (state.columns[i]?.editable === false) readonlyCols.add(i);
+    }
+    selectionLayer?.render(state.selection, measurements, readonlyCols);
 
     emitter.emit('render', visibleRange);
   }
