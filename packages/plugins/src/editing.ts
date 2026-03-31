@@ -447,6 +447,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         const cellTextAlign = computed.textAlign;
 
         // Create a simple input inside the cell
+        // The cell already has padding, so the input uses padding: 0 to avoid double padding
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'bg-cell-editor bg-cell-editor--inline';
@@ -454,7 +455,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         input.style.cssText = `
           width: 100%; height: 100%;
           border: none; outline: none;
-          font: ${cellFont}; padding: ${cellPadding};
+          font: ${cellFont}; padding: 0;
           text-align: ${cellTextAlign};
           margin: 0; box-sizing: border-box;
           background: transparent; color: inherit;
