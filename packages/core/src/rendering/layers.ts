@@ -64,6 +64,29 @@ export class SelectionLayer {
       this.overlay.appendChild(border);
       this.rangeBorders.push(border);
     }
+
+    // Fill handle at bottom-right corner of last range (or active cell)
+    const lastRange = selection.ranges[selection.ranges.length - 1];
+    if (lastRange && measurements.rowOffsets && measurements.colOffsets) {
+      const bottom = measurements.rowOffsets[lastRange.endRow + 1];
+      const right = measurements.colOffsets[lastRange.endCol + 1];
+      if (bottom != null && right != null) {
+        const handle = document.createElement('div');
+        handle.className = 'bg-fill-handle';
+        handle.style.position = 'absolute';
+        handle.style.width = '7px';
+        handle.style.height = '7px';
+        handle.style.background = 'var(--bg-active-border, #1a73e8)';
+        handle.style.border = '1px solid #fff';
+        handle.style.borderRadius = '1px';
+        handle.style.transform = `translate3d(${right - 4}px, ${bottom - 4}px, 0)`;
+        handle.style.cursor = 'crosshair';
+        handle.style.zIndex = '5';
+        handle.style.pointerEvents = 'auto';
+        this.overlay.appendChild(handle);
+        this.rangeBorders.push(handle);
+      }
+    }
   }
 
   destroy(): void {

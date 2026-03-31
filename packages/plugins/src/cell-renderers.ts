@@ -475,26 +475,28 @@ export function cellRenderers(): GridPlugin<'cell-renderers'> {
             container.style.color = truthy ? '#2e7d32' : '#c62828';
             container.style.fontWeight = '600';
           } else {
-            // 'checkbox' (default) — click to toggle
-            container.style.cursor = 'pointer';
+            // 'checkbox' (default) — click checkbox to toggle, click cell to select, dblclick to edit dropdown
             const wrapper = document.createElement('span');
-            wrapper.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;height:100%;line-height:normal;pointer-events:none;';
+            wrapper.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;height:100%;line-height:normal;';
             const box = document.createElement('span');
+            box.style.cursor = 'pointer';
             if (truthy) {
-              box.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:3px;background:#1a73e8;color:#fff;';
+              box.style.cssText += 'display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:3px;background:#1a73e8;color:#fff;cursor:pointer;';
               box.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5L4 7.5L8 3"/></svg>';
             } else {
-              box.style.cssText = 'display:inline-block;width:16px;height:16px;border-radius:3px;border:1.5px solid #d0d0d0;box-sizing:border-box;';
+              box.style.cssText += 'display:inline-block;width:16px;height:16px;border-radius:3px;border:1.5px solid #d0d0d0;box-sizing:border-box;cursor:pointer;';
             }
             wrapper.appendChild(box);
             container.appendChild(wrapper);
 
+            // Only the checkbox box toggles — clicks elsewhere on the cell go to normal selection
             const onClick = (e: MouseEvent) => {
               e.stopPropagation();
+              e.preventDefault();
               ctx.grid.updateCell(context.rowIndex, context.column.id, !context.value);
             };
-            container.addEventListener('mousedown', onClick);
-            return () => { container.removeEventListener('mousedown', onClick); };
+            box.addEventListener('mousedown', onClick);
+            return () => { box.removeEventListener('mousedown', onClick); };
           }
         },
         getStringValue(context: CellRenderContext): string {
