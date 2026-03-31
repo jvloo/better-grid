@@ -203,8 +203,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           const cellRect = cellEl.getBoundingClientRect();
           const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
           const gridRect = gridEl?.getBoundingClientRect();
-          const cellPadding = getComputedStyle(cellEl).padding;
-          const cellFont = getComputedStyle(cellEl).font;
+          const cellComputed = getComputedStyle(cellEl);
+          const cellPadding = cellComputed.padding;
+          const cellFont = cellComputed.font;
+          const cellTextAlign = cellComputed.textAlign;
           const maxRightWidth = gridRect ? gridRect.right - cellRect.left : cellRect.width;
           const fullWidth = gridRect?.width ?? cellRect.width;
           const gridLeft = gridRect?.left ?? cellRect.left;
@@ -236,7 +238,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             outline:none; margin:0;
             font:${cellFont}; line-height:1.5; color:inherit;
             background:transparent; box-sizing:border-box;
-            padding:${cellPadding};
+            padding:${cellPadding}; text-align:${cellTextAlign};
             min-height:${cellRect.height - borderW * 2 + 0.5}px;
             max-height:${cellRect.height * 4}px;
             overflow:auto;
