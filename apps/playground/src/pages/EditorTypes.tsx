@@ -167,7 +167,7 @@ export function EditorTypes() {
       <BetterGrid<EditorRow>
         columns={columns}
         data={floatData}
-        selection={{ mode: 'range' }}
+        selection={{ mode: 'range', fillHandle: false }}
         plugins={floatPlugins}
         onDataChange={(changes) => {
           setFloatData((prev) => {
@@ -188,7 +188,7 @@ export function EditorTypes() {
       <BetterGrid<EditorRow>
         columns={columns}
         data={inlineData}
-        selection={{ mode: 'range' }}
+        selection={{ mode: 'range', fillHandle: false }}
         plugins={inlinePlugins}
         onDataChange={(changes) => {
           setInlineData((prev) => {
