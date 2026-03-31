@@ -16,6 +16,7 @@ import { PerformanceDemo } from './pages/PerformanceDemo';
 import { ProPreview } from './pages/ProPreview';
 import { HRDirectory } from './pages/HRDirectory';
 import { InventoryTracker } from './pages/InventoryTracker';
+import { MergeCellsDemo } from './pages/MergeCellsDemo';
 
 type View = 'landing' | 'demos';
 type Page =
@@ -34,11 +35,12 @@ type Page =
   | 'performance'
   | 'hr-directory'
   | 'inventory'
+  | 'merge-cells'
   | 'pro';
 
 const VALID_PAGES = new Set<Page>([
   'finance', 'project-tracker', 'hr-directory', 'inventory', 'editors', 'cell-types', 'clipboard',
-  'sort-filter', 'search-export', 'hierarchy', 'frozen-pinned', 'multi-header',
+  'sort-filter', 'search-export', 'hierarchy', 'frozen-pinned', 'multi-header', 'merge-cells',
   'core-only', 'plugin-toggle', 'performance', 'pro',
 ]);
 
@@ -138,6 +140,7 @@ export function App() {
           <NavButton active={page === 'performance'} onClick={() => navigatePage('performance')} icon="⚡">Performance</NavButton>
 
           <SectionLabel>Pro</SectionLabel>
+          <NavButton active={page === 'merge-cells'} onClick={() => navigatePage('merge-cells')} icon="🔗">Merge Cells</NavButton>
           <NavButton active={page === 'pro'} onClick={() => navigatePage('pro')} icon="💎">Coming Soon</NavButton>
         </div>
 
@@ -164,6 +167,7 @@ export function App() {
           {page === 'core-only' && <CoreOnly />}
           {page === 'plugin-toggle' && <PluginToggle />}
           {page === 'performance' && <PerformanceDemo />}
+          {page === 'merge-cells' && <MergeCellsDemo />}
           {page === 'pro' && <ProPreview />}
         </div>
       </main>
