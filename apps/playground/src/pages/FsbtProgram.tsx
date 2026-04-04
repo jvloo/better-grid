@@ -130,7 +130,7 @@ export function FsbtProgram() {
     },
     // ── Col 2: Phase (indented name) ────────────────────────────────────
     {
-      id: 'name', accessorKey: 'name', header: 'Phase', width: 236,
+      id: 'name', accessorKey: 'name', header: (() => { const el = document.createElement('span'); el.textContent = 'Phase'; el.style.paddingLeft = '2px'; return el; }) as any, width: 236,
       editable: ((row: ProgramRow) => row.parentId !== null && row.custom) as any,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
