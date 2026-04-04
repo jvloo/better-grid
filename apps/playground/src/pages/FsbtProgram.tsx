@@ -137,7 +137,7 @@ export function FsbtProgram() {
         const isParent = row.parentId === null;
         container.textContent = row.name || '';
         container.style.fontSize = '12px';
-        container.style.fontWeight = '400';
+        container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = '#101828';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
         container.style.paddingLeft = isParent ? '8px' : '28px';
@@ -162,7 +162,7 @@ export function FsbtProgram() {
         const isParent = row.parentId === null;
         container.textContent = row.duration != null ? String(row.duration) : '';
         container.style.fontSize = '12px';
-        container.style.fontWeight = '400';
+        container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = '#101828';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
       },
@@ -190,7 +190,7 @@ export function FsbtProgram() {
         const isParent = row.parentId === null;
         container.textContent = row.start ? formatMonYY(row.start) : '';
         container.style.fontSize = '12px';
-        container.style.fontWeight = '400';
+        container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
       },
