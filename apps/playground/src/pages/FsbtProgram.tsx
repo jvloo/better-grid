@@ -124,7 +124,7 @@ export function FsbtProgram() {
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = isParent ? '#101828' : '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
-        container.style.padding = '10.4px 0 10.4px 8px';
+        container.style.padding = '10.4px 8px';
         container.style.justifyContent = 'flex-end';
       },
     },
