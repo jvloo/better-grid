@@ -419,3 +419,32 @@
   outline: 2px solid var(--bg-search-current-border, #f59e0b);
   outline-offset: -2px;
 }
+
+/* ---------------------------------------------------------------------------
+   Table Style Variants
+   --------------------------------------------------------------------------- */
+
+/* Borderless — no cell borders */
+.bg-table--borderless .bg-cell {
+  border-right: none;
+  border-bottom: none;
+}
+
+/* Striped — no vertical borders, horizontal borders, alternating row bg */
+.bg-table--striped .bg-cell {
+  border-right: none;
+}
+.bg-table--striped .bg-cell--frozen-col-last {
+  border-right: var(--bg-frozen-col-border, 1.5px solid #d0d0d0);
+}
+.bg-table--striped .bg-cell[data-row-even="1"] {
+  background: var(--bg-stripe-bg, #F9FAFB);
+}
+
+/* Striped no bg — same as striped but no alternating bg */
+.bg-table--striped-no-bg .bg-cell {
+  border-right: none;
+}
+.bg-table--striped-no-bg .bg-cell--frozen-col-last {
+  border-right: var(--bg-frozen-col-border, 1.5px solid #d0d0d0);
+}

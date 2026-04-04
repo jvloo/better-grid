@@ -343,6 +343,14 @@ export interface GridOptions<
   onSelectionChange?: (selection: Selection) => void;
   onDataChange?: (changes: CellChange<TData>[]) => void;
   onColumnResize?: (columnId: string, width: number) => void;
+  /**
+   * Table visual style variant.
+   * - 'bordered': full cell borders (default)
+   * - 'borderless': no cell borders
+   * - 'striped': no vertical borders, horizontal borders, alternating row bg
+   * - 'striped-no-bg': no vertical borders, horizontal borders, no alternating bg
+   */
+  tableStyle?: 'bordered' | 'borderless' | 'striped' | 'striped-no-bg';
 }
 
 // ---------------------------------------------------------------------------

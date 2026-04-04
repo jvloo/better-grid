@@ -278,6 +278,7 @@ export function FsbtProgram() {
     plugins,
     frozenLeftColumns: 7,
     freezeClip: { minVisible: 2 },
+    tableStyle: 'striped' as const,
     headerHeight: 44,
     hierarchy: {
       getRowId: (row: ProgramRow) => row.id,

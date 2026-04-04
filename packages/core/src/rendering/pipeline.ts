@@ -95,6 +95,7 @@ export class RenderingPipeline<TData = unknown> {
           }
           cell.dataset.row = String(row);
           cell.dataset.col = String(col);
+          cell.dataset.rowEven = row % 2 === 0 ? '1' : '0';
           this.cellPool.set(key, cell);
         }
 

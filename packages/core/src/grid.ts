@@ -1770,6 +1770,9 @@ export function createGrid<
       if (mounted) instance.unmount();
       container = el;
       container.classList.add('bg-grid');
+      if (options.tableStyle && options.tableStyle !== 'bordered') {
+        container.classList.add(`bg-table--${options.tableStyle}`);
+      }
       container.tabIndex = 0;
 
       // ── Fake scrollbar pattern (AG Grid-inspired) ──
