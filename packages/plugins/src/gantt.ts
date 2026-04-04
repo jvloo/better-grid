@@ -13,6 +13,8 @@ export interface GanttOptions {
   barHeight?: number;
   /** Bar colors by variance state */
   colors?: { neutral?: string; ahead?: string; late?: string };
+  /** Separate color for parent (group) rows. Default: '#1a5276' (dark teal) */
+  parentColor?: string;
   /** Enable drag interactions. Default: true */
   dragEnabled?: boolean;
   /** Auto-scroll near viewport edges during drag. Default: true */
@@ -78,6 +80,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
   const dragEnabled = options?.dragEnabled ?? true;
   const autoScroll = options?.autoScroll ?? true;
   const autoScrollThreshold = options?.autoScrollThreshold ?? 100;
+  const parentColor = options?.parentColor ?? '#1a5276';
   const dateColumnPrefix = options?.dateColumnPrefix ?? 'm_';
   const startColumnField = options?.startColumnField ?? 'startColumn';
   const endColumnField = options?.endColumnField ?? 'endColumn';
@@ -302,8 +305,13 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
       const ganttRenderer: CellTypeRenderer = {
         render(container: HTMLElement, context: CellRenderContext): void | (() => void) {
           container.textContent = '';
+
+          // Override cell styles so the bar can bleed across cell boundaries
           container.style.position = 'relative';
           container.style.overflow = 'visible';
+          container.style.padding = '0';
+          container.style.lineHeight = 'normal';
+          container.style.borderRight = 'none';
 
           const row = context.row as Record<string, unknown>;
           const startCol = row[startColumnField] as number | undefined;
@@ -315,7 +323,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           const colId = context.column.id;
           if (!colId.startsWith(dateColumnPrefix)) return;
 
-          // Get column index among date columns
+          // Build date column index (cached on grid columns)
           const allCols = ctx.grid.getColumns();
           const dateColIds: string[] = [];
           for (const c of allCols) {
@@ -336,50 +344,56 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           else segmentType = 'middle';
 
           const variance = row[varianceField] as number | undefined;
-          const barColor = getVarianceColor(variance, colors);
 
-          // Create bar element
+          // Use different color for parent (group) rows
+          const hierarchyState = ctx.grid.getState().hierarchyState;
+          const isParentRow = hierarchyState
+            ? hierarchyState.parentIds.has(
+                hierarchyState.dataIndexToRowId.get(context.rowIndex) ?? -1,
+              )
+            : false;
+          const barColor = isParentRow ? parentColor : getVarianceColor(variance, colors);
+          const barH = Math.round(context.style.height * barHeightFrac);
+          const barTop = Math.round((context.style.height - barH) / 2);
+
+          // Create bar element — uses exact pixel sizing for crisp rendering
           const bar = document.createElement('div');
           bar.className = 'bg-gantt-bar';
           bar.style.position = 'absolute';
-          bar.style.left = '-1px';
-          bar.style.top = '50%';
-          bar.style.transform = 'translateY(-50%)';
-          bar.style.width = 'calc(100% + 2px)';
-          bar.style.height = `${barHeightFrac * 100}%`;
+          bar.style.left = '0';
+          bar.style.top = `${barTop}px`;
+          // Extend width by 1px to cover the gap where the cell border was removed
+          bar.style.width = `calc(100% + 1px)`;
+          bar.style.height = `${barH}px`;
           bar.style.backgroundColor = barColor;
           bar.style.pointerEvents = 'none';
+          bar.style.zIndex = '1';
 
           // Rounded corners based on segment
+          const radius = Math.min(4, barH / 2);
           if (segmentType === 'start' || segmentType === 'full') {
-            bar.style.borderTopLeftRadius = '4px';
-            bar.style.borderBottomLeftRadius = '4px';
+            bar.style.borderTopLeftRadius = `${radius}px`;
+            bar.style.borderBottomLeftRadius = `${radius}px`;
           }
           if (segmentType === 'end' || segmentType === 'full') {
-            bar.style.borderTopRightRadius = '4px';
-            bar.style.borderBottomRightRadius = '4px';
+            bar.style.borderTopRightRadius = `${radius}px`;
+            bar.style.borderBottomRightRadius = `${radius}px`;
+            bar.style.width = '100%'; // don't extend past last cell
           }
 
           container.appendChild(bar);
 
           // Skip interaction layer if drag disabled or parent row in hierarchy
-          const hierarchyState = ctx.grid.getState().hierarchyState;
-          const isParent = hierarchyState
-            ? hierarchyState.parentIds.has(
-                hierarchyState.dataIndexToRowId.get(context.rowIndex) ?? -1,
-              )
-            : false;
-
-          if (!dragEnabled || isParent) return;
+          if (!dragEnabled || isParentRow) return;
 
           // Interactive overlay (for drag)
           const interactive = document.createElement('div');
           interactive.className = 'bg-gantt-interactive';
           interactive.style.position = 'absolute';
-          interactive.style.left = '-1px';
-          interactive.style.top = `${((1 - barHeightFrac) / 2) * 100}%`;
-          interactive.style.width = 'calc(100% + 2px)';
-          interactive.style.height = `${barHeightFrac * 100}%`;
+          interactive.style.left = '0';
+          interactive.style.top = `${barTop}px`;
+          interactive.style.width = `calc(100% + 1px)`;
+          interactive.style.height = `${barH}px`;
           interactive.style.cursor = 'move';
           interactive.style.zIndex = '2';
           interactive.style.opacity = '0';
@@ -411,12 +425,12 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
             handle.className = 'bg-gantt-handle bg-gantt-handle-start';
             handle.style.position = 'absolute';
             handle.style.left = '-4px';
-            handle.style.top = `${((1 - barHeightFrac) / 2) * 100}%`;
+            handle.style.top = `${barTop}px`;
             handle.style.width = '12px';
-            handle.style.height = `${barHeightFrac * 100}%`;
+            handle.style.height = `${barH}px`;
             handle.style.cursor = 'ew-resize';
             handle.style.zIndex = '3';
-            handle.style.borderRadius = '4px 0 0 4px';
+            handle.style.borderRadius = `${radius}px 0 0 ${radius}px`;
 
             handle.addEventListener('mouseenter', () => {
               handle.style.backgroundColor = 'rgba(255,255,255,0.8)';
@@ -441,12 +455,12 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
             handle.className = 'bg-gantt-handle bg-gantt-handle-end';
             handle.style.position = 'absolute';
             handle.style.right = '-4px';
-            handle.style.top = `${((1 - barHeightFrac) / 2) * 100}%`;
+            handle.style.top = `${barTop}px`;
             handle.style.width = '12px';
-            handle.style.height = `${barHeightFrac * 100}%`;
+            handle.style.height = `${barH}px`;
             handle.style.cursor = 'ew-resize';
             handle.style.zIndex = '3';
-            handle.style.borderRadius = '0 4px 4px 0';
+            handle.style.borderRadius = `0 ${radius}px ${radius}px 0`;
 
             handle.addEventListener('mouseenter', () => {
               handle.style.backgroundColor = 'rgba(255,255,255,0.8)';
@@ -499,12 +513,13 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
         getDragState: () => dragState,
       });
 
-      // Inject global drag cursor style
+      // Inject global styles for gantt cells and drag cursor
       const style = document.createElement('style');
       style.id = 'bg-gantt-drag-style';
       style.textContent = `
         .bg-gantt-dragging { cursor: move !important; }
         .bg-gantt-dragging * { cursor: move !important; user-select: none !important; }
+        .bg-cell:has(.bg-gantt-bar) { overflow: visible !important; padding: 0 !important; border-right-color: transparent !important; }
       `;
       if (!document.getElementById('bg-gantt-drag-style')) {
         document.head.appendChild(style);
