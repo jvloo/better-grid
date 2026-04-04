@@ -73,7 +73,7 @@ function getVarianceColor(
 export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
   const barHeightFrac = options?.barHeight ?? 0.5;
   const colors = {
-    neutral: options?.colors?.neutral ?? '#37c0fb',
+    neutral: options?.colors?.neutral ?? '#2BBDEE',
     ahead: options?.colors?.ahead ?? '#009856',
     late: options?.colors?.late ?? '#fb4c4d',
   };
