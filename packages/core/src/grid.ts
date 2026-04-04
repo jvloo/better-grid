@@ -689,7 +689,7 @@ export function createGrid<
     const cell = getCellFromEvent(event);
     if (!cell) return;
 
-    const selectionMode = options.selection?.mode ?? 'cell';
+    const selectionMode = options.selection?.mode ?? 'none';
     if (selectionMode === 'none') return;
 
     const isCtrlHeld = event.ctrlKey || event.metaKey;
@@ -1951,57 +1951,63 @@ export function createGrid<
 
       // Selection layer (inside cell container so offsets align with cells)
       selectionLayer = new SelectionLayer(cellContainer, container!);
-      selectionLayer.setFillHandleEnabled(options.selection?.fillHandle !== false);
+      selectionLayer.setFillHandleEnabled(options.selection != null && options.selection.fillHandle !== false);
 
-      // Fill handle drag → copy source values to target rows
+      // Fill handle drag → emit event for plugins, fallback to basic copy
       selectionLayer.setFillDragHandler(({ sourceRange, targetRange }) => {
-        const state = store.getState();
-        const columns = state.columns;
-        const sourceRowCount = sourceRange.endRow - sourceRange.startRow + 1;
-        const sourceColCount = sourceRange.endCol - sourceRange.startCol + 1;
-        const isVertical = targetRange.startCol === sourceRange.startCol && targetRange.endCol === sourceRange.endCol;
-        const isHorizontal = targetRange.startRow === sourceRange.startRow && targetRange.endRow === sourceRange.endRow;
+        // Let plugins handle fill (e.g. clipboard pro series detection)
+        let handled = false;
+        const fillEvent = { sourceRange, targetRange, handled: false };
+        emitter.emit('fill:execute' as keyof GridEvents<TData>, fillEvent as never);
+        handled = fillEvent.handled;
 
-        // Collect source values per column to detect series patterns
-        function getSourceValues(colIdx: number): unknown[] {
-          const col = columns[colIdx];
-          if (!col?.accessorKey) return [];
-          const vals: unknown[] = [];
-          for (let r = sourceRange.startRow; r <= sourceRange.endRow; r++) {
-            vals.push((state.data[r] as Record<string, unknown>)?.[col.accessorKey]);
-          }
-          return vals;
-        }
+        if (!handled) {
+          // Default: cycle source values (no series detection)
+          const state = store.getState();
+          const columns = state.columns;
+          const sourceRowCount = sourceRange.endRow - sourceRange.startRow + 1;
+          const sourceColCount = sourceRange.endCol - sourceRange.startCol + 1;
+          const isVertical = targetRange.startCol === sourceRange.startCol && targetRange.endCol === sourceRange.endCol;
+          const isHorizontal = targetRange.startRow === sourceRange.startRow && targetRange.endRow === sourceRange.endRow;
 
-        if (isVertical) {
-          // Fill rows — cycle source values (series detection is Pro)
-          for (let col = targetRange.startCol; col <= targetRange.endCol; col++) {
-            const column = columns[col];
-            if (!column || column.editable === false) continue;
-
-            const sourceVals = getSourceValues(col);
-            for (let row = targetRange.startRow; row <= targetRange.endRow; row++) {
-              const srcIdx = (row - targetRange.startRow) % sourceRowCount;
-              const value = sourceVals[srcIdx];
-              if (value !== undefined) {
-                instance.updateCell(row, column.id, value);
-              }
+          function getSourceValues(colIdx: number): unknown[] {
+            const col = columns[colIdx];
+            if (!col?.accessorKey) return [];
+            const vals: unknown[] = [];
+            for (let r = sourceRange.startRow; r <= sourceRange.endRow; r++) {
+              vals.push((state.data[r] as Record<string, unknown>)?.[col.accessorKey]);
             }
+            return vals;
           }
-        } else if (isHorizontal) {
-          // Fill columns — copy source column values to target columns
-          for (let row = targetRange.startRow; row <= targetRange.endRow; row++) {
+
+          if (isVertical) {
             for (let col = targetRange.startCol; col <= targetRange.endCol; col++) {
               const column = columns[col];
               if (!column || column.editable === false) continue;
 
-              const srcColIdx = sourceRange.startCol + ((col - targetRange.startCol) % sourceColCount);
-              const srcCol = columns[srcColIdx];
-              if (!srcCol?.accessorKey) continue;
+              const sourceVals = getSourceValues(col);
+              for (let row = targetRange.startRow; row <= targetRange.endRow; row++) {
+                const srcIdx = (row - targetRange.startRow) % sourceRowCount;
+                const value = sourceVals[srcIdx];
+                if (value !== undefined) {
+                  instance.updateCell(row, column.id, value);
+                }
+              }
+            }
+          } else if (isHorizontal) {
+            for (let row = targetRange.startRow; row <= targetRange.endRow; row++) {
+              for (let col = targetRange.startCol; col <= targetRange.endCol; col++) {
+                const column = columns[col];
+                if (!column || column.editable === false) continue;
 
-              const value = (state.data[row] as Record<string, unknown>)?.[srcCol.accessorKey];
-              if (value !== undefined) {
-                instance.updateCell(row, column.id, value);
+                const srcColIdx = sourceRange.startCol + ((col - targetRange.startCol) % sourceColCount);
+                const srcCol = columns[srcColIdx];
+                if (!srcCol?.accessorKey) continue;
+
+                const value = (state.data[row] as Record<string, unknown>)?.[srcCol.accessorKey];
+                if (value !== undefined) {
+                  instance.updateCell(row, column.id, value);
+                }
               }
             }
           }

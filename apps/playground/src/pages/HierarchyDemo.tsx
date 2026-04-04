@@ -91,6 +91,7 @@ export function HierarchyDemo() {
       getParentId: (row: DeptRow) => row.parentId,
       defaultExpanded: true,
     },
+    selection: { mode: 'range' },
     rowHeight: 36,
   });
 
