@@ -28,6 +28,9 @@
   --bg-input-border: #D0D5DD;
   --bg-input-placeholder: #98A2B3;
 
+  /* No alternating stripe bg — just use striped for borderless vertical */
+  --bg-stripe-bg: #fff;
+
   /* Frozen columns */
   --bg-frozen-col-border: 1.5px solid #D0D5DD;
   --bg-frozen-col-shadow: 2px 0 4px rgba(16, 24, 40, 0.06);
