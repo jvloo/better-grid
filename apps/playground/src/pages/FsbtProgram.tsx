@@ -140,7 +140,7 @@ export function FsbtProgram() {
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = '#101828';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
-        container.style.paddingLeft = isParent ? '8px' : '14px';
+        container.style.paddingLeft = isParent ? '8px' : (row.custom ? '' : '14px');
       },
     },
     // ── Col 3: Duration (center-aligned, wrapping header) ─────────────
