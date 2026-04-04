@@ -119,7 +119,7 @@ export function FsbtProgram() {
       editing({ editTrigger: 'dblclick' }),
       hierarchy({ expandColumn: 'name', indentSize: 22 }),
       cellRenderers(),
-      gantt({ dateColumnPrefix: 'm_', startColumnField: 'startColumn', endColumnField: 'endColumn' }),
+      gantt({ dateColumnPrefix: 'm_', startColumnField: 'startColumn', endColumnField: 'endColumn', colors: { neutral: '#86D9FC', ahead: '#86D9FC', late: '#86D9FC' }, parentColor: '#518BAA', barHeight: 0.43 }),
       clipboard(),
       undoRedo({ maxHistory: 50 }),
       exportPlugin({ filename: 'fsbt-program' }),
@@ -187,8 +187,8 @@ export function FsbtProgram() {
           width: '100%',
           position: 'relative',
           overflow: 'hidden',
-          border: '1px solid #e0e0e0',
-          borderRadius: 8,
+          
+          borderRadius: 12,
         }}
       />
     </div>

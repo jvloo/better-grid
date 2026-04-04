@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import './wiseway-theme.css';
 import { Landing } from './pages/Landing';
 import { FinanceDashboard } from './pages/FinanceDashboard';
 import { ProjectTracker } from './pages/ProjectTracker';
@@ -62,10 +63,25 @@ const VALID_PAGES = new Set<Page>([
   'dm-timeline', 'dm-forecast', 'dm-actuals', 'dm-summary',
 ]);
 
+const WISEWAY_PAGES = new Set<Page>([
+  'fsbt-program', 'fsbt-cost', 'fsbt-revenue', 'fsbt-funding',
+  'dm-timeline', 'dm-forecast', 'dm-actuals', 'dm-summary',
+]);
+
 function parseRoute(): { view: View; page: Page } {
   const path = window.location.pathname.replace(/\/+$/, '');
   if (path === '/demo' || path === '/demos') {
     return { view: 'demos', page: 'finance' };
+  }
+  if (path.startsWith('/demo-wiseway/')) {
+    const slug = path.slice(14) as Page;
+    if (WISEWAY_PAGES.has(slug)) {
+      return { view: 'demos', page: slug };
+    }
+    return { view: 'demos', page: 'fsbt-program' };
+  }
+  if (path === '/demo-wiseway') {
+    return { view: 'demos', page: 'fsbt-program' };
   }
   if (path.startsWith('/demo/')) {
     const slug = path.slice(6) as Page;
@@ -91,7 +107,8 @@ export function App() {
 
   const navigatePage = useCallback((p: Page) => {
     setPage(p);
-    window.history.pushState(null, '', `/demo/${p}`);
+    const prefix = WISEWAY_PAGES.has(p) ? '/demo-wiseway' : '/demo';
+    window.history.pushState(null, '', `${prefix}/${p}`);
   }, []);
 
   // Handle browser back/forward
@@ -198,14 +215,14 @@ export function App() {
           {page === 'plugin-toggle' && <PluginToggle />}
           {page === 'performance' && <PerformanceDemo />}
           {page === 'merge-cells' && <MergeCellsDemo />}
-          {page === 'fsbt-program' && <FsbtProgram />}
-          {page === 'fsbt-cost' && <FsbtCost />}
-          {page === 'fsbt-revenue' && <FsbtRevenue />}
-          {page === 'fsbt-funding' && <FsbtFunding />}
-          {page === 'dm-timeline' && <DmTimeline />}
-          {page === 'dm-forecast' && <DmForecast />}
-          {page === 'dm-actuals' && <DmActuals />}
-          {page === 'dm-summary' && <DmSummary />}
+          {page === 'fsbt-program' && <div className="wiseway-theme"><FsbtProgram /></div>}
+          {page === 'fsbt-cost' && <div className="wiseway-theme"><FsbtCost /></div>}
+          {page === 'fsbt-revenue' && <div className="wiseway-theme"><FsbtRevenue /></div>}
+          {page === 'fsbt-funding' && <div className="wiseway-theme"><FsbtFunding /></div>}
+          {page === 'dm-timeline' && <div className="wiseway-theme"><DmTimeline /></div>}
+          {page === 'dm-forecast' && <div className="wiseway-theme"><DmForecast /></div>}
+          {page === 'dm-actuals' && <div className="wiseway-theme"><DmActuals /></div>}
+          {page === 'dm-summary' && <div className="wiseway-theme"><DmSummary /></div>}
           {page === 'pro' && <ProPreview />}
         </div>
       </main>

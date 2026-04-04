@@ -260,8 +260,8 @@ export function DmActuals() {
           width: '100%',
           position: 'relative',
           overflow: 'hidden',
-          border: '1px solid #e0e0e0',
-          borderRadius: 8,
+          
+          borderRadius: 12,
         }}
       />
     </div>
