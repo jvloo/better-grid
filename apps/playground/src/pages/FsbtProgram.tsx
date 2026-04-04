@@ -70,21 +70,21 @@ function r(id: number, parentId: number | null, code: string, name: string, dur:
 const data: ProgramRow[] = [
   // ── Phase 1: Acquisition (Sep 18 – Mar 25, 79 months) ────────────────
   r(1, null, '1', 'Acquisition', 79, 'Sep 18', 'Mar 25'),
-  r(2, 1, '1.1', 'Due Diligence', null, 'Sep 18', 'Nov 18'),
-  r(3, 1, '1.2', 'Deposit', null, 'Nov 24', 'Nov 24'),
-  r(4, 1, '1.3', 'Settlement', null, 'Dec 24', 'Mar 25'),
+  r(2, 1, '1.1', 'Due Diligence', 3, 'Sep 18', 'Nov 18'),
+  r(3, 1, '1.2', 'Deposit', 1, 'Nov 24', 'Nov 24'),
+  r(4, 1, '1.3', 'Settlement', 4, 'Dec 24', 'Mar 25'),
   ...customRows(1, '1', 4),
 
   // ── Phase 2: Planning And Design (Sep 24 – May 26, 21 months) ────────
   r(5, null, '2', 'Planning And Design', 21, 'Sep 24', 'May 26'),
-  r(6, 5, '2.1', 'Design Prep To Lodgement', null, 'Sep 24', 'Dec 24'),
-  r(7, 5, '2.2', 'Planning Assessment', null, 'Dec 24', 'Mar 25'),
+  r(6, 5, '2.1', 'Design Prep To Lodgement', 4, 'Sep 24', 'Dec 24'),
+  r(7, 5, '2.2', 'Planning Assessment', 4, 'Dec 24', 'Mar 25'),
   r(8, 5, '2.3', 'Civil And Administrative Tribunal', null, '', ''),
-  r(9, 5, '2.4', 'Prepare Design Amendment', null, 'Mar 25', 'June 25'),
-  r(10, 5, '2.5', 'Amendment Approval', null, 'June 25', 'Sept 25'),
-  r(11, 5, '2.6', '50% Detail Design', null, 'Mar 25', 'June 25'),
-  r(12, 5, '2.7', '70% Detail Design', null, 'June 25', 'July 25'),
-  r(13, 5, '2.8', '100% Detail Design', null, 'July 25', 'May 26'),
+  r(9, 5, '2.4', 'Prepare Design Amendment', 4, 'Mar 25', 'June 25'),
+  r(10, 5, '2.5', 'Amendment Approval', 4, 'June 25', 'Sept 25'),
+  r(11, 5, '2.6', '50% Detail Design', 4, 'Mar 25', 'June 25'),
+  r(12, 5, '2.7', '70% Detail Design', 2, 'June 25', 'July 25'),
+  r(13, 5, '2.8', '100% Detail Design', 11, 'July 25', 'May 26'),
 
   // ── Phase 3: Construction And Building Works (Mar 25 – Sept 26, 19 months) ──
   r(14, null, '3', 'Construction And Building Works', 19, 'Mar 25', 'Sept 26'),
