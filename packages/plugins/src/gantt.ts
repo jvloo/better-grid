@@ -278,6 +278,9 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
         document.body.classList.remove('bg-gantt-dragging');
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
+
+        // Force re-render so bars reflect updated data
+        ctx.grid.refresh();
       }
 
       // ─── Start drag from cell ──────────────────────────────────────
