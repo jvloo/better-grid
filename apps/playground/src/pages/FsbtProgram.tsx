@@ -124,7 +124,7 @@ export function FsbtProgram() {
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = isParent ? '#101828' : '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
-        container.style.padding = '4.4px 6px';
+        container.style.padding = '8.4px 6px';
         container.style.justifyContent = 'flex-end';
       },
     },
@@ -206,7 +206,7 @@ export function FsbtProgram() {
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = isParent ? '#101828' : '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
-        container.style.padding = '4.4px 15.6px';
+        container.style.padding = '8.4px 15.6px';
       },
     },
     // ── Col 6: Collapse/expand arrow (handled by hierarchy plugin) ────
@@ -284,7 +284,7 @@ export function FsbtProgram() {
       getParentId: (row: ProgramRow) => row.parentId,
       defaultExpanded: true,
     },
-    rowHeight: 40,
+    rowHeight: 44,
   });
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
