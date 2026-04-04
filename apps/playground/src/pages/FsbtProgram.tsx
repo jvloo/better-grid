@@ -120,7 +120,7 @@ export function FsbtProgram() {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
         container.textContent = row.code;
-        container.style.fontSize = '14px';
+        container.style.fontSize = '12px';
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = isParent ? '#101828' : '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
@@ -136,7 +136,7 @@ export function FsbtProgram() {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
         container.textContent = row.name || '';
-        container.style.fontSize = '14px';
+        container.style.fontSize = '12px';
         container.style.fontWeight = '400';
         container.style.color = '#101828';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
@@ -161,7 +161,7 @@ export function FsbtProgram() {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
         container.textContent = row.duration != null ? String(row.duration) : '';
-        container.style.fontSize = '14px';
+        container.style.fontSize = '12px';
         container.style.fontWeight = '400';
         container.style.color = '#101828';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
@@ -189,7 +189,7 @@ export function FsbtProgram() {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
         container.textContent = row.start ? formatMonYY(row.start) : '';
-        container.style.fontSize = '14px';
+        container.style.fontSize = '12px';
         container.style.fontWeight = '400';
         container.style.color = '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
@@ -202,7 +202,7 @@ export function FsbtProgram() {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
         container.textContent = formatMonYY(row.end);
-        container.style.fontSize = '14px';
+        container.style.fontSize = '12px';
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = isParent ? '#101828' : '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
