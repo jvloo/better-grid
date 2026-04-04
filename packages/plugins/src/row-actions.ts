@@ -67,6 +67,23 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions'>
 
       const menuIcon = options.menuIcon ?? DOT_VERTICAL_SVG;
 
+      // Inject CSS to suppress all browser-default button interaction states
+      if (!document.getElementById('bg-row-actions-style')) {
+        const style = document.createElement('style');
+        style.id = 'bg-row-actions-style';
+        style.textContent = `
+          .bg-row-actions-trigger:focus,
+          .bg-row-actions-trigger:focus-visible,
+          .bg-row-actions-trigger:active {
+            outline: none !important;
+            box-shadow: none !important;
+            background-color: transparent !important;
+            -webkit-tap-highlight-color: transparent;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
       function closeMenu(): void {
         if (openMenu) {
           openMenu.remove();
