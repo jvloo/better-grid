@@ -264,7 +264,7 @@ export function FsbtProgram() {
         endColumnField: 'endColumn',
         colors: { neutral: '#86D9FC', ahead: '#86D9FC', late: '#86D9FC' },
         parentColor: '#518BAA',
-        barHeight: 0.43,
+        barHeight: 0.55,
         parentRowBackground: '#F8F8F8',
       }),
       clipboard(),

@@ -315,6 +315,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           container.style.padding = '0';
           container.style.lineHeight = 'normal';
           container.style.borderRight = 'none';
+          container.style.borderBottom = 'none';
 
           const row = context.row as Record<string, unknown>;
           const startCol = row[startColumnField] as number | undefined;
