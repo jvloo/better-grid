@@ -106,9 +106,8 @@ const data: ProgramRow[] = [
   r(26, 23, '5.3', 'Termination', null, 'Oct 36', 'Oct 36'),
 ];
 
-// Generate monthly columns from Sep 2018 (218 months to Oct 2036)
-// Show 48 columns starting from Sep 2018 for initial viewport
-const MONTH_COUNT = 48;
+// Generate monthly columns covering full project range (Sep 2018 – Oct 2036 = 218 months)
+const MONTH_COUNT = 218;
 const months: { key: string; label: string }[] = [];
 for (let i = 0; i < MONTH_COUNT; i++) {
   const d = new Date(BASE_YEAR, BASE_MONTH + i);
