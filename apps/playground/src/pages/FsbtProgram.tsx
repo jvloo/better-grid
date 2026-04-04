@@ -284,7 +284,7 @@ export function FsbtProgram() {
       getParentId: (row: ProgramRow) => row.parentId,
       defaultExpanded: true,
     },
-    rowHeight: 56,
+    rowHeight: 40,
   });
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
