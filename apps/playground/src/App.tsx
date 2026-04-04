@@ -18,6 +18,7 @@ import { ProPreview } from './pages/ProPreview';
 import { HRDirectory } from './pages/HRDirectory';
 import { InventoryTracker } from './pages/InventoryTracker';
 import { MergeCellsDemo } from './pages/MergeCellsDemo';
+import { SelectionModes } from './pages/SelectionModes';
 import { FsbtProgram } from './pages/FsbtProgram';
 import { FsbtCost } from './pages/FsbtCost';
 import { FsbtRevenue } from './pages/FsbtRevenue';
@@ -45,6 +46,7 @@ type Page =
   | 'hr-directory'
   | 'inventory'
   | 'merge-cells'
+  | 'selection-modes'
   | 'fsbt-program'
   | 'fsbt-cost'
   | 'fsbt-revenue'
@@ -58,7 +60,7 @@ type Page =
 const VALID_PAGES = new Set<Page>([
   'finance', 'project-tracker', 'hr-directory', 'inventory', 'editors', 'cell-types', 'clipboard',
   'sort-filter', 'search-export', 'hierarchy', 'frozen-pinned', 'multi-header', 'merge-cells',
-  'core-only', 'plugin-toggle', 'performance', 'pro',
+  'core-only', 'plugin-toggle', 'performance', 'selection-modes', 'pro',
   'fsbt-program', 'fsbt-cost', 'fsbt-revenue', 'fsbt-funding',
   'dm-timeline', 'dm-forecast', 'dm-actuals', 'dm-summary',
 ]);
@@ -211,6 +213,7 @@ export function App() {
             <NavButton active={page === 'core-only'} onClick={() => navigatePage('core-only')} icon="🧱">Core Only</NavButton>
             <NavButton active={page === 'plugin-toggle'} onClick={() => navigatePage('plugin-toggle')} icon="🔌">Plugin Toggle</NavButton>
             <NavButton active={page === 'performance'} onClick={() => navigatePage('performance')} icon="⚡">Performance</NavButton>
+            <NavButton active={page === 'selection-modes'} onClick={() => navigatePage('selection-modes')} icon="🎯">Selection Modes</NavButton>
 
             <SectionLabel>Other</SectionLabel>
             <NavButton active={page === 'pro'} onClick={() => navigatePage('pro')} icon="🗺️">Roadmap</NavButton>
@@ -241,6 +244,7 @@ export function App() {
           {page === 'plugin-toggle' && <PluginToggle />}
           {page === 'performance' && <PerformanceDemo />}
           {page === 'merge-cells' && <MergeCellsDemo />}
+          {page === 'selection-modes' && <SelectionModes />}
           {page === 'fsbt-program' && <div className="wiseway-theme"><FsbtProgram /></div>}
           {page === 'fsbt-cost' && <div className="wiseway-theme"><FsbtCost /></div>}
           {page === 'fsbt-revenue' && <div className="wiseway-theme"><FsbtRevenue /></div>}

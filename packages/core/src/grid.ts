@@ -693,13 +693,15 @@ export function createGrid<
     if (selectionMode === 'none') return;
 
     const isCtrlHeld = event.ctrlKey || event.metaKey;
+    const allowRange = selectionMode === 'range';
+    const allowMultiRange = allowRange && options.selection?.multiRange !== false;
 
-    if (event.shiftKey && store.getState().selection.active) {
-      // Extend the last range (works with both plain Shift and Shift+Ctrl)
+    if (event.shiftKey && allowRange && store.getState().selection.active) {
+      // Shift+click: extend selection range (range mode only)
       const newSelection = extendSelection(store.getState().selection, cell);
       store.setSelection(newSelection);
-    } else if (isCtrlHeld) {
-      // Ctrl/Meta+click: add a new single-cell range to existing selection
+    } else if (isCtrlHeld && allowMultiRange) {
+      // Ctrl/Meta+click: add a new single-cell range to existing selection (range + multiRange only)
       const currentSelection = store.getState().selection;
       const cellRange = {
         startRow: cell.rowIndex,
@@ -708,9 +710,9 @@ export function createGrid<
         endCol: cell.colIndex,
       };
       const newSelection = addRangeToSelection(currentSelection, cellRange);
-      // Update active cell to the newly clicked cell
       store.setSelection({ ...newSelection, active: cell });
     } else {
+      // Plain click: select single cell (all modes)
       store.setSelection(createCellSelection(cell));
     }
 
@@ -775,9 +777,9 @@ export function createGrid<
     const direction = getNavigationDirection(event);
     if (direction) {
       event.preventDefault();
-      if (event.shiftKey) {
-        // Extend selection
-        // For shift+arrow, we extend from the active cell
+      const kbSelectionMode = options.selection?.mode ?? 'none';
+      if (event.shiftKey && kbSelectionMode === 'range') {
+        // Shift+arrow: extend range (range mode only)
         const lastRange = state.selection.ranges[state.selection.ranges.length - 1];
         if (lastRange) {
           const end = navigateCell(
