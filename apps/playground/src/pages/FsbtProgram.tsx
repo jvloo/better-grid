@@ -169,7 +169,7 @@ export function FsbtProgram() {
     },
     // ── Col 4: Start (left-aligned) ─────────────────────────────────────
     {
-      id: 'start', accessorKey: 'start', header: 'Start', width: 110, placeholder: 'MM/YY',
+      id: 'start', accessorKey: 'start', header: (() => { const el = document.createElement('span'); el.textContent = 'Start'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, placeholder: 'MM/YY',
       valueModifier: {
         format: (v: unknown) => {
           if (!v || typeof v !== 'string') return '';
@@ -198,7 +198,7 @@ export function FsbtProgram() {
     },
     // ── Col 5: End (left-aligned, always read-only) ───────────────────
     {
-      id: 'end', accessorKey: 'end', header: 'End', width: 110, editable: false,
+      id: 'end', accessorKey: 'end', header: (() => { const el = document.createElement('span'); el.textContent = 'End'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
