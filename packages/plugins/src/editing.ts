@@ -77,15 +77,22 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           const style = document.createElement('style');
           style.id = 'bg-editing-input-style';
           style.textContent = `
+            .bg-cell--input-editable {
+              display: flex !important;
+              align-items: center !important;
+              line-height: normal !important;
+            }
             .bg-cell--input-editable .bg-input-box {
               background: var(--bg-input-bg, #F8F8F8);
               border-radius: 4px;
               box-shadow: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
-              min-height: 30px;
+              height: 30px;
               padding: 0 8px;
               display: flex;
               align-items: center;
               box-sizing: border-box;
+              width: 100%;
+              font-size: 14px;
             }
             .bg-cell--input-editable .bg-input-box:hover {
               background: var(--bg-input-hover-bg, #F0F0F0);
@@ -140,6 +147,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
             const box = document.createElement('div');
             box.className = 'bg-input-box';
+            // Inherit alignment from column
+            if (context.column.align === 'center') box.style.justifyContent = 'center';
+            else if (context.column.align === 'right') box.style.justifyContent = 'flex-end';
             if (text) {
               box.textContent = text;
             } else if (placeholder) {
@@ -242,9 +252,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         const isAutocomplete = column.editor === 'autocomplete';
         const dropdownOpts = getDropdownOptions(column, originalValue);
 
-        // Prepare cell for editing — keep cell padding unchanged so text
-        // position matches between display and edit modes (no glitch)
-        cellEl.textContent = '';
+        // Prepare cell for editing
+        // If the cell has an input box (inputStyle), use it as the editing anchor
+        const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
+        if (inputBox) {
+          inputBox.textContent = '';
+        } else {
+          cellEl.textContent = '';
+        }
         cellEl.classList.add('bg-cell--editing');
 
         // Hide fill handle during editing
@@ -308,14 +323,17 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         cursorAtEnd: boolean,
         numberColumn?: ColumnDef,
       ): HTMLInputElement {
-          const cellRect = cellEl.getBoundingClientRect();
+          // Use input box rect if present (inputStyle mode), otherwise cell rect
+          const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
+          const anchorEl = inputBox ?? cellEl;
+          const cellRect = anchorEl.getBoundingClientRect();
           const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
           const gridRect = gridEl?.getBoundingClientRect();
-          const cellComputed = getComputedStyle(cellEl);
-          const cellPadding = cellComputed.padding;
-          const cellFont = cellComputed.font;
-          const cellTextAlign = cellComputed.textAlign;
-          const cellLetterSpacing = cellComputed.letterSpacing;
+          const anchorComputed = getComputedStyle(anchorEl);
+          const cellPadding = anchorComputed.padding;
+          const cellFont = anchorComputed.font;
+          const cellTextAlign = anchorComputed.textAlign;
+          const cellLetterSpacing = anchorComputed.letterSpacing;
           const maxRightWidth = gridRect ? gridRect.right - cellRect.left : cellRect.width;
           const fullWidth = gridRect?.width ?? cellRect.width;
           const gridLeft = gridRect?.left ?? cellRect.left;
@@ -345,16 +363,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           ed.textContent = value;
           // Match cell position exactly. Use normal line-height + vertical padding
           // for centering, so text selection highlight doesn't span full cell height.
-          const fontSize = parseFloat(cellComputed.fontSize) || 14;
+          const fontSize = parseFloat(anchorComputed.fontSize) || 14;
           const contentLineHeight = Math.round(fontSize * 1.4);
           const editorHeight = cellRect.height - borderW * 2;
           const vertPad = Math.max(0, Math.floor((editorHeight - contentLineHeight) / 2));
-          const hPad = parseFloat(cellComputed.paddingLeft) || 12;
+          const hPad = parseFloat(anchorComputed.paddingLeft) || 12;
 
           ed.style.cssText = `
             outline:none; margin:0;
-            font-family:${cellComputed.fontFamily}; font-size:${cellComputed.fontSize};
-            font-weight:${cellComputed.fontWeight}; line-height:${contentLineHeight}px;
+            font-family:${anchorComputed.fontFamily}; font-size:${anchorComputed.fontSize};
+            font-weight:${anchorComputed.fontWeight}; line-height:${contentLineHeight}px;
             color:inherit; letter-spacing:${cellLetterSpacing};
             background:transparent; box-sizing:border-box;
             padding:${vertPad}px ${hPad}px; text-align:${cellTextAlign};
@@ -653,9 +671,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         cellEl: HTMLElement,
         value: string,
       ): HTMLInputElement {
-        const cellRect = cellEl.getBoundingClientRect();
-        const cellFont = getComputedStyle(cellEl).font;
-        const cellPadding = getComputedStyle(cellEl).padding;
+        const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
+        const anchorEl = inputBox ?? cellEl;
+        const cellRect = anchorEl.getBoundingClientRect();
+        const cellFont = getComputedStyle(anchorEl).font;
+        const cellPadding = getComputedStyle(anchorEl).padding;
 
         // Create floating container (same pattern as text editor)
         const floatBox = document.createElement('div');

@@ -65,10 +65,13 @@
   background: #F9FAFB;
 }
 
-/* Data cell text styling */
+/* Data cell styling — Wiseway uses flex for vertical centering */
 .wiseway-theme .bg-cell {
   color: #282F3D;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  line-height: normal;
 }
 
 /* Parent rows in hierarchy get distinct background */
