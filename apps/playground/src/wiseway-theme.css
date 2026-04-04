@@ -6,7 +6,7 @@
 .wiseway-theme {
   /* Font */
   --bg-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --bg-font-size: 12px;
+  --bg-font-size: 14px;
   --bg-text-color: #282F3D;
 
   /* Grid container */
@@ -22,7 +22,7 @@
   /* Cells */
   --bg-cell-bg: #fff;
   --bg-cell-border-color: #EAECF0;
-  --bg-cell-padding: 8.4px 6px;
+  --bg-cell-padding: 10.4px 8px;
 
   /* Input styling for editable cells */
   --bg-input-border: #D0D5DD;
@@ -55,8 +55,8 @@
 /* Override header cell styling (Wiseway uses #475467 grey-600) */
 .wiseway-theme .bg-header-cell {
   color: #475467;
-  font-size: 10px;
-  padding: 10px 6px;
+  font-size: 12px;
+  padding: 12px 8px;
   border-bottom: 1px solid #EAECF0;
 }
 
@@ -68,7 +68,7 @@
 /* Data cell styling — Wiseway uses flex for vertical centering */
 .wiseway-theme .bg-cell {
   color: #282F3D;
-  font-size: 12px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   line-height: normal;

@@ -113,18 +113,18 @@ export function FsbtProgram() {
         container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
       },
     },
-    // ── Col 1: Code (right-aligned, parent=bold) ──────────────────────
+    // ── Col 1: Code (right-aligned with left gap) ───────────────────────
     {
       id: 'code', accessorKey: 'code', header: 'Code', width: 40, align: 'right' as const, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
         container.textContent = row.code;
-        container.style.fontSize = '12px';
+        container.style.fontSize = '14px';
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = isParent ? '#101828' : '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
-        container.style.paddingRight = '0';
+        container.style.padding = '10.4px 0 10.4px 8px';
         container.style.justifyContent = 'flex-end';
       },
     },
@@ -136,7 +136,7 @@ export function FsbtProgram() {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
         container.textContent = row.name || '';
-        container.style.fontSize = '14px';
+        container.style.fontSize = '16px';
         container.style.fontWeight = '400';
         container.style.color = '#101828';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
@@ -161,38 +161,38 @@ export function FsbtProgram() {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
         container.textContent = row.duration != null ? String(row.duration) : '';
-        container.style.fontSize = '14px';
+        container.style.fontSize = '16px';
         container.style.fontWeight = '400';
         container.style.color = '#101828';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
       },
     },
-    // ── Col 4: Start (Mon yy display) ───────────────────────────────────
+    // ── Col 4: Start (left-aligned) ─────────────────────────────────────
     {
-      id: 'start', accessorKey: 'start', header: 'Start', width: 110, align: 'center' as const, placeholder: 'MM/YY',
+      id: 'start', accessorKey: 'start', header: 'Start', width: 110, placeholder: 'MM/YY',
       editable: ((row: ProgramRow) => row.parentId !== null) as any,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
         container.textContent = row.start ? formatMonYY(row.start) : '';
-        container.style.fontSize = '12px';
+        container.style.fontSize = '14px';
         container.style.fontWeight = '400';
         container.style.color = '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
       },
     },
-    // ── Col 5: End (Mon yy format, always read-only) ──────────────────
+    // ── Col 5: End (left-aligned, always read-only) ───────────────────
     {
-      id: 'end', accessorKey: 'end', header: 'End', width: 110, align: 'center' as const, editable: false,
+      id: 'end', accessorKey: 'end', header: 'End', width: 110, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
         container.textContent = formatMonYY(row.end);
-        container.style.fontSize = '12px';
+        container.style.fontSize = '14px';
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = isParent ? '#101828' : '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
-        container.style.padding = '8.4px 15.6px';
+        container.style.padding = '10.4px 17.6px';
       },
     },
     // ── Col 6: Collapse/expand arrow (handled by hierarchy plugin) ────
