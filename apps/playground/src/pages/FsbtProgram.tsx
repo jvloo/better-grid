@@ -115,7 +115,7 @@ export function FsbtProgram() {
     },
     // ── Col 1: Code (right-aligned with left gap) ───────────────────────
     {
-      id: 'code', accessorKey: 'code', header: 'Code', width: 40, align: 'right' as const, editable: false,
+      id: 'code', accessorKey: 'code', header: 'Code', width: 55, align: 'right' as const, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
