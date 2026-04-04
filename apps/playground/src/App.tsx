@@ -126,79 +126,112 @@ export function App() {
     return <Landing onExploreDemos={() => navigate('demos', 'finance')} />;
   }
 
+  const isWiseway = WISEWAY_PAGES.has(page);
+
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#fafbfc' }}>
+    <div style={{ display: 'flex', height: '100vh', background: isWiseway ? '#fff' : '#fafbfc' }}>
 
       {/* ═══ Sidebar ═══ */}
-      <nav style={{
-        width: 220,
-        background: '#0f0f0f',
-        borderRight: '1px solid #1a1a1a',
-        display: 'flex',
-        flexDirection: 'column',
-        overflowY: 'auto',
-        color: '#ccc',
-        flexShrink: 0,
-      }}>
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>Better Grid</span>
-          <button onClick={() => navigate('landing')} style={{
-            padding: '3px 8px', border: '1px solid #333', borderRadius: 5,
-            background: 'transparent', color: '#888', cursor: 'pointer', fontSize: 11,
-          }}>← Home</button>
-        </div>
+      {isWiseway ? (
+        <nav style={{
+          width: 240,
+          background: '#fff',
+          borderRight: '1px solid #EAECF0',
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: 'auto',
+          color: '#344054',
+          flexShrink: 0,
+          fontFamily: "'Inter', sans-serif",
+        }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #EAECF0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#101828' }}>Wiseway</span>
+            <button onClick={() => navigate('demos', 'finance')} style={{
+              padding: '3px 10px', border: '1px solid #D0D5DD', borderRadius: 6,
+              background: '#fff', color: '#667085', cursor: 'pointer', fontSize: 11,
+            }}>Demos</button>
+          </div>
 
-        <div style={{ padding: '8px 8px', flex: 1 }}>
-          <SectionLabel>Use Cases</SectionLabel>
-          <NavButton active={page === 'finance'} onClick={() => navigatePage('finance')} icon="💰">Finance Dashboard</NavButton>
-          <NavButton active={page === 'project-tracker'} onClick={() => navigatePage('project-tracker')} icon="📋">Project Tracker</NavButton>
-          <NavButton active={page === 'hr-directory'} onClick={() => navigatePage('hr-directory')} icon="👥">HR Directory</NavButton>
-          <NavButton active={page === 'inventory'} onClick={() => navigatePage('inventory')} icon="📦">Inventory Tracker</NavButton>
+          <div style={{ padding: '12px 12px', flex: 1 }}>
+            <WwSectionLabel>Feasibility</WwSectionLabel>
+            <WwNavButton active={page === 'fsbt-program'} onClick={() => navigatePage('fsbt-program')}>Program</WwNavButton>
+            <WwNavButton active={page === 'fsbt-cost'} onClick={() => navigatePage('fsbt-cost')}>Cost</WwNavButton>
+            <WwNavButton active={page === 'fsbt-revenue'} onClick={() => navigatePage('fsbt-revenue')}>Revenue</WwNavButton>
+            <WwNavButton active={page === 'fsbt-funding'} onClick={() => navigatePage('fsbt-funding')}>Funding</WwNavButton>
 
-          <SectionLabel>Editing</SectionLabel>
-          <NavButton active={page === 'editors'} onClick={() => navigatePage('editors')} icon="✏️">Editor Types</NavButton>
-          <NavButton active={page === 'clipboard'} onClick={() => navigatePage('clipboard')} icon="📎">Clipboard & Fill</NavButton>
+            <WwSectionLabel>Development Management</WwSectionLabel>
+            <WwNavButton active={page === 'dm-timeline'} onClick={() => navigatePage('dm-timeline')}>Timeline</WwNavButton>
+            <WwNavButton active={page === 'dm-forecast'} onClick={() => navigatePage('dm-forecast')}>Forecast</WwNavButton>
+            <WwNavButton active={page === 'dm-actuals'} onClick={() => navigatePage('dm-actuals')}>Input Actuals</WwNavButton>
+            <WwNavButton active={page === 'dm-summary'} onClick={() => navigatePage('dm-summary')}>Summary</WwNavButton>
+          </div>
 
-          <SectionLabel>Display</SectionLabel>
-          <NavButton active={page === 'cell-types'} onClick={() => navigatePage('cell-types')} icon="🎨">Cell Types</NavButton>
-          <NavButton active={page === 'sort-filter'} onClick={() => navigatePage('sort-filter')} icon="🔽">Sort & Filter</NavButton>
-          <NavButton active={page === 'search-export'} onClick={() => navigatePage('search-export')} icon="🔍">Search & Export</NavButton>
+          <div style={{ padding: '12px 20px', borderTop: '1px solid #EAECF0', fontSize: 11, color: '#667085' }}>
+            Powered by Better Grid
+          </div>
+        </nav>
+      ) : (
+        <nav style={{
+          width: 220,
+          background: '#0f0f0f',
+          borderRight: '1px solid #1a1a1a',
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: 'auto',
+          color: '#ccc',
+          flexShrink: 0,
+        }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>Better Grid</span>
+            <button onClick={() => navigate('landing')} style={{
+              padding: '3px 8px', border: '1px solid #333', borderRadius: 5,
+              background: 'transparent', color: '#888', cursor: 'pointer', fontSize: 11,
+            }}>← Home</button>
+          </div>
 
-          <SectionLabel>Layout</SectionLabel>
-          <NavButton active={page === 'hierarchy'} onClick={() => navigatePage('hierarchy')} icon="🌳">Hierarchy</NavButton>
-          <NavButton active={page === 'frozen-pinned'} onClick={() => navigatePage('frozen-pinned')} icon="📌">Frozen & Pinned</NavButton>
-          <NavButton active={page === 'multi-header'} onClick={() => navigatePage('multi-header')} icon="📊">Multi-Header</NavButton>
-          <NavButton active={page === 'merge-cells'} onClick={() => navigatePage('merge-cells')} icon="🔗">Merge Cells</NavButton>
+          <div style={{ padding: '8px 8px', flex: 1 }}>
+            <SectionLabel>Use Cases</SectionLabel>
+            <NavButton active={page === 'finance'} onClick={() => navigatePage('finance')} icon="💰">Finance Dashboard</NavButton>
+            <NavButton active={page === 'project-tracker'} onClick={() => navigatePage('project-tracker')} icon="📋">Project Tracker</NavButton>
+            <NavButton active={page === 'hr-directory'} onClick={() => navigatePage('hr-directory')} icon="👥">HR Directory</NavButton>
+            <NavButton active={page === 'inventory'} onClick={() => navigatePage('inventory')} icon="📦">Inventory Tracker</NavButton>
 
-          <SectionLabel>Architecture</SectionLabel>
-          <NavButton active={page === 'core-only'} onClick={() => navigatePage('core-only')} icon="🧱">Core Only</NavButton>
-          <NavButton active={page === 'plugin-toggle'} onClick={() => navigatePage('plugin-toggle')} icon="🔌">Plugin Toggle</NavButton>
-          <NavButton active={page === 'performance'} onClick={() => navigatePage('performance')} icon="⚡">Performance</NavButton>
+            <SectionLabel>Editing</SectionLabel>
+            <NavButton active={page === 'editors'} onClick={() => navigatePage('editors')} icon="✏️">Editor Types</NavButton>
+            <NavButton active={page === 'clipboard'} onClick={() => navigatePage('clipboard')} icon="📎">Clipboard & Fill</NavButton>
 
-          <SectionLabel>Wiseway - Feasibility</SectionLabel>
-          <NavButton active={page === 'fsbt-program'} onClick={() => navigatePage('fsbt-program')} icon="📐">FSBT Program</NavButton>
-          <NavButton active={page === 'fsbt-cost'} onClick={() => navigatePage('fsbt-cost')} icon="💰">FSBT Cost</NavButton>
-          <NavButton active={page === 'fsbt-revenue'} onClick={() => navigatePage('fsbt-revenue')} icon="📈">FSBT Revenue</NavButton>
-          <NavButton active={page === 'fsbt-funding'} onClick={() => navigatePage('fsbt-funding')} icon="🏦">FSBT Funding</NavButton>
+            <SectionLabel>Display</SectionLabel>
+            <NavButton active={page === 'cell-types'} onClick={() => navigatePage('cell-types')} icon="🎨">Cell Types</NavButton>
+            <NavButton active={page === 'sort-filter'} onClick={() => navigatePage('sort-filter')} icon="🔽">Sort & Filter</NavButton>
+            <NavButton active={page === 'search-export'} onClick={() => navigatePage('search-export')} icon="🔍">Search & Export</NavButton>
 
-          <SectionLabel>Wiseway - Dev Mgmt</SectionLabel>
-          <NavButton active={page === 'dm-timeline'} onClick={() => navigatePage('dm-timeline')} icon="📅">DM Timeline</NavButton>
-          <NavButton active={page === 'dm-forecast'} onClick={() => navigatePage('dm-forecast')} icon="📊">DM Forecast</NavButton>
-          <NavButton active={page === 'dm-actuals'} onClick={() => navigatePage('dm-actuals')} icon="📝">DM Input Actuals</NavButton>
-          <NavButton active={page === 'dm-summary'} onClick={() => navigatePage('dm-summary')} icon="💹">DM Summary</NavButton>
+            <SectionLabel>Layout</SectionLabel>
+            <NavButton active={page === 'hierarchy'} onClick={() => navigatePage('hierarchy')} icon="🌳">Hierarchy</NavButton>
+            <NavButton active={page === 'frozen-pinned'} onClick={() => navigatePage('frozen-pinned')} icon="📌">Frozen & Pinned</NavButton>
+            <NavButton active={page === 'multi-header'} onClick={() => navigatePage('multi-header')} icon="📊">Multi-Header</NavButton>
+            <NavButton active={page === 'merge-cells'} onClick={() => navigatePage('merge-cells')} icon="🔗">Merge Cells</NavButton>
 
-          <SectionLabel>Other</SectionLabel>
-          <NavButton active={page === 'pro'} onClick={() => navigatePage('pro')} icon="🗺️">Roadmap</NavButton>
-        </div>
+            <SectionLabel>Architecture</SectionLabel>
+            <NavButton active={page === 'core-only'} onClick={() => navigatePage('core-only')} icon="🧱">Core Only</NavButton>
+            <NavButton active={page === 'plugin-toggle'} onClick={() => navigatePage('plugin-toggle')} icon="🔌">Plugin Toggle</NavButton>
+            <NavButton active={page === 'performance'} onClick={() => navigatePage('performance')} icon="⚡">Performance</NavButton>
 
-        <div style={{ padding: '8px 16px', borderTop: '1px solid #1a1a1a', fontSize: 10, color: '#444' }}>
-          v0.1.0 &bull; MIT
-        </div>
-      </nav>
+            <SectionLabel>Wiseway</SectionLabel>
+            <NavButton active={false} onClick={() => navigatePage('fsbt-program')} icon="🏗️">Open Wiseway Demo</NavButton>
+
+            <SectionLabel>Other</SectionLabel>
+            <NavButton active={page === 'pro'} onClick={() => navigatePage('pro')} icon="🗺️">Roadmap</NavButton>
+          </div>
+
+          <div style={{ padding: '8px 16px', borderTop: '1px solid #1a1a1a', fontSize: 10, color: '#444' }}>
+            v0.1.0 &bull; MIT
+          </div>
+        </nav>
+      )}
 
       {/* ═══ Content ═══ */}
       <main style={{ flex: 1, overflow: 'auto', padding: '24px 28px', minWidth: 0 }}>
-        <div style={{ maxWidth: 1200 }}>
+        <div style={{ maxWidth: isWiseway ? undefined : 1200 }}>
           {page === 'finance' && <FinanceDashboard />}
           {page === 'project-tracker' && <ProjectTracker />}
           {page === 'hr-directory' && <HRDirectory />}
@@ -238,6 +271,47 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     }}>
       {children}
     </div>
+  );
+}
+
+function WwSectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#667085',
+      marginTop: 20, marginBottom: 6, paddingLeft: 8, letterSpacing: '0.5px',
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function WwNavButton({ active, onClick, children }: {
+  active: boolean; onClick: () => void; children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: '100%',
+        padding: '8px 12px',
+        border: 'none',
+        borderRadius: 8,
+        background: active ? '#F2F4F7' : 'transparent',
+        borderLeft: active ? '3px solid #065986' : '3px solid transparent',
+        color: active ? '#101828' : '#475467',
+        cursor: 'pointer',
+        textAlign: 'left',
+        fontSize: 14,
+        fontFamily: "'Inter', sans-serif",
+        fontWeight: active ? 600 : 400,
+        display: 'block',
+        marginBottom: 2,
+      }}
+      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = '#F9FAFB'; }}
+      onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+    >
+      {children}
+    </button>
   );
 }
 
