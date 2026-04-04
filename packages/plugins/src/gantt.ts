@@ -31,6 +31,23 @@ export interface GanttOptions {
   varianceField?: string;
   /** Background color for parent (group) row gantt cells. Default: undefined (no override) */
   parentRowBackground?: string;
+  /**
+   * Field names for start date, duration, and end date on the row data.
+   * When set, drag updates these fields (End auto-calculated from Start + Duration).
+   */
+  startDateField?: string;
+  durationField?: string;
+  endDateField?: string;
+  /**
+   * Convert a column index to a date string (for updating startDateField/endDateField).
+   * E.g. (colIndex) => '2025-07-01'
+   */
+  columnToDate?: (colIndex: number) => string;
+  /**
+   * Calculate duration in months between two column indices.
+   * Default: endCol - startCol + 1
+   */
+  columnsToDuration?: (startCol: number, endCol: number) => number;
 }
 
 export interface GanttApi {
@@ -230,12 +247,28 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
             dragType,
           } as never);
 
-          // Also update the row data directly
+          // Update the row data directly
           const data = ctx.grid.getData();
           const row = data[rowIndex];
           if (row) {
             ctx.grid.updateCell(rowIndex, startColumnField, newStart);
             ctx.grid.updateCell(rowIndex, endColumnField, newEnd);
+
+            // Update date/duration fields if configured
+            if (options?.columnToDate) {
+              const startDateFld = options.startDateField ?? 'start';
+              const endDateFld = options.endDateField ?? 'end';
+              const durFld = options.durationField ?? 'duration';
+              const newStartDate = options.columnToDate(newStart);
+              const newEndDate = options.columnToDate(newEnd);
+              const newDuration = options.columnsToDuration
+                ? options.columnsToDuration(newStart, newEnd)
+                : newEnd - newStart + 1;
+
+              ctx.grid.updateCell(rowIndex, startDateFld, newStartDate);
+              ctx.grid.updateCell(rowIndex, durFld, newDuration);
+              ctx.grid.updateCell(rowIndex, endDateFld, newEndDate);
+            }
           }
         }
 

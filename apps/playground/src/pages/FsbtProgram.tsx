@@ -287,6 +287,16 @@ export function FsbtProgram() {
         parentColor: '#518BAA',
         barHeight: 0.55,
         parentRowBackground: '#F8F8F8',
+        // Drag updates Start, Duration, End fields
+        startDateField: 'start',
+        durationField: 'duration',
+        endDateField: 'end',
+        columnToDate: (colIndex: number) => {
+          const y = BASE_YEAR + Math.floor((BASE_MONTH + colIndex) / 12);
+          const m = (BASE_MONTH + colIndex) % 12;
+          return `${y}-${String(m + 1).padStart(2, '0')}-01`;
+        },
+        columnsToDuration: (startCol: number, endCol: number) => endCol - startCol + 1,
       }),
       clipboard(),
       undoRedo({ maxHistory: 50 }),
