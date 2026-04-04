@@ -103,6 +103,7 @@ export function FsbtFunding() {
     columns,
     plugins,
     frozenLeftColumns: 2,
+    freezeClip: { minVisible: 2 },
     selection: { mode: 'range' as const },
     rowHeight: 44,
   });

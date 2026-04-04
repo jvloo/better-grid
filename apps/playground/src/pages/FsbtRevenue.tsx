@@ -213,6 +213,7 @@ export function FsbtRevenue() {
     columns: holdingColumns,
     plugins: holdingPlugins,
     frozenLeftColumns: 8,
+    freezeClip: { minVisible: 2 },
     hierarchy: {
       getRowId: (row: HoldingRow) => row.id,
       getParentId: (row: HoldingRow) => row.parentId,

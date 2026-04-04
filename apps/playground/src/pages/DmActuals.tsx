@@ -213,6 +213,7 @@ export function DmActuals() {
     headerRows: multiHeaders,
     plugins,
     frozenLeftColumns: 8,
+    freezeClip: { minVisible: 2 },
     pinnedBottomRows,
     selection: { mode: 'range' as const, fillHandle: true },
     rowHeight: 40,

@@ -191,6 +191,7 @@ export function DmForecast() {
     columns,
     plugins,
     frozenLeftColumns: 10,
+    freezeClip: { minVisible: 2 },
     hierarchy: {
       getRowId: (row: ForecastRow) => row.id,
       getParentId: (row: ForecastRow) => row.parentId,

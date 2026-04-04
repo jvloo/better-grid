@@ -147,6 +147,7 @@ export function DmTimeline() {
     columns,
     plugins,
     frozenLeftColumns: 6,
+    freezeClip: { minVisible: 2 },
     hierarchy: {
       getRowId: (row: TimelineRow) => row.id,
       getParentId: (row: TimelineRow) => row.parentId,
