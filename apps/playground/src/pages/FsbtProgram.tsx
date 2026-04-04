@@ -136,7 +136,7 @@ export function FsbtProgram() {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
         container.textContent = row.name || '';
-        container.style.fontSize = '16px';
+        container.style.fontSize = '14px';
         container.style.fontWeight = '400';
         container.style.color = '#101828';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
@@ -161,7 +161,7 @@ export function FsbtProgram() {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
         container.textContent = row.duration != null ? String(row.duration) : '';
-        container.style.fontSize = '16px';
+        container.style.fontSize = '14px';
         container.style.fontWeight = '400';
         container.style.color = '#101828';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
