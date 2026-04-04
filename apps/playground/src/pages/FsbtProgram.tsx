@@ -155,7 +155,7 @@ export function FsbtProgram() {
         el.style.display = 'block';
         return el;
       }) as any,
-      width: 110, align: 'center' as const,
+      width: 90, align: 'center' as const,
       editable: ((row: ProgramRow) => row.parentId !== null) as any,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
@@ -193,6 +193,7 @@ export function FsbtProgram() {
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
+        container.style.paddingLeft = '14px';
       },
     },
     // ── Col 5: End (left-aligned, always read-only) ───────────────────
@@ -206,7 +207,7 @@ export function FsbtProgram() {
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = isParent ? '#101828' : '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
-        container.style.padding = '8.4px 15.6px';
+        container.style.paddingLeft = '14px';
       },
     },
     // ── Col 6: Collapse/expand arrow (handled by hierarchy plugin) ────
