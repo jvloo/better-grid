@@ -1064,6 +1064,7 @@ export function createGrid<
 
     // Apply column alignment to header (justify-content maps left→flex-start, right→flex-end)
     if (opts.align === 'right') cell.style.justifyContent = 'flex-end';
+    else if (opts.align === 'center') cell.style.justifyContent = 'center';
     else if (opts.align === 'left') cell.style.justifyContent = 'flex-start';
     cell.style.position = 'absolute';
     cell.style.transform = `translate3d(${snapToDevicePixel(opts.left)}px, ${snapToDevicePixel(opts.top)}px, 0)`;
