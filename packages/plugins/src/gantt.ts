@@ -459,11 +459,26 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           interactive.style.transition = 'opacity 100ms';
 
           interactive.addEventListener('mouseenter', () => {
+            if (document.body.classList.contains('bg-gantt-dragging')) return;
             interactive.style.opacity = '0.3';
             interactive.style.backgroundColor = '#fff';
+            // Show tooltip with date range
+            if (options?.columnToDate) {
+              const rec = row as Record<string, unknown>;
+              const sCol = rec[startColumnField] as number;
+              const eCol = rec[endColumnField] as number;
+              const startDateFld = options.startDateField ?? 'start';
+              const endDateFld = options.endDateField ?? 'end';
+              const sDate = rec[startDateFld] as string || options.columnToDate(sCol);
+              const eDate = rec[endDateFld] as string || options.columnToDate(eCol);
+              const durFld = options.durationField ?? 'duration';
+              const dur = rec[durFld] as number | null;
+              interactive.title = `${sDate} – ${eDate}${dur != null ? ` (${dur} months)` : ''}`;
+            }
           });
           interactive.addEventListener('mouseleave', () => {
             interactive.style.opacity = '0';
+            interactive.title = '';
             interactive.style.backgroundColor = '';
           });
 
@@ -577,7 +592,8 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
       style.id = 'bg-gantt-drag-style';
       style.textContent = `
         .bg-gantt-dragging { cursor: move !important; }
-        .bg-gantt-dragging * { cursor: move !important; user-select: none !important; }
+        .bg-gantt-dragging * { cursor: move !important; user-select: none !important; pointer-events: none !important; }
+        .bg-gantt-dragging .bg-gantt-overlay { pointer-events: none !important; }
         .bg-cell:has(.bg-gantt-bar) { overflow: visible !important; padding: 0 !important; border-right-color: transparent !important; border-bottom-color: transparent !important; display: block !important; }
       `;
       if (!document.getElementById('bg-gantt-drag-style')) {
