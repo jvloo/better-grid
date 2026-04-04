@@ -32,21 +32,23 @@ interface ProgramRow {
 const BASE_YEAR = 2018;
 const BASE_MONTH = 8; // September (0-indexed)
 
-/** Convert "Mon YY" (e.g. "Sep 18", "Mar 25") to ISO date string */
+/** Convert "Mon YY" (e.g. "Sep 18", "Mar 25") to YYYY-MM-01 date string (no timezone issues) */
 function parseMonYY(s: string): string {
   if (!s) return '';
-  const months: Record<string, number> = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, June:5, Jun:5, July:6, Jul:6, Aug:7, Sept:8, Sep:8, Oct:9, Nov:10, Dec:11 };
+  const months: Record<string, number> = { Jan:1, Feb:2, Mar:3, Apr:4, May:5, June:6, Jun:6, July:7, Jul:7, Aug:8, Sept:9, Sep:9, Oct:10, Nov:11, Dec:12 };
   const parts = s.split(' ');
-  const m = months[parts[0]!] ?? 0;
+  const m = months[parts[0]!] ?? 1;
   const y = 2000 + parseInt(parts[1] || '0', 10);
-  return new Date(y, m, 1).toISOString().split('T')[0]!;
+  return `${y}-${String(m).padStart(2, '0')}-01`;
 }
 
-/** Convert ISO date to month column index (relative to BASE Sep 2018) */
-function toColIndex(iso: string): number {
-  if (!iso) return -1;
-  const d = new Date(iso);
-  return (d.getFullYear() - BASE_YEAR) * 12 + d.getMonth() - BASE_MONTH;
+/** Convert YYYY-MM-DD to month column index (relative to BASE Sep 2018) */
+function toColIndex(dateStr: string): number {
+  if (!dateStr) return -1;
+  const [yStr, mStr] = dateStr.split('-');
+  const y = parseInt(yStr!, 10);
+  const m = parseInt(mStr!, 10) - 1; // 0-indexed
+  return (y - BASE_YEAR) * 12 + m - BASE_MONTH;
 }
 
 let nextId = 100;
