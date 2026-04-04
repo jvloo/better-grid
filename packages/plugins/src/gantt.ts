@@ -122,7 +122,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
         el.style.zIndex = '9999';
         el.style.pointerEvents = 'none';
         el.style.borderRadius = '4px';
-        el.style.opacity = '0.7';
+        el.style.opacity = '0.35';
         el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
         el.style.transition = 'width 80ms ease-out';
         document.body.appendChild(el);
