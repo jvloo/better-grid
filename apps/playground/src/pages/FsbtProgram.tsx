@@ -193,7 +193,7 @@ export function FsbtProgram() {
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
-        container.style.paddingLeft = '14px';
+        if (isParent) container.style.paddingLeft = '14px';
       },
     },
     // ── Col 5: End (left-aligned, always read-only) ───────────────────
