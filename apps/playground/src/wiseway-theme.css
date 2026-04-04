@@ -31,6 +31,9 @@
   /* No alternating stripe bg — just use striped for borderless vertical */
   --bg-stripe-bg: #fff;
 
+  /* Suppress active cell outline (editing uses its own subtle focus style) */
+  --bg-active-border: transparent;
+
   /* Editor: subtle focus style matching Wiseway (barely visible border, same bg) */
   --bg-editor-bg: #F8F8F8;
   --bg-editor-border: #EFEFEF;
