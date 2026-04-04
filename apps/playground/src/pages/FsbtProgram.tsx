@@ -278,7 +278,7 @@ export function FsbtProgram() {
     plugins,
     frozenLeftColumns: 7,
     freezeClip: { minVisible: 2 },
-    headerHeight: 56,
+    headerHeight: 44,
     hierarchy: {
       getRowId: (row: ProgramRow) => row.id,
       getParentId: (row: ProgramRow) => row.parentId,
