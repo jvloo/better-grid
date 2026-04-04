@@ -33,14 +33,24 @@ export function useGrid<
   // Subscribe to state changes for re-renders
   useSyncExternalStore(adapter.subscribe, adapter.getSnapshot, adapter.getSnapshot);
 
-  // Sync data prop changes
+  // Track initial values to skip first effect run (columns/data are already
+  // set during createGrid; re-setting them would overwrite plugin modifications
+  // like hierarchy's column renderer wrapping).
+  const initialDataRef = useRef(options.data);
+  const initialColumnsRef = useRef(options.columns);
+
+  // Sync data prop changes (skip initial — already set in createGrid)
   useEffect(() => {
-    grid.setData(options.data);
+    if (options.data !== initialDataRef.current) {
+      grid.setData(options.data);
+    }
   }, [options.data, grid]);
 
-  // Sync column prop changes
+  // Sync column prop changes (skip initial — already set in createGrid)
   useEffect(() => {
-    grid.setColumns(options.columns);
+    if (options.columns !== initialColumnsRef.current) {
+      grid.setColumns(options.columns);
+    }
   }, [options.columns, grid]);
 
   // Sync pinned row prop changes

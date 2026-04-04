@@ -130,7 +130,7 @@ export function FsbtCost() {
       formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
       editing({ editTrigger: 'dblclick', precision: 0 }),
       sorting(),
-      hierarchy({ expandColumn: 'name', indentSize: 22 }),
+      hierarchy({ indentColumn: 'name', indentSize: 22 }),
       cellRenderers(),
       validation(),
       clipboard(),

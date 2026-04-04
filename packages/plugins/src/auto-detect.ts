@@ -13,7 +13,7 @@ export interface AutoDetectOptions {
 
 interface DetectedType {
   cellType?: string;
-  align?: string;
+  align?: 'left' | 'center' | 'right';
 }
 
 export function autoDetect(options?: AutoDetectOptions): GridPlugin<'auto-detect'> {
@@ -54,7 +54,7 @@ export function autoDetect(options?: AutoDetectOptions): GridPlugin<'auto-detect
             changed = true;
           }
           if (detected.align && !col.align && autoAlign) {
-            (col as ColumnDef & { align: string }).align = detected.align;
+            (col as ColumnDef & { align: 'left' | 'center' | 'right' }).align = detected.align;
             changed = true;
           }
         }

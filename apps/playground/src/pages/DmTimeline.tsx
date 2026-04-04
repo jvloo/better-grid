@@ -132,7 +132,7 @@ export function DmTimeline() {
     () => [
       formatting({ locale: 'en-AU', dateFormat: 'month-year' }),
       editing({ editTrigger: 'dblclick' }),
-      hierarchy({ expandColumn: 'phase', indentSize: 22 }),
+      hierarchy({ indentColumn: 'phase', indentSize: 22 }),
       cellRenderers(),
       gantt({ dateColumnPrefix: 'm_', startColumnField: 'startColumn', endColumnField: 'endColumn', varianceField: 'variance' }),
       clipboard(),

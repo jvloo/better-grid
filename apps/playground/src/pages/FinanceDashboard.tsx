@@ -151,7 +151,7 @@ export function FinanceDashboard() {
       editing({ editTrigger: 'dblclick', precision: 0 }),
       sorting(),
       filtering(),
-      hierarchy({ expandColumn: 'department', indentSize: 22 }),
+      hierarchy({ indentColumn: 'department', indentSize: 22 }),
       cellRenderers(),
       validation(),
       clipboard(),

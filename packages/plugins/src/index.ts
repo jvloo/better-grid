@@ -51,3 +51,6 @@ export { proRenderers } from './pro-renderers';
 
 export { gantt } from './gantt';
 export type { GanttOptions, GanttApi } from './gantt';
+
+export { rowActions, RowActionIcons } from './row-actions';
+export type { RowActionsOptions, RowActionsApi, RowAction } from './row-actions';

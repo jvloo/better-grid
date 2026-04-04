@@ -58,11 +58,11 @@ export function search(options?: SearchOptions): GridPlugin<'search'> {
         for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
           const row = data[rowIndex];
           for (let colIndex = 0; colIndex < columns.length; colIndex++) {
-            const col = columns[colIndex];
+            const col = columns[colIndex]!;
             let value: unknown;
-            if (col.accessorFn) {
+            if (col?.accessorFn) {
               value = col.accessorFn(row as never, rowIndex);
-            } else if (col.accessorKey) {
+            } else if (col?.accessorKey) {
               value = (row as Record<string, unknown>)[col.accessorKey];
             }
 
@@ -94,22 +94,22 @@ export function search(options?: SearchOptions): GridPlugin<'search'> {
       function navigateToMatch(index: number): void {
         if (matches.length === 0) return;
         currentMatchIndex = ((index % matches.length) + matches.length) % matches.length;
-        const match = matches[currentMatchIndex];
+        const match = matches[currentMatchIndex]!;
 
         // Select the matched cell
         ctx.grid.setSelection({
-          active: { rowIndex: match.rowIndex, colIndex: match.colIndex },
+          active: { rowIndex: match!.rowIndex, colIndex: match!.colIndex },
           ranges: [{
-            startRow: match.rowIndex,
-            endRow: match.rowIndex,
-            startCol: match.colIndex,
-            endCol: match.colIndex,
+            startRow: match!.rowIndex,
+            endRow: match!.rowIndex,
+            startCol: match!.colIndex,
+            endCol: match!.colIndex,
           }],
         });
 
         // Scroll the matched cell into view
         if (typeof ctx.grid.scrollTo === 'function') {
-          ctx.grid.scrollTo(match.rowIndex, match.colIndex);
+          ctx.grid.scrollTo(match!.rowIndex, match!.colIndex);
         }
         ctx.grid.refresh();
         requestAnimationFrame(applyHighlights);

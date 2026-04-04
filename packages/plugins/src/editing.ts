@@ -17,6 +17,12 @@ export interface EditingOptions {
   precision?: number;
   /** Editor rendering mode. 'float' = floating overlay (default), 'inline' = inside cell bounds */
   editorMode?: 'float' | 'inline';
+  /**
+   * Show editable cells with input-like styling (subtle border, rounded corners).
+   * Only applied to cells where `editable` is true/returns true.
+   * Default: false
+   */
+  inputStyle?: boolean;
 }
 
 /** Dropdown option for columns with meta.options */
@@ -57,12 +63,99 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
     booleanLabels: options?.booleanLabels ?? (['Yes', 'No'] as [string, string]),
     precision: options?.precision,
     editorMode: options?.editorMode ?? 'float',
+    inputStyle: options?.inputStyle ?? false,
   };
 
   return {
     id: 'editing',
 
     init(ctx: PluginContext) {
+      // ─── Input-style CSS + cellClass wrapping ────────────────────────
+      if (config.inputStyle) {
+        // Inject CSS once
+        if (!document.getElementById('bg-editing-input-style')) {
+          const style = document.createElement('style');
+          style.id = 'bg-editing-input-style';
+          style.textContent = `
+            .bg-cell--input-editable .bg-input-box {
+              background: var(--bg-input-bg, #F8F8F8);
+              border-radius: 4px;
+              box-shadow: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
+              min-height: 30px;
+              padding: 0 8px;
+              display: flex;
+              align-items: center;
+              box-sizing: border-box;
+            }
+            .bg-cell--input-editable .bg-input-box:hover {
+              background: var(--bg-input-hover-bg, #F0F0F0);
+            }
+            .bg-cell--input-editable .bg-input-box--placeholder {
+              color: var(--bg-input-placeholder, #98A2B3);
+            }
+          `;
+          document.head.appendChild(style);
+        }
+
+        // Wrap cellClass on editable columns — mark empty cells for flat input styling
+        const columns = ctx.store.getState().columns;
+        let changed = false;
+        for (const col of columns) {
+          if (col.editable === false) continue;
+          if (!col.accessorKey && !col.accessorFn) continue;
+
+          const origCellClass = col.cellClass;
+          const placeholder = col.placeholder;
+
+          col.cellClass = (value: unknown, row: unknown) => {
+            let cls = origCellClass ? origCellClass(value, row) ?? '' : '';
+            let isEditable = true;
+            if (typeof col.editable === 'function') {
+              isEditable = col.editable(row as never, col as never);
+            }
+            if (isEditable) cls += ' bg-cell--input-editable';
+            return cls.trim() || undefined;
+          };
+
+          // Wrap cellRenderer to add inner input box
+          const origRenderer = col.cellRenderer;
+          col.cellRenderer = (container, context) => {
+            let isEditable = col.editable !== false;
+            if (typeof col.editable === 'function') {
+              isEditable = col.editable(context.row as never, col as never);
+            }
+
+            if (!isEditable) {
+              if (origRenderer) return origRenderer(container, context);
+              container.textContent = context.value != null ? String(context.value) : '';
+              return;
+            }
+
+            // Run original renderer to set styles (bg, font, padding) on the cell
+            if (origRenderer) origRenderer(container, context);
+
+            // Capture text set by original renderer, then replace with input box
+            const text = container.textContent?.trim() || '';
+            container.textContent = '';
+
+            const box = document.createElement('div');
+            box.className = 'bg-input-box';
+            if (text) {
+              box.textContent = text;
+            } else if (placeholder) {
+              box.textContent = placeholder;
+              box.classList.add('bg-input-box--placeholder');
+            }
+            container.appendChild(box);
+          };
+
+          changed = true;
+        }
+
+        if (changed) {
+          ctx.store.update('columns', () => ({ columns: [...columns] }));
+        }
+      }
       let editingCell: CellPosition | null = null;
       let activeEditor: HTMLInputElement | null = null;
       let activeFloatBox: HTMLElement | null = null;
@@ -123,12 +216,22 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         const state = ctx.grid.getState();
         const column = state.columns[position.colIndex];
         if (!column) return;
+
+        // Map visual row index to data index (hierarchy may reorder/filter rows)
+        const hs = state.hierarchyState;
+        const dataIndex = hs ? (hs.visibleRows[position.rowIndex] ?? position.rowIndex) : position.rowIndex;
+        const rowData = state.data[dataIndex];
+
+        // Resolve editable — supports boolean or function(row, column)
         if (column.editable === false) return;
+        if (typeof column.editable === 'function') {
+          if (!rowData || !column.editable(rowData, column)) return;
+        }
 
         editingCell = position;
 
         // Get current raw value
-        const data = state.data[position.rowIndex];
+        const data = rowData;
         if (column.accessorKey && data) {
           originalValue = (data as Record<string, unknown>)[column.accessorKey];
         } else {
@@ -212,7 +315,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           const cellPadding = cellComputed.padding;
           const cellFont = cellComputed.font;
           const cellTextAlign = cellComputed.textAlign;
-          const cellLineHeight = cellComputed.lineHeight;
           const cellLetterSpacing = cellComputed.letterSpacing;
           const maxRightWidth = gridRect ? gridRect.right - cellRect.left : cellRect.width;
           const fullWidth = gridRect?.width ?? cellRect.width;
@@ -854,12 +956,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           | ((value: string) => void)
           | undefined;
 
-        // Find current label
-        const currentOpt = opts.find(
-          (o) => o.value === currentValue || String(o.value) === String(currentValue),
-        );
-        const currentLabel = currentOpt?.label ?? String(currentValue ?? '');
-
         // Cell metrics
         const rect = cellEl.getBoundingClientRect();
         const cellFont = getComputedStyle(cellEl).font;
@@ -1406,8 +1502,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           const tag = (event.target as HTMLElement)?.tagName;
           if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return false;
           if ((event.target as HTMLElement)?.isContentEditable) return false;
-          const column = ctx.grid.getState().columns[cell.colIndex];
-          if (column?.editable === false) return false;
+          const kbState = ctx.grid.getState();
+          const column = kbState.columns[cell.colIndex];
+          if (!column) return false;
+          if (column.editable === false) return false;
+          if (typeof column.editable === 'function') {
+            const kbHs = kbState.hierarchyState;
+            const di = kbHs ? (kbHs.visibleRows[cell.rowIndex] ?? cell.rowIndex) : cell.rowIndex;
+            const rd = kbState.data[di];
+            if (!rd || !column.editable(rd, column)) return false;
+          }
           startEdit(cell, event.key);
           return true;
         },

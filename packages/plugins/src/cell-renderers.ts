@@ -362,9 +362,9 @@ const tooltipRenderer: CellTypeRenderer = {
       tooltipEl.style.pointerEvents = 'none';
       tooltipEl.style.whiteSpace = 'normal';
 
-      const colors = typeColors[tooltipType] ?? typeColors.info;
-      tooltipEl.style.backgroundColor = colors.bg;
-      tooltipEl.style.color = colors.color;
+      const colors = typeColors[tooltipType] ?? typeColors.info!;
+      tooltipEl.style.backgroundColor = colors!.bg;
+      tooltipEl.style.color = colors!.color;
 
       document.body.appendChild(tooltipEl);
 

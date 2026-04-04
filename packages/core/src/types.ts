@@ -142,10 +142,12 @@ export interface ColumnDef<TData = unknown> {
   cellRenderer?: CellRenderer<TData>;
 
   // Editing
-  editable?: boolean;
+  editable?: boolean | ((row: TData, column: ColumnDef<TData>) => boolean);
   editor?: EditorType;
   options?: (string | ColumnOption)[];
   precision?: number;
+  /** Placeholder text shown in empty editable cells when inputStyle is enabled */
+  placeholder?: string;
 
   // Sorting
   sortable?: boolean;

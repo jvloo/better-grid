@@ -199,7 +199,7 @@ export function FsbtRevenue() {
     () => [
       formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
       editing({ editTrigger: 'dblclick', precision: 0 }),
-      hierarchy({ expandColumn: 'type', indentSize: 22 }),
+      hierarchy({ indentColumn: 'type', indentSize: 22 }),
       cellRenderers(),
       clipboard(),
       undoRedo({ maxHistory: 50 }),

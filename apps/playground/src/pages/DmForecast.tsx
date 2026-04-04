@@ -175,7 +175,7 @@ export function DmForecast() {
       formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
       editing({ editTrigger: 'dblclick', precision: 0 }),
       sorting(),
-      hierarchy({ expandColumn: 'accountName', indentSize: 22 }),
+      hierarchy({ indentColumn: 'accountName', indentSize: 22 }),
       cellRenderers(),
       clipboard(),
       undoRedo({ maxHistory: 50 }),

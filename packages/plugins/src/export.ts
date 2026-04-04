@@ -2,7 +2,7 @@
 // Export Plugin — CSV & Excel export with full grid feature support
 // ============================================================================
 
-import type { GridPlugin, PluginContext, ColumnDef, HeaderRow, HeaderCell } from '@better-grid/core';
+import type { GridPlugin, PluginContext, ColumnDef } from '@better-grid/core';
 
 export interface ExportOptions {
   /** Default filename (without extension). Default: 'export' */
@@ -287,7 +287,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
       function exportToExcel(opts?: { filename?: string }): void {
         const exportData = getExportData();
         const xlsx = buildXlsx(exportData);
-        const blob = new Blob([xlsx], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const blob = new Blob([xlsx as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         download(blob, (opts?.filename ?? config.filename) + '.xlsx');
       }
 
@@ -338,7 +338,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
           const col = data.columns[colIdx];
           const hAlign = cell.align ?? col?.align ?? '';
           // Map CSS vertical-align to Excel: top→top, middle→center, bottom→bottom
-          const rawVa = col?.align === 'center' ? '' : ''; // vertical align from column not commonly used
+          const rawVa: string = ''; // vertical align from column not commonly used
           const vAlign = rawVa === 'middle' ? 'center' : rawVa;
 
           let numFmt = NUM_FMT_GENERAL;
@@ -374,7 +374,6 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
         // ── Data validations (dropdown columns) ──
         const validations: { col: number; options: string[] }[] = [];
         for (let i = 0; i < data.columns.length; i++) {
-          const col = data.columns[i]!;
           // Check if the source column has options (for dropdown)
           const state = ctx.grid.getState();
           const colDef = state.columns[i];

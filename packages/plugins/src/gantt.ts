@@ -29,6 +29,8 @@ export interface GanttOptions {
   endColumnField?: string;
   /** Field name on row for variance (positive=ahead, negative=late). Default: 'variance' */
   varianceField?: string;
+  /** Background color for parent (group) row gantt cells. Default: undefined (no override) */
+  parentRowBackground?: string;
 }
 
 export interface GanttApi {
@@ -85,6 +87,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
   const startColumnField = options?.startColumnField ?? 'startColumn';
   const endColumnField = options?.endColumnField ?? 'endColumn';
   const varianceField = options?.varianceField ?? 'variance';
+  const parentRowBackground = options?.parentRowBackground;
 
   return {
     id: 'gantt',
@@ -332,6 +335,20 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           const dateColIndex = dateColIds.indexOf(colId);
           if (dateColIndex < 0) return;
 
+          // Detect parent row early (needed for background on ALL gantt cells, not just bar cells)
+          const hierarchyState = ctx.grid.getState().hierarchyState;
+          let isParentRow = false;
+          if (hierarchyState) {
+            const dataIndex = hierarchyState.visibleRows[context.rowIndex] ?? context.rowIndex;
+            const rowId = hierarchyState.dataIndexToRowId.get(dataIndex) ?? -1;
+            isParentRow = hierarchyState.parentIds.has(rowId);
+          }
+
+          // Apply parent row background to all gantt cells (including empty ones outside bar range)
+          if (isParentRow && parentRowBackground) {
+            container.style.backgroundColor = parentRowBackground;
+          }
+
           // Is this cell within the bar range?
           if (dateColIndex < startCol || dateColIndex > endCol) return;
 
@@ -345,13 +362,6 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
 
           const variance = row[varianceField] as number | undefined;
 
-          // Use different color for parent (group) rows
-          const hierarchyState = ctx.grid.getState().hierarchyState;
-          const isParentRow = hierarchyState
-            ? hierarchyState.parentIds.has(
-                hierarchyState.dataIndexToRowId.get(context.rowIndex) ?? -1,
-              )
-            : false;
           const barColor = isParentRow ? parentColor : getVarianceColor(variance, colors);
           const barH = Math.round(context.style.height * barHeightFrac);
           const barTop = Math.round((context.style.height - barH) / 2);
@@ -360,10 +370,10 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           const bar = document.createElement('div');
           bar.className = 'bg-gantt-bar';
           bar.style.position = 'absolute';
-          bar.style.left = '0';
+          bar.style.left = '-1px';
           bar.style.top = `${barTop}px`;
-          // Extend width by 1px to cover the gap where the cell border was removed
-          bar.style.width = `calc(100% + 1px)`;
+          // Width: 100% + 2px to cover cell borders seamlessly (matches Wiseway)
+          bar.style.width = `calc(100% + 2px)`;
           bar.style.height = `${barH}px`;
           bar.style.backgroundColor = barColor;
           bar.style.pointerEvents = 'none';
@@ -378,7 +388,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           if (segmentType === 'end' || segmentType === 'full') {
             bar.style.borderTopRightRadius = `${radius}px`;
             bar.style.borderBottomRightRadius = `${radius}px`;
-            bar.style.width = '100%'; // don't extend past last cell
+            bar.style.width = 'calc(100% + 1px)'; // end: don't extend past last cell border
           }
 
           container.appendChild(bar);
@@ -390,9 +400,9 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           const interactive = document.createElement('div');
           interactive.className = 'bg-gantt-interactive';
           interactive.style.position = 'absolute';
-          interactive.style.left = '0';
+          interactive.style.left = '-1px';
           interactive.style.top = `${barTop}px`;
-          interactive.style.width = `calc(100% + 1px)`;
+          interactive.style.width = `calc(100% + 2px)`;
           interactive.style.height = `${barH}px`;
           interactive.style.cursor = 'move';
           interactive.style.zIndex = '2';

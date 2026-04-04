@@ -689,6 +689,9 @@ export function createGrid<
     const cell = getCellFromEvent(event);
     if (!cell) return;
 
+    // Always emit cell:click (editing and other plugins depend on it)
+    emitter.emit('cell:click', cell, event as unknown as MouseEvent);
+
     const selectionMode = options.selection?.mode ?? 'none';
     if (selectionMode === 'none') return;
 
@@ -697,11 +700,9 @@ export function createGrid<
     const allowMultiRange = allowRange && options.selection?.multiRange !== false;
 
     if (event.shiftKey && allowRange && store.getState().selection.active) {
-      // Shift+click: extend selection range (range mode only)
       const newSelection = extendSelection(store.getState().selection, cell);
       store.setSelection(newSelection);
     } else if (isCtrlHeld && allowMultiRange) {
-      // Ctrl/Meta+click: add a new single-cell range to existing selection (range + multiRange only)
       const currentSelection = store.getState().selection;
       const cellRange = {
         startRow: cell.rowIndex,
@@ -712,11 +713,9 @@ export function createGrid<
       const newSelection = addRangeToSelection(currentSelection, cellRange);
       store.setSelection({ ...newSelection, active: cell });
     } else {
-      // Plain click: select single cell (all modes)
       store.setSelection(createCellSelection(cell));
     }
 
-    emitter.emit('cell:click', cell, event as unknown as MouseEvent);
     emitter.emit('selection:change', store.getState().selection);
     scheduleRender();
   }
@@ -871,6 +870,7 @@ export function createGrid<
         isLastFrozenCol,
         columnId: column.id,
         resizable: column.resizable !== false,
+        align: column.align,
       });
 
       appendHeaderCell(cell, isFrozen);
@@ -1054,12 +1054,17 @@ export function createGrid<
     resizable: boolean;
     resizeColIndex?: number; // column index to resize (defaults to colIndex)
     resizeHandleTop?: number; // extend resize handle upward (negative value)
+    align?: 'left' | 'center' | 'right';
   }): HTMLElement {
     const cell = document.createElement('div');
     let cls = 'bg-header-cell';
     if (opts.isFrozen) cls += ' bg-header-cell--frozen-left';
     if (opts.isLastFrozenCol) cls += ' bg-header-cell--frozen-col-last';
     cell.className = cls;
+
+    // Apply column alignment to header (justify-content maps left→flex-start, right→flex-end)
+    if (opts.align === 'right') cell.style.justifyContent = 'flex-end';
+    else if (opts.align === 'left') cell.style.justifyContent = 'flex-start';
     cell.style.position = 'absolute';
     cell.style.transform = `translate3d(${snapToDevicePixel(opts.left)}px, ${snapToDevicePixel(opts.top)}px, 0)`;
     cell.style.width = `${snapToDevicePixel(opts.width)}px`;

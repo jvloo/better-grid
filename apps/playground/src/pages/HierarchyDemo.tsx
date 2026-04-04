@@ -63,7 +63,7 @@ export function HierarchyDemo() {
   const plugins = useMemo(
     () => [
       formatting(),
-      hierarchy({ expandColumn: 'name', indentSize: 22 }),
+      hierarchy({ indentColumn: 'name', indentSize: 22 }),
     ],
     [],
   );
