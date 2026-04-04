@@ -146,7 +146,7 @@ export function FsbtCost() {
     data,
     columns,
     plugins,
-    frozenLeftColumns: 11,
+    frozenLeftColumns: 12,
     hierarchy: {
       getRowId: (row: CostRow) => row.id,
       getParentId: (row: CostRow) => row.parentId,
