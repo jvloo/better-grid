@@ -24,72 +24,92 @@ interface ProgramRow {
 // Dates computed sequentially from Jul 2025 base to create realistic Gantt
 // ---------------------------------------------------------------------------
 
-let nextId = 100; // custom rows start at 100+
+// ---------------------------------------------------------------------------
+// Data from QA app project 4369: https://qa-app.wiseway.ai/projects/4369/program
+// Base month: Sep 2018 (month index 0). 218 months total (Sep 2018 – Oct 2036).
+// ---------------------------------------------------------------------------
 
-/** Generate 3 empty custom rows for a parent */
+const BASE_YEAR = 2018;
+const BASE_MONTH = 8; // September (0-indexed)
+
+/** Convert "Mon YY" (e.g. "Sep 18", "Mar 25") to ISO date string */
+function parseMonYY(s: string): string {
+  if (!s) return '';
+  const months: Record<string, number> = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, June:5, Jun:5, July:6, Jul:6, Aug:7, Sept:8, Sep:8, Oct:9, Nov:10, Dec:11 };
+  const parts = s.split(' ');
+  const m = months[parts[0]!] ?? 0;
+  const y = 2000 + parseInt(parts[1] || '0', 10);
+  return new Date(y, m, 1).toISOString().split('T')[0]!;
+}
+
+/** Convert ISO date to month column index (relative to BASE Sep 2018) */
+function toColIndex(iso: string): number {
+  if (!iso) return -1;
+  const d = new Date(iso);
+  return (d.getFullYear() - BASE_YEAR) * 12 + d.getMonth() - BASE_MONTH;
+}
+
+let nextId = 100;
 function customRows(parentId: number, parentCode: string, startIndex: number): ProgramRow[] {
   const rows: ProgramRow[] = [];
   for (let i = 0; i < 3; i++) {
-    rows.push({
-      id: nextId++,
-      parentId,
-      code: `${parentCode}.${startIndex + i}`,
-      name: '',
-      duration: null,
-      start: '',
-      end: '',
-      custom: true,
-      startColumn: -1,
-      endColumn: -1,
-    });
+    rows.push({ id: nextId++, parentId, code: `${parentCode}.${startIndex + i}`, name: '', duration: null, start: '', end: '', custom: true, startColumn: -1, endColumn: -1 });
   }
   return rows;
 }
 
+/** Helper to build a row from QA app data */
+function r(id: number, parentId: number | null, code: string, name: string, dur: number | null, start: string, end: string, custom = false): ProgramRow {
+  const startIso = parseMonYY(start);
+  const endIso = parseMonYY(end);
+  return { id, parentId, code, name, duration: dur, start: startIso, end: endIso, custom, startColumn: toColIndex(startIso), endColumn: toColIndex(endIso) };
+}
+
 const data: ProgramRow[] = [
-  // ── Phase 1: Acquisition ──────────────────────────────────────────────
-  { id: 1, parentId: null, code: '1', name: 'Acquisition', duration: 3, start: '2025-07-01', end: '2025-09-30', custom: false, startColumn: 0, endColumn: 2 },
-  { id: 2, parentId: 1, code: '1.1', name: 'Due Diligence', duration: 1, start: '2025-07-01', end: '2025-07-31', custom: false, startColumn: 0, endColumn: 0 },
-  { id: 3, parentId: 1, code: '1.2', name: 'Deposit', duration: 1, start: '2025-08-01', end: '2025-08-31', custom: false, startColumn: 1, endColumn: 1 },
-  { id: 4, parentId: 1, code: '1.3', name: 'Settlement', duration: 1, start: '2025-09-01', end: '2025-09-30', custom: false, startColumn: 2, endColumn: 2 },
+  // ── Phase 1: Acquisition (Sep 18 – Mar 25, 79 months) ────────────────
+  r(1, null, '1', 'Acquisition', 79, 'Sep 18', 'Mar 25'),
+  r(2, 1, '1.1', 'Due Diligence', null, 'Sep 18', 'Nov 18'),
+  r(3, 1, '1.2', 'Deposit', null, 'Nov 24', 'Nov 24'),
+  r(4, 1, '1.3', 'Settlement', null, 'Dec 24', 'Mar 25'),
   ...customRows(1, '1', 4),
 
-  // ── Phase 2: Planning And Design ──────────────────────────────────────
-  { id: 5, parentId: null, code: '2', name: 'Planning And Design', duration: 18, start: '2025-10-01', end: '2027-03-31', custom: false, startColumn: 3, endColumn: 20 },
-  { id: 6, parentId: 5, code: '2.1', name: 'Design Prep', duration: 4, start: '2025-10-01', end: '2026-01-31', custom: false, startColumn: 3, endColumn: 6 },
-  { id: 7, parentId: 5, code: '2.2', name: 'Planning Assessment', duration: 7, start: '2026-02-01', end: '2026-08-31', custom: false, startColumn: 7, endColumn: 13 },
-  { id: 8, parentId: 5, code: '2.6', name: '50% Detail Design', duration: 2, start: '2026-09-01', end: '2026-10-31', custom: false, startColumn: 14, endColumn: 15 },
-  { id: 9, parentId: 5, code: '2.7', name: '70% Detail Design', duration: 2, start: '2026-11-01', end: '2026-12-31', custom: false, startColumn: 16, endColumn: 17 },
-  { id: 10, parentId: 5, code: '2.8', name: '100% Detail Design', duration: 3, start: '2027-01-01', end: '2027-03-31', custom: false, startColumn: 18, endColumn: 20 },
-  ...customRows(5, '2', 3),
+  // ── Phase 2: Planning And Design (Sep 24 – May 26, 21 months) ────────
+  r(5, null, '2', 'Planning And Design', 21, 'Sep 24', 'May 26'),
+  r(6, 5, '2.1', 'Design Prep To Lodgement', null, 'Sep 24', 'Dec 24'),
+  r(7, 5, '2.2', 'Planning Assessment', null, 'Dec 24', 'Mar 25'),
+  r(8, 5, '2.3', 'Civil And Administrative Tribunal', null, '', ''),
+  r(9, 5, '2.4', 'Prepare Design Amendment', null, 'Mar 25', 'June 25'),
+  r(10, 5, '2.5', 'Amendment Approval', null, 'June 25', 'Sept 25'),
+  r(11, 5, '2.6', '50% Detail Design', null, 'Mar 25', 'June 25'),
+  r(12, 5, '2.7', '70% Detail Design', null, 'June 25', 'July 25'),
+  r(13, 5, '2.8', '100% Detail Design', null, 'July 25', 'May 26'),
 
-  // ── Phase 3: Construction And Building Works ──────────────────────────
-  { id: 11, parentId: null, code: '3', name: 'Construction And Building Works', duration: 18, start: '2027-04-01', end: '2028-09-30', custom: false, startColumn: 21, endColumn: 38 },
-  { id: 12, parentId: 11, code: '3.1', name: 'Demolition', duration: 3, start: '2027-04-01', end: '2027-06-30', custom: false, startColumn: 21, endColumn: 23 },
-  { id: 13, parentId: 11, code: '3.2', name: 'Excavation', duration: 3, start: '2027-07-01', end: '2027-09-30', custom: false, startColumn: 24, endColumn: 26 },
-  { id: 14, parentId: 11, code: '3.3', name: 'Main Works', duration: 12, start: '2027-10-01', end: '2028-09-30', custom: false, startColumn: 27, endColumn: 38 },
-  ...customRows(11, '3', 4),
+  // ── Phase 3: Construction And Building Works (Mar 25 – Sept 26, 19 months) ──
+  r(14, null, '3', 'Construction And Building Works', 19, 'Mar 25', 'Sept 26'),
+  r(15, 14, '3.1', 'Demolition', null, 'Mar 25', 'May 25'),
+  r(16, 14, '3.2', 'Early Work/Excavation', null, 'May 25', 'Oct 25'),
+  r(17, 14, '3.3', 'Main Works', null, 'Oct 25', 'Sept 26'),
 
-  // ── Phase 4: Marketing And Sales ──────────────────────────────────────
-  { id: 15, parentId: null, code: '4', name: 'Marketing And Sales', duration: 15, start: '2027-07-01', end: '2028-09-30', custom: false, startColumn: 24, endColumn: 38 },
-  { id: 16, parentId: 15, code: '4.1', name: 'Marketing Prep', duration: 2, start: '2027-07-01', end: '2027-08-31', custom: false, startColumn: 24, endColumn: 25 },
-  { id: 17, parentId: 15, code: '4.2', name: 'Marketing Activity', duration: 6, start: '2027-09-01', end: '2028-02-28', custom: false, startColumn: 26, endColumn: 31 },
-  { id: 18, parentId: 15, code: '4.3', name: 'Sales Period', duration: 6, start: '2028-03-01', end: '2028-08-31', custom: false, startColumn: 32, endColumn: 37 },
-  { id: 19, parentId: 15, code: '4.4', name: 'Settlement Management', duration: 1, start: '2028-09-01', end: '2028-09-30', custom: false, startColumn: 38, endColumn: 38 },
-  ...customRows(15, '4', 5),
+  // ── Phase 4: Marketing And Sales (Dec 24 – Oct 26, 23 months) ────────
+  r(18, null, '4', 'Marketing And Sales', 23, 'Dec 24', 'Oct 26'),
+  r(19, 18, '4.1', 'Marketing Prep', null, 'Dec 24', 'Feb 25'),
+  r(20, 18, '4.2', 'Marketing Activity', null, 'Feb 25', 'Sept 26'),
+  r(21, 18, '4.3', 'Sales/Leasing Period', null, 'Feb 25', 'Sept 26'),
+  r(22, 18, '4.4', 'Settlement Management', null, 'Sept 26', 'Oct 26'),
 
-  // ── Phase 5: Operation/Asset Management ───────────────────────────────
-  { id: 20, parentId: null, code: '5', name: 'Operation/Asset Management', duration: 43, start: '2028-10-01', end: '2032-04-30', custom: false, startColumn: 39, endColumn: 81 },
-  { id: 21, parentId: 20, code: '5.1', name: 'Lease Up Period', duration: 6, start: '2028-10-01', end: '2029-03-31', custom: false, startColumn: 39, endColumn: 44 },
-  { id: 22, parentId: 20, code: '5.2', name: 'Holding Period', duration: 36, start: '2029-04-01', end: '2032-03-31', custom: false, startColumn: 45, endColumn: 80 },
-  { id: 23, parentId: 20, code: '5.3', name: 'Termination', duration: 1, start: '2032-04-01', end: '2032-04-30', custom: false, startColumn: 81, endColumn: 81 },
-  ...customRows(20, '5', 4),
+  // ── Phase 5: Operation/Asset Management (Oct 26 – Oct 36, 121 months) ──
+  r(23, null, '5', 'Operation/Asset Management', 121, 'Oct 26', 'Oct 36'),
+  r(24, 23, '5.1', 'Lease Up Period', null, 'Oct 26', 'Dec 26'),
+  r(25, 23, '5.2', 'Holding Period', null, 'Dec 26', 'Oct 36'),
+  r(26, 23, '5.3', 'Termination', null, 'Oct 36', 'Oct 36'),
 ];
 
-// Generate 48 monthly columns (Jul 2025 - Jun 2029) with short month headers
+// Generate monthly columns from Sep 2018 (218 months to Oct 2036)
+// Show 48 columns starting from Sep 2018 for initial viewport
+const MONTH_COUNT = 48;
 const months: { key: string; label: string }[] = [];
-for (let i = 0; i < 48; i++) {
-  const d = new Date(2025, 6 + i);
+for (let i = 0; i < MONTH_COUNT; i++) {
+  const d = new Date(BASE_YEAR, BASE_MONTH + i);
   const key = `m_${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, '0')}`;
   const label = d.toLocaleString('en-AU', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2);
   months.push({ key, label });
