@@ -85,8 +85,9 @@ export class RenderingPipeline<TData = unknown> {
           // Reuse a recycled element (already in DOM) or create new
           cell = this.recyclePool.pop() ?? null;
           if (cell) {
-            // Reset recycled element
+            // Reset recycled element — clear stale inline styles from plugins
             cell.className = 'bg-cell';
+            cell.style.cssText = 'position: absolute';
           } else {
             cell = document.createElement('div');
             cell.className = 'bg-cell';

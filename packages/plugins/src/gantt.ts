@@ -314,7 +314,6 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           container.style.padding = '0';
           container.style.borderRight = 'none';
           container.style.borderBottom = 'none';
-          container.style.position = 'relative';
           container.style.overflow = 'hidden';
           container.style.display = 'block';
           container.style.lineHeight = 'normal';
