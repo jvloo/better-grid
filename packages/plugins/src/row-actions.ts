@@ -217,7 +217,12 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions'>
           btn.style.color = '#667085';
           btn.style.width = '32px';
           btn.style.height = '32px';
+          btn.style.outline = 'none';
+          btn.style.WebkitTapHighlightColor = 'transparent';
           btn.innerHTML = menuIcon;
+
+          btn.addEventListener('focus', () => { btn.style.backgroundColor = ''; });
+          btn.addEventListener('mousedown', () => { btn.style.backgroundColor = ''; });
 
           btn.addEventListener('mouseenter', () => {
             btn.style.backgroundColor = '#F2F4F7';
@@ -226,6 +231,9 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions'>
             btn.style.backgroundColor = '';
           });
 
+          btn.addEventListener('pointerdown', (e) => {
+            e.stopPropagation(); // Prevent cell:click from firing
+          });
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
             e.preventDefault();

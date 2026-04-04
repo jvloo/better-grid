@@ -92,7 +92,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
               align-items: center;
               box-sizing: border-box;
               width: 100%;
-              font-size: 14px;
+              font-size: 12px;
             }
             .bg-cell--input-editable .bg-input-box:hover {
               background: var(--bg-input-hover-bg, #F0F0F0);
