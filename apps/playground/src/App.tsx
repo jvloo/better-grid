@@ -17,6 +17,14 @@ import { ProPreview } from './pages/ProPreview';
 import { HRDirectory } from './pages/HRDirectory';
 import { InventoryTracker } from './pages/InventoryTracker';
 import { MergeCellsDemo } from './pages/MergeCellsDemo';
+import { FsbtProgram } from './pages/FsbtProgram';
+import { FsbtCost } from './pages/FsbtCost';
+import { FsbtRevenue } from './pages/FsbtRevenue';
+import { FsbtFunding } from './pages/FsbtFunding';
+import { DmTimeline } from './pages/DmTimeline';
+import { DmForecast } from './pages/DmForecast';
+import { DmActuals } from './pages/DmActuals';
+import { DmSummary } from './pages/DmSummary';
 
 type View = 'landing' | 'demos';
 type Page =
@@ -36,12 +44,22 @@ type Page =
   | 'hr-directory'
   | 'inventory'
   | 'merge-cells'
+  | 'fsbt-program'
+  | 'fsbt-cost'
+  | 'fsbt-revenue'
+  | 'fsbt-funding'
+  | 'dm-timeline'
+  | 'dm-forecast'
+  | 'dm-actuals'
+  | 'dm-summary'
   | 'pro';
 
 const VALID_PAGES = new Set<Page>([
   'finance', 'project-tracker', 'hr-directory', 'inventory', 'editors', 'cell-types', 'clipboard',
   'sort-filter', 'search-export', 'hierarchy', 'frozen-pinned', 'multi-header', 'merge-cells',
   'core-only', 'plugin-toggle', 'performance', 'pro',
+  'fsbt-program', 'fsbt-cost', 'fsbt-revenue', 'fsbt-funding',
+  'dm-timeline', 'dm-forecast', 'dm-actuals', 'dm-summary',
 ]);
 
 function parseRoute(): { view: View; page: Page } {
@@ -140,6 +158,18 @@ export function App() {
           <NavButton active={page === 'plugin-toggle'} onClick={() => navigatePage('plugin-toggle')} icon="🔌">Plugin Toggle</NavButton>
           <NavButton active={page === 'performance'} onClick={() => navigatePage('performance')} icon="⚡">Performance</NavButton>
 
+          <SectionLabel>Wiseway - Feasibility</SectionLabel>
+          <NavButton active={page === 'fsbt-program'} onClick={() => navigatePage('fsbt-program')} icon="📐">FSBT Program</NavButton>
+          <NavButton active={page === 'fsbt-cost'} onClick={() => navigatePage('fsbt-cost')} icon="💰">FSBT Cost</NavButton>
+          <NavButton active={page === 'fsbt-revenue'} onClick={() => navigatePage('fsbt-revenue')} icon="📈">FSBT Revenue</NavButton>
+          <NavButton active={page === 'fsbt-funding'} onClick={() => navigatePage('fsbt-funding')} icon="🏦">FSBT Funding</NavButton>
+
+          <SectionLabel>Wiseway - Dev Mgmt</SectionLabel>
+          <NavButton active={page === 'dm-timeline'} onClick={() => navigatePage('dm-timeline')} icon="📅">DM Timeline</NavButton>
+          <NavButton active={page === 'dm-forecast'} onClick={() => navigatePage('dm-forecast')} icon="📊">DM Forecast</NavButton>
+          <NavButton active={page === 'dm-actuals'} onClick={() => navigatePage('dm-actuals')} icon="📝">DM Input Actuals</NavButton>
+          <NavButton active={page === 'dm-summary'} onClick={() => navigatePage('dm-summary')} icon="💹">DM Summary</NavButton>
+
           <SectionLabel>Other</SectionLabel>
           <NavButton active={page === 'pro'} onClick={() => navigatePage('pro')} icon="🗺️">Roadmap</NavButton>
         </div>
@@ -168,6 +198,14 @@ export function App() {
           {page === 'plugin-toggle' && <PluginToggle />}
           {page === 'performance' && <PerformanceDemo />}
           {page === 'merge-cells' && <MergeCellsDemo />}
+          {page === 'fsbt-program' && <FsbtProgram />}
+          {page === 'fsbt-cost' && <FsbtCost />}
+          {page === 'fsbt-revenue' && <FsbtRevenue />}
+          {page === 'fsbt-funding' && <FsbtFunding />}
+          {page === 'dm-timeline' && <DmTimeline />}
+          {page === 'dm-forecast' && <DmForecast />}
+          {page === 'dm-actuals' && <DmActuals />}
+          {page === 'dm-summary' && <DmSummary />}
           {page === 'pro' && <ProPreview />}
         </div>
       </main>

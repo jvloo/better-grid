@@ -40,6 +40,14 @@ export type { ExportOptions, ExportApi, ExportData, ExportCell } from './export'
 export { pagination } from './pagination';
 export type { PaginationOptions, PaginationApi } from './pagination';
 
+export { grouping } from './grouping';
+export type { GroupingOptions, GroupingApi, GroupRowInfo, BuiltinAggregation, AggregationSpec } from './grouping';
+
 // Pro plugins (planned for @better-grid/pro, included here during development)
 export { mergeCells } from './merge-cells';
 export type { MergeCellsOptions, MergeCellsApi, MergeCellDef } from './merge-cells';
+
+export { proRenderers } from './pro-renderers';
+
+export { gantt } from './gantt';
+export type { GanttOptions, GanttApi } from './gantt';
