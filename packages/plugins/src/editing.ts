@@ -346,18 +346,23 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           measureSpan.style.cssText = `position:fixed;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;font:${cellFont};padding:${cellPadding};`;
           document.body.appendChild(measureSpan);
 
-          // Create float box
+          // Create float box — resolve CSS variables from grid container (not body)
           const floatBox = document.createElement('div');
           floatBox.className = 'bg-cell-editor-float';
-          const borderW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bg-editor-border-width').trim() || '2');
+          const gridStyles = getComputedStyle(getGridContainer());
+          const edBorderW = parseFloat(gridStyles.getPropertyValue('--bg-editor-border-width').trim() || '2');
+          const edBg = gridStyles.getPropertyValue('--bg-editor-bg').trim() || '#fff';
+          const edBorder = gridStyles.getPropertyValue('--bg-editor-border').trim() || gridStyles.getPropertyValue('--bg-active-border').trim() || '#1a73e8';
+          const edRadius = gridStyles.getPropertyValue('--bg-editor-radius').trim() || '2px';
+          const edShadow = gridStyles.getPropertyValue('--bg-editor-shadow').trim() || '0 2px 8px rgba(0,0,0,0.15)';
           floatBox.style.cssText = `
             position: fixed; z-index: 200; box-sizing: border-box;
             top: ${cellRect.top}px; left: ${cellRect.left}px;
             min-width: ${cellRect.width}px; max-width: ${fullWidth}px;
-            background: var(--bg-editor-bg, #fff);
-            border: ${borderW}px solid var(--bg-editor-border, var(--bg-active-border, #1a73e8));
-            border-radius: var(--bg-editor-radius, 2px);
-            box-shadow: var(--bg-editor-shadow, 0 2px 8px rgba(0,0,0,0.15));
+            background: ${edBg};
+            border: ${edBorderW}px solid ${edBorder};
+            border-radius: ${edRadius};
+            box-shadow: ${edShadow};
           `;
 
           // Use contenteditable div — naturally supports vertical centering
@@ -370,7 +375,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           // for centering, so text selection highlight doesn't span full cell height.
           const fontSize = parseFloat(anchorComputed.fontSize) || 14;
           const contentLineHeight = Math.round(fontSize * 1.4);
-          const editorHeight = cellRect.height - borderW * 2;
+          const editorHeight = cellRect.height - edBorderW * 2;
           const vertPad = Math.max(0, Math.floor((editorHeight - contentLineHeight) / 2));
           const hPad = parseFloat(anchorComputed.paddingLeft) || 12;
 
