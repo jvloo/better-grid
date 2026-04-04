@@ -170,6 +170,20 @@ export function FsbtProgram() {
     // ── Col 4: Start (left-aligned) ─────────────────────────────────────
     {
       id: 'start', accessorKey: 'start', header: 'Start', width: 110, placeholder: 'MM/YY',
+      valueModifier: {
+        format: (v: unknown) => {
+          if (!v || typeof v !== 'string') return '';
+          const d = new Date(v as string);
+          return String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getFullYear()).slice(2);
+        },
+        parse: (v: string) => {
+          if (!v || !v.includes('/')) return v;
+          const [mm, yy] = v.split('/');
+          const year = 2000 + parseInt(yy || '0', 10);
+          const month = parseInt(mm || '1', 10) - 1;
+          return new Date(year, month, 1).toISOString().split('T')[0];
+        },
+      },
       editable: ((row: ProgramRow) => row.parentId !== null) as any,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;

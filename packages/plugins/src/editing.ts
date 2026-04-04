@@ -273,7 +273,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           activeEditor = createDropdown(cellEl, dropdownOpts, originalValue, column);
         } else {
           // Determine display string for the editor
-          let rawStr = originalValue != null ? String(originalValue) : '';
+          // Use valueModifier.format if available (e.g. date formatting)
+          let rawStr = originalValue != null
+            ? (column.valueModifier?.format ? column.valueModifier.format(originalValue) : String(originalValue))
+            : '';
 
           if (column.cellType === 'bigint') {
             // BigInt: use String() to preserve full integer precision
