@@ -309,11 +309,15 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
         render(container: HTMLElement, context: CellRenderContext): void | (() => void) {
           container.textContent = '';
 
-          // Reset gantt cell — clean slate for bar rendering or empty state
+          // Reset gantt cell — clean slate
           container.textContent = '';
           container.style.padding = '0';
           container.style.borderRight = 'none';
           container.style.borderBottom = 'none';
+          container.style.position = 'relative';
+          container.style.overflow = 'hidden';
+          container.style.display = 'block';
+          container.style.lineHeight = 'normal';
 
           const row = context.row as Record<string, unknown>;
           const startCol = row[startColumnField] as number | undefined;
@@ -351,10 +355,8 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           // Is this cell within the bar range?
           if (dateColIndex < startCol || dateColIndex > endCol) return;
 
-          // Only bar cells need these overrides for seamless bar rendering
-          container.style.position = 'relative';
+          // Bar cells: allow overflow for seamless multi-cell bars
           container.style.overflow = 'visible';
-          container.style.lineHeight = 'normal';
 
           const isStart = dateColIndex === startCol;
           const isEnd = dateColIndex === endCol;
