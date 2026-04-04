@@ -155,6 +155,10 @@ export class RenderingPipeline<TData = unknown> {
         // Apply column-level alignment before render (renderer can override)
         cell.style.textAlign = column.align ?? '';
         cell.style.verticalAlign = column.verticalAlign ?? '';
+        // Flex-compatible alignment (for themes that set display:flex on cells)
+        if (column.align === 'center') cell.style.justifyContent = 'center';
+        else if (column.align === 'right') cell.style.justifyContent = 'flex-end';
+        else cell.style.justifyContent = '';
 
         // Render priority: column renderer > cell type > global > default text
         let cleanup: void | (() => void) = undefined;

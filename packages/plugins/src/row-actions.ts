@@ -224,10 +224,11 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions'>
           const btn = document.createElement('button');
           btn.className = 'bg-row-actions-trigger';
           btn.style.border = 'none';
-          btn.style.background = 'none';
+          btn.style.backgroundColor = 'transparent';
           btn.style.cursor = 'pointer';
           btn.style.padding = '4px';
           btn.style.borderRadius = '4px';
+          btn.style.appearance = 'none';
           btn.style.display = 'inline-flex';
           btn.style.alignItems = 'center';
           btn.style.justifyContent = 'center';

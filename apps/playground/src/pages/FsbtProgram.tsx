@@ -125,6 +125,7 @@ export function FsbtProgram() {
         container.style.color = isParent ? '#101828' : '#282F3D';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
         container.style.paddingRight = '0';
+        container.style.justifyContent = 'flex-end';
       },
     },
     // ── Col 2: Phase (indented name) ────────────────────────────────────
