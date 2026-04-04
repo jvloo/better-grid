@@ -214,6 +214,7 @@ export function DmActuals() {
     plugins,
     frozenLeftColumns: 8,
     freezeClip: { minVisible: 2 },
+    tableStyle: 'striped' as const,
     pinnedBottomRows,
     selection: { mode: 'range' as const, fillHandle: true },
     rowHeight: 40,

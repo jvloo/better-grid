@@ -104,6 +104,7 @@ export function FsbtFunding() {
     plugins,
     frozenLeftColumns: 2,
     freezeClip: { minVisible: 2 },
+    tableStyle: 'striped' as const,
     selection: { mode: 'range' as const },
     rowHeight: 44,
   });

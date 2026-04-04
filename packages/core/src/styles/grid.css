@@ -441,10 +441,4 @@
   background: var(--bg-stripe-bg, #F9FAFB);
 }
 
-/* Striped no bg — same as striped but no alternating bg */
-.bg-table--striped-no-bg .bg-cell {
-  border-right: none;
-}
-.bg-table--striped-no-bg .bg-cell--frozen-col-last {
-  border-right: var(--bg-frozen-col-border, 1.5px solid #d0d0d0);
-}
+/* For striped without alternating bg, set --bg-stripe-bg: #fff */

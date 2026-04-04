@@ -148,6 +148,7 @@ export function FsbtCost() {
     plugins,
     frozenLeftColumns: 12,
     freezeClip: { minVisible: 2 },
+    tableStyle: 'striped' as const,
     hierarchy: {
       getRowId: (row: CostRow) => row.id,
       getParentId: (row: CostRow) => row.parentId,

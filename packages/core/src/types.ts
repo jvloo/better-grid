@@ -347,10 +347,9 @@ export interface GridOptions<
    * Table visual style variant.
    * - 'bordered': full cell borders (default)
    * - 'borderless': no cell borders
-   * - 'striped': no vertical borders, horizontal borders, alternating row bg
-   * - 'striped-no-bg': no vertical borders, horizontal borders, no alternating bg
+   * - 'striped': no vertical borders, horizontal borders, alternating row bg (customize with --bg-stripe-bg)
    */
-  tableStyle?: 'bordered' | 'borderless' | 'striped' | 'striped-no-bg';
+  tableStyle?: 'bordered' | 'borderless' | 'striped';
 }
 
 // ---------------------------------------------------------------------------

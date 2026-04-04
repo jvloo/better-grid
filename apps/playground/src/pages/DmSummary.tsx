@@ -148,6 +148,7 @@ export function DmSummary() {
     plugins,
     frozenLeftColumns: 4,
     freezeClip: { minVisible: 2 },
+    tableStyle: 'striped' as const,
     selection: { mode: 'range' as const },
     rowHeight: 50,
   });
