@@ -247,27 +247,35 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
             dragType,
           } as never);
 
-          // Update the row data directly
-          const data = ctx.grid.getData();
-          const row = data[rowIndex];
-          if (row) {
-            ctx.grid.updateCell(rowIndex, startColumnField, newStart);
-            ctx.grid.updateCell(rowIndex, endColumnField, newEnd);
+          // Update the row data directly — mutate data array and notify store
+          const visibleData = ctx.grid.getData();
+          const rowData = visibleData[rowIndex] as Record<string, unknown> | undefined;
+          if (rowData) {
+            // Update column indices on the row object
+            rowData[startColumnField] = newStart;
+            rowData[endColumnField] = newEnd;
 
             // Update date/duration fields if configured
             if (options?.columnToDate) {
               const startDateFld = options.startDateField ?? 'start';
               const endDateFld = options.endDateField ?? 'end';
               const durFld = options.durationField ?? 'duration';
-              const newStartDate = options.columnToDate(newStart);
-              const newEndDate = options.columnToDate(newEnd);
-              const newDuration = options.columnsToDuration
+              rowData[startDateFld] = options.columnToDate(newStart);
+              rowData[endDateFld] = options.columnToDate(newEnd);
+              rowData[durFld] = options.columnsToDuration
                 ? options.columnsToDuration(newStart, newEnd)
                 : newEnd - newStart + 1;
+            }
 
-              ctx.grid.updateCell(rowIndex, startDateFld, newStartDate);
-              ctx.grid.updateCell(rowIndex, durFld, newDuration);
-              ctx.grid.updateCell(rowIndex, endDateFld, newEndDate);
+            // Update cells that have corresponding columns (for display refresh)
+            const cols = ctx.grid.getColumns();
+            for (const col of cols) {
+              if (col.accessorKey && col.accessorKey in rowData) {
+                const val = rowData[col.accessorKey];
+                if (val !== undefined) {
+                  ctx.grid.updateCell(rowIndex, col.id, val);
+                }
+              }
             }
           }
         }
