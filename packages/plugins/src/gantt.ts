@@ -529,7 +529,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
       style.textContent = `
         .bg-gantt-dragging { cursor: move !important; }
         .bg-gantt-dragging * { cursor: move !important; user-select: none !important; }
-        .bg-cell:has(.bg-gantt-bar) { overflow: visible !important; padding: 0 !important; border-right-color: transparent !important; }
+        .bg-cell:has(.bg-gantt-bar) { overflow: visible !important; padding: 0 !important; border-right-color: transparent !important; border-bottom-color: transparent !important; display: block !important; }
       `;
       if (!document.getElementById('bg-gantt-drag-style')) {
         document.head.appendChild(style);

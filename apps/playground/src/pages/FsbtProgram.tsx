@@ -223,6 +223,7 @@ export function FsbtProgram() {
       id: m.key,
       accessorKey: m.key,
       header: m.label,
+      align: 'center' as const,
       width: 111,
       cellType: 'gantt' as const,
       editable: false,
