@@ -130,7 +130,7 @@ export function FsbtProgram() {
     },
     // ── Col 2: Phase (indented name) ────────────────────────────────────
     {
-      id: 'name', accessorKey: 'name', header: (() => { const el = document.createElement('span'); el.textContent = 'Phase'; el.style.paddingLeft = '2px'; return el; }) as any, width: 236,
+      id: 'name', accessorKey: 'name', header: (() => { const el = document.createElement('span'); el.textContent = 'Phase'; el.style.paddingLeft = '8px'; return el; }) as any, width: 236,
       editable: ((row: ProgramRow) => row.parentId !== null && row.custom) as any,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
@@ -140,7 +140,7 @@ export function FsbtProgram() {
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.color = '#101828';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
-        container.style.paddingLeft = isParent ? '8px' : (row.custom ? '' : '14px');
+        container.style.paddingLeft = row.custom ? '' : '14px';
       },
     },
     // ── Col 3: Duration (center-aligned, wrapping header) ─────────────
