@@ -144,12 +144,8 @@ export function App() {
           flexShrink: 0,
           fontFamily: "'Inter', sans-serif",
         }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #EAECF0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #EAECF0' }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: '#101828' }}>Wiseway</span>
-            <button onClick={() => navigate('demos', 'finance')} style={{
-              padding: '3px 10px', border: '1px solid #D0D5DD', borderRadius: 6,
-              background: '#fff', color: '#667085', cursor: 'pointer', fontSize: 11,
-            }}>Demos</button>
           </div>
 
           <div style={{ padding: '12px 12px', flex: 1 }}>
