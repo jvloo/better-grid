@@ -220,34 +220,18 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions'>
           container.style.alignItems = 'center';
           container.style.justifyContent = 'center';
 
-          // Create menu trigger button
-          const btn = document.createElement('button');
+          // Create menu trigger (div, not button — avoids browser default styling)
+          const btn = document.createElement('div');
           btn.className = 'bg-row-actions-trigger';
-          btn.style.border = 'none';
-          btn.style.backgroundColor = 'transparent';
           btn.style.cursor = 'pointer';
-          btn.style.padding = '4px';
-          btn.style.borderRadius = '4px';
-          btn.style.appearance = 'none';
           btn.style.display = 'inline-flex';
           btn.style.alignItems = 'center';
           btn.style.justifyContent = 'center';
           btn.style.color = '#667085';
           btn.style.width = '32px';
           btn.style.height = '32px';
-          btn.style.outline = 'none';
-          btn.style.WebkitTapHighlightColor = 'transparent';
+          btn.style.borderRadius = '4px';
           btn.innerHTML = menuIcon;
-
-          btn.addEventListener('focus', () => { btn.style.backgroundColor = ''; });
-          btn.addEventListener('mousedown', () => { btn.style.backgroundColor = ''; });
-
-          btn.addEventListener('mouseenter', () => {
-            btn.style.backgroundColor = '#F2F4F7';
-          });
-          btn.addEventListener('mouseleave', () => {
-            btn.style.backgroundColor = '';
-          });
 
           btn.addEventListener('pointerdown', (e) => {
             e.stopPropagation(); // Prevent cell:click from firing
