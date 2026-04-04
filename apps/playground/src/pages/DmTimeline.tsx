@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
-import type { ColumnDef, HeaderRow } from '@better-grid/core';
+import type { ColumnDef } from '@better-grid/core';
 import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin, gantt } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
@@ -85,49 +85,6 @@ export function DmTimeline() {
     [],
   );
 
-  const multiHeaders = useMemo<HeaderRow[]>(() => {
-    const fyGroups: { fy: string; count: number }[] = [];
-    for (const m of months) {
-      if (fyGroups.length > 0 && fyGroups[fyGroups.length - 1].fy === m.fy) {
-        fyGroups[fyGroups.length - 1].count++;
-      } else {
-        fyGroups.push({ fy: m.fy, count: 1 });
-      }
-    }
-
-    return [
-      {
-        id: 'groups',
-        height: 32,
-        cells: [
-          { id: 'g-details', content: 'Phase Details', colSpan: 6 },
-          ...fyGroups.map(g => ({
-            id: `g-${g.fy.toLowerCase()}`,
-            content: g.fy,
-            colSpan: g.count,
-          })),
-        ],
-      },
-      {
-        id: 'columns',
-        height: 32,
-        cells: [
-          { id: 'h-actions', content: '', columnId: 'actions' },
-          { id: 'h-phase', content: 'Phase', columnId: 'phase' },
-          { id: 'h-duration', content: 'Duration (months)', columnId: 'duration' },
-          { id: 'h-start', content: 'Start', columnId: 'start' },
-          { id: 'h-end', content: 'End', columnId: 'end' },
-          { id: 'h-variance', content: 'Variance', columnId: 'variance' },
-          ...months.map(m => ({
-            id: `h-${m.key}`,
-            content: m.label,
-            columnId: m.key,
-          })),
-        ],
-      },
-    ];
-  }, []);
-
   const plugins = useMemo(
     () => [
       formatting({ locale: 'en-AU', dateFormat: 'month-year' }),
@@ -145,7 +102,6 @@ export function DmTimeline() {
   const { grid, containerRef } = useGrid<TimelineRow>({
     data,
     columns,
-    headerRows: multiHeaders,
     plugins,
     frozenLeftColumns: 6,
     hierarchy: {
@@ -194,7 +150,7 @@ export function DmTimeline() {
       </p>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
         <strong>Plugins:</strong> formatting, editing, hierarchy, cellRenderers, gantt, clipboard, undoRedo, export &bull;
-        <strong> Core:</strong> frozenLeftColumns, headerRows, hierarchy
+        <strong> Core:</strong> frozenLeftColumns, hierarchy
       </div>
       <div
         ref={containerRef}

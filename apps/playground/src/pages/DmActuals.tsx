@@ -159,8 +159,8 @@ export function DmActuals() {
         height: 32,
         cells: [
           { id: 'g-actions', content: '', columnId: 'actions' },
-          { id: 'g-child2', content: 'Child 2', colSpan: 2 },
-          { id: 'g-child1', content: 'Child 1', colSpan: 2 },
+          { id: 'g-child2', content: 'Child2', colSpan: 2 },
+          { id: 'g-child1', content: 'Child1', colSpan: 2 },
           { id: 'g-parent', content: 'Parent', colSpan: 2 },
           { id: 'g-total', content: 'Total', rowSpan: 2 },
           ...fyGroups.map(g => ({
