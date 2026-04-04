@@ -349,13 +349,15 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           // Create float box
           const floatBox = document.createElement('div');
           floatBox.className = 'bg-cell-editor-float';
-          const borderW = 2;
+          const borderW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bg-editor-border-width').trim() || '2');
           floatBox.style.cssText = `
             position: fixed; z-index: 200; box-sizing: border-box;
             top: ${cellRect.top}px; left: ${cellRect.left}px;
             min-width: ${cellRect.width}px; max-width: ${fullWidth}px;
-            background: #fff; border: ${borderW}px solid var(--bg-active-border, #1a73e8);
-            border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            background: var(--bg-editor-bg, #fff);
+            border: ${borderW}px solid var(--bg-editor-border, var(--bg-active-border, #1a73e8));
+            border-radius: var(--bg-editor-radius, 2px);
+            box-shadow: var(--bg-editor-shadow, 0 2px 8px rgba(0,0,0,0.15));
           `;
 
           // Use contenteditable div — naturally supports vertical centering
