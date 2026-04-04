@@ -12,6 +12,7 @@ interface ProgramRow {
   duration: number;
   start: string;
   end: string;
+  status: string;
   custom: boolean;
   startColumn: number;
   endColumn: number;
@@ -20,25 +21,25 @@ interface ProgramRow {
 
 const data: ProgramRow[] = [
   // Pre-Development (parent)
-  { id: 1, parentId: null, code: '1', name: 'Pre-Development', duration: 12, start: '2025-07-01', end: '2026-06-30', custom: false, startColumn: 0, endColumn: 11 },
-  { id: 2, parentId: 1, code: '1.1', name: 'Due Diligence', duration: 3, start: '2025-07-01', end: '2025-09-30', custom: false, startColumn: 0, endColumn: 2 },
-  { id: 3, parentId: 1, code: '1.2', name: 'DA Lodgement', duration: 2, start: '2025-10-01', end: '2025-11-30', custom: false, startColumn: 3, endColumn: 4 },
-  { id: 4, parentId: 1, code: '1.3', name: 'DA Approval', duration: 4, start: '2025-12-01', end: '2026-03-31', custom: false, startColumn: 5, endColumn: 8 },
-  { id: 5, parentId: 1, code: '1.4', name: 'CC Approval', duration: 3, start: '2026-04-01', end: '2026-06-30', custom: false, startColumn: 9, endColumn: 11 },
+  { id: 1, parentId: null, code: '1', name: 'Pre-Development', duration: 12, start: '2025-07-01', end: '2026-06-30', status: '', custom: false, startColumn: 0, endColumn: 11 },
+  { id: 2, parentId: 1, code: '1.1', name: 'Due Diligence', duration: 3, start: '2025-07-01', end: '2025-09-30', status: 'Done', custom: false, startColumn: 0, endColumn: 2 },
+  { id: 3, parentId: 1, code: '1.2', name: 'DA Lodgement', duration: 2, start: '2025-10-01', end: '2025-11-30', status: 'Done', custom: false, startColumn: 3, endColumn: 4 },
+  { id: 4, parentId: 1, code: '1.3', name: 'DA Approval', duration: 4, start: '2025-12-01', end: '2026-03-31', status: 'On Time', custom: false, startColumn: 5, endColumn: 8 },
+  { id: 5, parentId: 1, code: '1.4', name: 'CC Approval', duration: 3, start: '2026-04-01', end: '2026-06-30', status: 'On Time', custom: false, startColumn: 9, endColumn: 11 },
 
   // Construction (parent)
-  { id: 6, parentId: null, code: '2', name: 'Construction', duration: 18, start: '2026-07-01', end: '2027-12-31', custom: false, startColumn: 12, endColumn: 29 },
-  { id: 7, parentId: 6, code: '2.1', name: 'Demolition & Excavation', duration: 3, start: '2026-07-01', end: '2026-09-30', custom: false, startColumn: 12, endColumn: 14 },
-  { id: 8, parentId: 6, code: '2.2', name: 'Substructure', duration: 4, start: '2026-10-01', end: '2027-01-31', custom: false, startColumn: 15, endColumn: 18 },
-  { id: 9, parentId: 6, code: '2.3', name: 'Superstructure', duration: 6, start: '2027-02-01', end: '2027-07-31', custom: false, startColumn: 19, endColumn: 24 },
-  { id: 10, parentId: 6, code: '2.4', name: 'Finishes & Fitout', duration: 4, start: '2027-08-01', end: '2027-11-30', custom: false, startColumn: 25, endColumn: 28 },
-  { id: 11, parentId: 6, code: '2.5', name: 'Landscaping & Handover', duration: 1, start: '2027-12-01', end: '2027-12-31', custom: false, startColumn: 29, endColumn: 29 },
+  { id: 6, parentId: null, code: '2', name: 'Construction', duration: 18, start: '2026-07-01', end: '2027-12-31', status: '', custom: false, startColumn: 12, endColumn: 29 },
+  { id: 7, parentId: 6, code: '2.1', name: 'Demolition & Excavation', duration: 3, start: '2026-07-01', end: '2026-09-30', status: 'On Time', custom: false, startColumn: 12, endColumn: 14 },
+  { id: 8, parentId: 6, code: '2.2', name: 'Substructure', duration: 4, start: '2026-10-01', end: '2027-01-31', status: 'On Time', custom: false, startColumn: 15, endColumn: 18 },
+  { id: 9, parentId: 6, code: '2.3', name: 'Superstructure', duration: 6, start: '2027-02-01', end: '2027-07-31', status: 'On Time', custom: false, startColumn: 19, endColumn: 24 },
+  { id: 10, parentId: 6, code: '2.4', name: 'Finishes & Fitout', duration: 4, start: '2027-08-01', end: '2027-11-30', status: 'On Time', custom: false, startColumn: 25, endColumn: 28 },
+  { id: 11, parentId: 6, code: '2.5', name: 'Landscaping & Handover', duration: 1, start: '2027-12-01', end: '2027-12-31', status: 'On Time', custom: false, startColumn: 29, endColumn: 29 },
 
   // Sales & Settlement (parent)
-  { id: 12, parentId: null, code: '3', name: 'Sales & Settlement', duration: 12, start: '2027-07-01', end: '2028-06-30', custom: false, startColumn: 24, endColumn: 35 },
-  { id: 13, parentId: 12, code: '3.1', name: 'Pre-Sales Launch', duration: 6, start: '2027-07-01', end: '2027-12-31', custom: false, startColumn: 24, endColumn: 29 },
-  { id: 14, parentId: 12, code: '3.2', name: 'Construction Sales', duration: 3, start: '2028-01-01', end: '2028-03-31', custom: false, startColumn: 30, endColumn: 32 },
-  { id: 15, parentId: 12, code: '3.3', name: 'Settlement Period', duration: 3, start: '2028-04-01', end: '2028-06-30', custom: false, startColumn: 33, endColumn: 35 },
+  { id: 12, parentId: null, code: '3', name: 'Sales & Settlement', duration: 12, start: '2027-07-01', end: '2028-06-30', status: '', custom: false, startColumn: 24, endColumn: 35 },
+  { id: 13, parentId: 12, code: '3.1', name: 'Pre-Sales Launch', duration: 6, start: '2027-07-01', end: '2027-12-31', status: 'On Time', custom: false, startColumn: 24, endColumn: 29 },
+  { id: 14, parentId: 12, code: '3.2', name: 'Construction Sales', duration: 3, start: '2028-01-01', end: '2028-03-31', status: 'On Time', custom: false, startColumn: 30, endColumn: 32 },
+  { id: 15, parentId: 12, code: '3.3', name: 'Settlement Period', duration: 3, start: '2028-04-01', end: '2028-06-30', status: 'On Time', custom: false, startColumn: 33, endColumn: 35 },
 ];
 
 const months: { key: string; label: string }[] = [];
@@ -52,13 +53,55 @@ for (let i = 0; i < 36; i++) {
 export function FsbtProgram() {
   const columns = useMemo<ColumnDef<ProgramRow>[]>(
     () => [
-      { id: 'actions', header: '', width: 50 },
+      {
+        id: 'actions', header: '', width: 50,
+        cellRenderer: (container) => {
+          container.textContent = '';
+          container.style.display = 'flex';
+          container.style.alignItems = 'center';
+          container.style.justifyContent = 'center';
+          container.style.cursor = 'grab';
+          container.style.color = '#999';
+          container.style.fontSize = '14px';
+          container.style.letterSpacing = '2px';
+          container.style.userSelect = 'none';
+          container.innerHTML = '<span style="pointer-events:none;line-height:1">&#x22EE;&#x22EE;</span>';
+        },
+      },
       { id: 'code', accessorKey: 'code', header: 'Code', width: 40, align: 'right' as const },
       { id: 'name', accessorKey: 'name', header: 'Phase', width: 236 },
       { id: 'duration', accessorKey: 'duration', header: 'Duration (months)', width: 110, align: 'right' as const },
       { id: 'start', accessorKey: 'start', header: 'Start', width: 110, align: 'center' as const, cellType: 'date' as const, dateFormat: 'month-year' as const },
       { id: 'end', accessorKey: 'end', header: 'End', width: 110, align: 'center' as const, cellType: 'date' as const, dateFormat: 'month-year' as const },
-      { id: 'dropdown', header: '', width: 55 },
+      {
+        id: 'status', accessorKey: 'status', header: '', width: 55,
+        cellRenderer: (container, ctx) => {
+          container.textContent = '';
+          const val = ctx.value as string;
+          if (!val) return;
+          const pill = document.createElement('span');
+          pill.textContent = val;
+          pill.style.display = 'inline-block';
+          pill.style.padding = '2px 8px';
+          pill.style.borderRadius = '12px';
+          pill.style.fontSize = '10px';
+          pill.style.fontWeight = '500';
+          pill.style.whiteSpace = 'nowrap';
+          pill.style.lineHeight = 'normal';
+          if (val === 'Done') {
+            pill.style.backgroundColor = '#dcfce7';
+            pill.style.color = '#166534';
+          } else if (val === 'On Time') {
+            pill.style.backgroundColor = '#e0f2fe';
+            pill.style.color = '#0c4a6e';
+            pill.style.border = '1px solid #7dd3fc';
+          } else if (val === 'Delayed') {
+            pill.style.backgroundColor = '#fee2e2';
+            pill.style.color = '#991b1b';
+          }
+          container.appendChild(pill);
+        },
+      },
       ...months.map(m => ({
         id: m.key,
         accessorKey: m.key,
