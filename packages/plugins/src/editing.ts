@@ -305,7 +305,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
           const editValue = initialValue ?? rawStr;
 
-          if (isDateEditor) {
+          if (column.editor === 'masked' && column.mask) {
+            activeEditor = createMaskedInput(cellEl, rawStr, column.mask);
+          } else if (isDateEditor) {
             activeEditor = createDateInput(cellEl, rawStr);
           } else if (config.editorMode === 'inline') {
             activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined);
@@ -672,6 +674,143 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         setTimeout(() => document.addEventListener('mousedown', onOutsideClick, true), 0);
 
         return input;
+      }
+
+      // -----------------------------------------------------------------------
+      // Date input editor
+      // -----------------------------------------------------------------------
+
+      // -----------------------------------------------------------------------
+      // Masked input editor (e.g. MM/YY)
+      // -----------------------------------------------------------------------
+
+      function createMaskedInput(
+        cellEl: HTMLElement,
+        value: string,
+        mask: string,
+      ): HTMLInputElement {
+        const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
+        const anchorEl = inputBox ?? cellEl;
+        const cellRect = anchorEl.getBoundingClientRect();
+        const gridStyles = getComputedStyle(getGridContainer());
+        const edBorderW = parseFloat(gridStyles.getPropertyValue('--bg-editor-border-width').trim() || '2');
+        const edBg = gridStyles.getPropertyValue('--bg-editor-bg').trim() || '#fff';
+        const edBorder = gridStyles.getPropertyValue('--bg-editor-border').trim() || gridStyles.getPropertyValue('--bg-active-border').trim() || '#1a73e8';
+        const edRadius = gridStyles.getPropertyValue('--bg-editor-radius').trim() || '2px';
+        const edShadow = gridStyles.getPropertyValue('--bg-editor-shadow').trim() || '0 2px 8px rgba(0,0,0,0.15)';
+
+        // Parse mask into sections: "MM/YY" → [{label:'MM',len:2}, {sep:'/'}, {label:'YY',len:2}]
+        const sections: { type: 'input'; label: string; len: number }[] = [];
+        const separators: { pos: number; char: string }[] = [];
+        let current = '';
+        for (const ch of mask) {
+          if (/[A-Za-z]/.test(ch)) {
+            current += ch;
+          } else {
+            if (current) { sections.push({ type: 'input', label: current, len: current.length }); current = ''; }
+            separators.push({ pos: sections.length, char: ch });
+          }
+        }
+        if (current) sections.push({ type: 'input', label: current, len: current.length });
+
+        // Parse current value to fill sections (e.g. "07/25" → ["07", "25"])
+        const valueParts = value ? value.split(/[^0-9]+/).filter(Boolean) : [];
+
+        // Create float box
+        const floatBox = document.createElement('div');
+        floatBox.className = 'bg-cell-editor-float';
+        floatBox.style.cssText = `
+          position: fixed; z-index: 200; box-sizing: border-box;
+          top: ${cellRect.top}px; left: ${cellRect.left}px;
+          min-width: ${cellRect.width}px;
+          background: ${edBg};
+          border: ${edBorderW}px solid ${edBorder};
+          border-radius: ${edRadius};
+          box-shadow: ${edShadow};
+          display: flex; align-items: center;
+          height: ${cellRect.height}px;
+          padding: 0 4px;
+          gap: 1px;
+          font-size: 12px;
+          font-family: inherit;
+        `;
+
+        const inputs: HTMLInputElement[] = [];
+
+        sections.forEach((sec, i) => {
+          // Add separator before this section if needed
+          separators.filter(s => s.pos === i).forEach(s => {
+            const sep = document.createElement('span');
+            sep.textContent = s.char;
+            sep.style.cssText = 'color: #667085; user-select: none; pointer-events: none;';
+            floatBox.appendChild(sep);
+          });
+
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.maxLength = sec.len;
+          inp.placeholder = sec.label;
+          inp.value = valueParts[i] || '';
+          inp.style.cssText = `
+            width: ${sec.len * 10 + 4}px;
+            border: none; outline: none; background: transparent;
+            text-align: center; font: inherit; padding: 0;
+            color: inherit;
+          `;
+
+          // Auto-advance to next section when filled
+          inp.addEventListener('input', () => {
+            if (inp.value.length >= sec.len && i < sections.length - 1) {
+              inputs[i + 1]?.focus();
+              inputs[i + 1]?.select();
+            }
+          });
+
+          // Only allow digits
+          inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') return; // allow tab navigation
+            if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') return;
+            if (e.key === 'Enter') { commitEdit(); return; }
+            if (e.key === 'Escape') { cancelEdit(); return; }
+            if (!/^\d$/.test(e.key)) { e.preventDefault(); }
+          });
+
+          inputs.push(inp);
+          floatBox.appendChild(inp);
+        });
+
+        // Add trailing separators
+        separators.filter(s => s.pos === sections.length).forEach(s => {
+          const sep = document.createElement('span');
+          sep.textContent = s.char;
+          sep.style.cssText = 'color: #667085;';
+          floatBox.appendChild(sep);
+        });
+
+        document.body.appendChild(floatBox);
+        activeFloatBox = floatBox;
+
+        // Focus first section
+        requestAnimationFrame(() => {
+          inputs[0]?.focus();
+          inputs[0]?.select();
+        });
+
+        // Close on outside click
+        const onOutsideClick = (e: MouseEvent) => {
+          if (!floatBox.contains(e.target as Node)) {
+            commitEdit();
+          }
+        };
+        setTimeout(() => document.addEventListener('mousedown', onOutsideClick, true), 0);
+
+        // Return a shim that reads combined value
+        const shim = document.createElement('input');
+        Object.defineProperty(shim, 'value', {
+          get: () => inputs.map(inp => inp.value).join('/'),
+        });
+
+        return shim;
       }
 
       // -----------------------------------------------------------------------

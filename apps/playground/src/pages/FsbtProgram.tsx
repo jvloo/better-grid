@@ -193,6 +193,7 @@ export function FsbtProgram() {
     // ── Col 4: Start (left-aligned) ─────────────────────────────────────
     {
       id: 'start', accessorKey: 'start', header: (() => { const el = document.createElement('span'); el.textContent = 'Start'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, placeholder: 'MM/YY',
+      editor: 'masked' as const, mask: 'MM/YY',
       rules: [{ validate: (v: unknown) => { if (!v || v === '') return true; const s = String(v); return /^\d{2}\/\d{2}$/.test(s) || 'Invalid date (MM/YY)'; } }],
       valueModifier: {
         format: (v: unknown) => {

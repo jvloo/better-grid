@@ -105,7 +105,7 @@ export interface CellTypeRenderer {
 export type CellType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'bigint' | 'select' | 'boolean' | (string & {});
 
 /** Editor mode override */
-export type EditorType = 'text' | 'dropdown' | 'number' | 'date' | 'autocomplete';
+export type EditorType = 'text' | 'dropdown' | 'number' | 'date' | 'autocomplete' | 'masked';
 
 /** Dropdown option for select/autocomplete columns */
 export interface ColumnOption {
@@ -148,6 +148,8 @@ export interface ColumnDef<TData = unknown> {
   precision?: number;
   /** Placeholder text shown in empty editable cells when inputStyle is enabled */
   placeholder?: string;
+  /** Input mask pattern (e.g. 'MM/YY'). Each letter = editable digit section, other chars = fixed. */
+  mask?: string;
 
   // Sorting
   sortable?: boolean;
