@@ -458,27 +458,26 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           interactive.style.opacity = '0';
           interactive.style.transition = 'opacity 100ms';
 
-          interactive.addEventListener('mouseenter', () => {
+          interactive.addEventListener('mouseenter', (e) => {
             if (document.body.classList.contains('bg-gantt-dragging')) return;
             interactive.style.opacity = '0.3';
             interactive.style.backgroundColor = '#fff';
             // Show tooltip with date range
-            if (options?.columnToDate) {
-              const rec = row as Record<string, unknown>;
-              const sCol = rec[startColumnField] as number;
-              const eCol = rec[endColumnField] as number;
-              const startDateFld = options.startDateField ?? 'start';
-              const endDateFld = options.endDateField ?? 'end';
-              const sDate = rec[startDateFld] as string || options.columnToDate(sCol);
-              const eDate = rec[endDateFld] as string || options.columnToDate(eCol);
-              const durFld = options.durationField ?? 'duration';
-              const dur = rec[durFld] as number | null;
-              interactive.title = `${sDate} – ${eDate}${dur != null ? ` (${dur} months)` : ''}`;
-            }
+            const rec = row as Record<string, unknown>;
+            const sCol = rec[startColumnField] as number;
+            const eCol = rec[endColumnField] as number;
+            const startDateFld = options?.startDateField ?? 'start';
+            const endDateFld = options?.endDateField ?? 'end';
+            const durFld = options?.durationField ?? 'duration';
+            const sDate = (rec[startDateFld] as string) || (options?.columnToDate ? options.columnToDate(sCol) : String(sCol));
+            const eDate = (rec[endDateFld] as string) || (options?.columnToDate ? options.columnToDate(eCol) : String(eCol));
+            const dur = rec[durFld] as number | null;
+            const text = `${sDate} – ${eDate}${dur != null ? ` (${dur} months)` : ''}`;
+            ctx.showTooltip(interactive, text, e.clientX, e.clientY);
           });
           interactive.addEventListener('mouseleave', () => {
             interactive.style.opacity = '0';
-            interactive.title = '';
+            ctx.dismissTooltip();
             interactive.style.backgroundColor = '';
           });
 

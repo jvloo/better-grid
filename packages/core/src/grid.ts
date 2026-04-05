@@ -1757,6 +1757,8 @@ export function createGrid<
         pluginRegistry.exposeApi(plugin.id, api);
       },
       getPluginApi: (id) => pluginRegistry.getPlugin(id),
+      showTooltip: (target: HTMLElement, text: string, cursorX?: number, cursorY?: number) => showTooltip(target, text, cursorX, cursorY),
+      dismissTooltip: () => dismissTooltip(),
     };
   }
 

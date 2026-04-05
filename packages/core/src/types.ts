@@ -408,6 +408,8 @@ export interface PluginContext<TData = unknown> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   expose(api: Record<string, any>): void;
   getPluginApi<T>(pluginId: string): T | undefined;
+  showTooltip(target: HTMLElement, text: string, cursorX?: number, cursorY?: number): void;
+  dismissTooltip(): void;
 }
 
 export interface GridPlugin<TId extends string = string> {
