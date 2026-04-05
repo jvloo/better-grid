@@ -297,6 +297,10 @@ export function FsbtProgram() {
           return `${y}-${String(m + 1).padStart(2, '0')}-01`;
         },
         columnsToDuration: (startCol: number, endCol: number) => endCol - startCol + 1,
+        formatDate: (dateStr: string) => {
+          if (!dateStr) return '';
+          return formatMonYY(dateStr);
+        },
       }),
       clipboard(),
       undoRedo({ maxHistory: 50 }),

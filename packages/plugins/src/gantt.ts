@@ -48,6 +48,12 @@ export interface GanttOptions {
    * Default: endCol - startCol + 1
    */
   columnsToDuration?: (startCol: number, endCol: number) => number;
+  /**
+   * Format a date string for tooltip display.
+   * Receives the raw value from startDateField/endDateField.
+   * Default: returns the raw string as-is.
+   */
+  formatDate?: (dateStr: string) => string;
 }
 
 export interface GanttApi {
@@ -105,6 +111,19 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
   const endColumnField = options?.endColumnField ?? 'endColumn';
   const varianceField = options?.varianceField ?? 'variance';
   const parentRowBackground = options?.parentRowBackground;
+  const fmtDate = options?.formatDate ?? ((s: string) => s);
+  const startDateFld = options?.startDateField ?? 'start';
+  const endDateFld = options?.endDateField ?? 'end';
+  const durFld = options?.durationField ?? 'duration';
+
+  /** Build tooltip text from row data */
+  function tooltipText(row: Record<string, unknown>): string {
+    const s = fmtDate(row[startDateFld] as string || '');
+    const e = fmtDate(row[endDateFld] as string || '');
+    const d = row[durFld] as number | null;
+    if (!s && !e) return '';
+    return `${s} – ${e}${d != null ? ` (${d} months)` : ''}`;
+  }
 
   return {
     id: 'gantt',
@@ -442,8 +461,25 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
 
           container.appendChild(bar);
 
-          // Skip interaction layer if drag disabled or parent row in hierarchy
-          if (!dragEnabled || isParentRow) return;
+          // Parent rows: tooltip only (no drag)
+          if (isParentRow || !dragEnabled) {
+            const hoverLayer = document.createElement('div');
+            hoverLayer.style.position = 'absolute';
+            hoverLayer.style.left = '-1px';
+            hoverLayer.style.top = `${barTop}px`;
+            hoverLayer.style.width = `calc(100% + 2px)`;
+            hoverLayer.style.height = `${barH}px`;
+            hoverLayer.style.zIndex = '2';
+            hoverLayer.style.cursor = 'default';
+            hoverLayer.addEventListener('mouseenter', (e) => {
+              if (document.body.classList.contains('bg-gantt-dragging')) return;
+              const text = tooltipText(row as Record<string, unknown>);
+              if (text) ctx.showTooltip(hoverLayer, text, e.clientX, e.clientY);
+            });
+            hoverLayer.addEventListener('mouseleave', () => { ctx.dismissTooltip(); });
+            container.appendChild(hoverLayer);
+            return;
+          }
 
           // Interactive overlay (for drag)
           const interactive = document.createElement('div');
@@ -462,18 +498,8 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
             if (document.body.classList.contains('bg-gantt-dragging')) return;
             interactive.style.opacity = '0.3';
             interactive.style.backgroundColor = '#fff';
-            // Show tooltip with date range
-            const rec = row as Record<string, unknown>;
-            const sCol = rec[startColumnField] as number;
-            const eCol = rec[endColumnField] as number;
-            const startDateFld = options?.startDateField ?? 'start';
-            const endDateFld = options?.endDateField ?? 'end';
-            const durFld = options?.durationField ?? 'duration';
-            const sDate = (rec[startDateFld] as string) || (options?.columnToDate ? options.columnToDate(sCol) : String(sCol));
-            const eDate = (rec[endDateFld] as string) || (options?.columnToDate ? options.columnToDate(eCol) : String(eCol));
-            const dur = rec[durFld] as number | null;
-            const text = `${sDate} – ${eDate}${dur != null ? ` (${dur} months)` : ''}`;
-            ctx.showTooltip(interactive, text, e.clientX, e.clientY);
+            const text = tooltipText(row as Record<string, unknown>);
+            if (text) ctx.showTooltip(interactive, text, e.clientX, e.clientY);
           });
           interactive.addEventListener('mouseleave', () => {
             interactive.style.opacity = '0';
