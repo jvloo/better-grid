@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin, gantt, rowActions, RowActionIcons } from '@better-grid/plugins';
+import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin, gantt, rowActions, RowActionIcons, validation } from '@better-grid/plugins';
 import type { RowAction } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
@@ -153,6 +153,7 @@ export function FsbtProgram() {
     {
       id: 'name', accessorKey: 'name', header: (() => { const el = document.createElement('span'); el.textContent = 'Phase'; el.style.paddingLeft = '8px'; return el; }) as any, width: 236,
       editable: ((row: ProgramRow) => row.parentId !== null && row.custom) as any,
+      rules: [{ validate: (v: unknown) => !v || String(v).trim().length >= 3 || 'Name is too short. Please re-enter.', message: 'Min 3 characters' }],
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
@@ -178,6 +179,7 @@ export function FsbtProgram() {
       }) as any,
       width: 90, align: 'center' as const,
       editable: ((row: ProgramRow) => row.parentId !== null) as any,
+      rules: [{ validate: (v: unknown) => { if (v == null || v === '') return true; const n = Number(v); return (Number.isInteger(n) && n >= 1 && n <= 999) || 'Duration must be 1-999'; } }],
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
@@ -191,6 +193,7 @@ export function FsbtProgram() {
     // ── Col 4: Start (left-aligned) ─────────────────────────────────────
     {
       id: 'start', accessorKey: 'start', header: (() => { const el = document.createElement('span'); el.textContent = 'Start'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, placeholder: 'MM/YY',
+      rules: [{ validate: (v: unknown) => { if (!v || v === '') return true; const s = String(v); return /^\d{2}\/\d{2}$/.test(s) || 'Invalid date (MM/YY)'; } }],
       valueModifier: {
         format: (v: unknown) => {
           if (!v || typeof v !== 'string') return '';
@@ -302,6 +305,7 @@ export function FsbtProgram() {
           return formatMonYY(dateStr);
         },
       }),
+      validation(),
       clipboard(),
       undoRedo({ maxHistory: 50 }),
       exportPlugin({ filename: 'fsbt-program' }),

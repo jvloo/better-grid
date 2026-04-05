@@ -83,6 +83,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
               line-height: normal !important;
             }
             .bg-cell--input-editable .bg-input-box {
+              pointer-events: none;
               background: var(--bg-input-bg, #F8F8F8);
               border-radius: 4px;
               box-shadow: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
