@@ -95,6 +95,9 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         });
 
         // Apply error styles and tooltip hover to cells with errors
+        let lastErrorCell: HTMLElement | null = null;
+        let lastErrorMessage = '';
+
         for (const error of errors.values()) {
           const { rowIndex, colIndex } = error.position;
           const cells = document.querySelectorAll(
@@ -115,7 +118,16 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
               htmlCell.removeEventListener('mouseenter', onEnter);
               htmlCell.removeEventListener('mouseleave', onLeave);
             });
+
+            lastErrorCell = htmlCell;
+            lastErrorMessage = error.message;
           }
+        }
+
+        // Auto-show tooltip on the most recently validated error cell
+        if (lastErrorCell) {
+          const rect = lastErrorCell.getBoundingClientRect();
+          ctx.showTooltip(lastErrorCell, lastErrorMessage, rect.left + rect.width / 2, rect.bottom);
         }
       }
 

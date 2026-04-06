@@ -171,6 +171,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       let activeEditor: HTMLInputElement | null = null;
       let activeFloatBox: HTMLElement | null = null;
       let activeDropdownPanel: HTMLElement | null = null;
+      /** Cleanup function for the current editor's outside-click listener */
+      let activeOutsideClickCleanup: (() => void) | null = null;
       let activeDropdownOptions: DropdownOption[] | null = null;
       let originalValue: unknown = null;
 
@@ -752,10 +754,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           inp.placeholder = sec.label;
           inp.value = valueParts[i] || '';
           inp.style.cssText = `
-            width: ${sec.len * 9 + 2}px;
+            width: ${sec.len}ch;
             border: none; outline: none; background: transparent;
-            text-align: center; font: inherit; padding: 0;
-            color: inherit;
+            text-align: left; font: inherit; padding: 0;
+            color: inherit; letter-spacing: 0;
           `;
 
           // Select all text on focus (MUI FieldSection behavior)
@@ -827,24 +829,59 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         document.body.appendChild(floatBox);
         activeFloatBox = floatBox;
 
+        // Track scroll to reposition float box (same as text editor)
+        const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
+        const maskedScrollEl = gridEl?.querySelector('.bg-grid__scroll') as HTMLElement | null;
+        const editRow = cellEl.dataset.row;
+        const editCol = cellEl.dataset.col;
+
+        function syncMaskedPosition(): void {
+          const currentCell = gridEl?.querySelector(`.bg-cell[data-row="${editRow}"][data-col="${editCol}"]`) as HTMLElement | null;
+          const gr = gridEl?.getBoundingClientRect();
+          if (!currentCell || !gr) { floatBox.style.visibility = 'hidden'; return; }
+          const anchor = currentCell.querySelector('.bg-input-box') as HTMLElement ?? currentCell;
+          const cr = anchor.getBoundingClientRect();
+          const headerH = parseFloat(gridEl?.querySelector('.bg-grid__headers')?.getBoundingClientRect().height + '' || '0');
+          const cellVisible = cr.bottom > (gr.top + headerH) && cr.top < gr.bottom && cr.right > gr.left && cr.left < gr.right;
+          floatBox.style.visibility = cellVisible ? 'visible' : 'hidden';
+          if (cellVisible) { floatBox.style.top = `${cr.top}px`; floatBox.style.left = `${cr.left}px`; }
+        }
+        function onMaskedScroll(): void { requestAnimationFrame(syncMaskedPosition); }
+        if (maskedScrollEl) maskedScrollEl.addEventListener('scroll', onMaskedScroll);
+
         // Focus first section
         requestAnimationFrame(() => {
           inputs[0]?.focus();
           inputs[0]?.select();
         });
 
-        // Close on outside click
-        const onOutsideClick = (e: MouseEvent) => {
-          if (!floatBox.contains(e.target as Node)) {
-            commitEdit();
-          }
-        };
-        setTimeout(() => document.addEventListener('mousedown', onOutsideClick, true), 0);
+        // Close on outside click — with proper cleanup via activeOutsideClickCleanup
+        let maskedActive = true;
+        function cleanupMasked(): void {
+          if (!maskedActive) return;
+          maskedActive = false;
+          document.removeEventListener('mousedown', onMaskedOutsideClick, true);
+          if (maskedScrollEl) maskedScrollEl.removeEventListener('scroll', onMaskedScroll);
+          activeOutsideClickCleanup = null;
+        }
+        function onMaskedOutsideClick(e: MouseEvent): void {
+          if (!maskedActive) return;
+          if (floatBox.contains(e.target as Node)) return;
+          cleanupMasked();
+          if (editingCell) commitEdit();
+        }
+        setTimeout(() => document.addEventListener('mousedown', onMaskedOutsideClick, true), 0);
+        // Register so cleanupEdit can call it on Escape/Enter
+        activeOutsideClickCleanup = cleanupMasked;
 
         // Return a shim that reads combined value
         const shim = document.createElement('input');
         Object.defineProperty(shim, 'value', {
-          get: () => inputs.map(inp => inp.value).join('/'),
+          get: () => {
+            const allEmpty = inputs.every(inp => inp.value === '');
+            if (allEmpty) return '';
+            return inputs.map(inp => inp.value).join('/');
+          },
         });
 
         return shim;
@@ -1557,6 +1594,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       }
 
       function cleanupEdit(): void {
+        // Clean up any active outside-click listener (masked input, etc.)
+        if (activeOutsideClickCleanup) {
+          activeOutsideClickCleanup();
+          activeOutsideClickCleanup = null;
+        }
+
         // Remove inline editor if present
         if (editingCell) {
           const cellEl = getCellElement(editingCell);
