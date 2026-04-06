@@ -25,12 +25,12 @@ interface ProgramRow {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Data from QA app project 4369: https://qa-app.wiseway.ai/projects/4369/program
-// Base month: Sep 2018 (month index 0). 218 months total (Sep 2018 – Oct 2036).
+// Data from QA app project 4288: https://qa-app.wiseway.ai/projects/4288/program
+// Base month: Aug 2023 (month index 0). 39 months total (Aug 2023 – Oct 2026).
 // ---------------------------------------------------------------------------
 
-const BASE_YEAR = 2018;
-const BASE_MONTH = 8; // September (0-indexed)
+const BASE_YEAR = 2023;
+const BASE_MONTH = 7; // August (0-indexed)
 
 /** Convert "Mon YY" (e.g. "Sep 18", "Mar 25") to YYYY-MM-01 date string (no timezone issues) */
 function parseMonYY(s: string): string {
@@ -68,46 +68,46 @@ function r(id: number, parentId: number | null, code: string, name: string, dur:
 }
 
 const data: ProgramRow[] = [
-  // ── Phase 1: Acquisition (Sep 18 – Mar 25, 79 months) ────────────────
-  r(1, null, '1', 'Acquisition', 79, 'Sep 18', 'Mar 25'),
-  r(2, 1, '1.1', 'Due Diligence', 3, 'Sep 18', 'Nov 18'),
-  r(3, 1, '1.2', 'Deposit', 1, 'Nov 24', 'Nov 24'),
-  r(4, 1, '1.3', 'Settlement', 4, 'Dec 24', 'Mar 25'),
+  // ── Phase 1: Acquisition (Aug 23 – Jan 24, 6 months) ─────────────────
+  r(1, null, '1', 'Acquisition', 6, 'Aug 23', 'Jan 24'),
+  r(2, 1, '1.1', 'Due Diligence', 4, 'Aug 23', 'Nov 23'),
+  r(3, 1, '1.2', 'Deposit', 1, 'Aug 23', 'Aug 23'),
+  r(4, 1, '1.3', 'Settlement', 1, 'Jan 24', 'Jan 24'),
   ...customRows(1, '1', 4),
 
-  // ── Phase 2: Planning And Design (Sep 24 – May 26, 21 months) ────────
-  r(5, null, '2', 'Planning And Design', 21, 'Sep 24', 'May 26'),
-  r(6, 5, '2.1', 'Design Prep To Lodgement', 4, 'Sep 24', 'Dec 24'),
-  r(7, 5, '2.2', 'Planning Assessment', 4, 'Dec 24', 'Mar 25'),
-  r(8, 5, '2.3', 'Civil And Administrative Tribunal', null, '', ''),
-  r(9, 5, '2.4', 'Prepare Design Amendment', 4, 'Mar 25', 'June 25'),
-  r(10, 5, '2.5', 'Amendment Approval', 4, 'June 25', 'Sept 25'),
-  r(11, 5, '2.6', '50% Detail Design', 4, 'Mar 25', 'June 25'),
-  r(12, 5, '2.7', '70% Detail Design', 2, 'June 25', 'July 25'),
-  r(13, 5, '2.8', '100% Detail Design', 11, 'July 25', 'May 26'),
+  // ── Phase 2: Planning And Design (Aug 23 – Mar 25, 20 months) ────────
+  r(5, null, '2', 'Planning And Design', 20, 'Aug 23', 'Mar 25'),
+  r(6, 5, '2.1', 'Design Prep To Lodgement', 3, 'Aug 23', 'Oct 23'),
+  r(7, 5, '2.2', 'Planning Assessment', 3, 'Nov 23', 'Jan 24'),
+  r(8, 5, '2.3', 'Civil And Administrative Tribunal', 6, 'Nov 23', 'Apr 24'),
+  r(9, 5, '2.4', 'Prepare Design Amendment', 3, 'May 24', 'July 24'),
+  r(10, 5, '2.5', 'Amendment Approval', 2, 'Aug 24', 'Sept 24'),
+  r(11, 5, '2.6', '50% Detail Design', 2, 'Oct 24', 'Nov 24'),
+  r(12, 5, '2.7', '70% Detail Design', 2, 'Dec 24', 'Jan 25'),
+  r(13, 5, '2.8', '100% Detail Design', 2, 'Feb 25', 'Mar 25'),
 
-  // ── Phase 3: Construction And Building Works (Mar 25 – Sept 26, 19 months) ──
-  r(14, null, '3', 'Construction And Building Works', 19, 'Mar 25', 'Sept 26'),
-  r(15, 14, '3.1', 'Demolition', null, 'Mar 25', 'May 25'),
-  r(16, 14, '3.2', 'Early Work/Excavation', null, 'May 25', 'Oct 25'),
-  r(17, 14, '3.3', 'Main Works', null, 'Oct 25', 'Sept 26'),
+  // ── Phase 3: Construction And Building Works (Oct 24 – Sept 26, 24 months) ──
+  r(14, null, '3', 'Construction And Building Works', 24, 'Oct 24', 'Sept 26'),
+  r(15, 14, '3.1', 'Demolition', 3, 'Oct 24', 'Dec 24'),
+  r(16, 14, '3.2', 'Early Work/Excavation', 6, 'Jan 25', 'June 25'),
+  r(17, 14, '3.3', 'Main Works', 18, 'Apr 25', 'Sept 26'),
 
-  // ── Phase 4: Marketing And Sales (Dec 24 – Oct 26, 23 months) ────────
-  r(18, null, '4', 'Marketing And Sales', 23, 'Dec 24', 'Oct 26'),
-  r(19, 18, '4.1', 'Marketing Prep', null, 'Dec 24', 'Feb 25'),
-  r(20, 18, '4.2', 'Marketing Activity', null, 'Feb 25', 'Sept 26'),
-  r(21, 18, '4.3', 'Sales/Leasing Period', null, 'Feb 25', 'Sept 26'),
-  r(22, 18, '4.4', 'Settlement Management', null, 'Sept 26', 'Oct 26'),
+  // ── Phase 4: Marketing And Sales (Mar 25 – Oct 26, 20 months) ────────
+  r(18, null, '4', 'Marketing And Sales', 20, 'Mar 25', 'Oct 26'),
+  r(19, 18, '4.1', 'Marketing Prep', 6, 'Mar 25', 'Aug 25'),
+  r(20, 18, '4.2', 'Marketing Activity', 13, 'Sep 25', 'Sept 26'),
+  r(21, 18, '4.3', 'Sales/Leasing Period', 13, 'Sep 25', 'Sept 26'),
+  r(22, 18, '4.4', 'Settlement Management', 1, 'Oct 26', 'Oct 26'),
 
-  // ── Phase 5: Operation/Asset Management (Oct 26 – Oct 36, 121 months) ──
-  r(23, null, '5', 'Operation/Asset Management', 121, 'Oct 26', 'Oct 36'),
-  r(24, 23, '5.1', 'Lease Up Period', null, 'Oct 26', 'Dec 26'),
-  r(25, 23, '5.2', 'Holding Period', null, 'Dec 26', 'Oct 36'),
-  r(26, 23, '5.3', 'Termination', null, 'Oct 36', 'Oct 36'),
+  // ── Phase 5: Operation/Asset Management (Oct 26, 1 month) ────────────
+  r(23, null, '5', 'Operation/Asset Management', 1, 'Oct 26', 'Oct 26'),
+  r(24, 23, '5.1', 'Lease Up Period', 1, 'Oct 26', 'Oct 26'),
+  r(25, 23, '5.2', 'Holding Period', 1, 'Oct 26', 'Oct 26'),
+  r(26, 23, '5.3', 'Termination', 1, 'Oct 26', 'Oct 26'),
 ];
 
-// Generate monthly columns covering full project range (Sep 2018 – Oct 2036 = 218 months)
-const MONTH_COUNT = 218;
+// Generate monthly columns covering full project range (Aug 2023 – Oct 2026 = 39 months)
+const MONTH_COUNT = 39;
 const months: { key: string; label: string }[] = [];
 for (let i = 0; i < MONTH_COUNT; i++) {
   const d = new Date(BASE_YEAR, BASE_MONTH + i);
