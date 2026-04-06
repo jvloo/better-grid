@@ -20,44 +20,37 @@ interface CostRow {
   [key: string]: string | number | boolean | null;
 }
 
+// Data from QA app project 4288: https://qa-app.wiseway.ai/projects/4288/cost
+// TDC: $161,041,739
 const data: CostRow[] = [
-  // Land Cost (parent)
-  { id: 1, parentId: null, code: '1', name: 'Land Cost', input: 42000000, inputNote: 'Fixed', escalation: 'none', amount: 42000000, start: '2025-07-01', end: '2025-07-31', variance: 0, custom: false, m_2025_07: 42000000 },
-  { id: 2, parentId: 1, code: '1.1', name: 'Purchase Price', input: 38000000, inputNote: 'Fixed', escalation: 'none', amount: 38000000, start: '2025-07-01', end: '2025-07-31', variance: 0, custom: false, m_2025_07: 38000000 },
-  { id: 3, parentId: 1, code: '1.2', name: 'Stamp Duty', input: 2310000, inputNote: '5.5% of land', escalation: 'none', amount: 2310000, start: '2025-07-01', end: '2025-07-31', variance: 0, custom: false, m_2025_07: 2310000 },
-  { id: 4, parentId: 1, code: '1.3', name: 'Legal & Acquisition', input: 1690000, inputNote: 'Fixed', escalation: 'none', amount: 1690000, start: '2025-07-01', end: '2025-07-31', variance: 0, custom: false, m_2025_07: 1690000 },
+  // 1. Land Cost
+  { id: 1, parentId: null, code: '1', name: 'Land Cost', input: 27000000, inputNote: 'Fixed', escalation: 'none', amount: 27000000, start: '2023-08-01', end: '2024-01-31', variance: 0, custom: false, m_2023_08: 27000000 },
+  { id: 2, parentId: 1, code: '1.01', name: 'Deposit', input: 2700000, inputNote: '10.00%', escalation: 'none', amount: 2700000, start: '2023-08-01', end: '2023-08-31', variance: 0, custom: false, m_2023_08: 2700000 },
+  { id: 3, parentId: 1, code: '1.02', name: 'Settlement', input: 24300000, inputNote: '90.00%', escalation: 'none', amount: 24300000, start: '2024-01-01', end: '2024-01-31', variance: 0, custom: false, m_2024_01: 24300000 },
 
-  // Construction (parent) — spread across 18 months of construction
-  { id: 5, parentId: null, code: '2', name: 'Construction', input: 85000000, inputNote: '', escalation: '', amount: 85000000, start: '2026-07-01', end: '2027-12-31', variance: -1200000, custom: false },
-  { id: 6, parentId: 5, code: '2.1', name: 'Substructure', input: 12750000, inputNote: '15% of const', escalation: 'cpi', amount: 13005000, start: '2026-07-01', end: '2026-12-31', variance: -255000, custom: false, m_2026_07: 2167500, m_2026_08: 2167500, m_2026_09: 2167500, m_2026_10: 2167500, m_2026_11: 2167500, m_2026_12: 2167500 },
-  { id: 7, parentId: 5, code: '2.2', name: 'Superstructure', input: 29750000, inputNote: '35% of const', escalation: 'cpi', amount: 30345000, start: '2027-01-01', end: '2027-07-31', variance: -595000, custom: false, m_2027_01: 4335000, m_2027_02: 4335000, m_2027_03: 4335000, m_2027_04: 4335000, m_2027_05: 4335000, m_2027_06: 4335000, m_2027_07: 4335000 },
-  { id: 8, parentId: 5, code: '2.3', name: 'Finishes', input: 21250000, inputNote: '25% of const', escalation: 'cpi', amount: 21675000, start: '2027-05-01', end: '2027-10-31', variance: -425000, custom: false, m_2027_05: 3612500, m_2027_06: 3612500, m_2027_07: 3612500, m_2027_08: 3612500, m_2027_09: 3612500, m_2027_10: 3612500 },
-  { id: 9, parentId: 5, code: '2.4', name: 'Services (M&E)', input: 12750000, inputNote: '15% of const', escalation: 'non-cpi', amount: 13005000, start: '2027-03-01', end: '2027-09-30', variance: 75000, custom: false, m_2027_03: 1857857, m_2027_04: 1857857, m_2027_05: 1857857, m_2027_06: 1857857, m_2027_07: 1857857, m_2027_08: 1857857, m_2027_09: 1857858 },
-  { id: 10, parentId: 5, code: '2.5', name: 'External Works', input: 4250000, inputNote: '5% of const', escalation: 'none', amount: 4250000, start: '2027-10-01', end: '2027-12-31', variance: 0, custom: false, m_2027_10: 1416667, m_2027_11: 1416667, m_2027_12: 1416666 },
-  { id: 11, parentId: 5, code: '2.6', name: 'Preliminaries', input: 4250000, inputNote: '5% of const', escalation: 'none', amount: 4250000, start: '2026-07-01', end: '2027-12-31', variance: 0, custom: false, m_2026_07: 236111, m_2026_08: 236111, m_2026_09: 236111, m_2026_10: 236111, m_2026_11: 236111, m_2026_12: 236111, m_2027_01: 236111, m_2027_02: 236111, m_2027_03: 236111, m_2027_04: 236111, m_2027_05: 236111, m_2027_06: 236111, m_2027_07: 236111, m_2027_08: 236111, m_2027_09: 236111, m_2027_10: 236111, m_2027_11: 236111, m_2027_12: 236113 },
+  // 2. Acquisition Cost
+  { id: 4, parentId: null, code: '2', name: 'Acquisition Cost', input: 0, inputNote: '', escalation: '', amount: 1964870, start: '2023-08-01', end: '2023-11-30', variance: 0, custom: false },
+  { id: 5, parentId: 4, code: '2.01', name: 'Stamp Duty', input: 1734870, inputNote: 'Fixed', escalation: 'none', amount: 1734870, start: '2023-08-01', end: '2023-08-31', variance: 0, custom: false, m_2023_08: 1734870 },
+  { id: 6, parentId: 4, code: '2.02', name: 'DD Costs', input: 200000, inputNote: 'Fixed', escalation: 'cpi', amount: 200000, start: '2023-08-01', end: '2023-11-30', variance: 0, custom: false, m_2023_08: 50000, m_2023_09: 50000, m_2023_10: 50000, m_2023_11: 50000 },
+  { id: 7, parentId: 4, code: '2.03', name: 'ASIC SPV Establishment', input: 30000, inputNote: 'Fixed', escalation: 'cpi', amount: 30000, start: '2023-08-01', end: '2023-08-31', variance: 0, custom: false, m_2023_08: 30000 },
 
-  // Professional Fees (parent)
-  { id: 12, parentId: null, code: '3', name: 'Professional Fees', input: 8500000, inputNote: '', escalation: '', amount: 8500000, start: '2025-10-01', end: '2027-12-31', variance: 0, custom: false },
-  { id: 13, parentId: 12, code: '3.1', name: 'Architect', input: 3400000, inputNote: '4% of const', escalation: 'none', amount: 3400000, start: '2025-10-01', end: '2027-06-30', variance: 0, custom: false, m_2025_10: 161905, m_2025_11: 161905, m_2025_12: 161905, m_2026_01: 161905, m_2026_02: 161905, m_2026_03: 161905, m_2026_04: 161905, m_2026_05: 161905, m_2026_06: 161905, m_2026_07: 161905, m_2026_08: 161905, m_2026_09: 161905, m_2026_10: 161905, m_2026_11: 161905, m_2026_12: 161905, m_2027_01: 161905, m_2027_02: 161905, m_2027_03: 161905, m_2027_04: 161905, m_2027_05: 161905, m_2027_06: 161900 },
-  { id: 14, parentId: 12, code: '3.2', name: 'Structural Engineer', input: 2550000, inputNote: '3% of const', escalation: 'none', amount: 2550000, start: '2026-01-01', end: '2027-06-30', variance: 0, custom: false, m_2026_01: 141667, m_2026_02: 141667, m_2026_03: 141667, m_2026_04: 141667, m_2026_05: 141667, m_2026_06: 141667, m_2026_07: 141667, m_2026_08: 141667, m_2026_09: 141667, m_2026_10: 141667, m_2026_11: 141667, m_2026_12: 141667, m_2027_01: 141667, m_2027_02: 141667, m_2027_03: 141667, m_2027_04: 141667, m_2027_05: 141667, m_2027_06: 141661 },
-  { id: 15, parentId: 12, code: '3.3', name: 'Quantity Surveyor', input: 1700000, inputNote: '2% of const', escalation: 'none', amount: 1700000, start: '2026-04-01', end: '2027-09-30', variance: 0, custom: false, m_2026_04: 94444, m_2026_05: 94444, m_2026_06: 94444, m_2026_07: 94444, m_2026_08: 94444, m_2026_09: 94444, m_2026_10: 94444, m_2026_11: 94444, m_2026_12: 94444, m_2027_01: 94444, m_2027_02: 94444, m_2027_03: 94444, m_2027_04: 94444, m_2027_05: 94444, m_2027_06: 94444, m_2027_07: 94444, m_2027_08: 94444, m_2027_09: 94452 },
-  { id: 16, parentId: 12, code: '3.4', name: 'Project Manager', input: 850000, inputNote: '1% of const', escalation: 'none', amount: 850000, start: '2026-07-01', end: '2027-12-31', variance: 0, custom: false, m_2026_07: 47222, m_2026_08: 47222, m_2026_09: 47222, m_2026_10: 47222, m_2026_11: 47222, m_2026_12: 47222, m_2027_01: 47222, m_2027_02: 47222, m_2027_03: 47222, m_2027_04: 47222, m_2027_05: 47222, m_2027_06: 47222, m_2027_07: 47222, m_2027_08: 47222, m_2027_09: 47222, m_2027_10: 47222, m_2027_11: 47222, m_2027_12: 47226 },
+  // 3. Construction Cost
+  { id: 8, parentId: null, code: '3', name: 'Construction Cost', input: 0, inputNote: '', escalation: '', amount: 114471000, start: '2024-10-01', end: '2026-09-30', variance: 0, custom: false },
+  { id: 9, parentId: 8, code: '3.01', name: 'Demolition', input: 1500000, inputNote: 'Fixed', escalation: 'cpi', amount: 1500000, start: '2024-10-01', end: '2024-12-31', variance: 0, custom: false, m_2024_10: 500000, m_2024_11: 500000, m_2024_12: 500000 },
+  { id: 10, parentId: 8, code: '3.03', name: 'Early Work', input: 1020000, inputNote: 'Fixed', escalation: 'cpi', amount: 1020000, start: '2025-01-01', end: '2025-06-30', variance: 0, custom: false, m_2025_01: 170000, m_2025_02: 170000, m_2025_03: 170000, m_2025_04: 170000, m_2025_05: 170000, m_2025_06: 170000 },
+  { id: 11, parentId: 8, code: '3.05', name: 'Main Construction', input: 106500000, inputNote: 'Fixed', escalation: 'cpi', amount: 106500000, start: '2025-04-01', end: '2026-09-30', variance: 0, custom: false },
+  { id: 12, parentId: 8, code: '3.08', name: 'Construction Contingency', input: 5451000, inputNote: '5.00%', escalation: 'none', amount: 5451000, start: '2024-10-01', end: '2026-09-30', variance: 0, custom: false },
 
-  // Statutory Costs
-  { id: 17, parentId: null, code: '4', name: 'Statutory Costs', input: 5100000, inputNote: '', escalation: '', amount: 5100000, start: '2025-12-01', end: '2026-06-30', variance: 0, custom: false },
-  { id: 18, parentId: 17, code: '4.1', name: 'Council S94 Contributions', input: 3400000, inputNote: 'Fixed', escalation: 'none', amount: 3400000, start: '2025-12-01', end: '2025-12-31', variance: 0, custom: false, m_2025_12: 3400000 },
-  { id: 19, parentId: 17, code: '4.2', name: 'DA/CC Application Fees', input: 850000, inputNote: 'Fixed', escalation: 'none', amount: 850000, start: '2025-10-01', end: '2025-10-31', variance: 0, custom: false, m_2025_10: 850000 },
-  { id: 20, parentId: 17, code: '4.3', name: 'Infrastructure Levy', input: 850000, inputNote: 'Fixed', escalation: 'none', amount: 850000, start: '2026-04-01', end: '2026-06-30', variance: 0, custom: false, m_2026_04: 283333, m_2026_05: 283333, m_2026_06: 283334 },
-
-  // Marketing & Sales
-  { id: 21, parentId: null, code: '5', name: 'Marketing & Sales', input: 3200000, inputNote: '', escalation: '', amount: 3200000, start: '2027-04-01', end: '2028-03-31', variance: 0, custom: false },
-  { id: 22, parentId: 21, code: '5.1', name: 'Sales & Marketing', input: 2400000, inputNote: 'Fixed', escalation: 'none', amount: 2400000, start: '2027-04-01', end: '2028-03-31', variance: 0, custom: false, m_2027_04: 200000, m_2027_05: 200000, m_2027_06: 200000, m_2027_07: 200000, m_2027_08: 200000, m_2027_09: 200000, m_2027_10: 200000, m_2027_11: 200000, m_2027_12: 200000, m_2028_01: 200000, m_2028_02: 200000, m_2028_03: 200000 },
-  { id: 23, parentId: 21, code: '5.2', name: 'Display Suite', input: 800000, inputNote: 'Fixed', escalation: 'none', amount: 800000, start: '2027-04-01', end: '2027-06-30', variance: 0, custom: false, m_2027_04: 266667, m_2027_05: 266667, m_2027_06: 266666 },
+  // 4. Professional Fees
+  { id: 13, parentId: null, code: '4', name: 'Professional Fees', input: 0, inputNote: '', escalation: '', amount: 2500506, start: '2023-08-01', end: '2025-03-31', variance: 0, custom: false },
+  { id: 14, parentId: 13, code: '4.03', name: 'Architecture', input: 500506, inputNote: 'Fixed', escalation: 'cpi', amount: 500506, start: '2023-08-01', end: '2025-03-31', variance: 0, custom: false },
+  { id: 15, parentId: 13, code: '4.11', name: 'External PM / Superintendent', input: 2000000, inputNote: 'Fixed', escalation: 'cpi', amount: 2000000, start: '2024-10-01', end: '2026-09-30', variance: 0, custom: false },
 ];
 
+// Monthly columns: Aug 2023 – Oct 2026 (39 months, matching Program)
 const months: { key: string; label: string }[] = [];
-for (let i = 0; i < 36; i++) {
-  const d = new Date(2025, 6 + i);
+for (let i = 0; i < 39; i++) {
+  const d = new Date(2023, 7 + i);
   const key = `m_${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, '0')}`;
   const label = d.toLocaleString('en-AU', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2);
   months.push({ key, label });
