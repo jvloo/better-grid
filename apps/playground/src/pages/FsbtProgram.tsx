@@ -194,7 +194,21 @@ export function FsbtProgram() {
     {
       id: 'start', accessorKey: 'start', header: (() => { const el = document.createElement('span'); el.textContent = 'Start'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, placeholder: 'MM/YY',
       editor: 'masked' as const, mask: 'MM/YY',
-      rules: [{ validate: (v: unknown) => { if (!v || v === '') return true; const s = String(v); return /^\d{2}\/\d{2}$/.test(s) || 'Invalid date (MM/YY)'; } }],
+      rules: [
+        { validate: (v: unknown) => { if (!v || v === '') return true; const s = String(v); return /^\d{2}\/\d{2}$/.test(s) || 'Invalid date (MM/YY)'; } },
+        { validate: (_v: unknown, row: unknown) => {
+          const r = row as ProgramRow;
+          if (!r.start || !r.parentId) return true;
+          const parent = data.find(d => d.id === r.parentId);
+          if (!parent?.start || !parent?.end) return true;
+          const childCol = toColIndex(r.start);
+          const parentStartCol = toColIndex(parent.start);
+          const parentEndCol = toColIndex(parent.end);
+          if (childCol < parentStartCol) return `Start before parent (${formatMonYY(parent.start)})`;
+          if (childCol > parentEndCol) return `Start after parent end (${formatMonYY(parent.end)})`;
+          return true;
+        }},
+      ],
       valueModifier: {
         format: (v: unknown) => {
           if (!v || typeof v !== 'string') return '';
