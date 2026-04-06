@@ -71,12 +71,41 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         return null;
       }
 
+      // Inject error message CSS once
+      if (!document.getElementById('bg-validation-style')) {
+        const style = document.createElement('style');
+        style.id = 'bg-validation-style';
+        style.textContent = `
+          .bg-cell--error .bg-input-box {
+            border: 1px solid #FFAAAA !important;
+            background: #FFF5F5 !important;
+          }
+          .bg-validation-error {
+            color: #E53E3E;
+            font-size: 10px;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: absolute;
+            bottom: 1px;
+            left: 8px;
+            right: 8px;
+            pointer-events: none;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
       function applyErrorStyles(): void {
-        // Remove all existing error styles
+        // Remove all existing error styles and error message elements
         document.querySelectorAll('.bg-cell--error').forEach((el) => {
           el.classList.remove('bg-cell--error');
           el.removeAttribute('title');
+          el.querySelector('.bg-validation-error')?.remove();
         });
+        // Also clean up orphaned error elements
+        document.querySelectorAll('.bg-validation-error').forEach(el => el.remove());
 
         // Apply error styles to cells with errors
         for (const error of errors.values()) {
@@ -87,6 +116,14 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
           for (const cell of cells) {
             cell.classList.add('bg-cell--error');
             (cell as HTMLElement).title = error.message;
+
+            // Add inline error message for input-style cells
+            if (!cell.querySelector('.bg-validation-error')) {
+              const errEl = document.createElement('div');
+              errEl.className = 'bg-validation-error';
+              errEl.textContent = error.message;
+              cell.appendChild(errEl);
+            }
           }
         }
       }
