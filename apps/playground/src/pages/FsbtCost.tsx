@@ -156,7 +156,8 @@ export function FsbtCost() {
     },
     pinnedBottomRows,
     selection: { mode: 'range' as const, fillHandle: true },
-    rowHeight: 56,
+    headerHeight: 44,
+    rowHeight: 44,
   });
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);

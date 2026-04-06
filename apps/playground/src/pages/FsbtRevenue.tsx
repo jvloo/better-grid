@@ -154,8 +154,10 @@ export function FsbtRevenue() {
     plugins: btsPlugins,
     pinnedBottomRows: [btsTotalsRow],
     selection: { mode: 'range' as const, fillHandle: true },
-    rowHeight: 36,
+    headerHeight: 44,
+    rowHeight: 44,
     pinnedBottomRowHeight: 44,
+    tableStyle: 'striped' as const,
   });
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -221,7 +223,8 @@ export function FsbtRevenue() {
       defaultExpanded: true,
     },
     selection: { mode: 'range' as const },
-    rowHeight: 50,
+    headerHeight: 44,
+    rowHeight: 44,
   });
 
   // ════════════════════════════════════════════════════════════════════════════

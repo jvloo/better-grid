@@ -19,6 +19,7 @@ import { HRDirectory } from './pages/HRDirectory';
 import { InventoryTracker } from './pages/InventoryTracker';
 import { MergeCellsDemo } from './pages/MergeCellsDemo';
 import { SelectionModes } from './pages/SelectionModes';
+import { TableStyles } from './pages/TableStyles';
 import { FsbtProgram } from './pages/FsbtProgram';
 import { FsbtCost } from './pages/FsbtCost';
 import { FsbtRevenue } from './pages/FsbtRevenue';
@@ -214,6 +215,7 @@ export function App() {
             <NavButton active={page === 'plugin-toggle'} onClick={() => navigatePage('plugin-toggle')} icon="🔌">Plugin Toggle</NavButton>
             <NavButton active={page === 'performance'} onClick={() => navigatePage('performance')} icon="⚡">Performance</NavButton>
             <NavButton active={page === 'selection-modes'} onClick={() => navigatePage('selection-modes')} icon="🎯">Selection Modes</NavButton>
+            <NavButton active={page === 'table-styles'} onClick={() => navigatePage('table-styles')} icon="🎨">Table Styles</NavButton>
 
             <SectionLabel>Other</SectionLabel>
             <NavButton active={page === 'pro'} onClick={() => navigatePage('pro')} icon="🗺️">Roadmap</NavButton>
@@ -245,6 +247,7 @@ export function App() {
           {page === 'performance' && <PerformanceDemo />}
           {page === 'merge-cells' && <MergeCellsDemo />}
           {page === 'selection-modes' && <SelectionModes />}
+          {page === 'table-styles' && <TableStyles />}
           {page === 'fsbt-program' && <div className="wiseway-theme"><FsbtProgram /></div>}
           {page === 'fsbt-cost' && <div className="wiseway-theme"><FsbtCost /></div>}
           {page === 'fsbt-revenue' && <div className="wiseway-theme"><FsbtRevenue /></div>}

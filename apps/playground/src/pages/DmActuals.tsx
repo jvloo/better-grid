@@ -217,7 +217,8 @@ export function DmActuals() {
     tableStyle: 'striped' as const,
     pinnedBottomRows,
     selection: { mode: 'range' as const, fillHandle: true },
-    rowHeight: 40,
+    headerHeight: 44,
+    rowHeight: 44,
   });
 
   const handleExportCsv = useCallback(() => {

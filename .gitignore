@@ -36,3 +36,4 @@ screenshots/
 
 # Agents
 .claude/settings.local.json
+snapshot.txt

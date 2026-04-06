@@ -106,6 +106,7 @@ export function FsbtFunding() {
     freezeClip: { minVisible: 2 },
     tableStyle: 'striped' as const,
     selection: { mode: 'range' as const },
+    headerHeight: 44,
     rowHeight: 44,
   });
 

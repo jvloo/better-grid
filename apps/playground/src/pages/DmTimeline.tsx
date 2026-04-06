@@ -155,7 +155,8 @@ export function DmTimeline() {
       defaultExpanded: true,
     },
     selection: { mode: 'range' as const },
-    rowHeight: 36,
+    headerHeight: 44,
+    rowHeight: 44,
   });
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);

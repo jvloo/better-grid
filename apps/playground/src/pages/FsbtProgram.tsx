@@ -116,11 +116,14 @@ for (let i = 0; i < MONTH_COUNT; i++) {
   months.push({ key, label });
 }
 
-/** Format date as "Mon yy" (e.g. "Apr 26") */
+/** Format YYYY-MM-DD to "Mon yy" (e.g. "Sept 18") — timezone-safe */
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','June','July','Aug','Sept','Oct','Nov','Dec'];
 function formatMonYY(dateStr: string): string {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleString('en-AU', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2);
+  const [yStr, mStr] = dateStr.split('-');
+  if (!yStr || !mStr) return dateStr;
+  const m = parseInt(mStr, 10) - 1;
+  return `${MONTH_NAMES[m] ?? mStr} ${yStr.slice(2)}`;
 }
 
 export function FsbtProgram() {

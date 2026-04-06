@@ -150,7 +150,8 @@ export function DmSummary() {
     freezeClip: { minVisible: 2 },
     tableStyle: 'striped' as const,
     selection: { mode: 'range' as const },
-    rowHeight: 50,
+    headerHeight: 44,
+    rowHeight: 44,
   });
 
   const handleExportCsv = useCallback(() => {

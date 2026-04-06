@@ -200,7 +200,8 @@ export function DmForecast() {
     },
     pinnedBottomRows,
     selection: { mode: 'range' as const, fillHandle: true },
-    rowHeight: 40,
+    headerHeight: 44,
+    rowHeight: 44,
   });
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
