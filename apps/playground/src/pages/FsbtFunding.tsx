@@ -11,12 +11,13 @@ interface FundingRow {
   [key: string]: string | number | null;
 }
 
+// Data from QA app project 4288: Equity Peak $22,809,333
 const data: FundingRow[] = [
   { id: 1, equityItem: 'Opening Balance', amount: 0 },
-  { id: 2, equityItem: 'Cash Equity Injection', amount: 48500000, m_2025_07: 42000000, m_2026_04: 2000000, m_2026_07: 2000000, m_2027_01: 1500000, m_2027_07: 1000000 },
-  { id: 3, equityItem: 'Non - Project Cost Equity Contribution', amount: 1200000, m_2025_07: 600000, m_2026_01: 300000, m_2026_07: 300000 },
-  { id: 4, equityItem: 'Equity Repatriation', amount: -15000000, m_2028_01: -5000000, m_2028_02: -5000000, m_2028_03: -5000000 },
-  { id: 5, equityItem: 'Return Capital', amount: -34700000, m_2028_04: -11566667, m_2028_05: -11566667, m_2028_06: -11566666 },
+  { id: 2, equityItem: 'Cash Equity Injection', amount: 22809533, m_2023_08: 3104106, m_2023_09: 374107, m_2023_10: 374106, m_2023_11: 374106, m_2024_01: 24300000 },
+  { id: 3, equityItem: 'Non - Project Cost Equity Contribution', amount: 0 },
+  { id: 4, equityItem: 'Equity Repatriation', amount: 0 },
+  { id: 5, equityItem: 'Return Capital', amount: 0 },
   { id: 6, equityItem: 'Manual Input', amount: 0 },
   { id: 7, equityItem: 'Closing Balance', amount: 0 },
   { id: 8, equityItem: 'Profit release', amount: 0 },
@@ -25,9 +26,10 @@ const data: FundingRow[] = [
 
 const highlightedRows = new Set(['Profit release', 'Cashflow']);
 
+// Monthly columns: Aug 2023 – Oct 2026 (39 months)
 const months: { key: string; label: string }[] = [];
-for (let i = 0; i < 36; i++) {
-  const d = new Date(2025, 6 + i);
+for (let i = 0; i < 39; i++) {
+  const d = new Date(2023, 7 + i);
   const key = `m_${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, '0')}`;
   const label = d.toLocaleString('en-AU', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2);
   months.push({ key, label });

@@ -25,11 +25,11 @@ interface BtsRow {
 }
 
 const btsData: BtsRow[] = [
-  { id: 1, type: 'Residential - Apartments', stage: 1, nsa: 12500, units: 180, salePrice: 9200, growthRate: 3.5, launchDate: '2027-07-01', projectedPrice: 9842, grossRevenue: 115000000, gst: 10, commUpfront: 2.5, commBackend: 1.0 },
-  { id: 2, type: 'Residential - Penthouses', stage: 1, nsa: 2800, units: 8, salePrice: 15000, growthRate: 4.0, launchDate: '2027-10-01', projectedPrice: 16224, grossRevenue: 42000000, gst: 10, commUpfront: 3.0, commBackend: 1.5 },
-  { id: 3, type: 'Retail', stage: 1, nsa: 1500, units: 6, salePrice: 7500, growthRate: 2.5, launchDate: '2028-01-01', projectedPrice: 7688, grossRevenue: 11250000, gst: 10, commUpfront: 3.0, commBackend: 1.0 },
-  { id: 4, type: 'Commercial - Office', stage: 1, nsa: 3200, units: 12, salePrice: 8800, growthRate: 3.0, launchDate: '2028-01-01', projectedPrice: 9064, grossRevenue: 28160000, gst: 10, commUpfront: 2.0, commBackend: 1.0 },
-  { id: 5, type: 'Parking', stage: 1, nsa: 800, units: 40, salePrice: 3500, growthRate: 2.0, launchDate: '2028-03-01', projectedPrice: 3570, grossRevenue: 2800000, gst: 10, commUpfront: 1.5, commBackend: 0.5 },
+  { id: 1, type: 'Residential - Apartments', stage: 1, nsa: 12500, units: 180, salePrice: 9200, growthRate: 3.5, launchDate: '2025-09-01', projectedPrice: 9842, grossRevenue: 115000000, gst: 10, commUpfront: 2.5, commBackend: 1.0 },
+  { id: 2, type: 'Residential - Penthouses', stage: 1, nsa: 2800, units: 8, salePrice: 15000, growthRate: 4.0, launchDate: '2025-10-01', projectedPrice: 16224, grossRevenue: 42000000, gst: 10, commUpfront: 3.0, commBackend: 1.5 },
+  { id: 3, type: 'Retail', stage: 1, nsa: 1500, units: 6, salePrice: 7500, growthRate: 2.5, launchDate: '2026-01-01', projectedPrice: 7688, grossRevenue: 11250000, gst: 10, commUpfront: 3.0, commBackend: 1.0 },
+  { id: 4, type: 'Commercial - Office', stage: 1, nsa: 3200, units: 12, salePrice: 8800, growthRate: 3.0, launchDate: '2026-01-01', projectedPrice: 9064, grossRevenue: 28160000, gst: 10, commUpfront: 2.0, commBackend: 1.0 },
+  { id: 5, type: 'Parking', stage: 1, nsa: 800, units: 40, salePrice: 3500, growthRate: 2.0, launchDate: '2026-03-01', projectedPrice: 3570, grossRevenue: 2800000, gst: 10, commUpfront: 1.5, commBackend: 0.5 },
 ];
 
 // ============================================================================
@@ -51,34 +51,34 @@ interface HoldingRow {
 
 const holdingData: HoldingRow[] = [
   // Gross Rent (parent)
-  { id: 1, parentId: null, type: 'Gross Rental Revenue', description: '', input: 0, amount: 8400000, start: '2028-01-01', end: '2028-06-30', variance: 0 },
-  { id: 2, parentId: 1, type: '', description: 'Residential', input: 520, amount: 4264000, start: '2028-01-01', end: '2028-06-30', variance: 0, m_2028_01: 710667, m_2028_02: 710667, m_2028_03: 710667, m_2028_04: 710667, m_2028_05: 710667, m_2028_06: 710665 },
-  { id: 3, parentId: 1, type: '', description: 'Commercial', input: 650, amount: 2080000, start: '2028-01-01', end: '2028-06-30', variance: 0, m_2028_01: 346667, m_2028_02: 346667, m_2028_03: 346667, m_2028_04: 346667, m_2028_05: 346667, m_2028_06: 346665 },
-  { id: 4, parentId: 1, type: '', description: 'Retail', input: 850, amount: 1275000, start: '2028-01-01', end: '2028-06-30', variance: 0, m_2028_01: 212500, m_2028_02: 212500, m_2028_03: 212500, m_2028_04: 212500, m_2028_05: 212500, m_2028_06: 212500 },
-  { id: 5, parentId: 1, type: '', description: 'Parking', input: 250, amount: 781000, start: '2028-01-01', end: '2028-06-30', variance: 0, m_2028_01: 130167, m_2028_02: 130167, m_2028_03: 130167, m_2028_04: 130167, m_2028_05: 130167, m_2028_06: 130165 },
+  { id: 1, parentId: null, type: 'Gross Rental Revenue', description: '', input: 0, amount: 8400000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
+  { id: 2, parentId: 1, type: '', description: 'Residential', input: 520, amount: 4264000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: 710667, m_2026_02: 710667, m_2026_03: 710667, m_2026_04: 710667, m_2026_05: 710667, m_2026_06: 710665 },
+  { id: 3, parentId: 1, type: '', description: 'Commercial', input: 650, amount: 2080000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: 346667, m_2026_02: 346667, m_2026_03: 346667, m_2026_04: 346667, m_2026_05: 346667, m_2026_06: 346665 },
+  { id: 4, parentId: 1, type: '', description: 'Retail', input: 850, amount: 1275000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: 212500, m_2026_02: 212500, m_2026_03: 212500, m_2026_04: 212500, m_2026_05: 212500, m_2026_06: 212500 },
+  { id: 5, parentId: 1, type: '', description: 'Parking', input: 250, amount: 781000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: 130167, m_2026_02: 130167, m_2026_03: 130167, m_2026_04: 130167, m_2026_05: 130167, m_2026_06: 130165 },
 
   // Less Outgoings (parent)
-  { id: 6, parentId: null, type: 'Less: Outgoings', description: '', input: 0, amount: -1260000, start: '2028-01-01', end: '2028-06-30', variance: 0 },
-  { id: 7, parentId: 6, type: '', description: 'Property Management', input: 0, amount: -504000, start: '2028-01-01', end: '2028-06-30', variance: 0, m_2028_01: -84000, m_2028_02: -84000, m_2028_03: -84000, m_2028_04: -84000, m_2028_05: -84000, m_2028_06: -84000 },
-  { id: 8, parentId: 6, type: '', description: 'Maintenance & Repairs', input: 0, amount: -378000, start: '2028-01-01', end: '2028-06-30', variance: 0, m_2028_01: -63000, m_2028_02: -63000, m_2028_03: -63000, m_2028_04: -63000, m_2028_05: -63000, m_2028_06: -63000 },
-  { id: 9, parentId: 6, type: '', description: 'Insurance & Rates', input: 0, amount: -378000, start: '2028-01-01', end: '2028-06-30', variance: 0, m_2028_01: -63000, m_2028_02: -63000, m_2028_03: -63000, m_2028_04: -63000, m_2028_05: -63000, m_2028_06: -63000 },
+  { id: 6, parentId: null, type: 'Less: Outgoings', description: '', input: 0, amount: -1260000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
+  { id: 7, parentId: 6, type: '', description: 'Property Management', input: 0, amount: -504000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: -84000, m_2026_02: -84000, m_2026_03: -84000, m_2026_04: -84000, m_2026_05: -84000, m_2026_06: -84000 },
+  { id: 8, parentId: 6, type: '', description: 'Maintenance & Repairs', input: 0, amount: -378000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: -63000, m_2026_02: -63000, m_2026_03: -63000, m_2026_04: -63000, m_2026_05: -63000, m_2026_06: -63000 },
+  { id: 9, parentId: 6, type: '', description: 'Insurance & Rates', input: 0, amount: -378000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: -63000, m_2026_02: -63000, m_2026_03: -63000, m_2026_04: -63000, m_2026_05: -63000, m_2026_06: -63000 },
 
   // Incentive (parent)
-  { id: 10, parentId: null, type: 'Less: Incentives', description: '', input: 0, amount: -420000, start: '2028-01-01', end: '2028-06-30', variance: 0 },
-  { id: 11, parentId: 10, type: '', description: 'Leasing Incentive (5%)', input: 5, amount: -420000, start: '2028-01-01', end: '2028-06-30', variance: 0, m_2028_01: -70000, m_2028_02: -70000, m_2028_03: -70000, m_2028_04: -70000, m_2028_05: -70000, m_2028_06: -70000 },
+  { id: 10, parentId: null, type: 'Less: Incentives', description: '', input: 0, amount: -420000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
+  { id: 11, parentId: 10, type: '', description: 'Leasing Incentive (5%)', input: 5, amount: -420000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: -70000, m_2026_02: -70000, m_2026_03: -70000, m_2026_04: -70000, m_2026_05: -70000, m_2026_06: -70000 },
 
   // Net (parent - summary)
-  { id: 12, parentId: null, type: 'Net Rental Revenue', description: '', input: 0, amount: 6720000, start: '2028-01-01', end: '2028-06-30', variance: 0 },
+  { id: 12, parentId: null, type: 'Net Rental Revenue', description: '', input: 0, amount: 6720000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
 ];
 
 // Monthly column definitions for Jan-Jun 2028
 const holdingMonths = [
-  { key: 'm_2028_01', label: 'Jan 28' },
-  { key: 'm_2028_02', label: 'Feb 28' },
-  { key: 'm_2028_03', label: 'Mar 28' },
-  { key: 'm_2028_04', label: 'Apr 28' },
-  { key: 'm_2028_05', label: 'May 28' },
-  { key: 'm_2028_06', label: 'Jun 28' },
+  { key: 'm_2026_01', label: 'Jan 26' },
+  { key: 'm_2026_02', label: 'Feb 26' },
+  { key: 'm_2026_03', label: 'Mar 26' },
+  { key: 'm_2026_04', label: 'Apr 26' },
+  { key: 'm_2026_05', label: 'May 26' },
+  { key: 'm_2026_06', label: 'Jun 28' },
 ];
 
 export function FsbtRevenue() {
