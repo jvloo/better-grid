@@ -71,7 +71,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         return null;
       }
 
-      // Inject error message CSS once
+      // Inject error border CSS once
       if (!document.getElementById('bg-validation-style')) {
         const style = document.createElement('style');
         style.id = 'bg-validation-style';
@@ -79,35 +79,22 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
           .bg-cell--error .bg-input-box {
             border: 1px solid #FFAAAA !important;
           }
-          .bg-validation-error {
-            color: #FB4C4C;
-            font-size: 12px;
-            font-weight: 400;
-            line-height: 1.2;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            position: absolute;
-            top: 30px;
-            left: 8px;
-            right: 8px;
-            pointer-events: none;
-          }
         `;
         document.head.appendChild(style);
       }
 
+      // Track hover listeners for cleanup
+      const hoverCleanups = new Map<HTMLElement, () => void>();
+
       function applyErrorStyles(): void {
-        // Remove all existing error styles and error message elements
+        // Remove existing error styles and hover listeners
         document.querySelectorAll('.bg-cell--error').forEach((el) => {
           el.classList.remove('bg-cell--error');
-          el.removeAttribute('title');
-          el.querySelector('.bg-validation-error')?.remove();
+          const cleanup = hoverCleanups.get(el as HTMLElement);
+          if (cleanup) { cleanup(); hoverCleanups.delete(el as HTMLElement); }
         });
-        // Also clean up orphaned error elements
-        document.querySelectorAll('.bg-validation-error').forEach(el => el.remove());
 
-        // Apply error styles to cells with errors
+        // Apply error styles and tooltip hover to cells with errors
         for (const error of errors.values()) {
           const { rowIndex, colIndex } = error.position;
           const cells = document.querySelectorAll(
@@ -115,15 +102,19 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
           );
           for (const cell of cells) {
             cell.classList.add('bg-cell--error');
-            (cell as HTMLElement).title = error.message;
+            const htmlCell = cell as HTMLElement;
 
-            // Add inline error message for input-style cells
-            if (!cell.querySelector('.bg-validation-error')) {
-              const errEl = document.createElement('div');
-              errEl.className = 'bg-validation-error';
-              errEl.textContent = error.message;
-              cell.appendChild(errEl);
-            }
+            // Tooltip on hover via grid's built-in tooltip system
+            const onEnter = (e: MouseEvent) => {
+              ctx.showTooltip(htmlCell, error.message, e.clientX, e.clientY);
+            };
+            const onLeave = () => { ctx.dismissTooltip(); };
+            htmlCell.addEventListener('mouseenter', onEnter);
+            htmlCell.addEventListener('mouseleave', onLeave);
+            hoverCleanups.set(htmlCell, () => {
+              htmlCell.removeEventListener('mouseenter', onEnter);
+              htmlCell.removeEventListener('mouseleave', onLeave);
+            });
           }
         }
       }
@@ -206,6 +197,8 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         unsubData();
         unsubRender();
         errors.clear();
+        for (const cleanup of hoverCleanups.values()) cleanup();
+        hoverCleanups.clear();
       };
     },
   };
