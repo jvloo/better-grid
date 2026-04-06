@@ -259,12 +259,12 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           newEnd = Math.max(newStart, newEnd);
 
           // Emit event for consumer to handle
-          ctx.emit('gantt:dragEnd' as keyof never, {
+          (ctx.emit as Function)('gantt:dragEnd', {
             rowIndex,
             startColumn: newStart,
             endColumn: newEnd,
             dragType,
-          } as never);
+          });
 
           // Update the row data directly — mutate data array and notify store
           const visibleData = ctx.grid.getData();
@@ -367,11 +367,29 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
         document.addEventListener('mouseup', onMouseUp);
       }
 
+      // ─── Date column index cache ────────────────────────────────────
+      // Built once on first render, rebuilt if columns change.
+      let cachedDateColMap: Map<string, number> | null = null;
+      let cachedColCount = 0;
+
+      function getDateColIndex(colId: string): number {
+        const allCols = ctx.grid.getColumns();
+        if (!cachedDateColMap || allCols.length !== cachedColCount) {
+          cachedDateColMap = new Map();
+          cachedColCount = allCols.length;
+          let idx = 0;
+          for (const c of allCols) {
+            if (c.id.startsWith(dateColumnPrefix)) {
+              cachedDateColMap.set(c.id, idx++);
+            }
+          }
+        }
+        return cachedDateColMap.get(colId) ?? -1;
+      }
+
       // ─── Gantt cell renderer ───────────────────────────────────────
       const ganttRenderer: CellTypeRenderer = {
         render(container: HTMLElement, context: CellRenderContext): void | (() => void) {
-          container.textContent = '';
-
           // Reset gantt cell — clean slate
           container.textContent = '';
           container.style.padding = '0';
@@ -391,13 +409,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           const colId = context.column.id;
           if (!colId.startsWith(dateColumnPrefix)) return;
 
-          // Build date column index (cached on grid columns)
-          const allCols = ctx.grid.getColumns();
-          const dateColIds: string[] = [];
-          for (const c of allCols) {
-            if (c.id.startsWith(dateColumnPrefix)) dateColIds.push(c.id);
-          }
-          const dateColIndex = dateColIds.indexOf(colId);
+          const dateColIndex = getDateColIndex(colId);
           if (dateColIndex < 0) return;
 
           // Detect parent row early (needed for background on ALL gantt cells, not just bar cells)
@@ -594,12 +606,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
           const colId = context.column.id;
           if (!colId.startsWith(dateColumnPrefix)) return '';
 
-          const allCols = ctx.grid.getColumns();
-          const dateColIds: string[] = [];
-          for (const c of allCols) {
-            if (c.id.startsWith(dateColumnPrefix)) dateColIds.push(c.id);
-          }
-          const dateColIndex = dateColIds.indexOf(colId);
+          const dateColIndex = getDateColIndex(colId);
           if (dateColIndex >= startCol && dateColIndex <= endCol) return '\u2588'; // block char
           return '';
         },
@@ -627,6 +634,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
 
       return () => {
         unreg();
+        cachedDateColMap = null;
         stopAutoScroll();
         removeOverlay();
         document.removeEventListener('mousemove', onMouseMove);

@@ -729,8 +729,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           box-shadow: ${edShadow};
           display: flex; align-items: center;
           height: ${cellRect.height}px;
-          padding: 0 4px;
-          gap: 1px;
+          padding: 0 6px;
+          gap: 0;
           font-size: 12px;
           font-family: inherit;
         `;
@@ -742,7 +742,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           separators.filter(s => s.pos === i).forEach(s => {
             const sep = document.createElement('span');
             sep.textContent = s.char;
-            sep.style.cssText = 'color: #667085; user-select: none; pointer-events: none;';
+            sep.style.cssText = 'color: #667085; user-select: none; pointer-events: none; font-size: 12px; line-height: 1;';
             floatBox.appendChild(sep);
           });
 
@@ -752,24 +752,61 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           inp.placeholder = sec.label;
           inp.value = valueParts[i] || '';
           inp.style.cssText = `
-            width: ${sec.len * 10 + 4}px;
+            width: ${sec.len * 9 + 2}px;
             border: none; outline: none; background: transparent;
             text-align: center; font: inherit; padding: 0;
             color: inherit;
           `;
 
+          // Select all text on focus (MUI FieldSection behavior)
+          inp.addEventListener('focus', () => { inp.select(); });
+
           // Auto-advance to next section when filled
           inp.addEventListener('input', () => {
             if (inp.value.length >= sec.len && i < sections.length - 1) {
               inputs[i + 1]?.focus();
-              inputs[i + 1]?.select();
             }
           });
 
-          // Only allow digits
+          // Section-aware key handling (matches MUI X Date Pickers behavior)
           inp.addEventListener('keydown', (e) => {
-            if (e.key === 'Tab') return; // allow tab navigation
-            if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') return;
+            // Tab / Shift+Tab: navigate between sections within the mask
+            if (e.key === 'Tab') {
+              if (e.shiftKey && i > 0) {
+                e.preventDefault();
+                inputs[i - 1]?.focus();
+              } else if (!e.shiftKey && i < sections.length - 1) {
+                e.preventDefault();
+                inputs[i + 1]?.focus();
+              }
+              // else: let Tab leave the editor (will trigger outside click → commit)
+              return;
+            }
+            // Backspace: if section empty, move to previous section
+            if (e.key === 'Backspace') {
+              if (inp.value === '' && i > 0) {
+                e.preventDefault();
+                inputs[i - 1]?.focus();
+              }
+              return;
+            }
+            // ArrowLeft: if at start, move to previous section
+            if (e.key === 'ArrowLeft') {
+              if (inp.selectionStart === 0 && i > 0) {
+                e.preventDefault();
+                inputs[i - 1]?.focus();
+              }
+              return;
+            }
+            // ArrowRight: if at end, move to next section
+            if (e.key === 'ArrowRight') {
+              if (inp.selectionStart === inp.value.length && i < sections.length - 1) {
+                e.preventDefault();
+                inputs[i + 1]?.focus();
+              }
+              return;
+            }
+            if (e.key === 'Delete') return;
             if (e.key === 'Enter') { commitEdit(); return; }
             if (e.key === 'Escape') { cancelEdit(); return; }
             if (!/^\d$/.test(e.key)) { e.preventDefault(); }
@@ -783,7 +820,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         separators.filter(s => s.pos === sections.length).forEach(s => {
           const sep = document.createElement('span');
           sep.textContent = s.char;
-          sep.style.cssText = 'color: #667085;';
+          sep.style.cssText = 'color: #667085; font-size: 12px;';
           floatBox.appendChild(sep);
         });
 
@@ -1561,8 +1598,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         originalValue = null;
 
         // Defer refresh so any in-progress pointer events can still find
-        // their target cells (synchronous refresh destroys DOM during mousedown)
+        // their target cells (synchronous refresh destroys DOM during mousedown).
+        // Guard: if a new edit has started by the time rAF fires, skip the
+        // refresh — otherwise it would destroy the freshly-opened editor.
         requestAnimationFrame(() => {
+          if (editingCell) return; // new edit already started, don't nuke it
           ctx.grid.refresh();
           // Show fill handle again
           const gc = getGridContainer();

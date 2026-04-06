@@ -2111,10 +2111,18 @@ export function createGrid<
     },
 
     destroy(): void {
-      // Skip if grid was re-mounted (StrictMode compatibility)
+      // Defer plugin destruction to handle React StrictMode correctly.
+      // StrictMode calls: ref(null) → unmount (mounted=false) → effect cleanup → destroy
+      //   → then immediately: ref(node) → mount (mounted=true) → effect setup.
+      // By deferring, we let mount() set mounted=true before checking,
+      // so plugins survive the StrictMode simulated unmount/remount cycle.
+      // On a real unmount, mounted stays false and plugins are properly cleaned up.
       if (mounted) return;
-      pluginRegistry.destroyAll();
-      emitter.removeAllListeners();
+      setTimeout(() => {
+        if (mounted) return; // Re-mounted by StrictMode — don't destroy
+        pluginRegistry.destroyAll();
+        emitter.removeAllListeners();
+      }, 0);
     },
 
     getData: () => store.getState().data,

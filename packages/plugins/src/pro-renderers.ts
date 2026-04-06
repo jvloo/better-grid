@@ -44,7 +44,7 @@ const sparklineRenderer: CellTypeRenderer = {
       const barWidth = chartW / data.length;
       const gap = Math.max(1, barWidth * 0.15);
       for (let i = 0; i < data.length; i++) {
-        const normalized = (data[i] - min) / range;
+        const normalized = (data[i]! - min) / range;
         const barH = Math.max(1, normalized * chartH);
         const rect = document.createElementNS(svgNs, 'rect');
         rect.setAttribute('x', String(padding + i * barWidth + gap / 2));
@@ -61,7 +61,7 @@ const sparklineRenderer: CellTypeRenderer = {
       const stepX = data.length > 1 ? chartW / (data.length - 1) : 0;
       for (let i = 0; i < data.length; i++) {
         const x = padding + i * stepX;
-        const y = padding + chartH - ((data[i] - min) / range) * chartH;
+        const y = padding + chartH - ((data[i]! - min) / range) * chartH;
         points.push(`${x},${y}`);
       }
 
@@ -124,8 +124,8 @@ const heatmapRenderer: CellTypeRenderer = {
     const segIdx = Math.min(Math.floor(t * segmentCount), segmentCount - 1);
     const segT = t * segmentCount - segIdx;
 
-    const c1 = parseHexColor(colorScale[segIdx]);
-    const c2 = parseHexColor(colorScale[segIdx + 1]);
+    const c1 = parseHexColor(colorScale[segIdx]!);
+    const c2 = parseHexColor(colorScale[segIdx + 1]!);
 
     const r = Math.round(c1.r + (c2.r - c1.r) * segT);
     const g = Math.round(c1.g + (c2.g - c1.g) * segT);
@@ -155,7 +155,7 @@ const heatmapRenderer: CellTypeRenderer = {
 function parseHexColor(hex: string): { r: number; g: number; b: number } {
   const h = hex.replace('#', '');
   const full = h.length === 3
-    ? h[0] + h[0] + h[1] + h[1] + h[2] + h[2]
+    ? h[0]! + h[0]! + h[1]! + h[1]! + h[2]! + h[2]!
     : h;
   return {
     r: parseInt(full.substring(0, 2), 16),
@@ -354,7 +354,7 @@ function applyInitials(
   }
   const colorIdx = Math.abs(hash) % colors.length;
 
-  el.style.backgroundColor = colors[colorIdx];
+  el.style.backgroundColor = colors[colorIdx]!;
   el.style.color = '#fff';
   el.style.fontSize = `${Math.round(size * 0.4)}px`;
   el.style.fontWeight = '600';
@@ -366,9 +366,9 @@ function getInitials(name: string): string {
   if (!name) return '?';
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return ((parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '')).toUpperCase();
   }
-  return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0] ?? '').substring(0, 2).toUpperCase();
 }
 
 // ---------------------------------------------------------------------------
@@ -414,9 +414,9 @@ const miniChartRenderer: CellTypeRenderer = {
     let startAngle = -Math.PI / 2;
 
     for (let i = 0; i < data.length; i++) {
-      const sliceAngle = (data[i].value / total) * 2 * Math.PI;
+      const sliceAngle = (data[i]!.value / total) * 2 * Math.PI;
       const endAngle = startAngle + sliceAngle;
-      const color = data[i].color ?? defaultColors[i % defaultColors.length];
+      const color = data[i]!.color ?? defaultColors[i % defaultColors.length];
 
       const path = document.createElementNS(svgNs, 'path');
       const largeArc = sliceAngle > Math.PI ? 1 : 0;
@@ -450,7 +450,7 @@ const miniChartRenderer: CellTypeRenderer = {
       }
 
       path.setAttribute('d', d);
-      path.setAttribute('fill', color);
+      path.setAttribute('fill', color!);
       svg.appendChild(path);
 
       startAngle = endAngle;

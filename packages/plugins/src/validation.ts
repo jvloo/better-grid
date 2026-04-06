@@ -78,17 +78,17 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         style.textContent = `
           .bg-cell--error .bg-input-box {
             border: 1px solid #FFAAAA !important;
-            background: #FFF5F5 !important;
           }
           .bg-validation-error {
-            color: #E53E3E;
-            font-size: 10px;
+            color: #FB4C4C;
+            font-size: 12px;
+            font-weight: 400;
             line-height: 1.2;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             position: absolute;
-            bottom: 1px;
+            top: 30px;
             left: 8px;
             right: 8px;
             pointer-events: none;
