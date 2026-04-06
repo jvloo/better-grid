@@ -195,7 +195,7 @@ export function FsbtProgram() {
       id: 'start', accessorKey: 'start', header: (() => { const el = document.createElement('span'); el.textContent = 'Start'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, placeholder: 'MM/YY',
       editor: 'masked' as const, mask: 'MM/YY',
       rules: [
-        { validate: (v: unknown) => { if (!v || v === '') return true; const s = String(v); return /^\d{2}\/\d{2}$/.test(s) || 'Invalid date (MM/YY)'; } },
+        { validate: (v: unknown) => { if (!v || v === '') return true; const s = String(v); return /^\d{4}-\d{2}-\d{2}$/.test(s) || 'Invalid date'; } },
         { validate: (_v: unknown, row: unknown) => {
           const r = row as ProgramRow;
           if (!r.start || !r.parentId) return true;
@@ -212,15 +212,17 @@ export function FsbtProgram() {
       valueModifier: {
         format: (v: unknown) => {
           if (!v || typeof v !== 'string') return '';
-          const d = new Date(v as string);
-          return String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getFullYear()).slice(2);
+          const s = v as string;
+          const [yStr, mStr] = s.split('-');
+          if (!yStr || !mStr) return '';
+          return `${mStr}/${yStr.slice(2)}`;
         },
         parse: (v: string) => {
           if (!v || !v.includes('/')) return v;
           const [mm, yy] = v.split('/');
           const year = 2000 + parseInt(yy || '0', 10);
-          const month = parseInt(mm || '1', 10) - 1;
-          return new Date(year, month, 1).toISOString().split('T')[0];
+          const month = parseInt(mm || '1', 10);
+          return `${year}-${String(month).padStart(2, '0')}-01`;
         },
       },
       editable: ((row: ProgramRow) => row.parentId !== null) as any,
