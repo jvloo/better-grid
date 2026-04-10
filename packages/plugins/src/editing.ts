@@ -722,6 +722,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         // Parse current value to fill sections (e.g. "07/25" → ["07", "25"])
         const valueParts = value ? value.split(/[^0-9]+/).filter(Boolean) : [];
 
+        // Capture cell's computed font so editor matches cell rendering
+        const anchorComputed = getComputedStyle(anchorEl);
+
         // Create float box
         const floatBox = document.createElement('div');
         floatBox.className = 'bg-cell-editor-float';
@@ -737,8 +740,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           height: ${cellRect.height}px;
           padding: 0 6px;
           gap: 0;
-          font-size: 12px;
-          font-family: inherit;
+          font-size: ${anchorComputed.fontSize};
+          font-family: ${anchorComputed.fontFamily};
         `;
 
         const inputs: HTMLInputElement[] = [];
@@ -758,10 +761,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           inp.placeholder = sec.label;
           inp.value = valueParts[i] || '';
           inp.style.cssText = `
-            width: ${sec.len + 1}ch;
+            width: ${sec.len + 2}ch;
             border: none; outline: none; background: transparent;
             text-align: left; font: inherit; padding: 0;
-            color: inherit; letter-spacing: 0;
+            color: inherit; letter-spacing: 0.3px;
           `;
 
           // Select all text on focus (MUI FieldSection behavior)
