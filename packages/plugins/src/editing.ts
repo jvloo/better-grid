@@ -500,7 +500,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
               return;
             }
 
-            const cr = currentCell.getBoundingClientRect();
+            // Use input-box as anchor (matches initial positioning in inputStyle mode)
+            const anchor = currentCell.querySelector('.bg-input-box') as HTMLElement ?? currentCell;
+            const cr = anchor.getBoundingClientRect();
             const headerH = parseFloat(gridEl?.querySelector('.bg-grid__headers')?.getBoundingClientRect().height + '' || '0');
             const cellVisible = cr.bottom > (gr.top + headerH) && cr.top < gr.bottom && cr.right > gr.left && cr.left < gr.right;
             floatBox.style.visibility = cellVisible ? 'visible' : 'hidden';
@@ -571,6 +573,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           }
           // Delay to avoid the dblclick that opened the editor
           setTimeout(() => document.addEventListener('mousedown', onOutsideClick, true), 0);
+          // Register so cleanupEdit can call it on Escape/Enter/transition
+          activeOutsideClickCleanup = cleanupFloat;
 
           // Shim: make contenteditable act like an input for commit
           const editorShim = {
@@ -754,7 +758,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           inp.placeholder = sec.label;
           inp.value = valueParts[i] || '';
           inp.style.cssText = `
-            width: ${sec.len}ch;
+            width: ${sec.len + 1}ch;
             border: none; outline: none; background: transparent;
             text-align: left; font: inherit; padding: 0;
             color: inherit; letter-spacing: 0;
@@ -763,10 +767,34 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           // Select all text on focus (MUI FieldSection behavior)
           inp.addEventListener('focus', () => { inp.select(); });
 
-          // Auto-advance to next section when filled
+          // Determine section type for validation
+          const isMonth = sec.label.toUpperCase() === 'MM';
+
+          // Validated input handler — auto-pad, range-check, auto-advance
           inp.addEventListener('input', () => {
-            if (inp.value.length >= sec.len && i < sections.length - 1) {
-              inputs[i + 1]?.focus();
+            const val = inp.value;
+            if (isMonth) {
+              if (val.length === 1 && parseInt(val) >= 2) {
+                // First digit 2-9 → auto-pad to "0X" and advance (MUI behavior)
+                inp.value = '0' + val;
+                if (i < sections.length - 1) inputs[i + 1]?.focus();
+                return;
+              }
+              if (val.length >= 2) {
+                const num = parseInt(val.slice(0, 2));
+                if (num < 1 || num > 12) {
+                  // Invalid month — keep only first digit
+                  inp.value = val[0]!;
+                  return;
+                }
+                if (i < sections.length - 1) inputs[i + 1]?.focus();
+                return;
+              }
+            } else {
+              // Generic: auto-advance when filled
+              if (val.length >= sec.len && i < sections.length - 1) {
+                inputs[i + 1]?.focus();
+              }
             }
           });
 
@@ -782,6 +810,26 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
                 inputs[i + 1]?.focus();
               }
               // else: let Tab leave the editor (will trigger outside click → commit)
+              return;
+            }
+            // ArrowUp/ArrowDown: increment/decrement section value
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+              e.preventDefault();
+              const cur = parseInt(inp.value) || 0;
+              const delta = e.key === 'ArrowUp' ? 1 : -1;
+              let next = cur + delta;
+              if (isMonth) {
+                // Wrap: 12→1, 1→12
+                if (next > 12) next = 1;
+                if (next < 1) next = 12;
+                inp.value = String(next).padStart(2, '0');
+              } else {
+                // Year: clamp to 0-99
+                if (next > 99) next = 0;
+                if (next < 0) next = 99;
+                inp.value = String(next).padStart(sec.len, '0');
+              }
+              inp.select();
               return;
             }
             // Backspace: if section empty, move to previous section
