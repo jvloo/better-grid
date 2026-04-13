@@ -175,6 +175,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       let activeOutsideClickCleanup: (() => void) | null = null;
       let activeDropdownOptions: DropdownOption[] | null = null;
       let originalValue: unknown = null;
+      let pendingClickEditHandoff: CellPosition | null = null;
+      let pendingClickEditHandoffFrame: number | null = null;
 
       function getGridContainer(): HTMLElement {
         return ctx.grid.getContainer() ?? document.body;
@@ -183,6 +185,115 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       function getCellElement(pos: CellPosition): HTMLElement | null {
         const selector = `.bg-cell[data-row="${pos.rowIndex}"][data-col="${pos.colIndex}"]`;
         return getGridContainer().querySelector(selector);
+      }
+
+      function getCellPositionFromElement(el: Element | null): CellPosition | null {
+        if (!(el instanceof HTMLElement)) return null;
+        const cell = el.closest('.bg-cell') as HTMLElement | null;
+        if (!cell) return null;
+
+        const rowIndex = Number(cell.dataset.row);
+        const colIndex = Number(cell.dataset.col);
+        if (Number.isNaN(rowIndex) || Number.isNaN(colIndex)) return null;
+
+        return { rowIndex, colIndex };
+      }
+
+      function isSameCell(a: CellPosition | null, b: CellPosition | null): boolean {
+        return !!a && !!b && a.rowIndex === b.rowIndex && a.colIndex === b.colIndex;
+      }
+
+      function getCellFromPoint(clientX: number, clientY: number, overlay?: HTMLElement | null): CellPosition | null {
+        const previousPointerEvents = overlay?.style.pointerEvents ?? '';
+        if (overlay) overlay.style.pointerEvents = 'none';
+
+        const target = document.elementFromPoint(clientX, clientY);
+
+        if (overlay) overlay.style.pointerEvents = previousPointerEvents;
+        return getCellPositionFromElement(target);
+      }
+
+      function suppressNextClickEdit(cell: CellPosition): void {
+        pendingClickEditHandoff = cell;
+        if (pendingClickEditHandoffFrame !== null) {
+          cancelAnimationFrame(pendingClickEditHandoffFrame);
+        }
+        pendingClickEditHandoffFrame = requestAnimationFrame(() => {
+          pendingClickEditHandoff = null;
+          pendingClickEditHandoffFrame = null;
+        });
+      }
+
+      function getNextClickedCell(
+        event: MouseEvent,
+        overlay?: HTMLElement | null,
+      ): CellPosition | null {
+        const directTargetCell = getCellPositionFromElement(event.target as Element | null);
+        if (directTargetCell && !isSameCell(editingCell, directTargetCell)) {
+          return directTargetCell;
+        }
+
+        const pointedCell = getCellFromPoint(event.clientX, event.clientY, overlay);
+        if (pointedCell && !isSameCell(editingCell, pointedCell)) {
+          return pointedCell;
+        }
+
+        return null;
+      }
+
+      function getFloatingSyncTargets(anchorEl: HTMLElement): Array<HTMLElement | Window> {
+        const targets: Array<HTMLElement | Window> = [window];
+        const seen = new Set<HTMLElement | Window>(targets);
+
+        const gridEl = anchorEl.closest('.bg-grid') as HTMLElement | null;
+        const gridScroll = gridEl?.querySelector('.bg-grid__scroll') as HTMLElement | null;
+        if (gridScroll && !seen.has(gridScroll)) {
+          targets.push(gridScroll);
+          seen.add(gridScroll);
+        }
+
+        let current = anchorEl.parentElement;
+        while (current) {
+          const style = getComputedStyle(current);
+          const overflowValues = [style.overflow, style.overflowX, style.overflowY];
+          const isScrollable = overflowValues.some((value) =>
+            value === 'auto' || value === 'scroll' || value === 'overlay',
+          );
+
+          if (isScrollable && !seen.has(current)) {
+            targets.push(current);
+            seen.add(current);
+          }
+
+          current = current.parentElement;
+        }
+
+        return targets;
+      }
+
+      function bindFloatingPositionSync(anchorEl: HTMLElement, sync: () => void): () => void {
+        let rafId: number | null = null;
+        const onSync = () => {
+          if (rafId !== null) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(() => {
+            rafId = null;
+            sync();
+          });
+        };
+
+        const targets = getFloatingSyncTargets(anchorEl);
+        for (const target of targets) {
+          target.addEventListener('scroll', onSync, { passive: true });
+        }
+        window.addEventListener('resize', onSync);
+
+        return () => {
+          if (rafId !== null) cancelAnimationFrame(rafId);
+          for (const target of targets) {
+            target.removeEventListener('scroll', onSync);
+          }
+          window.removeEventListener('resize', onSync);
+        };
       }
 
       // -----------------------------------------------------------------------
@@ -484,10 +595,15 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             }
           }
 
-          // Track scroll to reposition float box
-          const scrollEl = gridEl?.querySelector('.bg-grid__scroll') as HTMLElement | null;
           const editRow = cellEl.dataset.row;
           const editCol = cellEl.dataset.col;
+
+          function getAnchorRect(): DOMRect | null {
+            const currentCell = gridEl?.querySelector(`.bg-cell[data-row="${editRow}"][data-col="${editCol}"]`) as HTMLElement | null;
+            if (!currentCell) return null;
+            const anchor = currentCell.querySelector('.bg-input-box') as HTMLElement ?? currentCell;
+            return anchor.getBoundingClientRect();
+          }
 
           function syncPosition(): void {
             // Find current cell element by row/col (may be recycled by virtualization)
@@ -525,13 +641,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             }
           }
 
-          function onScroll(): void { requestAnimationFrame(syncPosition); }
-          if (scrollEl) {
-            scrollEl.addEventListener('scroll', onScroll);
-          }
-
           autoSize();
-          ed.addEventListener('input', autoSize);
+          const unbindPositionSync = bindFloatingPositionSync(cellEl, syncPosition);
+          syncPosition();
+          ed.addEventListener('input', () => {
+            autoSize();
+            syncPosition();
+          });
           ed.focus();
 
           // Select all text
@@ -560,14 +676,33 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             measureSpan.remove();
             floatBox.remove();
             activeFloatBox = null;
-            if (scrollEl) scrollEl.removeEventListener('scroll', onScroll);
+            unbindPositionSync();
             document.removeEventListener('mousedown', onOutsideClick, true);
           }
 
           // Commit on click outside the float box (not blur-based)
           function onOutsideClick(e: MouseEvent): void {
             if (!floatActive) return;
-            if (floatBox.contains(e.target as Node)) return;
+            const nextCell = getNextClickedCell(e, floatBox);
+            if (nextCell) {
+              suppressNextClickEdit(nextCell);
+              cleanupFloat();
+              if (editingCell) commitEdit();
+              ctx.grid.refresh();
+              startEdit(nextCell);
+              return;
+            }
+
+            if (floatBox.contains(e.target as Node)) {
+              const anchorRect = getAnchorRect();
+              const insideAnchor = !!anchorRect &&
+                e.clientX >= anchorRect.left &&
+                e.clientX <= anchorRect.right &&
+                e.clientY >= anchorRect.top &&
+                e.clientY <= anchorRect.bottom;
+
+              if (insideAnchor) return;
+            }
             cleanupFloat();
             if (editingCell) commitEdit();
           }
@@ -705,22 +840,147 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         const edRadius = gridStyles.getPropertyValue('--bg-editor-radius').trim() || '2px';
         const edShadow = gridStyles.getPropertyValue('--bg-editor-shadow').trim() || '0 2px 8px rgba(0,0,0,0.15)';
 
-        // Parse mask into sections: "MM/YY" → [{label:'MM',len:2}, {sep:'/'}, {label:'YY',len:2}]
-        const sections: { type: 'input'; label: string; len: number }[] = [];
+        const sectionLengths: number[] = [];
+        const sectionLabels: string[] = [];
         const separators: { pos: number; char: string }[] = [];
-        let current = '';
+        let currentSectionLength = 0;
+        let currentSectionLabel = '';
         for (const ch of mask) {
           if (/[A-Za-z]/.test(ch)) {
-            current += ch;
+            currentSectionLength += 1;
+            currentSectionLabel += ch;
           } else {
-            if (current) { sections.push({ type: 'input', label: current, len: current.length }); current = ''; }
-            separators.push({ pos: sections.length, char: ch });
+            if (currentSectionLength > 0) {
+              sectionLengths.push(currentSectionLength);
+              sectionLabels.push(currentSectionLabel);
+              currentSectionLength = 0;
+              currentSectionLabel = '';
+            }
+            separators.push({ pos: sectionLengths.length, char: ch });
           }
         }
-        if (current) sections.push({ type: 'input', label: current, len: current.length });
+        if (currentSectionLength > 0) {
+          sectionLengths.push(currentSectionLength);
+          sectionLabels.push(currentSectionLabel);
+        }
 
-        // Parse current value to fill sections (e.g. "07/25" → ["07", "25"])
-        const valueParts = value ? value.split(/[^0-9]+/).filter(Boolean) : [];
+        const totalDigits = sectionLengths.reduce((sum, len) => sum + len, 0);
+        const isMonthYearMask =
+          sectionLabels.length === 2 &&
+          sectionLabels[0]?.toUpperCase() === 'MM' &&
+          sectionLabels[1]?.toUpperCase() === 'YY';
+
+        let monthYearDigits = value.replace(/\D/g, '').slice(0, 4);
+        let monthYearRejectedComplete = false;
+        let monthYearHiddenPartial = false;
+
+        function resolveMonthYearDigits(rawValue: string, event?: Event): string {
+          const rawDigits = rawValue.replace(/\D/g, '').slice(0, 4);
+          const inputEvent = event instanceof InputEvent ? event : undefined;
+          const inputType = inputEvent?.inputType ?? '';
+          const insertedDigits = inputEvent?.data?.replace(/\D/g, '') ?? '';
+
+          if (inputType.startsWith('delete')) {
+            monthYearRejectedComplete = false;
+            monthYearHiddenPartial = false;
+            if (!rawDigits && monthYearDigits) return monthYearDigits.slice(0, -1);
+            return rawDigits;
+          }
+
+          if (inputType === 'insertText' && !insertedDigits) {
+            return monthYearDigits;
+          }
+
+          if (inputType === 'insertText' && insertedDigits.length === 1) {
+            if (monthYearRejectedComplete && rawDigits === insertedDigits) {
+              monthYearRejectedComplete = false;
+              monthYearHiddenPartial = false;
+              return insertedDigits;
+            }
+
+            if (!monthYearHiddenPartial && rawDigits === insertedDigits && monthYearDigits.length > rawDigits.length) {
+              monthYearRejectedComplete = false;
+              monthYearHiddenPartial = false;
+              return insertedDigits;
+            }
+
+            if (rawDigits.length > monthYearDigits.length && rawDigits.startsWith(monthYearDigits)) {
+              monthYearRejectedComplete = false;
+              monthYearHiddenPartial = false;
+              return rawDigits;
+            }
+
+            monthYearRejectedComplete = false;
+            monthYearHiddenPartial = false;
+            return `${monthYearDigits}${insertedDigits}`.slice(0, 4);
+          }
+
+          monthYearRejectedComplete = false;
+          monthYearHiddenPartial = false;
+          return rawDigits;
+        }
+
+        function normalizeMonthYearDigits(digits: string): { value: string; rejectedComplete: boolean } {
+          if (!digits) return { value: '', rejectedComplete: false };
+
+          if (digits.length === 1) {
+            const first = Number(digits);
+            return {
+              value: first >= 2 && first <= 9 ? `0${digits}/` : digits,
+              rejectedComplete: false,
+            };
+          }
+
+          let month = digits.slice(0, 2);
+          let year = digits.slice(2, 4);
+
+          const firstTwoMonth = Number(month);
+          if (digits.length === 3 && (Number(digits[0]) >= 2 || firstTwoMonth > 12)) {
+            month = `0${digits[0]}`;
+            year = digits.slice(1, 3);
+          }
+
+          const monthNum = Number(month);
+          if (month === '00' || monthNum > 12) {
+            // Match Wiseway/MUI behavior: invalid completed month is rejected.
+            return { value: '', rejectedComplete: digits.length >= 4 };
+          }
+
+          return {
+            value: year ? `${month}/${year}` : `${month}/`,
+            rejectedComplete: false,
+          };
+        }
+
+        function formatMaskedValue(rawValue: string, event?: Event): string {
+          if (isMonthYearMask) {
+            monthYearDigits = resolveMonthYearDigits(rawValue, event);
+            const normalized = normalizeMonthYearDigits(monthYearDigits);
+            monthYearRejectedComplete = normalized.rejectedComplete;
+            monthYearHiddenPartial = !normalized.value && !!monthYearDigits && !normalized.rejectedComplete;
+            return normalized.value;
+          }
+
+          const digits = rawValue.replace(/\D/g, '').slice(0, totalDigits);
+          let formatted = '';
+          let offset = 0;
+
+          for (let i = 0; i < sectionLengths.length; i += 1) {
+            const len = sectionLengths[i]!;
+            const part = digits.slice(offset, offset + len);
+            if (!part) break;
+
+            formatted += part;
+            offset += part.length;
+
+            const separator = separators.find((item) => item.pos === i + 1);
+            if (part.length === len && separator && (offset < digits.length || i < sectionLengths.length - 1)) {
+              formatted += separator.char;
+            }
+          }
+
+          return formatted;
+        }
 
         // Capture cell's computed font so editor matches cell rendering
         const anchorComputed = getComputedStyle(anchorEl);
@@ -736,155 +996,81 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           border: ${edBorderW}px solid ${edBorder};
           border-radius: ${edRadius};
           box-shadow: ${edShadow};
-          display: flex; align-items: center;
           height: ${cellRect.height}px;
-          padding: 0 6px;
-          gap: 0;
           font-size: ${anchorComputed.fontSize};
           font-family: ${anchorComputed.fontFamily};
         `;
 
-        const inputs: HTMLInputElement[] = [];
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.inputMode = 'numeric';
+        input.className = 'bg-cell-editor bg-cell-editor--masked';
+        input.placeholder = mask;
+        input.value = formatMaskedValue(value);
+        input.style.cssText = `
+          width: 100%;
+          height: ${cellRect.height - edBorderW * 2}px;
+          border: none;
+          outline: none;
+          background: transparent;
+          box-sizing: border-box;
+          font-family: ${anchorComputed.fontFamily};
+          font-size: ${anchorComputed.fontSize};
+          font-weight: ${anchorComputed.fontWeight};
+          letter-spacing: ${anchorComputed.letterSpacing};
+          color: inherit;
+          text-align: ${anchorComputed.textAlign};
+          padding: ${anchorComputed.padding};
+        `;
 
-        sections.forEach((sec, i) => {
-          // Add separator before this section if needed
-          separators.filter(s => s.pos === i).forEach(s => {
-            const sep = document.createElement('span');
-            sep.textContent = s.char;
-            sep.style.cssText = 'color: #667085; user-select: none; pointer-events: none; font-size: 12px; line-height: 1;';
-            floatBox.appendChild(sep);
-          });
+        const allowedKeys = new Set([
+          'Backspace',
+          'Delete',
+          'Tab',
+          'Enter',
+          'Escape',
+          'ArrowLeft',
+          'ArrowRight',
+          'ArrowUp',
+          'ArrowDown',
+          'Home',
+          'End',
+        ]);
 
-          const inp = document.createElement('input');
-          inp.type = 'text';
-          inp.maxLength = sec.len;
-          inp.placeholder = sec.label;
-          inp.value = valueParts[i] || '';
-          inp.style.cssText = `
-            width: ${sec.len + 2}ch;
-            border: none; outline: none; background: transparent;
-            text-align: left; font: inherit; padding: 0;
-            color: inherit; letter-spacing: 0.3px;
-          `;
-
-          // Select all text on focus (MUI FieldSection behavior)
-          inp.addEventListener('focus', () => { inp.select(); });
-
-          // Determine section type for validation
-          const isMonth = sec.label.toUpperCase() === 'MM';
-
-          // Validated input handler — auto-pad, range-check, auto-advance
-          inp.addEventListener('input', () => {
-            const val = inp.value;
-            if (isMonth) {
-              if (val.length === 1 && parseInt(val) >= 2) {
-                // First digit 2-9 → auto-pad to "0X" and advance (MUI behavior)
-                inp.value = '0' + val;
-                if (i < sections.length - 1) inputs[i + 1]?.focus();
-                return;
-              }
-              if (val.length >= 2) {
-                const num = parseInt(val.slice(0, 2));
-                if (num < 1 || num > 12) {
-                  // Invalid month — keep only first digit
-                  inp.value = val[0]!;
-                  return;
-                }
-                if (i < sections.length - 1) inputs[i + 1]?.focus();
-                return;
-              }
-            } else {
-              // Generic: auto-advance when filled
-              if (val.length >= sec.len && i < sections.length - 1) {
-                inputs[i + 1]?.focus();
-              }
-            }
-          });
-
-          // Section-aware key handling (matches MUI X Date Pickers behavior)
-          inp.addEventListener('keydown', (e) => {
-            // Tab / Shift+Tab: navigate between sections within the mask
-            if (e.key === 'Tab') {
-              if (e.shiftKey && i > 0) {
-                e.preventDefault();
-                inputs[i - 1]?.focus();
-              } else if (!e.shiftKey && i < sections.length - 1) {
-                e.preventDefault();
-                inputs[i + 1]?.focus();
-              }
-              // else: let Tab leave the editor (will trigger outside click → commit)
-              return;
-            }
-            // ArrowUp/ArrowDown: increment/decrement section value
-            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-              e.preventDefault();
-              const cur = parseInt(inp.value) || 0;
-              const delta = e.key === 'ArrowUp' ? 1 : -1;
-              let next = cur + delta;
-              if (isMonth) {
-                // Wrap: 12→1, 1→12
-                if (next > 12) next = 1;
-                if (next < 1) next = 12;
-                inp.value = String(next).padStart(2, '0');
-              } else {
-                // Year: clamp to 0-99
-                if (next > 99) next = 0;
-                if (next < 0) next = 99;
-                inp.value = String(next).padStart(sec.len, '0');
-              }
-              inp.select();
-              return;
-            }
-            // Backspace: if section empty, move to previous section
-            if (e.key === 'Backspace') {
-              if (inp.value === '' && i > 0) {
-                e.preventDefault();
-                inputs[i - 1]?.focus();
-              }
-              return;
-            }
-            // ArrowLeft: if at start, move to previous section
-            if (e.key === 'ArrowLeft') {
-              if (inp.selectionStart === 0 && i > 0) {
-                e.preventDefault();
-                inputs[i - 1]?.focus();
-              }
-              return;
-            }
-            // ArrowRight: if at end, move to next section
-            if (e.key === 'ArrowRight') {
-              if (inp.selectionStart === inp.value.length && i < sections.length - 1) {
-                e.preventDefault();
-                inputs[i + 1]?.focus();
-              }
-              return;
-            }
-            if (e.key === 'Delete') return;
-            if (e.key === 'Enter') { commitEdit(); return; }
-            if (e.key === 'Escape') { cancelEdit(); return; }
-            if (!/^\d$/.test(e.key)) { e.preventDefault(); }
-          });
-
-          inputs.push(inp);
-          floatBox.appendChild(inp);
+        input.addEventListener('input', (event) => {
+          const formatted = formatMaskedValue(input.value, event);
+          input.value = formatted;
+          input.setSelectionRange(formatted.length, formatted.length);
         });
 
-        // Add trailing separators
-        separators.filter(s => s.pos === sections.length).forEach(s => {
-          const sep = document.createElement('span');
-          sep.textContent = s.char;
-          sep.style.cssText = 'color: #667085; font-size: 12px;';
-          floatBox.appendChild(sep);
+        input.addEventListener('keydown', (e) => {
+          if (e.ctrlKey || e.metaKey || e.altKey) return;
+          if (e.key === 'Enter' || e.key === 'Escape' || e.key === 'Tab') {
+            e.preventDefault();
+            e.stopPropagation();
+            handleEditorKeydown(e);
+            return;
+          }
+          if (allowedKeys.has(e.key)) return;
+          if (/^\d$/.test(e.key)) return;
+          e.preventDefault();
         });
+
+        floatBox.appendChild(input);
 
         document.body.appendChild(floatBox);
         activeFloatBox = floatBox;
 
-        // Track scroll to reposition float box (same as text editor)
         const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
-        const maskedScrollEl = gridEl?.querySelector('.bg-grid__scroll') as HTMLElement | null;
         const editRow = cellEl.dataset.row;
         const editCol = cellEl.dataset.col;
+
+        function getAnchorRect(): DOMRect | null {
+          const currentCell = gridEl?.querySelector(`.bg-cell[data-row="${editRow}"][data-col="${editCol}"]`) as HTMLElement | null;
+          if (!currentCell) return null;
+          const anchor = currentCell.querySelector('.bg-input-box') as HTMLElement ?? currentCell;
+          return anchor.getBoundingClientRect();
+        }
 
         function syncMaskedPosition(): void {
           const currentCell = gridEl?.querySelector(`.bg-cell[data-row="${editRow}"][data-col="${editCol}"]`) as HTMLElement | null;
@@ -895,47 +1081,57 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           const headerH = parseFloat(gridEl?.querySelector('.bg-grid__headers')?.getBoundingClientRect().height + '' || '0');
           const cellVisible = cr.bottom > (gr.top + headerH) && cr.top < gr.bottom && cr.right > gr.left && cr.left < gr.right;
           floatBox.style.visibility = cellVisible ? 'visible' : 'hidden';
-          if (cellVisible) { floatBox.style.top = `${cr.top}px`; floatBox.style.left = `${cr.left}px`; }
+          if (cellVisible) {
+            floatBox.style.top = `${cr.top}px`;
+            floatBox.style.left = `${cr.left}px`;
+            floatBox.style.width = `${cr.width}px`;
+          }
         }
-        function onMaskedScroll(): void { requestAnimationFrame(syncMaskedPosition); }
-        if (maskedScrollEl) maskedScrollEl.addEventListener('scroll', onMaskedScroll);
+        const unbindPositionSync = bindFloatingPositionSync(cellEl, syncMaskedPosition);
+        syncMaskedPosition();
 
-        // Focus first section
         requestAnimationFrame(() => {
-          inputs[0]?.focus();
-          inputs[0]?.select();
+          input.focus();
+          input.setSelectionRange(input.value.length, input.value.length);
         });
 
-        // Close on outside click — with proper cleanup via activeOutsideClickCleanup
         let maskedActive = true;
         function cleanupMasked(): void {
           if (!maskedActive) return;
           maskedActive = false;
           document.removeEventListener('mousedown', onMaskedOutsideClick, true);
-          if (maskedScrollEl) maskedScrollEl.removeEventListener('scroll', onMaskedScroll);
+          unbindPositionSync();
           activeOutsideClickCleanup = null;
         }
         function onMaskedOutsideClick(e: MouseEvent): void {
           if (!maskedActive) return;
-          if (floatBox.contains(e.target as Node)) return;
+          const nextCell = getNextClickedCell(e, floatBox);
+          if (nextCell) {
+            suppressNextClickEdit(nextCell);
+            cleanupMasked();
+            if (editingCell) commitEdit();
+            ctx.grid.refresh();
+            startEdit(nextCell);
+            return;
+          }
+
+          if (floatBox.contains(e.target as Node)) {
+            const anchorRect = getAnchorRect();
+            const insideAnchor = !!anchorRect &&
+              e.clientX >= anchorRect.left &&
+              e.clientX <= anchorRect.right &&
+              e.clientY >= anchorRect.top &&
+              e.clientY <= anchorRect.bottom;
+
+            if (insideAnchor) return;
+          }
           cleanupMasked();
           if (editingCell) commitEdit();
         }
         setTimeout(() => document.addEventListener('mousedown', onMaskedOutsideClick, true), 0);
-        // Register so cleanupEdit can call it on Escape/Enter
         activeOutsideClickCleanup = cleanupMasked;
 
-        // Return a shim that reads combined value
-        const shim = document.createElement('input');
-        Object.defineProperty(shim, 'value', {
-          get: () => {
-            const allEmpty = inputs.every(inp => inp.value === '');
-            if (allEmpty) return '';
-            return inputs.map(inp => inp.value).join('/');
-          },
-        });
-
-        return shim;
+        return input;
       }
 
       // -----------------------------------------------------------------------
@@ -990,6 +1186,39 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         document.body.appendChild(floatBox);
         activeFloatBox = floatBox;
 
+        const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
+        const editRow = cellEl.dataset.row;
+        const editCol = cellEl.dataset.col;
+
+        function getAnchorRect(): DOMRect | null {
+          const currentCell = gridEl?.querySelector(`.bg-cell[data-row="${editRow}"][data-col="${editCol}"]`) as HTMLElement | null;
+          if (!currentCell) return null;
+          const anchor = currentCell.querySelector('.bg-input-box') as HTMLElement ?? currentCell;
+          return anchor.getBoundingClientRect();
+        }
+
+        function syncDatePosition(): void {
+          const currentCell = gridEl?.querySelector(`.bg-cell[data-row="${editRow}"][data-col="${editCol}"]`) as HTMLElement | null;
+          const gr = gridEl?.getBoundingClientRect();
+          if (!currentCell || !gr) {
+            floatBox.style.visibility = 'hidden';
+            return;
+          }
+
+          const anchor = currentCell.querySelector('.bg-input-box') as HTMLElement ?? currentCell;
+          const cr = anchor.getBoundingClientRect();
+          const headerH = parseFloat(gridEl?.querySelector('.bg-grid__headers')?.getBoundingClientRect().height + '' || '0');
+          const cellVisible = cr.bottom > (gr.top + headerH) && cr.top < gr.bottom && cr.right > gr.left && cr.left < gr.right;
+          floatBox.style.visibility = cellVisible ? 'visible' : 'hidden';
+          if (cellVisible) {
+            floatBox.style.top = `${cr.top}px`;
+            floatBox.style.left = `${cr.left}px`;
+            floatBox.style.width = `${cr.width}px`;
+          }
+        }
+
+        const unbindPositionSync = bindFloatingPositionSync(cellEl, syncDatePosition);
+        syncDatePosition();
         input.focus();
 
         // Keyboard handling
@@ -1011,7 +1240,26 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
         // Click outside to commit
         function onOutsideClick(ev: MouseEvent): void {
-          if (floatBox.contains(ev.target as Node)) return;
+          const nextCell = getNextClickedCell(ev, floatBox);
+          if (nextCell) {
+            suppressNextClickEdit(nextCell);
+            cleanup();
+            if (editingCell) commitEdit();
+            ctx.grid.refresh();
+            startEdit(nextCell);
+            return;
+          }
+
+          if (floatBox.contains(ev.target as Node)) {
+            const anchorRect = getAnchorRect();
+            const insideAnchor = !!anchorRect &&
+              ev.clientX >= anchorRect.left &&
+              ev.clientX <= anchorRect.right &&
+              ev.clientY >= anchorRect.top &&
+              ev.clientY <= anchorRect.bottom;
+
+            if (insideAnchor) return;
+          }
           cleanup();
           if (editingCell) commitEdit();
         }
@@ -1021,10 +1269,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         function cleanup(): void {
           if (!active) return;
           active = false;
+          unbindPositionSync();
           floatBox.remove();
           activeFloatBox = null;
           document.removeEventListener('mousedown', onOutsideClick, true);
+          activeOutsideClickCleanup = null;
         }
+
+        activeOutsideClickCleanup = cleanup;
 
         // Return a shim that acts like the text editor
         const editorShim = {
@@ -1765,10 +2017,22 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       };
 
       // Register triggers
+      let clickEditFrame: number | null = null;
+
       if (config.editTrigger === 'dblclick') {
         ctx.on('cell:dblclick', (cell) => startEdit(cell));
       } else if (config.editTrigger === 'click') {
-        ctx.on('cell:click', (cell) => startEdit(cell));
+        ctx.on('cell:click', (cell) => {
+          if (pendingClickEditHandoff && isSameCell(pendingClickEditHandoff, cell)) {
+            pendingClickEditHandoff = null;
+            return;
+          }
+          if (clickEditFrame !== null) cancelAnimationFrame(clickEditFrame);
+          clickEditFrame = requestAnimationFrame(() => {
+            clickEditFrame = null;
+            startEdit(cell);
+          });
+        });
       }
 
       const unbindEnter = ctx.registerKeyBinding({
@@ -1824,6 +2088,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       ctx.expose(api);
 
       return () => {
+        if (clickEditFrame !== null) cancelAnimationFrame(clickEditFrame);
+        if (pendingClickEditHandoffFrame !== null) cancelAnimationFrame(pendingClickEditHandoffFrame);
         unbindEnter();
         unbindEscape?.();
         unbindType();

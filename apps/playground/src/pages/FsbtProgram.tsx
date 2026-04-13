@@ -221,11 +221,16 @@ export function FsbtProgram() {
           return `${mStr}/${yStr.slice(2)}`;
         },
         parse: (v: string) => {
-          if (!v || !v.includes('/')) return v;
-          const [mm, yy] = v.split('/');
-          const year = 2000 + parseInt(yy || '0', 10);
-          const month = parseInt(mm || '1', 10);
-          return `${year}-${String(month).padStart(2, '0')}-01`;
+          const digits = v.replace(/\D/g, '').slice(0, 4);
+          if (digits.length === 0) return '';
+          if (digits.length < 4) return undefined;
+
+          const month = digits.slice(0, 2);
+          const yearSuffix = digits.slice(2, 4);
+          if (!/^(0[1-9]|1[0-2])$/.test(month)) return undefined;
+
+          const year = 2000 + Number(yearSuffix);
+          return `${year}-${month}-01`;
         },
       },
       editable: ((row: ProgramRow) => row.parentId !== null) as any,
