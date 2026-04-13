@@ -99,7 +99,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
               background: var(--bg-input-hover-bg, #F0F0F0);
             }
             .bg-cell--input-editable .bg-input-box--placeholder {
-              color: var(--bg-input-placeholder, #98A2B3);
+              color: var(--bg-input-placeholder, #667085);
             }
           `;
           document.head.appendChild(style);
@@ -924,6 +924,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           input.value = buildDisplayValue();
           const range = getSectionRange(activeSectionIdx);
           input.setSelectionRange(range.start, range.end);
+          syncDisplayLayer();
         }
 
         // Get the committed value (only digits from filled sections, joined by separator)
@@ -952,11 +953,57 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           font-family: ${anchorComputed.fontFamily};
         `;
 
+        // Display layer: spans with per-section coloring (digits = normal, labels = grey)
+        const displayLayer = document.createElement('div');
+        displayLayer.style.cssText = `
+          position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+          display: flex; align-items: center;
+          font-family: ${anchorComputed.fontFamily};
+          font-size: ${anchorComputed.fontSize};
+          font-weight: ${anchorComputed.fontWeight};
+          letter-spacing: ${anchorComputed.letterSpacing};
+          padding: ${anchorComputed.padding};
+          pointer-events: none;
+          white-space: nowrap;
+        `;
+
+        const placeholderColor = '#667085';
+
+        function syncDisplayLayer(): void {
+          displayLayer.innerHTML = '';
+          for (let i = 0; i < sectionLengths.length; i += 1) {
+            // Separators before this section
+            for (const sep of separators) {
+              if (sep.pos === i) {
+                const sepSpan = document.createElement('span');
+                sepSpan.textContent = sep.char;
+                sepSpan.style.color = placeholderColor;
+                displayLayer.appendChild(sepSpan);
+              }
+            }
+            const span = document.createElement('span');
+            const filled = sectionValues[i];
+            span.textContent = filled || sectionLabels[i] || '';
+            span.style.color = filled ? 'inherit' : placeholderColor;
+            displayLayer.appendChild(span);
+          }
+          // Trailing separators
+          for (const sep of separators) {
+            if (sep.pos === sectionLengths.length) {
+              const sepSpan = document.createElement('span');
+              sepSpan.textContent = sep.char;
+              sepSpan.style.color = placeholderColor;
+              displayLayer.appendChild(sepSpan);
+            }
+          }
+        }
+
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'bg-cell-editor bg-cell-editor--masked';
         input.value = buildDisplayValue();
         input.style.cssText = `
+          position: relative; z-index: 1;
           width: 100%;
           height: ${cellRect.height - edBorderW * 2}px;
           border: none;
@@ -967,7 +1014,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           font-size: ${anchorComputed.fontSize};
           font-weight: ${anchorComputed.fontWeight};
           letter-spacing: ${anchorComputed.letterSpacing};
-          color: inherit;
+          color: transparent;
           text-align: ${anchorComputed.textAlign};
           padding: ${anchorComputed.padding};
           caret-color: transparent;
@@ -1096,6 +1143,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           e.preventDefault();
         });
 
+        syncDisplayLayer();
+        floatBox.appendChild(displayLayer);
         floatBox.appendChild(input);
 
         document.body.appendChild(floatBox);
