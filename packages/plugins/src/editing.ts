@@ -331,7 +331,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       // Start editing
       // -----------------------------------------------------------------------
 
-      function startEdit(position: CellPosition, initialValue?: string): void {
+      function startEdit(position: CellPosition, initialValue?: string, clickEvent?: MouseEvent): void {
         if (editingCell) commitEdit();
 
         const cellEl = getCellElement(position);
@@ -419,7 +419,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           const editValue = initialValue ?? rawStr;
 
           if (column.editor === 'masked' && column.mask) {
-            activeEditor = createMaskedInput(cellEl, rawStr, column.mask);
+            activeEditor = createMaskedInput(cellEl, rawStr, column.mask, clickEvent);
           } else if (isDateEditor) {
             activeEditor = createDateInput(cellEl, rawStr);
           } else if (config.editorMode === 'inline') {
@@ -829,6 +829,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         cellEl: HTMLElement,
         value: string,
         mask: string,
+        clickEvent?: MouseEvent,
       ): HTMLInputElement {
         const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
         const anchorEl = inputBox ?? cellEl;
@@ -864,122 +865,72 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           sectionLabels.push(currentSectionLabel);
         }
 
-        const totalDigits = sectionLengths.reduce((sum, len) => sum + len, 0);
-        const isMonthYearMask =
-          sectionLabels.length === 2 &&
-          sectionLabels[0]?.toUpperCase() === 'MM' &&
-          sectionLabels[1]?.toUpperCase() === 'YY';
-
-        let monthYearDigits = value.replace(/\D/g, '').slice(0, 4);
-        let monthYearRejectedComplete = false;
-        let monthYearHiddenPartial = false;
-
-        function resolveMonthYearDigits(rawValue: string, event?: Event): string {
-          const rawDigits = rawValue.replace(/\D/g, '').slice(0, 4);
-          const inputEvent = event instanceof InputEvent ? event : undefined;
-          const inputType = inputEvent?.inputType ?? '';
-          const insertedDigits = inputEvent?.data?.replace(/\D/g, '') ?? '';
-
-          if (inputType.startsWith('delete')) {
-            monthYearRejectedComplete = false;
-            monthYearHiddenPartial = false;
-            if (!rawDigits && monthYearDigits) return monthYearDigits.slice(0, -1);
-            return rawDigits;
-          }
-
-          if (inputType === 'insertText' && !insertedDigits) {
-            return monthYearDigits;
-          }
-
-          if (inputType === 'insertText' && insertedDigits.length === 1) {
-            if (monthYearRejectedComplete && rawDigits === insertedDigits) {
-              monthYearRejectedComplete = false;
-              monthYearHiddenPartial = false;
-              return insertedDigits;
-            }
-
-            if (!monthYearHiddenPartial && rawDigits === insertedDigits && monthYearDigits.length > rawDigits.length) {
-              monthYearRejectedComplete = false;
-              monthYearHiddenPartial = false;
-              return insertedDigits;
-            }
-
-            if (rawDigits.length > monthYearDigits.length && rawDigits.startsWith(monthYearDigits)) {
-              monthYearRejectedComplete = false;
-              monthYearHiddenPartial = false;
-              return rawDigits;
-            }
-
-            monthYearRejectedComplete = false;
-            monthYearHiddenPartial = false;
-            return `${monthYearDigits}${insertedDigits}`.slice(0, 4);
-          }
-
-          monthYearRejectedComplete = false;
-          monthYearHiddenPartial = false;
-          return rawDigits;
+        // ── Section-based state ──────────────────────────────────────────
+        // Each section independently holds its digits or is empty (shows label).
+        // e.g. sectionValues = ['12', '25'] for "12/25", or ['', '25'] for "MM/25"
+        const initialDigits = value.replace(/\D/g, '');
+        const sectionValues: string[] = [];
+        let digitOffset = 0;
+        for (let i = 0; i < sectionLengths.length; i += 1) {
+          const len = sectionLengths[i]!;
+          const part = initialDigits.slice(digitOffset, digitOffset + len);
+          sectionValues.push(part.length === len ? part : '');
+          digitOffset += len;
         }
+        let activeSectionIdx = 0;
 
-        function normalizeMonthYearDigits(digits: string): { value: string; rejectedComplete: boolean } {
-          if (!digits) return { value: '', rejectedComplete: false };
-
-          if (digits.length === 1) {
-            const first = Number(digits);
-            return {
-              value: first >= 2 && first <= 9 ? `0${digits}/` : digits,
-              rejectedComplete: false,
-            };
-          }
-
-          let month = digits.slice(0, 2);
-          let year = digits.slice(2, 4);
-
-          const firstTwoMonth = Number(month);
-          if (digits.length === 3 && (Number(digits[0]) >= 2 || firstTwoMonth > 12)) {
-            month = `0${digits[0]}`;
-            year = digits.slice(1, 3);
-          }
-
-          const monthNum = Number(month);
-          if (month === '00' || monthNum > 12) {
-            // Match Wiseway/MUI behavior: invalid completed month is rejected.
-            return { value: '', rejectedComplete: digits.length >= 4 };
-          }
-
-          return {
-            value: year ? `${month}/${year}` : `${month}/`,
-            rejectedComplete: false,
-          };
-        }
-
-        function formatMaskedValue(rawValue: string, event?: Event): string {
-          if (isMonthYearMask) {
-            monthYearDigits = resolveMonthYearDigits(rawValue, event);
-            const normalized = normalizeMonthYearDigits(monthYearDigits);
-            monthYearRejectedComplete = normalized.rejectedComplete;
-            monthYearHiddenPartial = !normalized.value && !!monthYearDigits && !normalized.rejectedComplete;
-            return normalized.value;
-          }
-
-          const digits = rawValue.replace(/\D/g, '').slice(0, totalDigits);
-          let formatted = '';
-          let offset = 0;
-
+        // Build the display string: filled sections show digits, empty show label
+        function buildDisplayValue(): string {
+          let result = '';
           for (let i = 0; i < sectionLengths.length; i += 1) {
-            const len = sectionLengths[i]!;
-            const part = digits.slice(offset, offset + len);
-            if (!part) break;
-
-            formatted += part;
-            offset += part.length;
-
-            const separator = separators.find((item) => item.pos === i + 1);
-            if (part.length === len && separator && (offset < digits.length || i < sectionLengths.length - 1)) {
-              formatted += separator.char;
+            // Insert separators that come before this section
+            for (const sep of separators) {
+              if (sep.pos === i) result += sep.char;
             }
+            result += sectionValues[i] || sectionLabels[i] || ''.padEnd(sectionLengths[i]!, '_');
           }
+          // Trailing separators
+          for (const sep of separators) {
+            if (sep.pos === sectionLengths.length) result += sep.char;
+          }
+          return result;
+        }
 
-          return formatted;
+        // Get character range [start, end) of a section in the display string
+        function getSectionRange(sectionIndex: number): { start: number; end: number } {
+          let pos = 0;
+          for (let i = 0; i < sectionLengths.length; i += 1) {
+            for (const sep of separators) {
+              if (sep.pos === i) pos += sep.char.length;
+            }
+            const len = sectionValues[i]
+              ? sectionValues[i]!.length
+              : (sectionLabels[i]?.length ?? sectionLengths[i]!);
+            if (i === sectionIndex) return { start: pos, end: pos + len };
+            pos += len;
+          }
+          return { start: 0, end: 0 };
+        }
+
+        function getSectionAtCursor(cursorPos: number): number {
+          for (let i = sectionLengths.length - 1; i >= 0; i -= 1) {
+            const range = getSectionRange(i);
+            if (cursorPos >= range.start) return i;
+          }
+          return 0;
+        }
+
+        function syncInputDisplay(): void {
+          input.value = buildDisplayValue();
+          const range = getSectionRange(activeSectionIdx);
+          input.setSelectionRange(range.start, range.end);
+        }
+
+        // Get the committed value (only digits from filled sections, joined by separator)
+        function getCommitValue(): string {
+          const allFilled = sectionValues.every((v) => v !== '');
+          if (!allFilled) return '';
+          return sectionValues.join('/');
         }
 
         // Capture cell's computed font so editor matches cell rendering
@@ -1003,10 +954,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
         const input = document.createElement('input');
         input.type = 'text';
-        input.inputMode = 'numeric';
         input.className = 'bg-cell-editor bg-cell-editor--masked';
-        input.placeholder = mask;
-        input.value = formatMaskedValue(value);
+        input.value = buildDisplayValue();
         input.style.cssText = `
           width: 100%;
           height: ${cellRect.height - edBorderW * 2}px;
@@ -1021,26 +970,17 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           color: inherit;
           text-align: ${anchorComputed.textAlign};
           padding: ${anchorComputed.padding};
+          caret-color: transparent;
         `;
 
-        const allowedKeys = new Set([
-          'Backspace',
-          'Delete',
-          'Tab',
-          'Enter',
-          'Escape',
-          'ArrowLeft',
-          'ArrowRight',
-          'ArrowUp',
-          'ArrowDown',
-          'Home',
-          'End',
-        ]);
+        // All input goes through keydown — prevent browser from mutating the value
+        input.addEventListener('beforeinput', (e) => { e.preventDefault(); });
 
-        input.addEventListener('input', (event) => {
-          const formatted = formatMaskedValue(input.value, event);
-          input.value = formatted;
-          input.setSelectionRange(formatted.length, formatted.length);
+        // Click on MM or YY → select that section
+        input.addEventListener('mouseup', () => {
+          activeSectionIdx = getSectionAtCursor(input.selectionStart ?? 0);
+          const range = getSectionRange(activeSectionIdx);
+          input.setSelectionRange(range.start, range.end);
         });
 
         input.addEventListener('keydown', (e) => {
@@ -1051,8 +991,108 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             handleEditorKeydown(e);
             return;
           }
-          if (allowedKeys.has(e.key)) return;
-          if (/^\d$/.test(e.key)) return;
+
+          // Digit: type into active section
+          if (/^\d$/.test(e.key)) {
+            e.preventDefault();
+            const secLen = sectionLengths[activeSectionIdx]!;
+            const cur = sectionValues[activeSectionIdx] || '';
+            const isMonth = sectionLabels[activeSectionIdx]?.toUpperCase() === 'MM';
+
+            // If section is full, replace it (start fresh)
+            let next = cur.length >= secLen ? e.key : cur + e.key;
+
+            // Month auto-pad: first digit 2-9 → "0X" and auto-advance
+            if (isMonth && next.length === 1 && Number(next) >= 2) {
+              next = `0${next}`;
+            }
+            // Month validation: if completed month is invalid (e.g. "13"),
+            // auto-pad the first digit ("1" → "01"), advance, and spill the
+            // second digit ("3") into the next section
+            if (isMonth && next.length >= 2) {
+              const monthNum = Number(next.slice(0, 2));
+              if (monthNum < 1 || monthNum > 12) {
+                const spillDigit = next[1]!;
+                sectionValues[activeSectionIdx] = `0${next[0]}`;
+                if (activeSectionIdx < sectionLengths.length - 1) {
+                  activeSectionIdx += 1;
+                  sectionValues[activeSectionIdx] = spillDigit;
+                }
+                syncInputDisplay();
+                return;
+              }
+            }
+
+            sectionValues[activeSectionIdx] = next.slice(0, secLen);
+
+            // Auto-advance to next section when current is full
+            if (sectionValues[activeSectionIdx]!.length >= secLen && activeSectionIdx < sectionLengths.length - 1) {
+              activeSectionIdx += 1;
+            }
+
+            syncInputDisplay();
+            return;
+          }
+
+          // Backspace: clear active section, then move to previous
+          if (e.key === 'Backspace') {
+            e.preventDefault();
+            if (sectionValues[activeSectionIdx]) {
+              // Section has a value → clear it (show label placeholder)
+              sectionValues[activeSectionIdx] = '';
+            } else if (activeSectionIdx > 0) {
+              // Section already empty → move to previous and clear it
+              activeSectionIdx -= 1;
+              sectionValues[activeSectionIdx] = '';
+            }
+            syncInputDisplay();
+            return;
+          }
+
+          // Delete: clear active section
+          if (e.key === 'Delete') {
+            e.preventDefault();
+            sectionValues[activeSectionIdx] = '';
+            syncInputDisplay();
+            return;
+          }
+
+          // ArrowLeft/Right: navigate between sections
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            if (activeSectionIdx > 0) activeSectionIdx -= 1;
+            const range = getSectionRange(activeSectionIdx);
+            input.setSelectionRange(range.start, range.end);
+            return;
+          }
+          if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            if (activeSectionIdx < sectionLengths.length - 1) activeSectionIdx += 1;
+            const range = getSectionRange(activeSectionIdx);
+            input.setSelectionRange(range.start, range.end);
+            return;
+          }
+
+          // ArrowUp/Down: increment/decrement section value
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            const secLen = sectionLengths[activeSectionIdx]!;
+            const isMonth = sectionLabels[activeSectionIdx]?.toUpperCase() === 'MM';
+            const cur = parseInt(sectionValues[activeSectionIdx] || '0', 10);
+            const delta = e.key === 'ArrowUp' ? 1 : -1;
+            let next = cur + delta;
+            if (isMonth) {
+              if (next > 12) next = 1;
+              if (next < 1) next = 12;
+            } else {
+              if (next > 99) next = 0;
+              if (next < 0) next = 99;
+            }
+            sectionValues[activeSectionIdx] = String(next).padStart(secLen, '0');
+            syncInputDisplay();
+            return;
+          }
+
           e.preventDefault();
         });
 
@@ -1092,7 +1132,29 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
         requestAnimationFrame(() => {
           input.focus();
-          input.setSelectionRange(input.value.length, input.value.length);
+          // Determine which section was clicked based on mouse position
+          let initialSection = 0;
+          if (clickEvent && sectionLengths.length > 1) {
+            // Measure where each section sits by using a temporary canvas context
+            const ctx2d = document.createElement('canvas').getContext('2d');
+            if (ctx2d) {
+              ctx2d.font = `${anchorComputed.fontWeight} ${anchorComputed.fontSize} ${anchorComputed.fontFamily}`;
+              const display = buildDisplayValue();
+              const sepRange = getSectionRange(0);
+              // Text up to end of first section + separator = boundary between MM and YY
+              const boundaryText = display.slice(0, sepRange.end + 1);
+              const boundaryWidth = ctx2d.measureText(boundaryText).width;
+              // Compare click position relative to cell's text start
+              const paddingLeft = parseFloat(anchorComputed.paddingLeft) || 0;
+              const clickOffset = clickEvent.clientX - cellRect.left - paddingLeft;
+              if (clickOffset > boundaryWidth) {
+                initialSection = 1;
+              }
+            }
+          }
+          activeSectionIdx = initialSection;
+          const range = getSectionRange(initialSection);
+          input.setSelectionRange(range.start, range.end);
         });
 
         let maskedActive = true;
@@ -1131,7 +1193,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         setTimeout(() => document.addEventListener('mousedown', onMaskedOutsideClick, true), 0);
         activeOutsideClickCleanup = cleanupMasked;
 
-        return input;
+        // Return a shim whose .value returns the commit value (digits only, joined)
+        const shim = document.createElement('input');
+        Object.defineProperty(shim, 'value', {
+          get: () => getCommitValue(),
+        });
+        return shim;
       }
 
       // -----------------------------------------------------------------------
@@ -2022,7 +2089,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       if (config.editTrigger === 'dblclick') {
         ctx.on('cell:dblclick', (cell) => startEdit(cell));
       } else if (config.editTrigger === 'click') {
-        ctx.on('cell:click', (cell) => {
+        ctx.on('cell:click', (cell, event) => {
           if (pendingClickEditHandoff && isSameCell(pendingClickEditHandoff, cell)) {
             pendingClickEditHandoff = null;
             return;
@@ -2030,7 +2097,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           if (clickEditFrame !== null) cancelAnimationFrame(clickEditFrame);
           clickEditFrame = requestAnimationFrame(() => {
             clickEditFrame = null;
-            startEdit(cell);
+            startEdit(cell, undefined, event);
           });
         });
       }
