@@ -518,9 +518,31 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             ed.addEventListener('keydown', (e) => {
               // Allow control-modified keys (Ctrl+A/C/V/X etc.)
               if (e.ctrlKey || e.metaKey || e.altKey) return;
+              // ArrowUp/Down: increment/decrement value, clamped to min/max
+              if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                const text = ed.textContent || '';
+                const cur = parseFloat(text) || 0;
+                const step = numberPrecision != null ? Math.pow(10, -numberPrecision) : 1;
+                const delta = e.key === 'ArrowUp' ? step : -step;
+                let next = cur + delta;
+                if (numberPrecision != null) {
+                  next = parseFloat(next.toFixed(numberPrecision));
+                }
+                if (numberColumn!.min != null && next < numberColumn!.min) next = numberColumn!.min;
+                if (numberColumn!.max != null && next > numberColumn!.max) next = numberColumn!.max;
+                ed.textContent = String(next);
+                // Select all text after update
+                const range = document.createRange();
+                range.selectNodeContents(ed);
+                const sel = window.getSelection();
+                sel?.removeAllRanges();
+                sel?.addRange(range);
+                return;
+              }
               // Allow navigation and control keys
               if (['Backspace', 'Delete', 'Tab', 'Enter', 'Escape',
-                   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                   'ArrowLeft', 'ArrowRight',
                    'Home', 'End'].includes(e.key)) return;
               // Allow digits, minus, period
               if (/^[0-9.\-]$/.test(e.key)) {
@@ -763,8 +785,24 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
 
           input.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey || e.altKey) return;
+            // ArrowUp/Down: increment/decrement value, clamped to min/max
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+              e.preventDefault();
+              const cur = parseFloat(input.value) || 0;
+              const step = numberPrecision != null ? Math.pow(10, -numberPrecision) : 1;
+              const delta = e.key === 'ArrowUp' ? step : -step;
+              let next = cur + delta;
+              if (numberPrecision != null) {
+                next = parseFloat(next.toFixed(numberPrecision));
+              }
+              if (numberColumn!.min != null && next < numberColumn!.min) next = numberColumn!.min;
+              if (numberColumn!.max != null && next > numberColumn!.max) next = numberColumn!.max;
+              input.value = String(next);
+              input.select();
+              return;
+            }
             if (['Backspace', 'Delete', 'Tab', 'Enter', 'Escape',
-                 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                 'ArrowLeft', 'ArrowRight',
                  'Home', 'End'].includes(e.key)) return;
             if (/^[0-9.\-]$/.test(e.key)) {
               const text = input.value;

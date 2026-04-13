@@ -146,6 +146,10 @@ export interface ColumnDef<TData = unknown> {
   editor?: EditorType;
   options?: (string | ColumnOption)[];
   precision?: number;
+  /** Minimum allowed numeric value (used for ArrowUp/Down clamping) */
+  min?: number;
+  /** Maximum allowed numeric value (used for ArrowUp/Down clamping) */
+  max?: number;
   /** Placeholder text shown in empty editable cells when inputStyle is enabled */
   placeholder?: string;
   /** Input mask pattern (e.g. 'MM/YY'). Each letter = editable digit section, other chars = fixed. */

@@ -170,7 +170,7 @@ export function FsbtProgram() {
     },
     // ── Col 3: Duration (center-aligned, wrapping header) ─────────────
     {
-      id: 'duration', accessorKey: 'duration',
+      id: 'duration', accessorKey: 'duration', cellType: 'number' as const, min: 1, max: 999,
       header: (() => {
         const el = document.createElement('span');
         el.textContent = 'Duration (months)';
