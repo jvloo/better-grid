@@ -1,4 +1,4 @@
-# Better Grid
+# [WIP] Better Grid
 
 A framework-agnostic, TypeScript-first data grid & spreadsheet library with composable plugin architecture.
 
