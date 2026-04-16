@@ -99,7 +99,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
               background: var(--bg-input-hover-bg, #F0F0F0);
             }
             .bg-cell--input-editable .bg-input-box--placeholder {
-              color: var(--bg-input-placeholder, #667085);
+              color: var(--bg-input-placeholder, #98A2B3);
             }
           `;
           document.head.appendChild(style);
@@ -151,8 +151,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             // Inherit alignment from column
             if (context.column.align === 'center') box.style.justifyContent = 'center';
             else if (context.column.align === 'right') box.style.justifyContent = 'flex-end';
+            const isPlaceholderText = Boolean(
+              placeholder &&
+              text === placeholder &&
+              (context.value == null || context.value === ''),
+            );
             if (text) {
               box.textContent = text;
+              if (isPlaceholderText) box.classList.add('bg-input-box--placeholder');
             } else if (placeholder) {
               box.textContent = placeholder;
               box.classList.add('bg-input-box--placeholder');
@@ -1005,7 +1011,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           white-space: nowrap;
         `;
 
-        const placeholderColor = '#667085';
+        const placeholderColor = getComputedStyle(cellEl).color;
 
         function syncDisplayLayer(): void {
           displayLayer.innerHTML = '';

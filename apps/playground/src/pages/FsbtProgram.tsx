@@ -1,6 +1,6 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useRef, useState } from 'react';
 import { useGrid } from '@better-grid/react';
-import type { ColumnDef } from '@better-grid/core';
+import type { CellChange, ColumnDef } from '@better-grid/core';
 import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin, gantt, rowActions, RowActionIcons, validation } from '@better-grid/plugins';
 import type { RowAction } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
@@ -67,7 +67,7 @@ function r(id: number, parentId: number | null, code: string, name: string, dur:
   return { id, parentId, code, name, duration: dur, start: startIso, end: endIso, custom, startColumn: toColIndex(startIso), endColumn: toColIndex(endIso) };
 }
 
-const data: ProgramRow[] = [
+const INITIAL_PROGRAM_DATA: ProgramRow[] = [
   // ── Phase 1: Acquisition (Aug 23 – Jan 24, 6 months) ─────────────────
   r(1, null, '1', 'Acquisition', 6, 'Aug 23', 'Jan 24'),
   r(2, 1, '1.1', 'Due Diligence', 4, 'Aug 23', 'Nov 23'),
@@ -106,6 +106,8 @@ const data: ProgramRow[] = [
   r(26, 23, '5.3', 'Termination', 1, 'Oct 26', 'Oct 26'),
 ];
 
+const MAX_CUSTOM_ROWS_PER_PARENT = 3;
+
 // Generate monthly columns covering full project range (Aug 2023 – Oct 2026 = 39 months)
 const MONTH_COUNT = 39;
 const months: { key: string; label: string }[] = [];
@@ -126,7 +128,138 @@ function formatMonYY(dateStr: string): string {
   return `${MONTH_NAMES[m] ?? mStr} ${yStr.slice(2)}`;
 }
 
+function columnToDate(colIndex: number): string {
+  const y = BASE_YEAR + Math.floor((BASE_MONTH + colIndex) / 12);
+  const m = (BASE_MONTH + colIndex) % 12;
+  return `${y}-${String(m + 1).padStart(2, '0')}-01`;
+}
+
+function coerceDuration(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 ? n : null;
+}
+
+function normalizeProgramRows(rows: ProgramRow[]): ProgramRow[] {
+  const next = rows.map(row => ({ ...row }));
+
+  for (const row of next) {
+    if (row.parentId === null) continue;
+
+    const duration = coerceDuration(row.duration);
+    if (!row.start || duration == null) {
+      row.duration = duration;
+      row.end = '';
+      row.startColumn = row.start ? toColIndex(row.start) : -1;
+      row.endColumn = -1;
+      continue;
+    }
+
+    const startColumn = toColIndex(row.start);
+    row.duration = duration;
+    row.startColumn = startColumn;
+    row.endColumn = startColumn >= 0 ? startColumn + duration - 1 : -1;
+    row.end = row.endColumn >= 0 ? columnToDate(row.endColumn) : '';
+  }
+
+  for (const parent of next.filter(row => row.parentId === null)) {
+    const scheduledChildren = next.filter(row =>
+      row.parentId === parent.id && row.startColumn >= 0 && row.endColumn >= row.startColumn,
+    );
+    if (scheduledChildren.length === 0) continue;
+
+    const startColumn = Math.min(...scheduledChildren.map(row => row.startColumn));
+    const endColumn = Math.max(...scheduledChildren.map(row => row.endColumn));
+    parent.startColumn = startColumn;
+    parent.endColumn = endColumn;
+    parent.start = columnToDate(startColumn);
+    parent.end = columnToDate(endColumn);
+    parent.duration = endColumn - startColumn + 1;
+  }
+
+  return next;
+}
+
+function renumberCustomChildren(rows: ProgramRow[], parentId: number): ProgramRow[] {
+  const parent = rows.find(row => row.id === parentId);
+  if (!parent) return rows;
+
+  const regularSuffixes = rows
+    .filter(row => row.parentId === parentId && !row.custom)
+    .map(row => Number(row.code.split('.').at(-1)))
+    .filter(Number.isFinite);
+  let nextSuffix = Math.max(0, ...regularSuffixes) + 1;
+
+  return rows.map(row => {
+    if (row.parentId !== parentId || !row.custom) return row;
+    return { ...row, code: `${parent.code}.${nextSuffix++}` };
+  });
+}
+
+function insertCustomRow(rows: ProgramRow[], sourceRow: ProgramRow): ProgramRow[] {
+  const parentId = sourceRow.parentId ?? sourceRow.id;
+  const parent = rows.find(row => row.id === parentId);
+  if (!parent) return rows;
+
+  const customCount = rows.filter(row => row.parentId === parentId && row.custom).length;
+  if (customCount >= MAX_CUSTOM_ROWS_PER_PARENT) return rows;
+
+  const nextId = Math.max(...rows.map(row => row.id)) + 1;
+  const children = rows.filter(row => row.parentId === parentId);
+  const lastChildIndex = Math.max(...children.map(child => rows.findIndex(row => row.id === child.id)));
+  const insertIndex = lastChildIndex >= 0 ? lastChildIndex + 1 : rows.findIndex(row => row.id === parentId) + 1;
+  const row: ProgramRow = {
+    id: nextId,
+    parentId,
+    code: `${parent.code}.0`,
+    name: '',
+    duration: null,
+    start: '',
+    end: '',
+    custom: true,
+    startColumn: -1,
+    endColumn: -1,
+  };
+
+  const next = [...rows.slice(0, insertIndex), row, ...rows.slice(insertIndex)];
+  return normalizeProgramRows(renumberCustomChildren(next, parentId));
+}
+
+function deleteCustomRow(rows: ProgramRow[], sourceRow: ProgramRow): ProgramRow[] {
+  if (!sourceRow.custom || sourceRow.parentId == null) return rows;
+  const next = rows.filter(row => row.id !== sourceRow.id);
+  return normalizeProgramRows(renumberCustomChildren(next, sourceRow.parentId));
+}
+
 export function FsbtProgram() {
+  const [rows, setRows] = useState(() => normalizeProgramRows(INITIAL_PROGRAM_DATA));
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+
+  const handleProgramDataChange = useCallback((changes: CellChange<ProgramRow>[]) => {
+    setRows(prevRows => {
+      let changed = false;
+      const byId = new Map(changes.map(change => [change.row.id, change.row]));
+      const nextRows = prevRows.map(row => {
+        const updated = byId.get(row.id);
+        if (!updated) return row;
+        changed = true;
+        return { ...row, ...updated };
+      });
+
+      return changed ? normalizeProgramRows(nextRows) : prevRows;
+    });
+  }, []);
+
+  const handleRowAction = useCallback((actionId: string, row: unknown) => {
+    const sourceRow = row as ProgramRow;
+    setRows(prevRows => {
+      if (actionId === 'add') return insertCustomRow(prevRows, sourceRow);
+      if (actionId === 'delete') return deleteCustomRow(prevRows, sourceRow);
+      return prevRows;
+    });
+  }, []);
+
   const columns = useMemo<ColumnDef<ProgramRow>[]>(() => [
     // ── Col 0: Menu (handled by rowActions plugin) ──────────────────────
     {
@@ -202,7 +335,7 @@ export function FsbtProgram() {
         { validate: (_v: unknown, row: unknown) => {
           const r = row as ProgramRow;
           if (!r.start || !r.parentId) return true;
-          const parent = data.find(d => d.id === r.parentId);
+          const parent = rowsRef.current.find(d => d.id === r.parentId);
           if (!parent?.start || !parent?.end) return true;
           const childCol = toColIndex(r.start);
           const parentStartCol = toColIndex(parent.start);
@@ -289,22 +422,22 @@ export function FsbtProgram() {
         getActions: (row): RowAction[] | undefined => {
           const r = row as ProgramRow;
           if (r.parentId === null) return undefined; // no menu for parents
+          const customCount = rowsRef.current.filter(candidate => candidate.parentId === r.parentId && candidate.custom).length;
           const actions: RowAction[] = [
-            { id: 'add', label: 'Add', icon: RowActionIcons.plus },
+            {
+              id: 'add',
+              label: 'Add',
+              icon: RowActionIcons.plus,
+              disabled: customCount >= MAX_CUSTOM_ROWS_PER_PARENT,
+              disabledTooltip: `Maximum ${MAX_CUSTOM_ROWS_PER_PARENT} custom rows reached`,
+            },
           ];
           if (r.custom) {
             actions.push({ id: 'delete', label: 'Delete', icon: RowActionIcons.trash });
           }
           return actions;
         },
-        onAction: (actionId, row, _rowIndex) => {
-          const r = row as ProgramRow;
-          if (actionId === 'add') {
-            console.log('Add child under parent', r.parentId);
-          } else if (actionId === 'delete') {
-            console.log('Delete custom row', r.id, r.code);
-          }
-        },
+        onAction: handleRowAction,
       }),
       cellRenderers(),
       gantt({
@@ -319,11 +452,7 @@ export function FsbtProgram() {
         startDateField: 'start',
         durationField: 'duration',
         endDateField: 'end',
-        columnToDate: (colIndex: number) => {
-          const y = BASE_YEAR + Math.floor((BASE_MONTH + colIndex) / 12);
-          const m = (BASE_MONTH + colIndex) % 12;
-          return `${y}-${String(m + 1).padStart(2, '0')}-01`;
-        },
+        columnToDate,
         columnsToDuration: (startCol: number, endCol: number) => endCol - startCol + 1,
         formatDate: (dateStr: string) => {
           if (!dateStr) return '';
@@ -335,11 +464,11 @@ export function FsbtProgram() {
       undoRedo({ maxHistory: 50 }),
       exportPlugin({ filename: 'fsbt-program' }),
     ],
-    [],
+    [handleRowAction],
   );
 
   const { grid, containerRef } = useGrid<ProgramRow>({
-    data,
+    data: rows,
     columns,
     plugins,
     frozenLeftColumns: 7,
@@ -352,6 +481,7 @@ export function FsbtProgram() {
       defaultExpanded: true,
     },
     rowHeight: 44,
+    onDataChange: handleProgramDataChange,
   });
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
@@ -372,7 +502,7 @@ export function FsbtProgram() {
   const btnStyle = { padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12 } as const;
 
   return (
-    <div>
+    <div className="fsbt-program-demo">
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>FSBT Program</h1>
         <div style={{ display: 'flex', gap: 6 }}>

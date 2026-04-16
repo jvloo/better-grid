@@ -35,6 +35,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
 
     init(ctx: PluginContext) {
       const errors = new Map<string, ValidationError>();
+      const validationTooltipEls = new Map<string, HTMLElement>();
 
       function positionKey(pos: CellPosition): string {
         return `${pos.rowIndex}:${pos.colIndex}`;
@@ -76,17 +77,62 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         const style = document.createElement('style');
         style.id = 'bg-validation-style';
         style.textContent = `
+          .bg-cell--input-editable.bg-cell--error {
+            outline: none !important;
+          }
           .bg-cell--error .bg-input-box {
             border: 1px solid #FFAAAA !important;
           }
+          .bg-validation-tooltip {
+            position: fixed;
+            z-index: 10000;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.10);
+            padding: 4px 8px;
+            pointer-events: none;
+            white-space: nowrap;
+          }
+          .bg-validation-tooltip__text {
+            color: #FB4C4C;
+            font-size: 12px;
+            line-height: 18px;
+            margin: 0;
+          }
         `;
         document.head.appendChild(style);
+      }
+
+      function dismissValidationTooltips(): void {
+        for (const tooltip of validationTooltipEls.values()) {
+          tooltip.remove();
+        }
+        validationTooltipEls.clear();
+      }
+
+      function showValidationTooltip(key: string, target: HTMLElement, message: string): void {
+        const anchor = target.querySelector('.bg-input-box') as HTMLElement | null;
+        const rect = (anchor ?? target).getBoundingClientRect();
+        const tooltip = document.createElement('div');
+        tooltip.className = 'bg-validation-tooltip';
+        tooltip.style.left = `${rect.left}px`;
+        tooltip.style.top = `${rect.bottom + 4}px`;
+
+        const text = document.createElement('p');
+        text.className = 'bg-validation-tooltip__text';
+        text.textContent = message;
+        tooltip.appendChild(text);
+
+        document.body.appendChild(tooltip);
+        validationTooltipEls.set(key, tooltip);
       }
 
       // Track hover listeners for cleanup
       const hoverCleanups = new Map<HTMLElement, () => void>();
 
       function applyErrorStyles(): void {
+        dismissValidationTooltips();
+
         // Remove existing error styles and hover listeners
         document.querySelectorAll('.bg-cell--error').forEach((el) => {
           el.classList.remove('bg-cell--error');
@@ -95,9 +141,6 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         });
 
         // Apply error styles and tooltip hover to cells with errors
-        let lastErrorCell: HTMLElement | null = null;
-        let lastErrorMessage = '';
-
         for (const error of errors.values()) {
           const { rowIndex, colIndex } = error.position;
           const cells = document.querySelectorAll(
@@ -107,27 +150,16 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
             cell.classList.add('bg-cell--error');
             const htmlCell = cell as HTMLElement;
 
-            // Tooltip on hover via grid's built-in tooltip system
-            const onEnter = (e: MouseEvent) => {
-              ctx.showTooltip(htmlCell, error.message, e.clientX, e.clientY);
+            const key = `${positionKey(error.position)}:${validationTooltipEls.size}`;
+            showValidationTooltip(key, htmlCell, error.message);
+            const onEnter = () => {
+              if (!validationTooltipEls.has(key)) showValidationTooltip(key, htmlCell, error.message);
             };
-            const onLeave = () => { ctx.dismissTooltip(); };
             htmlCell.addEventListener('mouseenter', onEnter);
-            htmlCell.addEventListener('mouseleave', onLeave);
             hoverCleanups.set(htmlCell, () => {
               htmlCell.removeEventListener('mouseenter', onEnter);
-              htmlCell.removeEventListener('mouseleave', onLeave);
             });
-
-            lastErrorCell = htmlCell;
-            lastErrorMessage = error.message;
           }
-        }
-
-        // Auto-show tooltip on the most recently validated error cell
-        if (lastErrorCell) {
-          const rect = lastErrorCell.getBoundingClientRect();
-          ctx.showTooltip(lastErrorCell, lastErrorMessage, rect.left + rect.width / 2, rect.bottom);
         }
       }
 
@@ -209,6 +241,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         unsubData();
         unsubRender();
         errors.clear();
+        dismissValidationTooltips();
         for (const cleanup of hoverCleanups.values()) cleanup();
         hoverCleanups.clear();
       };
