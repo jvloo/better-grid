@@ -24,6 +24,8 @@ export class RenderingPipeline<TData = unknown> {
   private frozenCells = new Map<number, { element: HTMLElement; baseLeft: number; top: number }>();
   /** Recycled DOM elements ready for reuse — avoids remove()/appendChild() churn */
   private recyclePool: HTMLElement[] = [];
+  /** Row style presets from GridOptions.rowStyles */
+  rowStyles: { field: string; styles: Record<string, Record<string, string>> } | undefined;
 
   setGlobalCellRenderer(renderer: CellRenderer<TData> | null): void {
     this.globalCellRenderer = renderer;
@@ -178,6 +180,13 @@ export class RenderingPipeline<TData = unknown> {
 
         if (cleanup) {
           this.cleanupFns.set(key, cleanup);
+        }
+
+        // Apply row-level style presets (rowStyles) before column cellStyle
+        if (this.rowStyles) {
+          const fieldVal = String((rowData as Record<string, unknown>)[this.rowStyles.field] ?? '');
+          const rs = this.rowStyles.styles[fieldVal];
+          if (rs) Object.assign(cell.style, rs);
         }
 
         // Apply conditional cellStyle / cellClass after rendering

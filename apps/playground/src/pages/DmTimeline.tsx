@@ -90,32 +90,12 @@ export function DmTimeline() {
       { id: 'end', accessorKey: 'end', header: 'End', width: 100, align: 'center' as const, cellType: 'date' as const, dateFormat: 'month-year' as const },
       {
         id: 'status', accessorKey: 'status', header: 'Variance', width: 120,
-        cellRenderer: (container, ctx) => {
-          container.textContent = '';
-          const val = ctx.value as string;
-          if (!val) return;
-          const pill = document.createElement('span');
-          pill.textContent = val;
-          pill.style.display = 'inline-block';
-          pill.style.padding = '2px 10px';
-          pill.style.borderRadius = '12px';
-          pill.style.fontSize = '11px';
-          pill.style.fontWeight = '500';
-          pill.style.whiteSpace = 'nowrap';
-          pill.style.lineHeight = 'normal';
-          if (val === 'Done') {
-            pill.style.backgroundColor = '#dcfce7';
-            pill.style.color = '#166534';
-          } else if (val === 'On Time') {
-            pill.style.backgroundColor = '#e0f2fe';
-            pill.style.color = '#0c4a6e';
-            pill.style.border = '1px solid #7dd3fc';
-          } else if (val === 'Delayed') {
-            pill.style.backgroundColor = '#fee2e2';
-            pill.style.color = '#991b1b';
-          }
-          container.appendChild(pill);
-        },
+        cellType: 'badge' as const,
+        options: [
+          { value: 'Done', label: 'Done', color: '#166534', bg: '#dcfce7', fontWeight: '500' },
+          { value: 'On Time', label: 'On Time', color: '#0c4a6e', bg: '#e0f2fe', border: '1px solid #7dd3fc', fontWeight: '500' },
+          { value: 'Delayed', label: 'Delayed', color: '#991b1b', bg: '#fee2e2', fontWeight: '500' },
+        ],
       },
       ...months.map(m => ({
         id: m.key,

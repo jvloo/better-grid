@@ -43,6 +43,9 @@ export type { PaginationOptions, PaginationApi } from './pagination';
 export { grouping } from './grouping';
 export type { GroupingOptions, GroupingApi, GroupRowInfo, BuiltinAggregation, AggregationSpec } from './grouping';
 
+export { timeSeries } from './time-series';
+export type { TimeSeriesOptions, TimeSeriesResult } from './time-series';
+
 // Pro plugins (planned for @better-grid/pro, included here during development)
 export { mergeCells } from './merge-cells';
 export type { MergeCellsOptions, MergeCellsApi, MergeCellDef } from './merge-cells';
@@ -54,3 +57,6 @@ export type { GanttOptions, GanttApi } from './gantt';
 
 export { rowActions, RowActionIcons } from './row-actions';
 export type { RowActionsOptions, RowActionsApi, RowAction } from './row-actions';
+
+export { aggregation } from './aggregation';
+export type { AggregationOptions, AggregationRule } from './aggregation';

@@ -453,7 +453,6 @@ export function FsbtProgram() {
         durationField: 'duration',
         endDateField: 'end',
         columnToDate,
-        columnsToDuration: (startCol: number, endCol: number) => endCol - startCol + 1,
         formatDate: (dateStr: string) => {
           if (!dateStr) return '';
           return formatMonYY(dateStr);

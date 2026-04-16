@@ -866,8 +866,20 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       // -----------------------------------------------------------------------
 
       // -----------------------------------------------------------------------
-      // Masked input editor (e.g. MM/YY)
+      // Masked input editor (e.g. MM/YY, DD/MM/YYYY, HH:mm:ss)
       // -----------------------------------------------------------------------
+
+      // Section validation rules keyed by label (case-sensitive: MM=month, mm=minutes).
+      // autoPadFrom: first digit at or above this triggers "0X" auto-pad.
+      function sectionValidation(label: string, _secLen: number): { min: number; max: number; autoPadFrom: number } | null {
+        switch (label) {
+          case 'MM': return { min: 1, max: 12, autoPadFrom: 2 };
+          case 'DD': return { min: 1, max: 31, autoPadFrom: 4 };
+          case 'HH': return { min: 0, max: 23, autoPadFrom: 3 };
+          case 'mm': case 'ss': case 'SS': return { min: 0, max: 59, autoPadFrom: 6 };
+          default: return null;
+        }
+      }
 
       function createMaskedInput(
         cellEl: HTMLElement,
@@ -1088,21 +1100,21 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
             e.preventDefault();
             const secLen = sectionLengths[activeSectionIdx]!;
             const cur = sectionValues[activeSectionIdx] || '';
-            const isMonth = sectionLabels[activeSectionIdx]?.toUpperCase() === 'MM';
+            const label = sectionLabels[activeSectionIdx] ?? '';
+            const sv = sectionValidation(label, secLen);
 
             // If section is full, replace it (start fresh)
             let next = cur.length >= secLen ? e.key : cur + e.key;
 
-            // Month auto-pad: first digit 2-9 → "0X" and auto-advance
-            if (isMonth && next.length === 1 && Number(next) >= 2) {
+            // Auto-pad: first digit already exceeds max tens → "0X" and advance
+            if (sv && next.length === 1 && Number(next) >= sv.autoPadFrom) {
               next = `0${next}`;
             }
-            // Month validation: if completed month is invalid (e.g. "13"),
-            // auto-pad the first digit ("1" → "01"), advance, and spill the
-            // second digit ("3") into the next section
-            if (isMonth && next.length >= 2) {
-              const monthNum = Number(next.slice(0, 2));
-              if (monthNum < 1 || monthNum > 12) {
+            // Validation: if completed value is out of range, auto-pad first
+            // digit and spill the second into the next section
+            if (sv && next.length >= 2) {
+              const num = Number(next.slice(0, 2));
+              if (num < sv.min || num > sv.max) {
                 const spillDigit = next[1]!;
                 sectionValues[activeSectionIdx] = `0${next[0]}`;
                 if (activeSectionIdx < sectionLengths.length - 1) {
@@ -1168,16 +1180,18 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
             e.preventDefault();
             const secLen = sectionLengths[activeSectionIdx]!;
-            const isMonth = sectionLabels[activeSectionIdx]?.toUpperCase() === 'MM';
+            const label = sectionLabels[activeSectionIdx] ?? '';
+            const sv = sectionValidation(label, secLen);
             const cur = parseInt(sectionValues[activeSectionIdx] || '0', 10);
             const delta = e.key === 'ArrowUp' ? 1 : -1;
             let next = cur + delta;
-            if (isMonth) {
-              if (next > 12) next = 1;
-              if (next < 1) next = 12;
+            if (sv) {
+              if (next > sv.max) next = sv.min;
+              if (next < sv.min) next = sv.max;
             } else {
-              if (next > 99) next = 0;
-              if (next < 0) next = 99;
+              const ceiling = Math.pow(10, secLen) - 1;
+              if (next > ceiling) next = 0;
+              if (next < 0) next = ceiling;
             }
             sectionValues[activeSectionIdx] = String(next).padStart(secLen, '0');
             syncInputDisplay();

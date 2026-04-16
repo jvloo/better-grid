@@ -51,6 +51,8 @@ export function createGrid<
   );
   const rendering = new RenderingPipeline<TData>();
   const frozenRendering = new RenderingPipeline<TData>();
+  rendering.rowStyles = options.rowStyles;
+  frozenRendering.rowStyles = options.rowStyles;
   const pluginRegistry = new PluginRegistry();
   const keyBindings: KeyBinding[] = [];
   const commands = new Map<string, Command>();
@@ -589,6 +591,23 @@ export function createGrid<
           cell.textContent = column.valueModifier.format(value);
         } else {
           cell.textContent = value != null ? String(value) : '';
+        }
+
+        // Apply row-level style presets
+        if (options.rowStyles) {
+          const fieldVal = String((rowData as Record<string, unknown>)[options.rowStyles.field] ?? '');
+          const rs = options.rowStyles.styles[fieldVal];
+          if (rs) Object.assign(cell.style, rs);
+        }
+
+        // Apply conditional cellStyle / cellClass
+        if (column.cellStyle) {
+          const styles = column.cellStyle(value, rowData);
+          if (styles) Object.assign(cell.style, styles);
+        }
+        if (column.cellClass) {
+          const cls = column.cellClass(value, rowData);
+          if (cls) cell.className += ' ' + cls;
         }
 
         pinnedContainer.appendChild(cell);

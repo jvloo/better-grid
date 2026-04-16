@@ -21,7 +21,7 @@ const badgeRenderer: CellTypeRenderer = {
     span.style.pointerEvents = 'none';
 
     const options = context.column.options as
-      | Array<{ label: string; value: string | number | boolean; color?: string; bg?: string }>
+      | Array<{ label: string; value: string | number | boolean; color?: string; bg?: string; border?: string; fontWeight?: string }>
       | undefined;
     const match = options?.find((opt) => opt.value === context.value);
 
@@ -29,6 +29,8 @@ const badgeRenderer: CellTypeRenderer = {
       span.textContent = match.label;
       span.style.color = match.color ?? '#666';
       span.style.backgroundColor = match.bg ?? '#f5f5f5';
+      if (match.border) span.style.border = match.border;
+      if (match.fontWeight) span.style.fontWeight = match.fontWeight;
     } else {
       span.textContent = context.value != null ? String(context.value) : '';
       span.style.color = '#666';

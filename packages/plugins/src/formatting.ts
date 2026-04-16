@@ -26,6 +26,8 @@ export interface FormattingOptions {
   decimalPlaces?: number;
   /** Default date format preset. Default: 'medium' */
   dateFormat?: DateFormatPreset;
+  /** Color for negative numbers (e.g. '#dc2626'). Per-column override via column.meta.negativeColor */
+  negativeColor?: string;
 }
 
 export interface FormattingApi {
@@ -201,6 +203,10 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
             container.textContent = formatValue(context.value, type, context.column);
             if (type === 'number' || type === 'currency' || type === 'percent' || type === 'bigint') {
               container.style.textAlign = 'right';
+              const negColor = (context.column.meta?.negativeColor as string) ?? options?.negativeColor;
+              if (negColor && typeof context.value === 'number' && context.value < 0) {
+                container.style.color = negColor;
+              }
             }
           },
           getStringValue(context: CellRenderContext) {

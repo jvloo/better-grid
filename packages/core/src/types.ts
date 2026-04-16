@@ -356,6 +356,11 @@ export interface GridOptions<
    * - 'striped': no vertical borders, horizontal borders, alternating row bg (customize with --bg-stripe-bg)
    */
   tableStyle?: 'bordered' | 'borderless' | 'striped';
+  /** Apply styles to rows based on a field value. Avoids repetitive cellStyle functions for report-style grids */
+  rowStyles?: {
+    field: string;
+    styles: Record<string, Record<string, string>>;
+  };
 }
 
 // ---------------------------------------------------------------------------
