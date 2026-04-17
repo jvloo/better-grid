@@ -25,9 +25,22 @@ export interface ValidationOptions {
   validateOn?: 'commit' | 'all';
 }
 
+export const VALIDATION_ERROR_CODES = {
+  REQUIRED_FIELD: 'REQUIRED_FIELD',
+  VALIDATION_FAILED: 'VALIDATION_FAILED',
+} as const;
+
+export type ValidationErrorCode = typeof VALIDATION_ERROR_CODES[keyof typeof VALIDATION_ERROR_CODES];
+
 export interface ValidationError {
   position: CellPosition;
   message: string;
+  /**
+   * Stable code identifying which kind of validation failed. Compare against
+   * `grid.$errorCodes.REQUIRED_FIELD` / `.VALIDATION_FAILED` for typed narrowing
+   * instead of parsing `message`.
+   */
+  code: ValidationErrorCode;
 }
 
 export interface ValidationApi {
@@ -40,11 +53,6 @@ export interface ValidationApi {
   /** Check if all cells are valid */
   isValid(): boolean;
 }
-
-export const VALIDATION_ERROR_CODES = {
-  REQUIRED_FIELD: 'REQUIRED_FIELD',
-  VALIDATION_FAILED: 'VALIDATION_FAILED',
-} as const;
 
 export function validation(options?: ValidationOptions): GridPlugin<'validation', ValidationApi> {
   const config = {
@@ -63,7 +71,9 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         return `${pos.rowIndex}:${pos.colIndex}`;
       }
 
-      function validateCell(position: CellPosition): string | null {
+      type CellFailure = { message: string; code: ValidationErrorCode };
+
+      function validateCell(position: CellPosition): CellFailure | null {
         const state = ctx.grid.getState();
         const column = state.columns[position.colIndex];
         if (!column) return null;
@@ -73,21 +83,19 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
           ? (row as Record<string, unknown>)?.[column.accessorKey]
           : undefined;
 
-        // Check required
         if (column.required && (value == null || value === '')) {
-          return 'This field is required';
+          return { message: 'This field is required', code: VALIDATION_ERROR_CODES.REQUIRED_FIELD };
         }
 
-        // Check rules
         if (!column.rules || column.rules.length === 0) return null;
 
         for (const rule of column.rules) {
           const result = rule.validate(value, row);
           if (result === false) {
-            return rule.message ?? 'Invalid value';
+            return { message: rule.message ?? 'Invalid value', code: VALIDATION_ERROR_CODES.VALIDATION_FAILED };
           }
           if (typeof result === 'string') {
-            return result;
+            return { message: result, code: VALIDATION_ERROR_CODES.VALIDATION_FAILED };
           }
         }
 
@@ -194,10 +202,10 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
       const api: ValidationApi = {
         validate(position) {
           if (position) {
-            const error = validateCell(position);
+            const failure = validateCell(position);
             const key = positionKey(position);
-            if (error) {
-              const entry = { position, message: error };
+            if (failure) {
+              const entry: ValidationError = { position, ...failure };
               errors.set(key, entry);
               return [entry];
             }
@@ -216,9 +224,9 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
               if (!column?.rules?.length && !column?.required) continue;
 
               const pos = { rowIndex: row, colIndex: col };
-              const error = validateCell(pos);
-              if (error) {
-                const entry = { position: pos, message: error };
+              const failure = validateCell(pos);
+              if (failure) {
+                const entry: ValidationError = { position: pos, ...failure };
                 errors.set(positionKey(pos), entry);
                 allErrors.push(entry);
               }

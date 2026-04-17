@@ -17,8 +17,14 @@ export type { FilteringOptions, FilteringApi, FilterState, FilterOperator } from
 export { formatting } from './free/formatting';
 export type { FormattingOptions, FormattingApi, DateFormatPreset } from './free/formatting';
 
-export { validation } from './free/validation';
-export type { ValidationOptions, ValidationApi, ValidationError, ColumnValidationRule } from './free/validation';
+export { validation, VALIDATION_ERROR_CODES } from './free/validation';
+export type {
+  ValidationOptions,
+  ValidationApi,
+  ValidationError,
+  ValidationErrorCode,
+  ColumnValidationRule,
+} from './free/validation';
 
 export { clipboard } from './free/clipboard';
 export type { ClipboardOptions, ClipboardApi } from './free/clipboard';
