@@ -449,13 +449,6 @@ export interface GridPlugin<TId extends string = string, TApi = unknown> {
    *     if (err.code === grid.$errorCodes.REQUIRED_FIELD) { ... }
    */
   $errorCodes?: Readonly<Record<string, string>>;
-  $types?: {
-    columnDef?: Record<string, unknown>;
-    cellState?: Record<string, unknown>;
-    gridOptions?: Record<string, unknown>;
-    gridState?: Record<string, unknown>;
-    events?: Record<string, unknown>;
-  };
   init?(ctx: PluginContext): (() => void) | void;
   hooks?: {
     beforeCellCommit?(event: { rowIndex: number; colIndex: number; oldValue: unknown; newValue: unknown }):

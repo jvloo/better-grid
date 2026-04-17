@@ -19,7 +19,7 @@ Monorepo with pnpm workspaces + Turborepo.
 
 ### Core Design
 
-- **Plugin architecture** — features as composable plugins with `$types` for TypeScript inference
+- **Plugin architecture** — features as composable plugins that declare exposed APIs (`$api`) and error codes (`$errorCodes`); consumer types are extended via module augmentation (`declare module '@better-grid/core'`)
 - **Inference helpers** — `InferRow<typeof grid>` / `InferState<typeof grid>` / `InferPluginApis<Plugins>` / `InferPluginErrorCodes<Plugins>` recover row, state, per-plugin API, and error-code types from the instance
 - **Typed plugin accessor** — `grid.plugins.sorting.toggleSort(...)` is statically typed via the `$api` phantom field on each plugin; see "Typed plugins & error codes" below
 - **Config-driven DX** — works out of the box with `createGrid()`, one function call
