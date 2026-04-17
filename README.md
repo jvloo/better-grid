@@ -160,6 +160,18 @@ Customize via CSS custom properties:
 }
 ```
 
+## Browser support
+
+Better Grid targets evergreen browsers and assumes native support for `ResizeObserver` and `PointerEvent`. The tested baseline is:
+
+| Browser             | Minimum version |
+| ------------------- | --------------- |
+| Chrome / Edge       | 88              |
+| Firefox             | 78              |
+| Safari (macOS, iOS) | 14              |
+
+Older browsers are not supported. If you need to serve them, polyfill `ResizeObserver` and `PointerEvent` yourself — we do not ship polyfills.
+
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md) for the full feature roadmap, tier strategy, and competitive analysis.
