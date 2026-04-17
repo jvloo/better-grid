@@ -20,7 +20,12 @@ export class EventEmitter<TEvents extends EventMap> {
   }
 
   off<E extends keyof TEvents>(event: E, handler: TEvents[E]): void {
-    this.listeners.get(event)?.delete(handler as AnyFn);
+    const set = this.listeners.get(event);
+    if (!set) return;
+    set.delete(handler as AnyFn);
+    if (set.size === 0) {
+      this.listeners.delete(event);
+    }
   }
 
   emit<E extends keyof TEvents>(event: E, ...args: Parameters<TEvents[E]>): void {

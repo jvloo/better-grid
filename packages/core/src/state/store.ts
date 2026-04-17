@@ -25,7 +25,12 @@ export class StateStore<TData = unknown> {
     }
     this.listeners.get(key)!.add(callback);
     return () => {
-      this.listeners.get(key)?.delete(callback);
+      const set = this.listeners.get(key);
+      if (!set) return;
+      set.delete(callback);
+      if (set.size === 0) {
+        this.listeners.delete(key);
+      }
     };
   }
 
