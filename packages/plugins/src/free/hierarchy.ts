@@ -87,6 +87,8 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy'> {
         if (toggleStyle === 'chevron') {
           const arrow = document.createElement('span');
           arrow.className = 'bg-hierarchy-toggle';
+          arrow.setAttribute('role', 'button');
+          arrow.setAttribute('aria-label', isExpanded ? 'Collapse row' : 'Expand row');
           arrow.style.display = 'inline-flex';
           arrow.style.transition = 'transform 0.3s ease-out';
           arrow.style.cursor = 'pointer';
@@ -107,6 +109,8 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy'> {
         } else {
           const toggle = document.createElement('span');
           toggle.className = 'bg-hierarchy-toggle';
+          toggle.setAttribute('role', 'button');
+          toggle.setAttribute('aria-label', isExpanded ? 'Collapse row' : 'Expand row');
           toggle.textContent = isExpanded ? collapseIcon : expandIcon;
           toggle.style.cursor = 'pointer';
           toggle.style.marginRight = '6px';
@@ -143,6 +147,14 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy'> {
           const { depth, isParent, isExpanded, rowId } = info;
 
           container.textContent = '';
+
+          // ARIA: expose depth + expand/collapse state on the cell
+          container.setAttribute('aria-level', String(depth + 1));
+          if (isParent) {
+            container.setAttribute('aria-expanded', String(isExpanded));
+          } else {
+            container.removeAttribute('aria-expanded');
+          }
 
           // Apply indent
           const basePadding = 8;

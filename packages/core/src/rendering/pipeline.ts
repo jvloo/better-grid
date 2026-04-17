@@ -1,6 +1,9 @@
 // ============================================================================
 // Rendering Pipeline — DOM-based cell rendering with pooling
 // ============================================================================
+// ARIA note: cells are absolutely positioned — there is no per-row container
+// element to mark with role="row". aria-rowindex on each gridcell is the
+// documented substitute when row grouping is omitted.
 
 import type { CellRenderContext, CellRenderer, CellTypeRenderer, ColumnDef, RowStylesConfig, Selection } from '../types';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,6 +27,8 @@ export class RenderingPipeline<TData = unknown> {
   private frozenCells = new Map<number, { element: HTMLElement; baseLeft: number; top: number }>();
   /** Recycled DOM elements ready for reuse — avoids remove()/appendChild() churn */
   private recyclePool: HTMLElement[] = [];
+  /** Reused per renderCells() to avoid per-frame Set allocation */
+  private visibleKeys = new Set<number>();
   /** Row style presets from GridOptions.rowStyles */
   rowStyles: RowStylesConfig<TData> | undefined;
 
@@ -57,7 +62,8 @@ export class RenderingPipeline<TData = unknown> {
     scrollLeft = 0,
     frozenTopRows = 0,
   ): void {
-    const visibleKeys = new Set<number>();
+    const visibleKeys = this.visibleKeys;
+    visibleKeys.clear();
 
     // Phase 1: Collect cells to visible set, identify which are new
     for (let row = startRow; row < endRow; row++) {
@@ -99,6 +105,10 @@ export class RenderingPipeline<TData = unknown> {
           cell.dataset.row = String(row);
           cell.dataset.col = String(col);
           cell.dataset.rowEven = row % 2 === 0 ? '1' : '0';
+          // ARIA indices are 1-based; data-* stays 0-based to match existing code
+          cell.setAttribute('role', 'gridcell');
+          cell.setAttribute('aria-rowindex', String(row + 1));
+          cell.setAttribute('aria-colindex', String(col + 1));
           this.cellPool.set(key, cell);
         }
 

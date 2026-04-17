@@ -10,6 +10,7 @@ const DEFAULT_MIN_WIDTH = 50;
 export class ColumnManager<TData = unknown> {
   private columns: ColumnDef<TData>[] = [];
   private widths: number[] = [];
+  private readonlyCols = new Set<number>();
 
   setColumns(columns: ColumnDef<TData>[]): void {
     // Normalize columns: default accessorKey, validate widths
@@ -26,6 +27,14 @@ export class ColumnManager<TData = unknown> {
       return normalized;
     });
     this.widths = this.columns.map((col) => col.width ?? DEFAULT_WIDTH);
+    this.readonlyCols.clear();
+    for (let i = 0; i < this.columns.length; i++) {
+      if (this.columns[i]?.editable === false) this.readonlyCols.add(i);
+    }
+  }
+
+  getReadonlyColumns(): Set<number> {
+    return this.readonlyCols;
   }
 
   getColumns(): ColumnDef<TData>[] {

@@ -18,7 +18,6 @@ export type {
   CellEditorType,
   ColumnOption,
   BadgeOption,
-  ColumnValidationRule,
   HeaderRow,
   HeaderCell,
   FooterRow,

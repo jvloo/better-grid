@@ -156,8 +156,12 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting'> {
       function updateHeaderIndicators(): void {
         // Remove all existing indicators
         document.querySelectorAll('.bg-sort-indicator').forEach((el) => el.remove());
+        // Reset aria-sort on every column header — stale cells get 'none'
+        document
+          .querySelectorAll('.bg-header-cell[role="columnheader"][aria-sort]')
+          .forEach((el) => el.setAttribute('aria-sort', 'none'));
 
-        // Add indicators to sorted column headers
+        // Add indicators + aria-sort to sorted column headers
         for (const { columnId, direction } of sortState) {
           const col = ctx.grid.getState().columns.findIndex((c) => c.id === columnId);
           if (col === -1) continue;
@@ -167,6 +171,7 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting'> {
             `.bg-header-cell[data-col="${col}"]:not(.bg-header-cell--group)`,
           );
           for (const headerCell of headerCells) {
+            headerCell.setAttribute('aria-sort', direction === 'asc' ? 'ascending' : 'descending');
             const indicator = document.createElement('span');
             indicator.className = 'bg-sort-indicator';
             indicator.innerHTML = direction === 'asc'

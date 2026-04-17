@@ -4,6 +4,13 @@
 
 import type { GridPlugin, PluginContext, CellTypeRenderer, CellRenderContext } from '@better-grid/core';
 
+declare module '@better-grid/core' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnDef<TData = unknown> {
+    dateFormat?: 'short' | 'medium' | 'long' | 'full' | 'iso' | 'month-year' | 'year' | 'time' | 'datetime';
+  }
+}
+
 export type DateFormatPreset =
   | 'short'       // 1/15/26
   | 'medium'      // Jan 15, 2026

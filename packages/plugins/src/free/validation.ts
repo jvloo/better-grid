@@ -4,6 +4,22 @@
 
 import type { GridPlugin, PluginContext, CellPosition } from '@better-grid/core';
 
+/** Validation rule for a column */
+export interface ColumnValidationRule {
+  /** Return true if valid, or an error message string if invalid */
+  validate: (value: unknown, row: unknown) => boolean | string;
+  /** Fallback error message when validate returns false */
+  message?: string;
+}
+
+declare module '@better-grid/core' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnDef<TData = unknown> {
+    required?: boolean;
+    rules?: ColumnValidationRule[];
+  }
+}
+
 export interface ValidationOptions {
   /** When to validate: 'commit' (after edit), 'all' (validate everything on init). Default: 'commit' */
   validateOn?: 'commit' | 'all';

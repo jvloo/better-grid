@@ -80,6 +80,8 @@ export function createPinnedRowRenderer<TData = unknown>(
 
         const cell = document.createElement('div');
         cell.className = 'bg-cell bg-cell--pinned';
+        cell.setAttribute('role', 'gridcell');
+        cell.setAttribute('aria-colindex', String(col + 1));
         cell.style.position = 'absolute';
         cell.style.transform = `translate3d(${left}px, ${snapToDevicePixel(top)}px, 0)`;
         cell.style.width = `${width}px`;

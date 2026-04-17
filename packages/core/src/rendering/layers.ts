@@ -22,6 +22,10 @@ export class SelectionLayer {
   private onFillDrag: ((result: FillDragResult) => void) | null = null;
   private isEditing = false;
   private fillHandleEnabled = true;
+  /** Cached fill-handle offset — avoids getBoundingClientRect() reflow per frame */
+  private fillHandleOffsetX = 0;
+  private fillHandleOffsetY = 0;
+  private fillHandleOffsetValid = false;
 
   constructor(container: HTMLElement, gridRoot?: HTMLElement) {
     this.container = container;
@@ -48,6 +52,11 @@ export class SelectionLayer {
 
   setFillDragHandler(handler: (result: FillDragResult) => void): void {
     this.onFillDrag = handler;
+  }
+
+  /** Invalidate the cached fill-handle offset — call when the container moves/resizes. */
+  invalidateLayout(): void {
+    this.fillHandleOffsetValid = false;
   }
 
   render(selection: Selection, measurements: LayoutMeasurements, readonlyColumns?: Set<number>): void {
@@ -127,11 +136,14 @@ export class SelectionLayer {
 
         // Position relative to the grid root (above frozen overlay z-index 8)
         // by computing the cell container's offset from the grid root.
-        const containerRect = this.container.getBoundingClientRect();
-        const rootRect = this.gridRoot.getBoundingClientRect();
-        const offsetX = containerRect.left - rootRect.left;
-        const offsetY = containerRect.top - rootRect.top;
-        handle.style.transform = `translate3d(${right - 4 + offsetX}px, ${bottom - 4 + offsetY}px, 0)`;
+        if (!this.fillHandleOffsetValid) {
+          const containerRect = this.container.getBoundingClientRect();
+          const rootRect = this.gridRoot.getBoundingClientRect();
+          this.fillHandleOffsetX = containerRect.left - rootRect.left;
+          this.fillHandleOffsetY = containerRect.top - rootRect.top;
+          this.fillHandleOffsetValid = true;
+        }
+        handle.style.transform = `translate3d(${right - 4 + this.fillHandleOffsetX}px, ${bottom - 4 + this.fillHandleOffsetY}px, 0)`;
 
         // Hide when editing
         if (this.isEditing) handle.style.display = 'none';

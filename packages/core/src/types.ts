@@ -149,22 +149,12 @@ export interface ColumnDef<TData = unknown> {
   editable?: boolean | ((row: TData, column: ColumnDef<TData>) => boolean);
   cellEditor?: CellEditorType;
   options?: (string | ColumnOption)[];
-  precision?: number;
-  /** Minimum allowed numeric value (used for ArrowUp/Down clamping) */
-  min?: number;
-  /** Maximum allowed numeric value (used for ArrowUp/Down clamping) */
-  max?: number;
-  /** Placeholder text shown in empty editable cells when inputStyle is enabled */
-  placeholder?: string;
-  /** Input mask pattern (e.g. 'MM/YY'). Each letter = editable digit section, other chars = fixed. */
-  mask?: string;
 
   // Sorting
   sortable?: boolean;
   comparator?: (a: unknown, b: unknown) => number;
 
   // Formatting
-  dateFormat?: 'short' | 'medium' | 'long' | 'full' | 'iso' | 'month-year' | 'year' | 'time' | 'datetime';
   hideZero?: boolean;
 
   /** Format the raw cell value to a display string (render time). */
@@ -172,24 +162,12 @@ export interface ColumnDef<TData = unknown> {
   /** Parse a user-entered string back into the cell value (edit commit time). Return undefined to keep the original. */
   valueParser?: (value: string) => unknown;
 
-  // Validation
-  required?: boolean;
-  rules?: ColumnValidationRule[];
-
   // Conditional styling
   cellStyle?: (value: unknown, row: unknown) => Record<string, string> | undefined;
   cellClass?: (value: unknown, row: unknown) => string | undefined;
 
   // Extensibility (for third-party plugins)
   meta?: Record<string, unknown>;
-}
-
-/** Validation rule for a column */
-export interface ColumnValidationRule {
-  /** Return true if valid, or an error message string if invalid */
-  validate: (value: unknown, row: unknown) => boolean | string;
-  /** Fallback error message when validate returns false */
-  message?: string;
 }
 
 // ---------------------------------------------------------------------------

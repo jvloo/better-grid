@@ -27,6 +27,8 @@ export interface HeaderRendererDeps {
   tooltip: Tooltip;
   /** Whether the filtering plugin is active (controls filter button visibility) */
   hasFilterPlugin: () => boolean;
+  /** Current sort direction for a column (used to emit aria-sort). Optional — omit when sorting plugin absent. */
+  getSortState?: (columnId: string) => 'ascending' | 'descending' | 'none';
 
   // Callbacks
   onHeaderClick: (columnId: string) => void;
@@ -56,6 +58,8 @@ interface HeaderCellOpts {
   resizeColIndex?: number;
   resizeHandleTop?: number;
   align?: 'left' | 'center' | 'right';
+  /** Number of data columns this cell spans (for aria-colspan). Defaults to 1. */
+  colSpan?: number;
 }
 
 export function createHeaderRenderer<TData = unknown>(
@@ -206,6 +210,7 @@ export function createHeaderRenderer<TData = unknown>(
             resizable: frozenCanResize,
             resizeColIndex: frozenLastCol,
             resizeHandleTop: groupSpanEndCols.has(frozenLastCol) ? -topOffset : undefined,
+            colSpan: frozenCols - colIndex,
           });
           if (span > 1) frozenEl.classList.add('bg-header-cell--span');
           if (!reachesLastRow) frozenEl.classList.add('bg-header-cell--group');
@@ -227,6 +232,7 @@ export function createHeaderRenderer<TData = unknown>(
             resizable: canResize,
             resizeColIndex: lastColInSpan,
             resizeHandleTop: groupSpanEndCols.has(lastColInSpan) ? -topOffset : undefined,
+            colSpan: endCol - frozenCols,
           });
           scrollEl.style.borderLeft = 'none';
           if (span > 1) scrollEl.classList.add('bg-header-cell--span');
@@ -250,6 +256,7 @@ export function createHeaderRenderer<TData = unknown>(
             resizable: canResize,
             resizeColIndex: lastColInSpan,
             resizeHandleTop: reachesLastRow && groupSpanEndCols.has(lastColInSpan) ? -topOffset : undefined,
+            colSpan: span,
           });
 
           if (span > 1) {
@@ -285,6 +292,16 @@ export function createHeaderRenderer<TData = unknown>(
     cell.dataset.col = String(opts.colIndex);
     cell.dataset.baseLeft = String(opts.left);
 
+    // ARIA: every header cell exposes columnheader role + 1-based colindex.
+    // Group headers (span > 1) also expose aria-colspan so multi-column spans
+    // are announced accurately by screen readers.
+    cell.setAttribute('role', 'columnheader');
+    cell.setAttribute('aria-colindex', String(opts.colIndex + 1));
+    const span = opts.colSpan ?? 1;
+    if (span > 1) {
+      cell.setAttribute('aria-colspan', String(span));
+    }
+
     const textSpan = document.createElement('span');
     textSpan.className = 'bg-header-cell__text';
     if (typeof opts.content === 'function') {
@@ -309,6 +326,12 @@ export function createHeaderRenderer<TData = unknown>(
 
     if (opts.columnId) {
       const colId = opts.columnId;
+
+      // Reflect current sort direction so screen readers announce it.
+      if (deps.getSortState) {
+        cell.setAttribute('aria-sort', deps.getSortState(colId));
+      }
+
       cell.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).classList.contains('bg-resize-handle')) return;
         deps.onHeaderClick(colId);
@@ -324,6 +347,8 @@ export function createHeaderRenderer<TData = unknown>(
         filterBtn.className = 'bg-header-cell__filter-btn';
         filterBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 1.5h8M2.5 4h5M4 6.5h2M5 6.5V9"/></svg>';
         filterBtn.title = 'Filter';
+        filterBtn.setAttribute('role', 'button');
+        filterBtn.setAttribute('aria-label', `Filter ${textSpan.textContent?.trim() || colId}`);
         filterBtn.addEventListener('mousedown', (e) => {
           e.stopPropagation();
           e.preventDefault();

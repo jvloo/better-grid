@@ -191,6 +191,14 @@ export function createGrid<
     return state.hierarchyState.visibleRows[visibleIndex] ?? visibleIndex;
   }
 
+  /** Sync aria-rowcount/aria-colcount on the grid container. */
+  function updateAriaCounts(): void {
+    if (!container) return;
+    const state = store.getState();
+    container.setAttribute('aria-rowcount', String(getEffectiveRowCount()));
+    container.setAttribute('aria-colcount', String(state.columns.length));
+  }
+
   function recomputeMeasurements(): void {
     const state = store.getState();
     const rowCount = getEffectiveRowCount();
@@ -462,13 +470,8 @@ export function createGrid<
       frozenCellOverlay.style.top = `${headerHeight + pinnedTopH}px`;
     }
 
-    // Render selection layer
-    // Compute readonly column set for fill handle visibility
-    const readonlyCols = new Set<number>();
-    for (let i = 0; i < state.columns.length; i++) {
-      if (state.columns[i]?.editable === false) readonlyCols.add(i);
-    }
-    selectionLayer?.render(state.selection, measurements, readonlyCols);
+    // Render selection layer (readonly cols are cached on ColumnManager, rebuilt on setColumns)
+    selectionLayer?.render(state.selection, measurements, columnManager.getReadonlyColumns());
 
     emitter.emit('render', visibleRange);
   }
@@ -874,6 +877,8 @@ export function createGrid<
         container.classList.add(`bg-table--${options.tableStyle}`);
       }
       container.tabIndex = 0;
+      container.setAttribute('role', 'grid');
+      updateAriaCounts();
 
       // ── Fake scrollbar pattern (AG Grid-inspired) ──
       // Viewport (overflow:hidden) holds headers + cells — nothing scrolls natively.
@@ -1046,6 +1051,15 @@ export function createGrid<
         singleHeaderRowHeight,
         tooltip,
         hasFilterPlugin: () => !!pluginRegistry.getPlugin('filtering'),
+        getSortState: (columnId) => {
+          const sortApi = pluginRegistry.getPlugin<{
+            getSortState: () => readonly { columnId: string; direction: 'asc' | 'desc' }[];
+          }>('sorting');
+          const sorted = sortApi?.getSortState().find((s) => s.columnId === columnId);
+          return sorted
+            ? (sorted.direction === 'asc' ? 'ascending' : 'descending')
+            : 'none';
+        },
         onHeaderClick: (columnId) => {
           for (const plugin of pluginRegistry.getAllPlugins()) {
             plugin.hooks?.onHeaderClick?.(columnId);
@@ -1171,7 +1185,10 @@ export function createGrid<
       container.addEventListener('keydown', handleKeyDown);
 
       // Resize observer
-      resizeObserver = new ResizeObserver(() => scheduleRender());
+      resizeObserver = new ResizeObserver(() => {
+        selectionLayer?.invalidateLayout();
+        scheduleRender();
+      });
       resizeObserver.observe(container);
 
       mounted = true;
@@ -1201,6 +1218,9 @@ export function createGrid<
       if (container) {
         container.innerHTML = '';
         container.classList.remove('bg-grid');
+        container.removeAttribute('role');
+        container.removeAttribute('aria-rowcount');
+        container.removeAttribute('aria-colcount');
       }
 
       container = null;
@@ -1250,6 +1270,7 @@ export function createGrid<
       }));
       rebuildHierarchy();
       recomputeMeasurements();
+      updateAriaCounts();
       emitter.emit('data:set', data);
       scheduleRender();
     },
@@ -1324,6 +1345,7 @@ export function createGrid<
       }
       invalidateHeaders();
       recomputeMeasurements();
+      updateAriaCounts();
       scheduleRender();
     },
 
@@ -1380,6 +1402,7 @@ export function createGrid<
       const hierarchyState = buildHierarchyState(state.data, expanded, hierarchyConfig);
       store.update('hierarchy', () => ({ hierarchyState }));
       recomputeMeasurements();
+      updateAriaCounts();
       scheduleRender();
     },
 
@@ -1393,6 +1416,7 @@ export function createGrid<
       const hierarchyState = buildHierarchyState(state.data, expanded, hierarchyConfig);
       store.update('hierarchy', () => ({ hierarchyState }));
       recomputeMeasurements();
+      updateAriaCounts();
       scheduleRender();
     },
 
@@ -1402,6 +1426,7 @@ export function createGrid<
       const hierarchyState = buildHierarchyState(state.data, new Set(), hierarchyConfig);
       store.update('hierarchy', () => ({ hierarchyState }));
       recomputeMeasurements();
+      updateAriaCounts();
       scheduleRender();
     },
 
