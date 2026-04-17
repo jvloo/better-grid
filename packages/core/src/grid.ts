@@ -16,7 +16,6 @@ import type {
   Command,
   PluginContext,
   HierarchyConfig,
-  HierarchyState,
   CellRenderContext,
 } from './types';
 import { EventEmitter } from './events/emitter';
@@ -32,6 +31,8 @@ import { navigateCell, navigateTab, getNavigationDirection } from './keyboard/na
 import { computeZoneDimensions } from './virtualization/layout';
 import { createFilterPanel, type FilterApi } from './ui/filter-panel';
 import { createContextMenu, type MenuItem } from './ui/context-menu';
+import { createTooltip } from './ui/tooltip';
+import { buildHierarchyState, buildInitialExpandedSet } from './hierarchy/build';
 
 import { snapToDevicePixel } from './utils';
 
@@ -123,78 +124,20 @@ export function createGrid<
 
   const hierarchyConfig = options.hierarchy as HierarchyConfig<TData> | undefined;
 
-  /** Build the hierarchy state from data + expanded set */
-  function buildHierarchyState(data: TData[], expandedRows: Set<string | number>): HierarchyState {
-    const cfg = hierarchyConfig!;
-    const childrenMap = new Map<string | number | null, number[]>();
-    const rowDepths = new Map<string | number, number>();
-    const parentIds = new Set<string | number>();
-    const dataIndexToRowId = new Map<number, string | number>();
-
-    // Build children map: parentId → array of data indices
-    // Also build dataIndex → rowId map
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i]!;
-      const rowId = cfg.getRowId(row);
-      const parentId = cfg.getParentId(row) ?? null;
-      dataIndexToRowId.set(i, rowId);
-      if (!childrenMap.has(parentId)) {
-        childrenMap.set(parentId, []);
-      }
-      childrenMap.get(parentId)!.push(i);
-    }
-
-    // Mark parent IDs (keys of childrenMap that are actual row IDs, not null)
-    for (const [parentId] of childrenMap) {
-      if (parentId !== null) {
-        parentIds.add(parentId);
-      }
-    }
-
-    // Walk tree depth-first to build visibleRows and rowDepths
-    const visibleRows: number[] = [];
-
-    function walk(parentId: string | number | null, depth: number): void {
-      const children = childrenMap.get(parentId);
-      if (!children) return;
-      for (const dataIndex of children) {
-        const row = data[dataIndex]!;
-        const rowId = cfg.getRowId(row);
-        rowDepths.set(rowId, depth);
-        visibleRows.push(dataIndex);
-
-        // Recurse into children if expanded
-        if (expandedRows.has(rowId) && childrenMap.has(rowId)) {
-          walk(rowId, depth + 1);
-        }
-      }
-    }
-
-    walk(null, 0);
-
-    return { expandedRows, visibleRows, rowDepths, childrenMap, parentIds, dataIndexToRowId };
-  }
-
-  /** Rebuild hierarchy state and update the store */
+  /** Rebuild hierarchy state from current data + current expanded set */
   function rebuildHierarchy(): void {
     if (!hierarchyConfig) return;
     const state = store.getState();
     const currentExpanded = state.hierarchyState?.expandedRows ?? new Set<string | number>();
-    const hierarchyState = buildHierarchyState(state.data, currentExpanded);
+    const hierarchyState = buildHierarchyState(state.data, currentExpanded, hierarchyConfig);
     store.update('hierarchy', () => ({ hierarchyState }));
   }
 
   /** Initialize hierarchy if configured */
   if (hierarchyConfig) {
     const defaultExpanded = hierarchyConfig.defaultExpanded !== false; // default true
-    const initialExpanded = new Set<string | number>();
-    if (defaultExpanded) {
-      // Expand all rows that have children
-      for (let i = 0; i < options.data.length; i++) {
-        initialExpanded.add(hierarchyConfig.getRowId(options.data[i]!));
-      }
-    }
-    const hierarchyState = buildHierarchyState(options.data, initialExpanded);
+    const initialExpanded = buildInitialExpandedSet(options.data, hierarchyConfig, defaultExpanded);
+    const hierarchyState = buildHierarchyState(options.data, initialExpanded, hierarchyConfig);
     store.update('hierarchy', () => ({ hierarchyState }));
   }
 
@@ -1382,48 +1325,12 @@ export function createGrid<
   const dismissFilterPanel = filterPanel.dismiss;
 
   // ---------------------------------------------------------------------------
-  // Cell tooltip (for clipped text)
+  // Cell tooltip (delegated to ui/tooltip.ts)
   // ---------------------------------------------------------------------------
 
-  let tooltipEl: HTMLElement | null = null;
-  let tooltipTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function showTooltip(target: HTMLElement, text: string, cursorX?: number, cursorY?: number): void {
-    dismissTooltip();
-    tooltipTimer = setTimeout(() => {
-      const left = cursorX ?? target.getBoundingClientRect().left;
-      const top = cursorY != null ? cursorY + 12 : target.getBoundingClientRect().bottom + 4;
-      tooltipEl = document.createElement('div');
-      tooltipEl.className = 'bg-tooltip';
-      tooltipEl.textContent = text;
-      tooltipEl.style.cssText = `
-        position: fixed;
-        left: ${left}px;
-        top: ${top}px;
-        z-index: 100;
-        background: var(--bg-context-menu-bg, #fff);
-        border: 1px solid var(--bg-context-menu-border, #d0d0d0);
-        border-radius: 6px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        padding: 4px 10px;
-        font-size: 13px;
-        white-space: nowrap;
-        pointer-events: none;
-      `;
-      document.body.appendChild(tooltipEl);
-    }, 500);
-  }
-
-  function dismissTooltip(): void {
-    if (tooltipTimer) {
-      clearTimeout(tooltipTimer);
-      tooltipTimer = null;
-    }
-    if (tooltipEl) {
-      tooltipEl.remove();
-      tooltipEl = null;
-    }
-  }
+  const tooltip = createTooltip();
+  const showTooltip = tooltip.show;
+  const dismissTooltip = tooltip.dismiss;
 
   function invalidateHeaders(): void {
     headersRendered = false;
@@ -1988,7 +1895,7 @@ export function createGrid<
       } else {
         expanded.add(rowId);
       }
-      const hierarchyState = buildHierarchyState(state.data, expanded);
+      const hierarchyState = buildHierarchyState(state.data, expanded, hierarchyConfig);
       store.update('hierarchy', () => ({ hierarchyState }));
       recomputeMeasurements();
       scheduleRender();
@@ -2001,7 +1908,7 @@ export function createGrid<
       for (const row of state.data) {
         expanded.add(hierarchyConfig.getRowId(row));
       }
-      const hierarchyState = buildHierarchyState(state.data, expanded);
+      const hierarchyState = buildHierarchyState(state.data, expanded, hierarchyConfig);
       store.update('hierarchy', () => ({ hierarchyState }));
       recomputeMeasurements();
       scheduleRender();
@@ -2010,7 +1917,7 @@ export function createGrid<
     collapseAll(): void {
       if (!hierarchyConfig) return;
       const state = store.getState();
-      const hierarchyState = buildHierarchyState(state.data, new Set());
+      const hierarchyState = buildHierarchyState(state.data, new Set(), hierarchyConfig);
       store.update('hierarchy', () => ({ hierarchyState }));
       recomputeMeasurements();
       scheduleRender();
