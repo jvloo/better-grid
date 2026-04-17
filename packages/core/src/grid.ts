@@ -30,6 +30,8 @@ import { SelectionLayer } from './rendering/layers';
 import { createEmptySelection, createCellSelection, extendSelection, addRangeToSelection } from './selection/model';
 import { navigateCell, navigateTab, getNavigationDirection } from './keyboard/navigation';
 import { computeZoneDimensions } from './virtualization/layout';
+import { createFilterPanel, type FilterApi } from './ui/filter-panel';
+import { createContextMenu, type MenuItem } from './ui/context-menu';
 
 import { snapToDevicePixel } from './utils';
 
@@ -1294,384 +1296,90 @@ export function createGrid<
   }
 
   // ---------------------------------------------------------------------------
-  // Header context menu
+  // Header context menu (DOM via ui/context-menu.ts, items collected here)
   // ---------------------------------------------------------------------------
 
-  let activeContextMenu: HTMLElement | null = null;
+  const contextMenu = createContextMenu();
+  const dismissContextMenu = contextMenu.dismiss;
 
   function showHeaderContextMenu(event: MouseEvent, columnId: string): void {
     dismissContextMenu();
+    const items: MenuItem[] = [];
 
-    const items: { label: string; action: () => void; active?: boolean }[] = [];
-
-    // Collect menu items from plugins
-    for (const plugin of pluginRegistry.getAllPlugins()) {
-      if (plugin.id === 'sorting') {
-        const api = pluginRegistry.getPlugin<{ getSortState: () => { columnId: string; direction: string }[]; clearSort: () => void; toggleSort: (id: string, multi?: boolean) => void }>(plugin.id);
-        if (api) {
-          const sorted = api.getSortState();
-          const colSorted = sorted.find((s) => s.columnId === columnId);
-          items.push(
-            { label: 'Sort Ascending', action: () => { api.clearSort(); api.toggleSort(columnId); }, active: colSorted?.direction === 'asc' },
-            { label: 'Sort Descending', action: () => { api.clearSort(); api.toggleSort(columnId); api.toggleSort(columnId); }, active: colSorted?.direction === 'desc' },
-          );
-          if (colSorted) {
-            items.push({ label: 'Clear Sort', action: () => {
-              // Remove just this column's sort by re-applying without it
-              const remaining = sorted.filter((s) => s.columnId !== columnId);
-              api.clearSort();
-              for (const s of remaining) {
-                api.toggleSort(s.columnId, true);
-                if (s.direction === 'desc') api.toggleSort(s.columnId, true);
-              }
-            }});
+    // Sorting items
+    const sortApi = pluginRegistry.getPlugin<{
+      getSortState: () => { columnId: string; direction: string }[];
+      clearSort: () => void;
+      toggleSort: (id: string, multi?: boolean) => void;
+    }>('sorting');
+    if (sortApi) {
+      const sorted = sortApi.getSortState();
+      const colSorted = sorted.find((s) => s.columnId === columnId);
+      items.push(
+        { label: 'Sort Ascending', action: () => { sortApi.clearSort(); sortApi.toggleSort(columnId); }, active: colSorted?.direction === 'asc' },
+        { label: 'Sort Descending', action: () => { sortApi.clearSort(); sortApi.toggleSort(columnId); sortApi.toggleSort(columnId); }, active: colSorted?.direction === 'desc' },
+      );
+      if (colSorted) {
+        items.push({ label: 'Clear Sort', action: () => {
+          // Remove just this column's sort by re-applying without it
+          const remaining = sorted.filter((s) => s.columnId !== columnId);
+          sortApi.clearSort();
+          for (const s of remaining) {
+            sortApi.toggleSort(s.columnId, true);
+            if (s.direction === 'desc') sortApi.toggleSort(s.columnId, true);
           }
-          if (sorted.length > 1) {
-            items.push({ label: 'Clear All Sorts', action: () => api.clearSort() });
-          }
-        }
+        }});
+      }
+      if (sorted.length > 1) {
+        items.push({ label: 'Clear All Sorts', action: () => sortApi.clearSort() });
       }
     }
 
     // Filtering items
-    for (const plugin of pluginRegistry.getAllPlugins()) {
-      if (plugin.id === 'filtering') {
-        const api = pluginRegistry.getPlugin<{ getFilters: () => { columnId: string }[]; setFilter: (id: string, value: unknown, op?: string) => void; removeFilter: (id: string) => void; clearFilters: () => void }>(plugin.id);
-        if (api) {
-          const filtered = api.getFilters();
-          const colFiltered = filtered.find((f) => f.columnId === columnId);
-
-          // Add a separator if sorting items exist
-          if (items.length > 0) {
-            items.push({ label: '─', action: () => {}, active: false });
-          }
-
-          items.push({
-            label: colFiltered ? 'Change Filter...' : 'Filter...',
-            action: () => {
-              dismissContextMenu();
-              showFilterPanel(event, columnId, colFiltered as { columnId: string; value: unknown; operator: string } | undefined);
-            },
-            active: !!colFiltered,
-          });
-
-          if (colFiltered) {
-            items.push({ label: 'Clear Filter', action: () => api.removeFilter(columnId) });
-          }
-          if (filtered.length > 0) {
-            items.push({ label: 'Clear All Filters', action: () => api.clearFilters() });
-          }
-        }
-      }
-    }
-
-    if (items.length === 0) return;
-
-    // Create menu
-    const menu = document.createElement('div');
-    menu.className = 'bg-context-menu';
-    menu.style.cssText = `
-      position: fixed;
-      left: ${event.clientX}px;
-      top: ${event.clientY}px;
-      z-index: 100;
-      background: var(--bg-context-menu-bg, #fff);
-      border: 1px solid var(--bg-context-menu-border, #d0d0d0);
-      border-radius: 6px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      padding: 4px 0;
-      min-width: 160px;
-      font: ${getComputedStyle(event.target as HTMLElement).font};
-      font-weight: normal;
-    `;
-
-    for (const item of items) {
-      // Separator
-      if (item.label === '─') {
-        const sep = document.createElement('div');
-        sep.style.cssText = 'height: 1px; background: #e0e0e0; margin: 4px 0;';
-        menu.appendChild(sep);
-        continue;
-      }
-
-      const menuItem = document.createElement('div');
-      menuItem.className = 'bg-context-menu__item' + (item.active ? ' bg-context-menu__item--active' : '');
-      menuItem.textContent = item.label;
-      const activeBg = 'var(--bg-dropdown-selected-bg, #e8f0fe)';
-      menuItem.style.cssText = `
-        padding: 6px 12px;
-        cursor: pointer;
-        user-select: none;
-        ${item.active ? `background: ${activeBg}; font-weight: 500;` : ''}
-      `;
-      menuItem.addEventListener('mouseenter', () => {
-        menuItem.style.background = 'var(--bg-context-menu-hover, #f0f0f0)';
-      });
-      menuItem.addEventListener('mouseleave', () => {
-        menuItem.style.background = item.active ? activeBg : '';
-      });
-      menuItem.addEventListener('click', () => {
-        item.action();
-        dismissContextMenu();
-      });
-      menu.appendChild(menuItem);
-    }
-
-    document.body.appendChild(menu);
-    activeContextMenu = menu;
-
-    // Close on click outside
-    const closeHandler = (e: MouseEvent) => {
-      if (!menu.contains(e.target as Node)) {
-        dismissContextMenu();
-        document.removeEventListener('mousedown', closeHandler);
-      }
-    };
-    // Delay to avoid the contextmenu click itself dismissing
-    setTimeout(() => document.addEventListener('mousedown', closeHandler), 0);
-  }
-
-  function dismissContextMenu(): void {
-    if (activeContextMenu) {
-      activeContextMenu.remove();
-      activeContextMenu = null;
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Filter Panel (replaces browser prompt())
-  // ---------------------------------------------------------------------------
-
-  let activeFilterPanel: HTMLElement | null = null;
-
-  function dismissFilterPanel(): void {
-    if (activeFilterPanel) {
-      activeFilterPanel.remove();
-      activeFilterPanel = null;
-    }
-  }
-
-  function showFilterPanel(
-    event: MouseEvent,
-    columnId: string,
-    currentFilter?: { columnId: string; value: unknown; operator: string },
-  ): void {
-    dismissFilterPanel();
-
-    const filteringPlugin = pluginRegistry.getPlugin<{
+    const filterApi = pluginRegistry.getPlugin<{
+      getFilters: () => { columnId: string }[];
       setFilter: (id: string, value: unknown, op?: string) => void;
       removeFilter: (id: string) => void;
+      clearFilters: () => void;
     }>('filtering');
-    if (!filteringPlugin) return;
+    if (filterApi) {
+      const filtered = filterApi.getFilters();
+      const colFiltered = filtered.find((f) => f.columnId === columnId);
 
-    // Determine column name and type for operator list
-    const cols = columnManager.getColumns();
-    const colDef = cols.find((c) => c.id === columnId);
-    const columnName = (colDef?.header as string) || columnId;
-    const cellType = colDef?.cellType as string | undefined;
-    const isNumeric = cellType === 'number' || cellType === 'currency' || cellType === 'percent' || cellType === 'bigint';
+      if (items.length > 0) {
+        items.push({ label: '─', action: () => {} });
+      }
 
-    const textOperators = [
-      { value: 'contains', label: 'Contains' },
-      { value: 'eq', label: 'Equals' },
-      { value: 'neq', label: 'Not equals' },
-      { value: 'startsWith', label: 'Starts with' },
-      { value: 'endsWith', label: 'Ends with' },
-    ];
-    const numberOperators = [
-      { value: 'eq', label: 'Equals' },
-      { value: 'neq', label: 'Not equals' },
-      { value: 'gt', label: 'Greater than' },
-      { value: 'gte', label: 'Greater or equal' },
-      { value: 'lt', label: 'Less than' },
-      { value: 'lte', label: 'Less or equal' },
-    ];
-    const operators = isNumeric ? numberOperators : textOperators;
+      items.push({
+        label: colFiltered ? 'Change Filter...' : 'Filter...',
+        action: () => {
+          dismissContextMenu();
+          showFilterPanel(event, columnId, colFiltered as { columnId: string; value: unknown; operator: string } | undefined);
+        },
+        active: !!colFiltered,
+      });
 
-    // Position: anchor below the header cell that was right-clicked
-    const headerCell = (event.target as HTMLElement).closest('.bg-header-cell') as HTMLElement | null;
-    let anchorX = event.clientX;
-    let anchorY = event.clientY;
-    if (headerCell) {
-      const rect = headerCell.getBoundingClientRect();
-      anchorX = rect.left;
-      anchorY = rect.bottom;
+      if (colFiltered) {
+        items.push({ label: 'Clear Filter', action: () => filterApi.removeFilter(columnId) });
+      }
+      if (filtered.length > 0) {
+        items.push({ label: 'Clear All Filters', action: () => filterApi.clearFilters() });
+      }
     }
 
-    // Build the panel
-    const panel = document.createElement('div');
-    panel.className = 'bg-filter-panel';
-    const font = getComputedStyle(event.target as HTMLElement).font;
-    panel.style.cssText = `
-      position: fixed;
-      left: ${anchorX}px;
-      top: ${anchorY}px;
-      z-index: 100;
-      background: var(--bg-filter-panel-bg, #fff);
-      border: 1px solid var(--bg-filter-panel-border, #d0d0d0);
-      border-radius: 6px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      padding: 12px;
-      min-width: 220px;
-      font: ${font};
-      font-weight: normal;
-    `;
-
-    // Title
-    const title = document.createElement('div');
-    title.className = 'bg-filter-panel__title';
-    title.textContent = `Filter: ${columnName}`;
-    title.style.cssText = 'font-weight: 600; margin-bottom: 8px; font-size: 13px;';
-    panel.appendChild(title);
-
-    // Operator select
-    const select = document.createElement('select');
-    select.className = 'bg-filter-panel__operator';
-    select.style.cssText = `
-      display: block;
-      width: 100%;
-      padding: 6px 8px;
-      margin-bottom: 8px;
-      border: 1px solid var(--bg-filter-panel-input-border, #ccc);
-      border-radius: 4px;
-      font: inherit;
-      font-size: 13px;
-      background: var(--bg-filter-panel-input-bg, #fff);
-      appearance: auto;
-    `;
-    for (const op of operators) {
-      const opt = document.createElement('option');
-      opt.value = op.value;
-      opt.textContent = op.label;
-      select.appendChild(opt);
-    }
-    // Pre-select current operator
-    if (currentFilter?.operator) {
-      select.value = currentFilter.operator;
-    }
-    panel.appendChild(select);
-
-    // Value input
-    const input = document.createElement('input');
-    input.className = 'bg-filter-panel__input';
-    input.type = isNumeric ? 'number' : 'text';
-    input.placeholder = 'Filter value...';
-    input.style.cssText = `
-      display: block;
-      width: 100%;
-      padding: 6px 8px;
-      margin-bottom: 10px;
-      border: 1px solid var(--bg-filter-panel-input-border, #ccc);
-      border-radius: 4px;
-      font: inherit;
-      font-size: 13px;
-      box-sizing: border-box;
-      background: var(--bg-filter-panel-input-bg, #fff);
-    `;
-    // Pre-populate current value
-    if (currentFilter?.value != null) {
-      input.value = String(currentFilter.value);
-    }
-    panel.appendChild(input);
-
-    // Button row
-    const btnRow = document.createElement('div');
-    btnRow.style.cssText = 'display: flex; gap: 8px; justify-content: flex-end;';
-
-    const clearBtn = document.createElement('button');
-    clearBtn.className = 'bg-filter-panel__btn bg-filter-panel__btn--clear';
-    clearBtn.textContent = 'Clear';
-    clearBtn.style.cssText = `
-      padding: 5px 12px;
-      border: 1px solid var(--bg-filter-panel-btn-border, #ccc);
-      border-radius: 4px;
-      background: var(--bg-filter-panel-btn-bg, #fff);
-      cursor: pointer;
-      font: inherit;
-      font-size: 13px;
-    `;
-
-    const applyBtn = document.createElement('button');
-    applyBtn.className = 'bg-filter-panel__btn bg-filter-panel__btn--apply';
-    applyBtn.textContent = 'Apply';
-    applyBtn.style.cssText = `
-      padding: 5px 12px;
-      border: 1px solid var(--bg-filter-panel-apply-border, #1a73e8);
-      border-radius: 4px;
-      background: var(--bg-filter-panel-apply-bg, #1a73e8);
-      color: var(--bg-filter-panel-apply-color, #fff);
-      cursor: pointer;
-      font: inherit;
-      font-size: 13px;
-    `;
-
-    btnRow.appendChild(clearBtn);
-    btnRow.appendChild(applyBtn);
-    panel.appendChild(btnRow);
-
-    // Actions
-    function applyFilter(): void {
-      const val = input.value;
-      if (val === '') {
-        filteringPlugin!.removeFilter(columnId);
-      } else {
-        filteringPlugin!.setFilter(columnId, val, select.value);
-      }
-      dismissFilterPanel();
-    }
-
-    function clearFilter(): void {
-      filteringPlugin!.removeFilter(columnId);
-      dismissFilterPanel();
-    }
-
-    applyBtn.addEventListener('click', applyFilter);
-    clearBtn.addEventListener('click', clearFilter);
-
-    // Keyboard: Enter → apply, Escape → dismiss
-    input.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        applyFilter();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        dismissFilterPanel();
-      }
-    });
-
-    select.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        dismissFilterPanel();
-      }
-    });
-
-    // Append and focus
-    document.body.appendChild(panel);
-    activeFilterPanel = panel;
-
-    // Ensure panel stays within viewport
-    requestAnimationFrame(() => {
-      const rect = panel.getBoundingClientRect();
-      if (rect.right > window.innerWidth) {
-        panel.style.left = `${Math.max(0, window.innerWidth - rect.width - 8)}px`;
-      }
-      if (rect.bottom > window.innerHeight) {
-        panel.style.top = `${Math.max(0, anchorY - rect.height - 4)}px`;
-      }
-    });
-
-    input.focus();
-
-    // Close on click outside (delayed to avoid immediate dismiss)
-    const closeHandler = (e: MouseEvent) => {
-      if (!panel.contains(e.target as Node)) {
-        dismissFilterPanel();
-        document.removeEventListener('mousedown', closeHandler);
-      }
-    };
-    setTimeout(() => document.addEventListener('mousedown', closeHandler), 0);
+    contextMenu.show(event, items);
   }
+
+  // ---------------------------------------------------------------------------
+  // Filter Panel (delegated to ui/filter-panel.ts)
+  // ---------------------------------------------------------------------------
+
+  const filterPanel = createFilterPanel({
+    getColumns: () => columnManager.getColumns(),
+    getFilterApi: () => pluginRegistry.getPlugin<FilterApi>('filtering'),
+  });
+  const showFilterPanel = filterPanel.show;
+  const dismissFilterPanel = filterPanel.dismiss;
 
   // ---------------------------------------------------------------------------
   // Cell tooltip (for clipped text)
