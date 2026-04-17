@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
+import { timeSeries } from '@better-grid/core';
 import { formatting, sorting, cellRenderers, clipboard, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
@@ -48,13 +49,13 @@ const data: SummaryRow[] = [
 ];
 
 // 36 months: Jul 2025 – Jun 2028
-const months: { key: string; label: string }[] = [];
-for (let i = 0; i < 36; i++) {
-  const d = new Date(2025, 6 + i);
-  const key = `m_${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, '0')}`;
-  const label = d.toLocaleString('en-AU', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2);
-  months.push({ key, label });
-}
+const ts = timeSeries({
+  start: '2025-07-01',
+  end: '2028-06-01',
+  locale: 'en-AU',
+  fiscalYearStart: 7,
+  columnWidth: 90,
+});
 
 // Shared cellStyle for row-type styling + negative value coloring
 const rowStyleFn = (v: unknown, row: unknown) => {
@@ -117,11 +118,8 @@ export function DmSummary() {
         cellStyle: rowStyleFn,
         hideZero: true,
       },
-      ...months.map(m => ({
-        id: m.key,
-        accessorKey: m.key,
-        header: m.label,
-        width: 90,
+      ...ts.columns.map(c => ({
+        ...c,
         cellType: 'currency' as const,
         precision: 0,
         hideZero: true,

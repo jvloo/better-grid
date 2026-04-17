@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
+import { timeSeries } from '@better-grid/core';
 import { formatting, editing, sorting, hierarchy, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
@@ -48,13 +49,16 @@ const data: CostRow[] = [
 ];
 
 // Monthly columns: Aug 2023 – Oct 2026 (39 months, matching Program)
-const months: { key: string; label: string }[] = [];
-for (let i = 0; i < 39; i++) {
-  const d = new Date(2023, 7 + i);
-  const key = `m_${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, '0')}`;
-  const label = d.toLocaleString('en-AU', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2);
-  months.push({ key, label });
-}
+const ts = timeSeries({
+  start: '2023-08-01',
+  end: '2026-10-01',
+  locale: 'en-AU',
+  columnDefaults: {
+    cellType: 'currency' as never,
+    precision: 0,
+    hideZero: true,
+  },
+});
 
 // Compute pinned bottom totals row from root-level rows
 function buildTotalsRow(): CostRow {
@@ -78,13 +82,13 @@ function buildTotalsRow(): CostRow {
     totals.amount += row.amount;
     totals.variance += row.variance;
   }
-  for (const m of months) {
+  for (const col of ts.columns) {
     let sum = 0;
     for (const row of data) {
-      const val = row[m.key];
+      const val = row[col.id];
       if (typeof val === 'number') sum += val;
     }
-    if (sum !== 0) totals[m.key] = sum;
+    if (sum !== 0) totals[col.id] = sum;
   }
   return totals;
 }
@@ -105,15 +109,7 @@ export function FsbtCost() {
       { id: 'end', accessorKey: 'end', header: 'End', width: 85, cellType: 'date' as const, dateFormat: 'month-year' as const },
       { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 85, cellType: 'change' as const },
       { id: 'varianceStatus', header: '', width: 44 },
-      ...months.map(m => ({
-        id: m.key,
-        accessorKey: m.key,
-        header: m.label,
-        width: 80,
-        cellType: 'currency' as const,
-        precision: 0,
-        hideZero: true,
-      })),
+      ...ts.columns,
     ],
     [],
   );

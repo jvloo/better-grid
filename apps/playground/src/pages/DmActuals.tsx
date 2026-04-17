@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
+import { timeSeries } from '@better-grid/core';
 import { formatting, editing, sorting, filtering, cellRenderers, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
@@ -34,15 +35,20 @@ const data: ActualRow[] = [
   { id: 15, child2Code: 'C60011', child2Name: 'Senior Debt Interest', child1Code: 'C6001', child1Name: 'Interest', parentCode: 'B6001', parentName: 'Finance', total: 8160000, m_2026_07: 283333, m_2026_08: 311667, m_2026_09: 340000, m_2026_10: 368333, m_2026_11: 396667, m_2026_12: 425000, m_2027_01: 453333, m_2027_02: 481667, m_2027_03: 504167, m_2027_04: 526667, m_2027_05: 549167, m_2027_06: 571667, m_2027_07: 588333, m_2027_08: 605000, m_2027_09: 621667, m_2027_10: 638333 },
 ];
 
-// Generate 24 monthly columns: Jul 2026 – Jun 2028
-const months: { key: string; label: string; fy: string }[] = [];
-for (let i = 0; i < 24; i++) {
-  const d = new Date(2026, 6 + i); // starts at Jul 2026
-  const key = `m_${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, '0')}`;
-  const label = d.toLocaleString('en-AU', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2);
-  const fy = d.getMonth() >= 6 ? `FY${d.getFullYear() + 1}` : `FY${d.getFullYear()}`;
-  months.push({ key, label, fy });
-}
+// Monthly columns: Jul 2026 – Jun 2028 (AU FY, July start)
+const ts = timeSeries({
+  start: '2026-07-01',
+  end: '2028-06-01',
+  locale: 'en-AU',
+  fiscalYearStart: 7,
+  columnWidth: 90,
+  columnDefaults: {
+    cellType: 'currency' as never,
+    precision: 0,
+    hideZero: true,
+    editable: true,
+  },
+});
 
 // Compute pinned bottom totals row
 function buildTotalsRow(): ActualRow {
@@ -59,13 +65,13 @@ function buildTotalsRow(): ActualRow {
   for (const row of data) {
     totals.total += row.total;
   }
-  for (const m of months) {
+  for (const col of ts.columns) {
     let sum = 0;
     for (const row of data) {
-      const val = row[m.key];
+      const val = row[col.id];
       if (typeof val === 'number') sum += val;
     }
-    if (sum !== 0) totals[m.key] = sum;
+    if (sum !== 0) totals[col.id] = sum;
   }
   return totals;
 }
@@ -129,29 +135,13 @@ export function DmActuals() {
         precision: 0,
         align: 'right' as const,
       },
-      ...months.map(m => ({
-        id: m.key,
-        accessorKey: m.key,
-        header: m.label,
-        width: 90,
-        cellType: 'currency' as const,
-        precision: 0,
-        hideZero: true,
-        editable: true,
-      })),
+      ...ts.columns,
     ],
     [],
   );
 
   const multiHeaders = useMemo<HeaderRow[]>(() => {
-    const fyGroups: { fy: string; count: number }[] = [];
-    for (const m of months) {
-      if (fyGroups.length > 0 && fyGroups[fyGroups.length - 1].fy === m.fy) {
-        fyGroups[fyGroups.length - 1].count++;
-      } else {
-        fyGroups.push({ fy: m.fy, count: 1 });
-      }
-    }
+    const fyGroupCells = ts.headerLayout[0]?.cells ?? [];
 
     return [
       {
@@ -163,11 +153,7 @@ export function DmActuals() {
           { id: 'g-child1', content: 'Child1', colSpan: 2 },
           { id: 'g-parent', content: 'Parent', colSpan: 2 },
           { id: 'g-total', content: 'Total', rowSpan: 2 },
-          ...fyGroups.map(g => ({
-            id: `g-${g.fy.toLowerCase()}`,
-            content: g.fy,
-            colSpan: g.count,
-          })),
+          ...fyGroupCells,
         ],
       },
       {
@@ -181,10 +167,10 @@ export function DmActuals() {
           { id: 'h-child1Name', content: 'Description', columnId: 'child1Name' },
           { id: 'h-parentCode', content: 'ID', columnId: 'parentCode' },
           { id: 'h-parentName', content: 'Description', columnId: 'parentName' },
-          ...months.map(m => ({
-            id: `h-${m.key}`,
-            content: m.label,
-            columnId: m.key,
+          ...ts.columns.map(c => ({
+            id: `h-${c.id}`,
+            content: c.header as string,
+            columnId: c.id,
           })),
         ],
       },

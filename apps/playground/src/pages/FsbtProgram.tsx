@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useRef, useState } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { CellChange, ColumnDef } from '@better-grid/core';
+import { timeSeries } from '@better-grid/core';
 import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin, gantt, rowActions, RowActionIcons, validation } from '@better-grid/plugins';
 import type { RowAction } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
@@ -29,8 +30,27 @@ interface ProgramRow {
 // Base month: Aug 2023 (month index 0). 39 months total (Aug 2023 – Oct 2026).
 // ---------------------------------------------------------------------------
 
-const BASE_YEAR = 2023;
-const BASE_MONTH = 7; // August (0-indexed)
+// Monthly columns: Aug 2023 – Oct 2026 (39 months) with date↔index helpers
+const ts = timeSeries({
+  start: '2023-08-01',
+  end: '2026-10-01',
+  locale: 'en-AU',
+  columnWidth: 111,
+  columnDefaults: {
+    align: 'center' as never,
+    cellType: 'gantt' as never,
+    editable: false,
+  },
+});
+
+function toColIndex(dateStr: string): number {
+  if (!dateStr) return -1;
+  return ts.toIndex(dateStr);
+}
+
+function columnToDate(colIndex: number): string {
+  return ts.toDate(colIndex);
+}
 
 /** Convert "Mon YY" (e.g. "Sep 18", "Mar 25") to YYYY-MM-01 date string (no timezone issues) */
 function parseMonYY(s: string): string {
@@ -40,15 +60,6 @@ function parseMonYY(s: string): string {
   const m = months[parts[0]!] ?? 1;
   const y = 2000 + parseInt(parts[1] || '0', 10);
   return `${y}-${String(m).padStart(2, '0')}-01`;
-}
-
-/** Convert YYYY-MM-DD to month column index (relative to BASE Sep 2018) */
-function toColIndex(dateStr: string): number {
-  if (!dateStr) return -1;
-  const [yStr, mStr] = dateStr.split('-');
-  const y = parseInt(yStr!, 10);
-  const m = parseInt(mStr!, 10) - 1; // 0-indexed
-  return (y - BASE_YEAR) * 12 + m - BASE_MONTH;
 }
 
 let nextId = 100;
@@ -108,16 +119,6 @@ const INITIAL_PROGRAM_DATA: ProgramRow[] = [
 
 const MAX_CUSTOM_ROWS_PER_PARENT = 3;
 
-// Generate monthly columns covering full project range (Aug 2023 – Oct 2026 = 39 months)
-const MONTH_COUNT = 39;
-const months: { key: string; label: string }[] = [];
-for (let i = 0; i < MONTH_COUNT; i++) {
-  const d = new Date(BASE_YEAR, BASE_MONTH + i);
-  const key = `m_${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, '0')}`;
-  const label = d.toLocaleString('en-AU', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2);
-  months.push({ key, label });
-}
-
 /** Format YYYY-MM-DD to "Mon yy" (e.g. "Sept 18") — timezone-safe */
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','June','July','Aug','Sept','Oct','Nov','Dec'];
 function formatMonYY(dateStr: string): string {
@@ -126,12 +127,6 @@ function formatMonYY(dateStr: string): string {
   if (!yStr || !mStr) return dateStr;
   const m = parseInt(mStr, 10) - 1;
   return `${MONTH_NAMES[m] ?? mStr} ${yStr.slice(2)}`;
-}
-
-function columnToDate(colIndex: number): string {
-  const y = BASE_YEAR + Math.floor((BASE_MONTH + colIndex) / 12);
-  const m = (BASE_MONTH + colIndex) % 12;
-  return `${y}-${String(m + 1).padStart(2, '0')}-01`;
 }
 
 function coerceDuration(value: unknown): number | null {
@@ -400,16 +395,8 @@ export function FsbtProgram() {
         container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
       },
     },
-    // ── Monthly Gantt columns (100px each) ────────────────────────────
-    ...months.map(m => ({
-      id: m.key,
-      accessorKey: m.key,
-      header: m.label,
-      align: 'center' as const,
-      width: 111,
-      cellType: 'gantt' as const,
-      editable: false,
-    })),
+    // ── Monthly Gantt columns (111px each) ────────────────────────────
+    ...ts.columns,
   ], []);
 
   const plugins = useMemo(

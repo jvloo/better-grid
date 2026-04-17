@@ -20,7 +20,7 @@ Monorepo with pnpm workspaces + Turborepo.
 ### Core Design (Better Auth-inspired)
 
 - **Plugin architecture** — features as composable plugins with `$types` for TypeScript inference
-- **`$Infer` pattern** — `typeof grid.$Infer.Row` flows column schema to full type inference
+- **Inference helpers** — `InferRow<typeof grid>` / `InferState<typeof grid>` recover row & state types from the instance
 - **Config-driven DX** — works out of the box with `createGrid()`, one function call
 - **Framework adapters** — thin reactivity wrappers (~50 lines each)
 - **cellType registry** — plugins register renderers via `registerCellType()`; core just dispatches

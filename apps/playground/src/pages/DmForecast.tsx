@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
+import { timeSeries } from '@better-grid/core';
 import { formatting, editing, sorting, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
@@ -67,13 +68,19 @@ const data: ForecastRow[] = [
   { id: 31, parentId: 29, type: 'child2', accountCode: 'RV.02', accountName: 'Rental Revenue', escalationRate: 'none', frequency: 'monthly', startDate: '2028-01-01', endDate: '2028-06-30', remainingValue: 0, amountPerFreq: -2000000, totalAmount: -12000000, m_2028_01: -2000000, m_2028_02: -2000000, m_2028_03: -2000000, m_2028_04: -2000000, m_2028_05: -2000000, m_2028_06: -2000000 },
 ];
 
-const months: { key: string; label: string }[] = [];
-for (let i = 0; i < 36; i++) {
-  const d = new Date(2025, 6 + i);
-  const key = `m_${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, '0')}`;
-  const label = d.toLocaleString('en-AU', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2);
-  months.push({ key, label });
-}
+// 36 months: Jul 2025 – Jun 2028
+const ts = timeSeries({
+  start: '2025-07-01',
+  end: '2028-06-01',
+  locale: 'en-AU',
+  fiscalYearStart: 7,
+  columnWidth: 90,
+  columnDefaults: {
+    cellType: 'currency' as never,
+    precision: 0,
+    hideZero: true,
+  },
+});
 
 function buildNetTotalRow(): ForecastRow {
   const roots = data.filter(r => r.parentId === null);
@@ -91,16 +98,16 @@ function buildNetTotalRow(): ForecastRow {
     amountPerFreq: 0,
     totalAmount: roots.reduce((s, r) => s + r.totalAmount, 0),
   };
-  for (const m of months) {
+  for (const col of ts.columns) {
     let sum = 0;
     for (const r of roots) {
-      const val = r[m.key];
+      const val = r[col.id];
       if (typeof val === 'number') sum += val;
     }
     // Also sum from child rows whose parent is a root (roots may not have monthly values directly)
     for (const r of data) {
       if (r.parentId !== null) {
-        const val = r[m.key];
+        const val = r[col.id];
         if (typeof val === 'number') {
           // Check if parent is a root (parentId is in roots list)
           const parentIsRoot = roots.some(root => root.id === r.parentId);
@@ -108,7 +115,7 @@ function buildNetTotalRow(): ForecastRow {
         }
       }
     }
-    if (sum !== 0) row[m.key] = sum;
+    if (sum !== 0) row[col.id] = sum;
   }
   return row;
 }
@@ -152,14 +159,8 @@ export function DmForecast() {
           return style;
         },
       },
-      ...months.map(m => ({
-        id: m.key,
-        accessorKey: m.key,
-        header: m.label,
-        width: 90,
-        cellType: 'currency' as const,
-        precision: 0,
-        hideZero: true,
+      ...ts.columns.map(c => ({
+        ...c,
         editable: true,
         cellStyle: (v: unknown) => {
           if (typeof v === 'number' && v < 0) return { color: '#16a34a' };

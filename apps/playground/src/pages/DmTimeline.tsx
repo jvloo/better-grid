@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
+import { timeSeries } from '@better-grid/core';
 import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin, gantt } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
@@ -57,14 +58,17 @@ const data: TimelineRow[] = [
   { id: 22, parentId: 20, code: '5.2', parentCode: '5', isParent: false, phase: 'Warranty Period', duration: 12, start: '2029-01-01', end: '2029-12-31', variance: 0, status: 'On Time', isCustom: false, collapsed: false, startColumn: 48, endColumn: 59 },
 ];
 
-const months: { key: string; label: string; fy: string }[] = [];
-for (let i = 0; i < 60; i++) {
-  const d = new Date(2025, 0 + i);
-  const key = `m_${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, '0')}`;
-  const label = d.toLocaleString('en-AU', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2);
-  const fy = d.getMonth() >= 6 ? `FY${d.getFullYear() + 1}` : `FY${d.getFullYear()}`;
-  months.push({ key, label, fy });
-}
+// Monthly columns: Jan 2025 – Dec 2029 (60 months, AU FY)
+const ts = timeSeries({
+  start: '2025-01-01',
+  end: '2029-12-01',
+  locale: 'en-AU',
+  fiscalYearStart: 7,
+  columnWidth: 70,
+  columnDefaults: {
+    cellType: 'gantt' as never,
+  },
+});
 
 export function DmTimeline() {
   const columns = useMemo<ColumnDef<TimelineRow>[]>(
@@ -97,13 +101,7 @@ export function DmTimeline() {
           { value: 'Delayed', label: 'Delayed', color: '#991b1b', bg: '#fee2e2', fontWeight: '500' },
         ],
       },
-      ...months.map(m => ({
-        id: m.key,
-        accessorKey: m.key,
-        header: m.label,
-        width: 70,
-        cellType: 'gantt' as const,
-      })),
+      ...ts.columns,
     ],
     [],
   );

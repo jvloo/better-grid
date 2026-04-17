@@ -15,7 +15,7 @@ The data grid market has a gap — no library combines a rich free tier, type-sa
 | Handsontable    | 11             | No (monolithic)     | Yes                 |                          No |
 | RevoGrid        | 4              | No (BasePlugin)     | Yes                 |               No (Pro only) |
 | TanStack Table  | 0 (headless)   | Partial (features)  | Yes                 |                         N/A |
-| **Better Grid** | **6+ (MIT)**   | **Yes ($Infer)**    | **Yes**             |                     **Yes** |
+| **Better Grid** | **6+ (MIT)**   | **Yes (InferRow)**  | **Yes**             |                     **Yes** |
 
 ## Features
 
@@ -102,7 +102,7 @@ function MyGrid({ data }: { data: Row[] }) {
 
 Inspired by [Better Auth](https://better-auth.com):
 
-- **Type-safe plugin composition** — composable, tree-shakeable plugins with `$Infer` pattern for full TypeScript inference
+- **Type-safe plugin composition** — composable, tree-shakeable plugins with `InferRow<typeof grid>` for full TypeScript inference
 - **Framework-agnostic** — vanilla TS core, thin framework adapters
 - **Works out of the box** — sensible defaults, zero config needed
 - **AI-ready** — composable AI plugins with free NL filtering (planned)

@@ -29,10 +29,17 @@ import { createEmptySelection, createCellSelection, extendSelection, addRangeToS
 import { navigateCell, navigateTab, getNavigationDirection } from './keyboard/navigation';
 import { computeZoneDimensions } from './virtualization/layout';
 import { createFilterPanel, type FilterApi } from './ui/filter-panel';
-import { createContextMenu, type MenuItem } from './ui/context-menu';
+import { createContextMenu } from './ui/context-menu';
 import { createTooltip } from './ui/tooltip';
 import { startColumnResize as startColumnResizeDrag } from './ui/column-resize';
 import { startFreezeClipDrag as startFreezeClipDragUI } from './ui/freeze-clip-drag';
+import { scrollCellIntoView as scrollCellIntoViewUI } from './ui/scroll-into-view';
+import {
+  buildHeaderContextMenuItems,
+  type HeaderContextMenuSortApi,
+  type HeaderContextMenuFilterApi,
+  type HeaderContextMenuFilter,
+} from './ui/header-context-menu';
 import { createHeaderRenderer, type HeaderRenderer } from './rendering/headers';
 import { createPinnedRowRenderer, getPinnedRowsHeight } from './rendering/pinned-rows';
 import { buildHierarchyState, buildInitialExpandedSet } from './hierarchy/build';
@@ -730,35 +737,16 @@ export function createGrid<
   // ---------------------------------------------------------------------------
 
   function scrollCellIntoView(cell: CellPosition): void {
-    if (!fakeScrollbar) return;
-
     const measurements = virtualization.getMeasurements();
-    const rowTop = measurements.rowOffsets[cell.rowIndex]!;
-    const rowBottom = measurements.rowOffsets[cell.rowIndex + 1]!;
-    const colLeft = measurements.colOffsets[cell.colIndex]!;
-    const colRight = measurements.colOffsets[cell.colIndex + 1]!;
-
-    const viewTop = fakeScrollbar.scrollTop;
-    const viewBottom = viewTop + (fakeScrollbar?.clientHeight ?? 0) - headerHeight;
-    const viewLeft = fakeScrollbar.scrollLeft;
-    const viewRight = viewLeft + (viewport?.clientWidth ?? 0);
-
-    // Vertical scroll
-    if (rowTop < viewTop) {
-      fakeScrollbar.scrollTop = rowTop;
-    } else if (rowBottom > viewBottom) {
-      fakeScrollbar.scrollTop = rowBottom - (fakeScrollbar?.clientHeight ?? 0) + headerHeight;
-    }
-
-    // Horizontal scroll (skip if frozen column)
-    const state = store.getState();
-    if (cell.colIndex >= state.frozenLeftColumns) {
-      if (colLeft < viewLeft) {
-        fakeScrollbar.scrollLeft = colLeft;
-      } else if (colRight > viewRight) {
-        fakeScrollbar.scrollLeft = colRight - (viewport?.clientWidth ?? 0);
-      }
-    }
+    scrollCellIntoViewUI({
+      cell,
+      fakeScrollbar,
+      viewport,
+      colOffsets: measurements.colOffsets,
+      rowOffsets: measurements.rowOffsets,
+      headerHeight,
+      frozenLeftColumns: store.getState().frozenLeftColumns,
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -818,68 +806,22 @@ export function createGrid<
 
   function showHeaderContextMenu(event: MouseEvent, columnId: string): void {
     dismissContextMenu();
-    const items: MenuItem[] = [];
+    const sortApi = pluginRegistry.getPlugin<HeaderContextMenuSortApi>('sorting');
+    const filterApi = pluginRegistry.getPlugin<HeaderContextMenuFilterApi>('filtering');
 
-    // Sorting items
-    const sortApi = pluginRegistry.getPlugin<{
-      getSortState: () => { columnId: string; direction: string }[];
-      clearSort: () => void;
-      toggleSort: (id: string, multi?: boolean) => void;
-    }>('sorting');
-    if (sortApi) {
-      const sorted = sortApi.getSortState();
-      const colSorted = sorted.find((s) => s.columnId === columnId);
-      items.push(
-        { label: 'Sort Ascending', action: () => { sortApi.clearSort(); sortApi.toggleSort(columnId); }, active: colSorted?.direction === 'asc' },
-        { label: 'Sort Descending', action: () => { sortApi.clearSort(); sortApi.toggleSort(columnId); sortApi.toggleSort(columnId); }, active: colSorted?.direction === 'desc' },
-      );
-      if (colSorted) {
-        items.push({ label: 'Clear Sort', action: () => {
-          // Remove just this column's sort by re-applying without it
-          const remaining = sorted.filter((s) => s.columnId !== columnId);
-          sortApi.clearSort();
-          for (const s of remaining) {
-            sortApi.toggleSort(s.columnId, true);
-            if (s.direction === 'desc') sortApi.toggleSort(s.columnId, true);
-          }
-        }});
-      }
-      if (sorted.length > 1) {
-        items.push({ label: 'Clear All Sorts', action: () => sortApi.clearSort() });
-      }
-    }
-
-    // Filtering items
-    const filterApi = pluginRegistry.getPlugin<{
-      getFilters: () => { columnId: string }[];
-      setFilter: (id: string, value: unknown, op?: string) => void;
-      removeFilter: (id: string) => void;
-      clearFilters: () => void;
-    }>('filtering');
-    if (filterApi) {
-      const filtered = filterApi.getFilters();
-      const colFiltered = filtered.find((f) => f.columnId === columnId);
-
-      if (items.length > 0) {
-        items.push({ label: '─', action: () => {} });
-      }
-
-      items.push({
-        label: colFiltered ? 'Change Filter...' : 'Filter...',
-        action: () => {
-          dismissContextMenu();
-          showFilterPanel(event, columnId, colFiltered as { columnId: string; value: unknown; operator: string } | undefined);
-        },
-        active: !!colFiltered,
-      });
-
-      if (colFiltered) {
-        items.push({ label: 'Clear Filter', action: () => filterApi.removeFilter(columnId) });
-      }
-      if (filtered.length > 0) {
-        items.push({ label: 'Clear All Filters', action: () => filterApi.clearFilters() });
-      }
-    }
+    const items = buildHeaderContextMenuItems({
+      columnId,
+      sortApi,
+      filterApi,
+      onOpenFilterPanel: (colFiltered: HeaderContextMenuFilter | undefined) => {
+        dismissContextMenu();
+        showFilterPanel(
+          event,
+          columnId,
+          colFiltered as { columnId: string; value: unknown; operator: string } | undefined,
+        );
+      },
+    });
 
     contextMenu.show(event, items);
   }
