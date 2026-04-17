@@ -282,10 +282,10 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard'> {
 
       /** Parse a pasted string value into the column's expected data type */
       function parsePasteValue(raw: string, column: ColumnDef, oldValue: unknown): unknown {
-        // Custom valueModifier.parse takes priority
-        if (column.valueModifier?.parse) {
+        // Custom valueParser takes priority
+        if (column.valueParser) {
           try {
-            const parsed = column.valueModifier.parse(raw);
+            const parsed = column.valueParser(raw);
             if (parsed !== undefined) return parsed;
           } catch { /* fall through */ }
         }

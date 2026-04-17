@@ -129,7 +129,7 @@ export function DmForecast() {
       { id: 'accountCode', accessorKey: 'accountCode', header: 'ID', width: 70, align: 'center' as const },
       { id: 'accountName', accessorKey: 'accountName', header: 'Description', width: 210 },
       {
-        id: 'escalationRate', accessorKey: 'escalationRate', header: 'Escalation', width: 100, editor: 'dropdown' as const,
+        id: 'escalationRate', accessorKey: 'escalationRate', header: 'Escalation', width: 100, cellEditor: 'dropdown' as const,
         options: [
           { label: 'None', value: 'none' },
           { label: 'CPI - 3%', value: 'cpi' },
@@ -137,7 +137,7 @@ export function DmForecast() {
         ],
       },
       {
-        id: 'frequency', accessorKey: 'frequency', header: 'Frequency', width: 100, editor: 'dropdown' as const,
+        id: 'frequency', accessorKey: 'frequency', header: 'Frequency', width: 100, cellEditor: 'dropdown' as const,
         options: [
           { label: 'Monthly', value: 'monthly' },
           { label: 'Quarterly', value: 'quarterly' },

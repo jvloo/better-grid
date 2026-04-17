@@ -172,8 +172,8 @@ export class RenderingPipeline<TData = unknown> {
           cleanup = this.cellTypes.get(column.cellType)!.render(cell, context as AnyCellRenderContext);
         } else if (this.globalCellRenderer) {
           cleanup = this.globalCellRenderer(cell, context);
-        } else if (column.valueModifier?.format) {
-          cell.textContent = column.valueModifier.format(value);
+        } else if (column.valueFormatter) {
+          cell.textContent = column.valueFormatter(value);
         } else {
           cell.textContent = value != null ? String(value) : '';
         }

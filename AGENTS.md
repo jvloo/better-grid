@@ -45,9 +45,9 @@ Identity:    id, accessorKey, accessorFn, header
 Layout:      width, minWidth, maxWidth, resizable
 Alignment:   align ('left'|'center'|'right'), verticalAlign ('top'|'middle'|'bottom')
 Rendering:   cellType ('number'|'currency'|'percent'|'date'|'bigint'|'select'|'boolean'), cellRenderer
-Editing:     editable, editor ('text'|'dropdown'), options, precision
+Editing:     editable, cellEditor ('text'|'dropdown'), options, precision, valueParser
 Sorting:     sortable, comparator
-Formatting:  dateFormat, hideZero, valueModifier ({ format, parse })
+Formatting:  dateFormat, hideZero, valueFormatter
 Validation:  required, rules
 Extension:   meta
 ```

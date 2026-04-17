@@ -117,7 +117,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
         if (fmtApi && column.cellType) {
           return fmtApi.formatValue(value, column.cellType, column as never);
         }
-        if (column.valueModifier?.format) return column.valueModifier.format(value);
+        if (column.valueFormatter) return column.valueFormatter(value);
         if (column.hideZero && value === 0) return '';
         if (typeof value === 'boolean') return value ? 'Yes' : 'No';
         return value != null ? String(value) : '';

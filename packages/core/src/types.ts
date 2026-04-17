@@ -104,8 +104,8 @@ export interface CellTypeRenderer {
 /** Built-in cell types for formatting and editing */
 export type CellType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'bigint' | 'select' | 'boolean' | (string & {});
 
-/** Editor mode override */
-export type EditorType = 'text' | 'dropdown' | 'number' | 'date' | 'autocomplete' | 'masked';
+/** Cell editor mode override */
+export type CellEditorType = 'text' | 'dropdown' | 'number' | 'date' | 'autocomplete' | 'masked';
 
 /** Dropdown option for select/autocomplete columns */
 export interface ColumnOption {
@@ -123,14 +123,6 @@ export interface BadgeOption extends ColumnOption {
   border?: string;
   /** Font weight (e.g. '500', '600', 'bold') */
   fontWeight?: string;
-}
-
-/** Custom value modifier for formatting display and parsing input */
-export interface ValueModifier {
-  /** Format raw value for display (render time) */
-  format?: (value: unknown) => string;
-  /** Parse user input string back to data (edit commit time). Return undefined to keep original value. */
-  parse?: (value: string) => unknown;
 }
 
 export interface ColumnDef<TData = unknown> {
@@ -155,7 +147,7 @@ export interface ColumnDef<TData = unknown> {
 
   // Editing
   editable?: boolean | ((row: TData, column: ColumnDef<TData>) => boolean);
-  editor?: EditorType;
+  cellEditor?: CellEditorType;
   options?: (string | ColumnOption)[];
   precision?: number;
   /** Minimum allowed numeric value (used for ArrowUp/Down clamping) */
@@ -175,8 +167,10 @@ export interface ColumnDef<TData = unknown> {
   dateFormat?: 'short' | 'medium' | 'long' | 'full' | 'iso' | 'month-year' | 'year' | 'time' | 'datetime';
   hideZero?: boolean;
 
-  /** Custom value modifier for formatting display and parsing input */
-  valueModifier?: ValueModifier;
+  /** Format the raw cell value to a display string (render time). */
+  valueFormatter?: (value: unknown) => string;
+  /** Parse a user-entered string back into the cell value (edit commit time). Return undefined to keep the original. */
+  valueParser?: (value: string) => unknown;
 
   // Validation
   required?: boolean;
@@ -353,7 +347,7 @@ export interface GridOptions<
   pinnedTopRows?: TData[];
   pinnedBottomRows?: TData[];
   headerLayout?: HeaderRow[];
-  footerRows?: FooterRow[];
+  footerLayout?: FooterRow[];
   selection?: SelectionOptions;
   virtualization?: VirtualizationOptions;
   hierarchy?: HierarchyConfig<TData>;

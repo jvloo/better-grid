@@ -103,7 +103,7 @@ export function FsbtCost() {
       { id: 'name', accessorKey: 'name', header: 'Phase', width: 236 },
       { id: 'input', accessorKey: 'input', header: 'Input', width: 110, cellType: 'currency' as const, precision: 0, align: 'right' as const, editable: true },
       { id: 'inputNote', accessorKey: 'inputNote', header: '', width: 140 },
-      { id: 'escalation', accessorKey: 'escalation', header: 'Escalation', width: 110, editor: 'dropdown' as const, options: ['none', 'cpi', 'non-cpi'] },
+      { id: 'escalation', accessorKey: 'escalation', header: 'Escalation', width: 110, cellEditor: 'dropdown' as const, options: ['none', 'cpi', 'non-cpi'] },
       { id: 'amount', accessorKey: 'amount', header: 'Amount', width: 110, cellType: 'currency' as const, precision: 0, align: 'right' as const, cellStyle: () => ({ background: '#f5f5f5', fontWeight: '600' }) },
       { id: 'start', accessorKey: 'start', header: 'Start', width: 85, cellType: 'date' as const, dateFormat: 'month-year' as const },
       { id: 'end', accessorKey: 'end', header: 'End', width: 85, cellType: 'date' as const, dateFormat: 'month-year' as const },

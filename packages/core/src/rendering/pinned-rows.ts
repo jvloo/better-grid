@@ -105,7 +105,7 @@ export function createPinnedRowRenderer<TData = unknown>(
           style: { top, left, width, height: rowH },
         };
 
-        // Render priority: column renderer > cell type > valueModifier > default text
+        // Render priority: column renderer > cell type > valueFormatter > default text
         const hidden = column.hideZero && value === 0;
         if (hidden) {
           // skip content
@@ -113,8 +113,8 @@ export function createPinnedRowRenderer<TData = unknown>(
           column.cellRenderer(cell, context);
         } else if (column.cellType && deps.rendering.getCellType(column.cellType)) {
           deps.rendering.getCellType(column.cellType)!.render(cell, context as CellRenderContext);
-        } else if (column.valueModifier?.format) {
-          cell.textContent = column.valueModifier.format(value);
+        } else if (column.valueFormatter) {
+          cell.textContent = column.valueFormatter(value);
         } else {
           cell.textContent = value != null ? String(value) : '';
         }

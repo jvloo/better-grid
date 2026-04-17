@@ -66,12 +66,12 @@ export function ProjectTracker() {
       },
       {
         id: 'assignee', header: 'Assignee', width: 120,
-        editor: 'autocomplete', options: ['Alice', 'Bob', 'Carol', 'David', 'Emma'],
+        cellEditor: 'autocomplete', options: ['Alice', 'Bob', 'Carol', 'David', 'Emma'],
         meta: { allowCreate: true }, sortable: true,
       },
       {
         id: 'priority', header: 'Priority', width: 90,
-        cellType: 'badge', editor: 'dropdown', sortable: true,
+        cellType: 'badge', cellEditor: 'dropdown', sortable: true,
         options: [
           { label: 'High', value: 'High', color: '#c62828', bg: '#ffebee' },
           { label: 'Medium', value: 'Medium', color: '#e65100', bg: '#fff3e0' },
@@ -80,7 +80,7 @@ export function ProjectTracker() {
       },
       {
         id: 'status', header: 'Status', width: 120,
-        cellType: 'badge', editor: 'dropdown', sortable: true,
+        cellType: 'badge', cellEditor: 'dropdown', sortable: true,
         options: [
           { label: 'Todo', value: 'Todo', color: '#666', bg: '#f5f5f5' },
           { label: 'In Progress', value: 'In Progress', color: '#1565c0', bg: '#e3f2fd' },

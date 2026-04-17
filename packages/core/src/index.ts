@@ -15,7 +15,7 @@ export type {
   // Columns
   ColumnDef,
   CellType,
-  EditorType,
+  CellEditorType,
   ColumnOption,
   BadgeOption,
   ColumnValidationRule,

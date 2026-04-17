@@ -324,7 +324,7 @@ export function FsbtProgram() {
     // ── Col 4: Start (left-aligned) ─────────────────────────────────────
     {
       id: 'start', accessorKey: 'start', header: (() => { const el = document.createElement('span'); el.textContent = 'Start'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, placeholder: 'MM/YY',
-      editor: 'masked' as const, mask: 'MM/YY',
+      cellEditor: 'masked' as const, mask: 'MM/YY',
       rules: [
         { validate: (v: unknown) => { if (!v || v === '') return true; const s = String(v); return /^\d{4}-\d{2}-\d{2}$/.test(s) || 'Invalid date'; } },
         { validate: (_v: unknown, row: unknown) => {
@@ -340,26 +340,24 @@ export function FsbtProgram() {
           return true;
         }},
       ],
-      valueModifier: {
-        format: (v: unknown) => {
-          if (!v || typeof v !== 'string') return '';
-          const s = v as string;
-          const [yStr, mStr] = s.split('-');
-          if (!yStr || !mStr) return '';
-          return `${mStr}/${yStr.slice(2)}`;
-        },
-        parse: (v: string) => {
-          const digits = v.replace(/\D/g, '').slice(0, 4);
-          if (digits.length === 0) return '';
-          if (digits.length < 4) return undefined;
+      valueFormatter: (v: unknown) => {
+        if (!v || typeof v !== 'string') return '';
+        const s = v as string;
+        const [yStr, mStr] = s.split('-');
+        if (!yStr || !mStr) return '';
+        return `${mStr}/${yStr.slice(2)}`;
+      },
+      valueParser: (v: string) => {
+        const digits = v.replace(/\D/g, '').slice(0, 4);
+        if (digits.length === 0) return '';
+        if (digits.length < 4) return undefined;
 
-          const month = digits.slice(0, 2);
-          const yearSuffix = digits.slice(2, 4);
-          if (!/^(0[1-9]|1[0-2])$/.test(month)) return undefined;
+        const month = digits.slice(0, 2);
+        const yearSuffix = digits.slice(2, 4);
+        if (!/^(0[1-9]|1[0-2])$/.test(month)) return undefined;
 
-          const year = 2000 + Number(yearSuffix);
-          return `${year}-${month}-01`;
-        },
+        const year = 2000 + Number(yearSuffix);
+        return `${year}-${month}-01`;
       },
       editable: ((row: ProgramRow) => row.parentId !== null) as any,
       cellRenderer: (container, ctx) => {

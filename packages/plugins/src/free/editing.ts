@@ -310,8 +310,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         column: ColumnDef,
         value: unknown,
       ): DropdownOption[] | null {
-        // column.editor: 'text' forces text input, skips all dropdown logic
-        if (column.editor === 'text') return null;
+        // column.cellEditor: 'text' forces text input, skips all dropdown logic
+        if (column.cellEditor === 'text') return null;
 
         // Explicit column.options → always dropdown
         if (Array.isArray(column.options) && column.options.length > 0) {
@@ -369,7 +369,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
         }
 
         // Check if this should be a dropdown or autocomplete
-        const isAutocomplete = column.editor === 'autocomplete';
+        const isAutocomplete = column.cellEditor === 'autocomplete';
         const dropdownOpts = getDropdownOptions(column, originalValue);
 
         // Prepare cell for editing
@@ -393,9 +393,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           activeEditor = createDropdown(cellEl, dropdownOpts, originalValue, column);
         } else {
           // Determine display string for the editor
-          // Use valueModifier.format if available (e.g. date formatting)
+          // Use valueFormatter if available (e.g. date formatting)
           let rawStr = originalValue != null
-            ? (column.valueModifier?.format ? column.valueModifier.format(originalValue) : String(originalValue))
+            ? (column.valueFormatter ? column.valueFormatter(originalValue) : String(originalValue))
             : '';
 
           if (column.cellType === 'bigint') {
@@ -417,14 +417,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
           }
 
           // Check editor type or auto-detect from cellType
-          const isDateEditor = column.editor === 'date' ||
-            (!column.editor && column.cellType === 'date');
-          const isNumberEditor = column.editor === 'number' ||
-            (!column.editor && (column.cellType === 'number' || column.cellType === 'currency'));
+          const isDateEditor = column.cellEditor === 'date' ||
+            (!column.cellEditor && column.cellType === 'date');
+          const isNumberEditor = column.cellEditor === 'number' ||
+            (!column.cellEditor && (column.cellType === 'number' || column.cellType === 'currency'));
 
           const editValue = initialValue ?? rawStr;
 
-          if (column.editor === 'masked' && column.mask) {
+          if (column.cellEditor === 'masked' && column.mask) {
             activeEditor = createMaskedInput(cellEl, rawStr, column.mask, clickEvent);
           } else if (isDateEditor) {
             activeEditor = createDateInput(cellEl, rawStr);
@@ -2004,10 +2004,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing'> {
       ): unknown {
         if (!column) return newValue;
 
-        // Custom valueModifier.parse takes priority over all built-in parsing
-        if (column.valueModifier?.parse) {
+        // Custom valueParser takes priority over all built-in parsing
+        if (column.valueParser) {
           try {
-            const parsed = column.valueModifier.parse(newValue);
+            const parsed = column.valueParser(newValue);
             return parsed !== undefined ? parsed : prevValue;
           } catch {
             return prevValue;

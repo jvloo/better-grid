@@ -60,7 +60,7 @@ function makeColumns(): ColumnDef<EditorRow>[] {
       id: 'quantity',
       header: 'Qty (number)',
       width: 100,
-      editor: 'number',
+      cellEditor: 'number',
       precision: 0,
       rules: [{ validate: (v) => (v as number) > 0 || 'Must be > 0' }],
     },
@@ -86,7 +86,7 @@ function makeColumns(): ColumnDef<EditorRow>[] {
       id: 'assignee',
       header: 'Assignee',
       width: 130,
-      editor: 'autocomplete' as const,
+      cellEditor: 'autocomplete' as const,
       options: ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'],
       meta: { allowCreate: true },
     },
@@ -95,14 +95,12 @@ function makeColumns(): ColumnDef<EditorRow>[] {
       header: 'Weight',
       width: 120,
       align: 'right',
-      valueModifier: {
-        format: (v: unknown) => typeof v === 'number' ? `${v.toFixed(2)} kg` : String(v ?? ''),
-        parse: (s: string) => {
-          const cleaned = s.replace(/[^0-9.\-]/g, '');
-          if (cleaned === '' || cleaned === '-') return undefined;
-          const num = Number(cleaned);
-          return isNaN(num) ? undefined : Math.round(num * 100) / 100;
-        },
+      valueFormatter: (v: unknown) => typeof v === 'number' ? `${v.toFixed(2)} kg` : String(v ?? ''),
+      valueParser: (s: string) => {
+        const cleaned = s.replace(/[^0-9.\-]/g, '');
+        if (cleaned === '' || cleaned === '-') return undefined;
+        const num = Number(cleaned);
+        return isNaN(num) ? undefined : Math.round(num * 100) / 100;
       },
     },
     {
@@ -156,7 +154,7 @@ export function EditorTypes() {
         Name (text, required) | Price (number, auto-detected from currency cellType) |
         Qty (number, explicit editor) | Rate (percent, text with % parsing) |
         Start Date (date, auto-detected) | Category (dropdown) |
-        Assignee (autocomplete, allowCreate) | Weight (valueModifier, "X.XX kg") |
+        Assignee (autocomplete, allowCreate) | Weight (valueFormatter/Parser, "X.XX kg") |
         Active (boolean checkbox) | Notes (text)
       </div>
 
