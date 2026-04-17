@@ -1,8 +1,75 @@
 # [WIP] Better Grid
 
-A framework-agnostic, TypeScript-first data grid & spreadsheet library with composable plugin architecture.
+A framework-agnostic, TypeScript-first data grid & spreadsheet library with a composable plugin architecture. Ships a virtualized rendering pipeline, range selection, keyboard navigation, and 15+ free plugins (formatting, editing, sorting, filtering, clipboard, export, hierarchy, search, validation, pagination, undo/redo, ...) — without the "Community vs Enterprise" fork.
 
 > **Status**: Early development (v0.0.1). API is unstable.
+
+## Quick Start
+
+```bash
+npm install @better-grid/core @better-grid/react @better-grid/plugins
+```
+
+**React:**
+
+```tsx
+import { BetterGrid } from '@better-grid/react';
+import { formatting, editing, sorting } from '@better-grid/plugins';
+import '@better-grid/core/styles.css';
+
+interface Row {
+  id: number;
+  name: string;
+  amount: number;
+  active: boolean;
+}
+
+function MyGrid({ data }: { data: Row[] }) {
+  return (
+    <BetterGrid<Row>
+      columns={[
+        { id: 'id', header: '#', width: 40 },
+        { id: 'name', header: 'Name', width: 200, editable: true },
+        { id: 'amount', header: 'Amount', width: 150, cellType: 'currency', align: 'right', sortable: true },
+        { id: 'active', header: 'Active', width: 80, align: 'center' },
+      ]}
+      data={data}
+      frozenLeftColumns={1}
+      selection={{ mode: 'range' }}
+      plugins={[
+        formatting({ locale: 'en-US', currencyCode: 'USD' }),
+        editing({ editTrigger: 'dblclick' }),
+        sorting(),
+      ]}
+      height={400}
+    />
+  );
+}
+```
+
+**Vanilla TypeScript** (no framework):
+
+```ts
+import { createGrid } from '@better-grid/core';
+import { formatting, sorting } from '@better-grid/plugins';
+import '@better-grid/core/styles.css';
+
+const grid = createGrid<Row>({
+  columns: [
+    { id: 'name', header: 'Name', width: 200 },
+    { id: 'amount', header: 'Amount', cellType: 'currency', align: 'right' },
+  ],
+  data,
+  plugins: [formatting({ locale: 'en-US', currencyCode: 'USD' }), sorting()],
+});
+
+grid.mount(document.getElementById('grid-host')!);
+```
+
+## Migrating from another grid?
+
+- [From AG Grid](docs/migration-from-ag-grid.md) — column-def + grid-options cheat sheet
+- [From TanStack Table](docs/migration-from-tanstack-table.md) — rendering-included vs headless cheat sheet
 
 ## Why Better Grid?
 
@@ -56,47 +123,6 @@ The data grid market has a gap — no library combines a rich free tier, type-sa
 
 - **MCP Server** — AI-assisted column config, schema inference, migration from other grids
 - **AI Plugin** — natural language filtering, data summarization, smart suggestions
-
-## Quick Start
-
-```bash
-npm install @better-grid/core @better-grid/react @better-grid/plugins
-```
-
-```tsx
-import { BetterGrid } from '@better-grid/react';
-import { formatting, editing, sorting } from '@better-grid/plugins';
-import '@better-grid/core/styles.css';
-
-interface Row {
-  id: number;
-  name: string;
-  amount: number;
-  active: boolean;
-}
-
-function MyGrid({ data }: { data: Row[] }) {
-  return (
-    <BetterGrid<Row>
-      columns={[
-        { id: 'id', header: '#', width: 40 },
-        { id: 'name', header: 'Name', width: 200 },
-        { id: 'amount', header: 'Amount', width: 150, cellType: 'currency', align: 'right' },
-        { id: 'active', header: 'Active', width: 80, align: 'center' },
-      ]}
-      data={data}
-      frozenLeftColumns={1}
-      selection={{ mode: 'range' }}
-      plugins={[
-        formatting({ locale: 'en-US', currencyCode: 'USD' }),
-        editing({ editTrigger: 'dblclick' }),
-        sorting(),
-      ]}
-      height={400}
-    />
-  );
-}
-```
 
 ## Design Philosophy
 
