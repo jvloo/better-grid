@@ -4,6 +4,11 @@
 
 import type { ColumnDef } from '../types';
 
+// Minimal ambient `process` declaration so bundlers can statically dead-code
+// eliminate dev-mode warnings when consumers build with NODE_ENV=production.
+// Avoids pulling in @types/node for a library target.
+declare const process: { env: { NODE_ENV?: string } };
+
 const DEFAULT_WIDTH = 100;
 const DEFAULT_MIN_WIDTH = 50;
 
@@ -13,6 +18,17 @@ export class ColumnManager<TData = unknown> {
   private readonlyCols = new Set<number>();
 
   setColumns(columns: ColumnDef<TData>[]): void {
+    // Dev-mode: detect duplicate column ids before normalization
+    if (process.env.NODE_ENV !== 'production') {
+      const seen = new Set<string>();
+      for (const col of columns) {
+        if (seen.has(col.id)) {
+          throw new Error(`[better-grid] Duplicate column id: "${col.id}". Each column must have a unique id.`);
+        }
+        seen.add(col.id);
+      }
+    }
+
     // Normalize columns: default accessorKey, validate widths
     this.columns = columns.map((col) => {
       const normalized = !col.accessorKey && !col.accessorFn
@@ -30,6 +46,35 @@ export class ColumnManager<TData = unknown> {
     this.readonlyCols.clear();
     for (let i = 0; i < this.columns.length; i++) {
       if (this.columns[i]?.editable === false) this.readonlyCols.add(i);
+    }
+  }
+
+  /**
+   * Dev-mode validation: warn when a column's `accessorKey` doesn't exist on a sample row.
+   * Skips columns that use `accessorFn` (explicit opt-out) and columns where accessorKey
+   * matches the column id (auto-fill in setColumns — user didn't pick it explicitly).
+   *
+   * Pass the user's original column defs so we can tell which accessorKeys were user-provided
+   * vs auto-filled. The sample row is typically `options.data[0]`.
+   */
+  validateAgainstSample(
+    originalColumns: ColumnDef<TData>[],
+    sampleRow: TData,
+  ): void {
+    if (process.env.NODE_ENV === 'production') return;
+    if (sampleRow == null || typeof sampleRow !== 'object') return;
+
+    const rowKeys = new Set(Object.keys(sampleRow as Record<string, unknown>));
+    for (const col of originalColumns) {
+      if (col.accessorFn) continue; // Opting out of key-based access
+      if (!col.accessorKey) continue; // No key provided, will auto-fill from id
+      // Auto-fill fallthrough: skip when accessorKey === id (user didn't pick it explicitly)
+      if (col.accessorKey === col.id) continue;
+      if (!rowKeys.has(col.accessorKey)) {
+        console.warn(
+          `[better-grid] Column "${col.id}": accessorKey "${col.accessorKey}" not found on the first data row.`,
+        );
+      }
     }
   }
 

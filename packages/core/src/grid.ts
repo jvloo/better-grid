@@ -46,6 +46,10 @@ import { buildHierarchyState, buildInitialExpandedSet } from './hierarchy/build'
 
 import { snapToDevicePixel } from './utils';
 
+// Minimal ambient `process` declaration so bundlers can statically dead-code
+// eliminate dev-mode warnings when consumers build with NODE_ENV=production.
+declare const process: { env: { NODE_ENV?: string } };
+
 const DEFAULT_ROW_HEIGHT = 40;
 const DEFAULT_HEADER_HEIGHT = 40;
 
@@ -105,6 +109,15 @@ export function createGrid<
 
   // Initialize columns
   columnManager.setColumns(options.columns);
+
+  // Dev-mode: warn when a column's accessorKey isn't a property on the first data row.
+  // Deferred to after setColumns so we can compare against the user-provided (non-normalized)
+  // columns and skip the auto-fill fallthrough case.
+  if (process.env.NODE_ENV !== 'production') {
+    if (options.data.length > 0) {
+      columnManager.validateAgainstSample(options.columns, options.data[0] as TData);
+    }
+  }
 
   // Initialize state store (use normalized columns from manager)
   const initialState: GridState<TData> = {
@@ -871,6 +884,29 @@ export function createGrid<
   const instance: GridInstance<TData> = {
     mount(el: HTMLElement): void {
       if (mounted) instance.unmount();
+
+      // Dev-mode: warn about cellTypes that no plugin has registered. Plugins are
+      // initialized at createGrid time (or via addPlugin), so by mount time all
+      // built-in + user-added plugin cellType renderers should be in the pipeline.
+      // This is only a warning — a cellType might still be registered later via addPlugin.
+      if (process.env.NODE_ENV !== 'production') {
+        const BUILTIN_CELL_TYPES = new Set([
+          'text', 'number', 'currency', 'percent', 'date', 'bigint', 'select', 'boolean',
+        ]);
+        const warned = new Set<string>();
+        for (const col of columnManager.getColumns()) {
+          const ct = col.cellType;
+          if (!ct) continue;
+          if (BUILTIN_CELL_TYPES.has(ct)) continue;
+          if (rendering.getCellType(ct)) continue;
+          if (warned.has(ct)) continue;
+          warned.add(ct);
+          console.warn(
+            `[better-grid] Column "${col.id}": cellType "${ct}" is not built-in and no plugin has registered a renderer for it.`,
+          );
+        }
+      }
+
       container = el;
       container.classList.add('bg-grid');
       if (options.tableStyle && options.tableStyle !== 'bordered') {
