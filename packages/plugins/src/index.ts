@@ -43,6 +43,7 @@ export type { PaginationOptions, PaginationApi } from './pagination';
 export { grouping } from './grouping';
 export type { GroupingOptions, GroupingApi, GroupRowInfo, BuiltinAggregation, AggregationSpec } from './grouping';
 
+// Builders — pure utilities that generate config, not GridPlugins
 export { timeSeries } from './time-series';
 export type { TimeSeriesOptions, TimeSeriesResult } from './time-series';
 

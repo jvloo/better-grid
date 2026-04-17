@@ -1,3 +1,19 @@
+// ============================================================================
+// timeSeries — Column Builder Utility (NOT a GridPlugin)
+//
+// Unlike other files in this package, timeSeries is a pure function that
+// generates column definitions + FY header rows + date↔index helpers.
+// It runs at setup time, has no runtime init, and is composed into your
+// grid config by spreading `.columns` and `.headerRows`.
+//
+// Usage:
+//   const ts = timeSeries({ start: '2025-07-01', end: '2026-06-30', fiscalYearStart: 7 });
+//   const grid = createGrid({ columns: [...fixed, ...ts.columns], headerRows: ts.headerRows });
+//
+// Lives alongside plugins because it's commonly paired with gantt/aggregation,
+// but registers nothing and needs no cleanup.
+// ============================================================================
+
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
 
 export interface TimeSeriesOptions {

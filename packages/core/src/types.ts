@@ -113,6 +113,18 @@ export interface ColumnOption {
   value: string | number | boolean;
 }
 
+/** Badge option for badge cellType — extends ColumnOption with styling */
+export interface BadgeOption extends ColumnOption {
+  /** Text color (e.g. '#166534') */
+  color?: string;
+  /** Background color (e.g. '#dcfce7') */
+  bg?: string;
+  /** CSS border shorthand (e.g. '1px solid #7dd3fc') */
+  border?: string;
+  /** Font weight (e.g. '500', '600', 'bold') */
+  fontWeight?: string;
+}
+
 /** Custom value modifier for formatting display and parsing input */
 export interface ValueModifier {
   /** Format raw value for display (render time) */
@@ -356,11 +368,18 @@ export interface GridOptions<
    * - 'striped': no vertical borders, horizontal borders, alternating row bg (customize with --bg-stripe-bg)
    */
   tableStyle?: 'bordered' | 'borderless' | 'striped';
-  /** Apply styles to rows based on a field value. Avoids repetitive cellStyle functions for report-style grids */
-  rowStyles?: {
-    field: string;
-    styles: Record<string, Record<string, string>>;
-  };
+  /**
+   * Apply styles to rows based on a field value. Avoids repetitive cellStyle functions for report-style grids.
+   * Example: `{ field: 'type', styles: { title: { background: '#eee', fontWeight: '600' } } }`
+   */
+  rowStyles?: RowStylesConfig<TData>;
+}
+
+export interface RowStylesConfig<TData = unknown> {
+  /** Field on the row whose value determines which style preset applies */
+  field: keyof TData & string;
+  /** Style presets keyed by the field's string value. Values are CSS property → value */
+  styles: Record<string, Partial<CSSStyleDeclaration>>;
 }
 
 // ---------------------------------------------------------------------------

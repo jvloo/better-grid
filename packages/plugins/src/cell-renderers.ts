@@ -2,7 +2,7 @@
 // Cell Renderers Plugin — Reusable cell type renderers
 // ============================================================================
 
-import type { GridPlugin, PluginContext, CellTypeRenderer, CellRenderContext } from '@better-grid/core';
+import type { GridPlugin, PluginContext, CellTypeRenderer, CellRenderContext, BadgeOption } from '@better-grid/core';
 
 // ---------------------------------------------------------------------------
 // Badge
@@ -20,9 +20,7 @@ const badgeRenderer: CellTypeRenderer = {
     span.style.lineHeight = 'normal';
     span.style.pointerEvents = 'none';
 
-    const options = context.column.options as
-      | Array<{ label: string; value: string | number | boolean; color?: string; bg?: string; border?: string; fontWeight?: string }>
-      | undefined;
+    const options = context.column.options as BadgeOption[] | undefined;
     const match = options?.find((opt) => opt.value === context.value);
 
     if (match) {
@@ -40,9 +38,7 @@ const badgeRenderer: CellTypeRenderer = {
     container.appendChild(span);
   },
   getStringValue(context: CellRenderContext): string {
-    const options = context.column.options as
-      | Array<{ label: string; value: string | number | boolean }>
-      | undefined;
+    const options = context.column.options as BadgeOption[] | undefined;
     const match = options?.find((opt) => opt.value === context.value);
     return match?.label ?? (context.value != null ? String(context.value) : '');
   },

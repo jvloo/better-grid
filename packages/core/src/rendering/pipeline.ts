@@ -2,7 +2,7 @@
 // Rendering Pipeline — DOM-based cell rendering with pooling
 // ============================================================================
 
-import type { CellRenderContext, CellRenderer, CellTypeRenderer, ColumnDef, Selection } from '../types';
+import type { CellRenderContext, CellRenderer, CellTypeRenderer, ColumnDef, RowStylesConfig, Selection } from '../types';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCellRenderContext = CellRenderContext<any>;
 import type { LayoutMeasurements } from '../virtualization/engine';
@@ -25,7 +25,7 @@ export class RenderingPipeline<TData = unknown> {
   /** Recycled DOM elements ready for reuse — avoids remove()/appendChild() churn */
   private recyclePool: HTMLElement[] = [];
   /** Row style presets from GridOptions.rowStyles */
-  rowStyles: { field: string; styles: Record<string, Record<string, string>> } | undefined;
+  rowStyles: RowStylesConfig<TData> | undefined;
 
   setGlobalCellRenderer(renderer: CellRenderer<TData> | null): void {
     this.globalCellRenderer = renderer;

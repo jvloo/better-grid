@@ -113,16 +113,37 @@ export function aggregation<TData = unknown>(
         }
       }
 
+      // Debounced scheduler: coalesce bursts of data:change events (e.g. paste,
+      // fill handle, bulk edit) into a single aggregation pass per animation frame.
+      let rafHandle = 0;
+      const hasRaf = typeof requestAnimationFrame !== 'undefined';
+      function scheduleRecompute() {
+        if (rafHandle) return;
+        const cb = () => { rafHandle = 0; recompute(); };
+        rafHandle = hasRaf ? requestAnimationFrame(cb) : (setTimeout(cb, 0) as unknown as number);
+      }
+      function cancelScheduled() {
+        if (!rafHandle) return;
+        if (hasRaf) cancelAnimationFrame(rafHandle);
+        else clearTimeout(rafHandle);
+        rafHandle = 0;
+      }
+
       recompute();
 
-      const off1 = ctx.on('data:change', recompute);
-      const off2 = ctx.on('data:set', recompute);
+      const off1 = ctx.on('data:change', scheduleRecompute);
+      const off2 = ctx.on('data:set', () => {
+        // data:set replaces all rows — reset the numeric field cache
+        numericFields = null;
+        scheduleRecompute();
+      });
 
       ctx.expose({ recompute });
 
       return () => {
         off1();
         off2();
+        cancelScheduled();
       };
     },
   };

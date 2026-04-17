@@ -1,5 +1,9 @@
 // ============================================================================
 // Export Plugin — CSV & Excel export with full grid feature support
+//
+// Soft dependencies (detected at runtime via ctx.getPluginApi, falls back if absent):
+//   - 'formatting': if present, uses formatValue() for cell text; otherwise raw values
+//   - 'mergeCells':  if present, preserves merged ranges in Excel output
 // ============================================================================
 
 import type { GridPlugin, PluginContext, ColumnDef } from '@better-grid/core';
