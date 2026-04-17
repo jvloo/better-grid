@@ -66,10 +66,55 @@ export function createHeaderRenderer<TData = unknown>(
   deps: HeaderRendererDeps,
 ): HeaderRenderer<TData> {
   let rendered = false;
+  let tooltipDelegationAttached = false;
+
+  // Delegated tooltip handlers — attached once per renderer lifetime on the
+  // header container(s), replacing N per-cell mouseenter/mouseleave pairs.
+  // For a 60-column, 2-row header that's 240 fewer listeners.
+  // Uses mouseover/mouseout (bubble) since mouseenter/mouseleave don't bubble.
+  function onHeaderOver(event: MouseEvent): void {
+    const target = event.target as Element | null;
+    if (!target) return;
+    const cell = target.closest('.bg-header-cell') as HTMLElement | null;
+    if (!cell) return;
+    // Ignore transitions that stay within the same cell (mouseover bubbles
+    // up from child elements like the text span and the filter button).
+    const related = event.relatedTarget as Node | null;
+    if (related && cell.contains(related)) return;
+    const textSpan = cell.querySelector('.bg-header-cell__text') as HTMLElement | null;
+    if (!textSpan) return;
+    if (textSpan.scrollWidth > textSpan.clientWidth) {
+      deps.tooltip.show(cell, textSpan.textContent ?? '');
+    }
+  }
+
+  function onHeaderOut(event: MouseEvent): void {
+    const target = event.target as Element | null;
+    if (!target) return;
+    const cell = target.closest('.bg-header-cell') as HTMLElement | null;
+    if (!cell) return;
+    // Ignore transitions that stay within the same cell.
+    const related = event.relatedTarget as Node | null;
+    if (related && cell.contains(related)) return;
+    deps.tooltip.dismiss();
+  }
+
+  function attachTooltipDelegation(): void {
+    if (tooltipDelegationAttached) return;
+    tooltipDelegationAttached = true;
+    deps.headerContainer.addEventListener('mouseover', onHeaderOver);
+    deps.headerContainer.addEventListener('mouseout', onHeaderOut);
+    if (deps.frozenHeaderOverlay) {
+      deps.frozenHeaderOverlay.addEventListener('mouseover', onHeaderOver);
+      deps.frozenHeaderOverlay.addEventListener('mouseout', onHeaderOut);
+    }
+  }
 
   function render(state: GridState<TData>, measurements: LayoutMeasurements): void {
     if (!deps.headerContainer) return;
     if (rendered) return;
+
+    attachTooltipDelegation();
 
     rendered = true;
     deps.headerContainer.innerHTML = '';
@@ -316,13 +361,9 @@ export function createHeaderRenderer<TData = unknown>(
     }
     cell.appendChild(textSpan);
 
-    // Show tooltip on hover when text is clipped
-    cell.addEventListener('mouseenter', () => {
-      if (textSpan.scrollWidth > textSpan.clientWidth) {
-        deps.tooltip.show(cell, textSpan.textContent ?? '');
-      }
-    });
-    cell.addEventListener('mouseleave', deps.tooltip.dismiss);
+    // Tooltip on hover (when text is clipped) is handled via a single pair of
+    // delegated mouseover/mouseout listeners on the header container(s).
+    // See attachTooltipDelegation() — no per-cell listener here.
 
     if (opts.columnId) {
       const colId = opts.columnId;
