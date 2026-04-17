@@ -16,7 +16,6 @@ import type {
   Command,
   PluginContext,
   HierarchyConfig,
-  CellRenderContext,
 } from './types';
 import { EventEmitter } from './events/emitter';
 import { StateStore } from './state/store';
@@ -33,6 +32,7 @@ import { createFilterPanel, type FilterApi } from './ui/filter-panel';
 import { createContextMenu, type MenuItem } from './ui/context-menu';
 import { createTooltip } from './ui/tooltip';
 import { createHeaderRenderer, type HeaderRenderer } from './rendering/headers';
+import { createPinnedRowRenderer, getPinnedRowsHeight } from './rendering/pinned-rows';
 import { buildHierarchyState, buildInitialExpandedSet } from './hierarchy/build';
 
 import { snapToDevicePixel } from './utils';
@@ -465,10 +465,14 @@ export function createGrid<
   }
 
   // ---------------------------------------------------------------------------
-  // Pinned row rendering (static, no virtualization)
+  // Pinned row rendering (delegated to rendering/pinned-rows.ts)
   // ---------------------------------------------------------------------------
 
-  // Pinned rows are always re-rendered (cheap: typically 1-3 rows, no virtualization needed)
+  const pinnedRenderer = createPinnedRowRenderer<TData>({
+    rendering,
+    rowHeight: options.rowHeight,
+    rowStyles: options.rowStyles,
+  });
 
   function renderPinnedRows(
     pinnedContainer: HTMLElement,
@@ -478,99 +482,15 @@ export function createGrid<
     startCol?: number,
     endCol?: number,
   ): void {
-    pinnedContainer.innerHTML = '';
-    const colStart = startCol ?? 0;
-    const colEnd = endCol ?? columns.length;
-    if (rows.length === 0) return;
-
-    const rowH = typeof options.rowHeight === 'number' ? options.rowHeight : DEFAULT_ROW_HEIGHT;
-
-    for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
-      const rowData = rows[rowIdx]!;
-      const top = rowIdx * rowH;
-
-      for (let col = colStart; col < colEnd; col++) {
-        const column = columns[col]!;
-        const left = snapToDevicePixel(measurements.colOffsets[col]!);
-        const width = snapToDevicePixel(measurements.colOffsets[col + 1]!) - left;
-
-        const cell = document.createElement('div');
-        cell.className = 'bg-cell bg-cell--pinned';
-        cell.style.position = 'absolute';
-        cell.style.transform = `translate3d(${left}px, ${snapToDevicePixel(top)}px, 0)`;
-        cell.style.width = `${width}px`;
-        cell.style.height = `${rowH}px`;
-        cell.style.lineHeight = `${rowH}px`;
-
-        // Apply column-level alignment
-        cell.style.textAlign = column.align ?? '';
-        cell.style.verticalAlign = column.verticalAlign ?? '';
-
-        // Get value
-        const value = column.accessorFn
-          ? column.accessorFn(rowData, rowIdx)
-          : column.accessorKey
-            ? (rowData as Record<string, unknown>)[column.accessorKey]
-            : undefined;
-
-        // Build context for cellType rendering
-        const context: CellRenderContext<TData> = {
-          rowIndex: rowIdx,
-          colIndex: col,
-          row: rowData,
-          column,
-          value,
-          isSelected: false,
-          isActive: false,
-          style: { top, left, width, height: rowH },
-        };
-
-        // Render priority: column renderer > cell type > valueModifier > default text
-        const hidden = column.hideZero && value === 0;
-        if (hidden) {
-          // skip
-        } else if (column.cellRenderer) {
-          column.cellRenderer(cell, context);
-        } else if (column.cellType && rendering.getCellType(column.cellType)) {
-          rendering.getCellType(column.cellType)!.render(cell, context as CellRenderContext);
-        } else if (column.valueModifier?.format) {
-          cell.textContent = column.valueModifier.format(value);
-        } else {
-          cell.textContent = value != null ? String(value) : '';
-        }
-
-        // Apply row-level style presets
-        if (options.rowStyles) {
-          const fieldVal = String((rowData as Record<string, unknown>)[options.rowStyles.field] ?? '');
-          const rs = options.rowStyles.styles[fieldVal];
-          if (rs) Object.assign(cell.style, rs);
-        }
-
-        // Apply conditional cellStyle / cellClass
-        if (column.cellStyle) {
-          const styles = column.cellStyle(value, rowData);
-          if (styles) Object.assign(cell.style, styles);
-        }
-        if (column.cellClass) {
-          const cls = column.cellClass(value, rowData);
-          if (cls) cell.className += ' ' + cls;
-        }
-
-        pinnedContainer.appendChild(cell);
-      }
-    }
+    pinnedRenderer.render(pinnedContainer, rows, columns, measurements, startCol, endCol);
   }
 
   function getPinnedTopHeight(): number {
-    const state = store.getState();
-    const rowH = typeof options.rowHeight === 'number' ? options.rowHeight : DEFAULT_ROW_HEIGHT;
-    return state.pinnedTopRows.length * rowH;
+    return getPinnedRowsHeight(store.getState().pinnedTopRows.length, options.rowHeight);
   }
 
   function getPinnedBottomHeight(): number {
-    const state = store.getState();
-    const rowH = typeof options.rowHeight === 'number' ? options.rowHeight : DEFAULT_ROW_HEIGHT;
-    return state.pinnedBottomRows.length * rowH;
+    return getPinnedRowsHeight(store.getState().pinnedBottomRows.length, options.rowHeight);
   }
 
   // ---------------------------------------------------------------------------
