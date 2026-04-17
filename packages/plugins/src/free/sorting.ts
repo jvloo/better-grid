@@ -31,7 +31,7 @@ export interface SortingApi {
   toggleSort(columnId: string, multi?: boolean): void;
 }
 
-export function sorting(options?: SortingOptions): GridPlugin<'sorting'> {
+export function sorting(options?: SortingOptions): GridPlugin<'sorting', SortingApi> {
   const config = {
     multiSort: options?.multiSort ?? false,
     maxSortColumns: options?.maxSortColumns ?? 3,

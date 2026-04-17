@@ -10,7 +10,7 @@ export class PluginRegistry {
   private exposedApis = new Map<string, Record<string, unknown>>();
 
   /** Register plugins in dependency order */
-  register(plugins: GridPlugin[]): void {
+  register(plugins: readonly GridPlugin[]): void {
     const sorted = this.topologicalSort(plugins);
     for (const plugin of sorted) {
       this.plugins.set(plugin.id, plugin);
@@ -113,7 +113,7 @@ export class PluginRegistry {
   }
 
   /** Topological sort — ensures plugins init after their dependencies */
-  private topologicalSort(plugins: GridPlugin[]): GridPlugin[] {
+  private topologicalSort(plugins: readonly GridPlugin[]): GridPlugin[] {
     const pluginMap = new Map(plugins.map((p) => [p.id, p]));
     const visited = new Set<string>();
     const result: GridPlugin[] = [];

@@ -55,8 +55,8 @@ const DEFAULT_HEADER_HEIGHT = 40;
 
 export function createGrid<
   TData = unknown,
-  TPlugins extends GridPlugin[] = GridPlugin[],
->(options: GridOptions<TData, TPlugins>): GridInstance<TData> {
+  const TPlugins extends readonly GridPlugin[] = readonly GridPlugin[],
+>(options: GridOptions<TData, TPlugins>): GridInstance<TData, TPlugins> {
   // ---------------------------------------------------------------------------
   // Internal state
   // ---------------------------------------------------------------------------
@@ -881,7 +881,27 @@ export function createGrid<
   // Grid instance
   // ---------------------------------------------------------------------------
 
-  const instance: GridInstance<TData> = {
+  const pluginsProxy = new Proxy(Object.create(null) as Record<string, unknown>, {
+    get(_target, key) {
+      if (typeof key !== 'string') return undefined;
+      return pluginRegistry.getPlugin(key);
+    },
+    has(_target, key) {
+      if (typeof key !== 'string') return false;
+      return pluginRegistry.getPlugin(key) !== undefined;
+    },
+    ownKeys() {
+      return pluginRegistry.getAllPlugins().map((p) => p.id);
+    },
+    getOwnPropertyDescriptor(_target, key) {
+      if (typeof key !== 'string') return undefined;
+      const api = pluginRegistry.getPlugin(key);
+      if (api === undefined) return undefined;
+      return { configurable: true, enumerable: true, value: api, writable: false };
+    },
+  });
+
+  const instance: GridInstance<TData, TPlugins> = {
     mount(el: HTMLElement): void {
       if (mounted) instance.unmount();
 
@@ -1485,6 +1505,7 @@ export function createGrid<
     off: (event, handler) => emitter.off(event, handler),
 
     getPlugin: <T,>(id: string) => pluginRegistry.getPlugin<T>(id),
+    plugins: pluginsProxy as GridInstance<TData, TPlugins>['plugins'],
     getState: () => store.getState(),
     getContainer: () => container,
     getHeaderLayout: () => headerRows,

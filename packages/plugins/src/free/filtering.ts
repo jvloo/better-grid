@@ -28,7 +28,7 @@ export interface FilteringApi {
   clearFilters(): void;
 }
 
-export function filtering(options?: FilteringOptions): GridPlugin<'filtering'> {
+export function filtering(options?: FilteringOptions): GridPlugin<'filtering', FilteringApi> {
   const config = {
     manualFiltering: options?.manualFiltering ?? false,
   };

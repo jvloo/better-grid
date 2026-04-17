@@ -313,7 +313,7 @@ export interface HierarchyState {
 
 export interface GridOptions<
   TData = unknown,
-  TPlugins extends GridPlugin[] = GridPlugin[],
+  TPlugins extends readonly GridPlugin[] = readonly GridPlugin[],
 > {
   columns: ColumnDef<TData>[];
   data: TData[];
@@ -406,9 +406,16 @@ export interface PluginContext<TData = unknown> {
   dismissTooltip(): void;
 }
 
-export interface GridPlugin<TId extends string = string> {
+export interface GridPlugin<TId extends string = string, TApi = unknown> {
   id: TId;
   dependencies?: string[];
+  /**
+   * Phantom marker carrying the plugin's exposed API type for inference.
+   * Never assigned at runtime — plugins declare their API shape in the return
+   * type signature (e.g. `GridPlugin<'sorting', SortingApi>`) so that
+   * `grid.plugins.sorting` can be statically typed via {@link InferPluginApis}.
+   */
+  $api?: TApi;
   $types?: {
     columnDef?: Record<string, unknown>;
     cellState?: Record<string, unknown>;
@@ -434,7 +441,10 @@ export interface GridPlugin<TId extends string = string> {
 // Grid Instance
 // ---------------------------------------------------------------------------
 
-export interface GridInstance<TData = unknown> {
+export interface GridInstance<
+  TData = unknown,
+  TPlugins extends readonly GridPlugin[] = readonly GridPlugin[],
+> {
   mount(container: HTMLElement): void;
   unmount(): void;
   destroy(): void;
@@ -474,6 +484,15 @@ export interface GridInstance<TData = unknown> {
   off<E extends keyof GridEvents<TData>>(event: E, handler: GridEvents<TData>[E]): void;
 
   getPlugin<T>(pluginId: string): T | undefined;
+  /**
+   * Typed access to plugin APIs keyed by plugin id. Populated lazily — reading
+   * an entry returns the API previously published via `ctx.expose(...)`, or
+   * undefined if the plugin hasn't exposed one yet.
+   *
+   * Prefer this over {@link getPlugin} when the plugin tuple is statically known:
+   * `grid.plugins.sorting.getSortState()` infers without a manual type argument.
+   */
+  readonly plugins: InferPluginApis<TPlugins>;
   getState(): GridState<TData>;
   getContainer(): HTMLElement | null;
   getHeaderLayout(): HeaderRow[] | undefined;
@@ -539,11 +558,25 @@ export interface PluginGridApi<TData = unknown> {
  * Extract the row type from a grid instance.
  * Usage: `type Row = InferRow<typeof grid>`
  */
-export type InferRow<G> = G extends GridInstance<infer TData> ? TData : never;
+export type InferRow<G> = G extends GridInstance<infer TData, infer _P> ? TData : never;
 
 /**
  * Extract the grid-state type from a grid instance.
  * Usage: `type State = InferState<typeof grid>`
  */
 export type InferState<G> =
-  G extends GridInstance<infer TData> ? GridState<TData> : never;
+  G extends GridInstance<infer TData, infer _P> ? GridState<TData> : never;
+
+/**
+ * Walk a `readonly GridPlugin[]` tuple and produce a record keyed by each
+ * plugin's literal `id`, with values set to the plugin's declared `$api` type.
+ *
+ * Plugins that don't declare a TApi collapse to `unknown`. A non-literal
+ * `readonly GridPlugin[]` degrades gracefully to `Record<string, unknown>`,
+ * so consumers that don't `as const` (or pass plugins in inline-array position
+ * without the `const` type-parameter modifier) still type-check.
+ */
+export type InferPluginApis<TPlugins extends readonly GridPlugin[] | undefined> =
+  TPlugins extends readonly GridPlugin[]
+    ? { readonly [P in TPlugins[number] as P['id']]: P extends GridPlugin<string, infer TApi> ? TApi : never }
+    : Record<string, unknown>;

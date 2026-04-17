@@ -51,6 +51,7 @@ export type {
   // Type-level inference
   InferRow,
   InferState,
+  InferPluginApis,
 } from './types';
 
 // Selection utilities
