@@ -1058,7 +1058,8 @@ export function createGrid<
       // Sits behind viewport; scrollbar tracks are exposed at the right/bottom
       // edges where the viewport is sized smaller to leave room.
       fakeScrollbar = document.createElement('div');
-      fakeScrollbar.className = 'bg-grid__scroll'; // keep class for plugin compat
+      // Stable selector — editing, gantt, row-actions plugins all query `.bg-grid__scroll`.
+      fakeScrollbar.className = 'bg-grid__scroll';
       fakeScrollbar.style.position = 'absolute';
       fakeScrollbar.style.inset = '0';
       fakeScrollbar.style.overflow = 'auto';

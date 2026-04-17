@@ -1970,10 +1970,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       // -----------------------------------------------------------------------
 
       function getPrecision(column: ColumnDef): number | undefined {
-        // First-class column.precision, then legacy meta.precision, then global config
         if (typeof column.precision === 'number') return column.precision;
-        const metaPrecision = column.meta?.precision;
-        if (typeof metaPrecision === 'number') return metaPrecision;
         return config.precision;
       }
 
