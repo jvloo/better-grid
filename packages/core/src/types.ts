@@ -413,13 +413,6 @@ export interface KeyBinding {
   priority?: number;
 }
 
-export interface CellDecorator {
-  id: string;
-  priority?: number;
-  decorate(cell: HTMLElement, context: CellRenderContext): void;
-  cleanup?(cell: HTMLElement): void;
-}
-
 export interface Command {
   id: string;
   execute(payload: unknown): void;
@@ -427,12 +420,11 @@ export interface Command {
 }
 
 export interface PluginContext<TData = unknown> {
-  grid: GridInstance<TData>;
+  grid: PluginGridApi<TData>;
   store: import('./state/store').StateStore<TData>;
   on<E extends keyof GridEvents<TData>>(event: E, handler: GridEvents<TData>[E]): () => void;
   emit<E extends keyof GridEvents<TData>>(event: E, ...args: Parameters<GridEvents<TData>[E]>): void;
   registerKeyBinding(binding: KeyBinding): () => void;
-  registerCellDecorator(decorator: CellDecorator): () => void;
   registerCellType(type: string, renderer: CellTypeRenderer): () => void;
   registerCommand(command: Command): void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -527,4 +519,50 @@ export interface GridInstance<
 
   batch(fn: () => void): void;
   refresh(): void;
+}
+
+// ---------------------------------------------------------------------------
+// Plugin Grid API (narrow subset of GridInstance for plugins)
+// ---------------------------------------------------------------------------
+
+/**
+ * The methods plugins are allowed to call on the grid.
+ * Deliberately narrower than GridInstance — excludes lifecycle (mount/unmount/destroy),
+ * the raw event emitter (on/off — use ctx.on/ctx.emit instead), plugin lookup
+ * (getPlugin — use ctx.getPluginApi), and type-only $Infer.
+ *
+ * If you're writing a plugin and need a method not on this type, consider whether
+ * the grid should expose it or whether the plugin is reaching too far.
+ */
+export interface PluginGridApi<TData = unknown> {
+  // Data access
+  getData(): TData[];
+  setData(data: TData[]): void;
+  updateCell(rowIndex: number, columnId: string, value: unknown): void;
+
+  // Columns
+  getColumns(): ColumnDef<TData>[];
+
+  // State
+  getState(): GridState<TData>;
+
+  // Rendering
+  refresh(): void;
+  getContainer(): HTMLElement | null;
+  getHeaderRows(): HeaderRow[] | undefined;
+
+  // Selection
+  setSelection(selection: Selection): void;
+
+  // Scrolling
+  scrollTo(row: number, column?: number): void;
+
+  // Pinned rows
+  setPinnedTopRows(rows: TData[]): void;
+  setPinnedBottomRows(rows: TData[]): void;
+
+  // Hierarchy (only relevant when hierarchy config is set)
+  toggleRow(rowId: string | number): void;
+  expandAll(): void;
+  collapseAll(): void;
 }

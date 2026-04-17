@@ -6,7 +6,6 @@ export type {
   GridPlugin,
   PluginContext,
   KeyBinding,
-  CellDecorator,
   CellTypeRenderer,
   Command,
 } from '../types';

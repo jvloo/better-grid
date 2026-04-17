@@ -977,11 +977,6 @@ export function createGrid<
           if (idx >= 0) keyBindings.splice(idx, 1);
         };
       },
-      registerCellDecorator: () => {
-        // Cell decorator pipeline not yet implemented.
-        // Use cellRenderer on ColumnDef for per-column custom rendering.
-        return () => {};
-      },
       registerCellType: (type, renderer) => {
         const unreg1 = rendering.registerCellType(type, renderer);
         const unreg2 = frozenRendering.registerCellType(type, renderer);

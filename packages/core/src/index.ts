@@ -31,7 +31,6 @@ export type {
   CellRenderContext,
   CellRenderer,
   CellTypeRenderer,
-  CellDecorator,
   // Selection
   Selection,
   SelectionOptions,
@@ -42,6 +41,7 @@ export type {
   // Plugins
   GridPlugin,
   PluginContext,
+  PluginGridApi,
   KeyBinding,
   Command,
   // Hierarchy
