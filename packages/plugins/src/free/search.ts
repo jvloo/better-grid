@@ -29,7 +29,7 @@ interface MatchPosition {
   colIndex: number;
 }
 
-export function search(options?: SearchOptions): GridPlugin<'search'> {
+export function search(options?: SearchOptions): GridPlugin<'search', SearchApi> {
   const caseSensitive = options?.caseSensitive ?? false;
   const matchClass = options?.matchClass ?? 'bg-cell--search-match';
 

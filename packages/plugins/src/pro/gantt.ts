@@ -95,7 +95,7 @@ function getVarianceColor(
 // Plugin factory
 // ---------------------------------------------------------------------------
 
-export function gantt(options?: GanttOptions): GridPlugin<'gantt'> {
+export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
   const barHeightFrac = options?.barHeight ?? 0.5;
   const colors = {
     neutral: options?.colors?.neutral ?? '#2BBDEE',

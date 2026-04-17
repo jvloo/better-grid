@@ -42,7 +42,7 @@ export interface HierarchyApi {
 
 const CHEVRON_SVG = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy'> {
+export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', HierarchyApi> {
   const indentSize = options?.indentSize ?? 20;
   const expandIcon = options?.expandIcon ?? '\u25b8';
   const collapseIcon = options?.collapseIcon ?? '\u25be';

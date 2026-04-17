@@ -15,6 +15,11 @@ export interface AggregationOptions<TData = unknown> {
   pinnedTop?: AggregationRule<TData>[];
 }
 
+export interface AggregationApi {
+  /** Force a recompute of pinned aggregate rows. Called automatically on data changes. */
+  recompute(): void;
+}
+
 type AnyRow = Record<string, unknown>;
 
 function applyBuiltin(fn: string, values: number[]): number {
@@ -82,7 +87,7 @@ function detectNumericFields(data: unknown[]): string[] {
 
 export function aggregation<TData = unknown>(
   options: AggregationOptions<TData>,
-): GridPlugin<'aggregation'> {
+): GridPlugin<'aggregation', AggregationApi> {
   return {
     id: 'aggregation',
 

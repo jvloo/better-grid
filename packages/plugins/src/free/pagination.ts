@@ -28,7 +28,7 @@ export interface PaginationApi {
   lastPage(): void;
 }
 
-export function pagination(options?: PaginationOptions): GridPlugin<'pagination'> {
+export function pagination(options?: PaginationOptions): GridPlugin<'pagination', PaginationApi> {
   const config = {
     pageSize: options?.pageSize ?? 20,
     pageSizeOptions: options?.pageSizeOptions ?? [10, 20, 50, 100],

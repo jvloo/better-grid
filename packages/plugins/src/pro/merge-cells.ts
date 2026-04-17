@@ -28,7 +28,7 @@ export interface MergeCellsApi {
   getMergeAt(row: number, col: number): MergeCellDef | null;
 }
 
-export function mergeCells(options?: MergeCellsOptions): GridPlugin<'mergeCells'> {
+export function mergeCells(options?: MergeCellsOptions): GridPlugin<'mergeCells', MergeCellsApi> {
   return {
     id: 'mergeCells',
 

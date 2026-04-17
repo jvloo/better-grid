@@ -416,6 +416,17 @@ export interface GridPlugin<TId extends string = string, TApi = unknown> {
    * `grid.plugins.sorting` can be statically typed via {@link InferPluginApis}.
    */
   $api?: TApi;
+  /**
+   * Canonical error-code dictionary the plugin may emit. Must be a runtime
+   * object (typically `as const`) so the grid can merge all plugins' codes
+   * into `grid.$errorCodes`. Keys should be SCREAMING_SNAKE_CASE identifiers
+   * and values should mirror the key as a string literal.
+   *
+   * Consumers then narrow against them without magic strings:
+   *
+   *     if (err.code === grid.$errorCodes.REQUIRED_FIELD) { ... }
+   */
+  $errorCodes?: Readonly<Record<string, string>>;
   $types?: {
     columnDef?: Record<string, unknown>;
     cellState?: Record<string, unknown>;
@@ -493,6 +504,14 @@ export interface GridInstance<
    * `grid.plugins.sorting.getSortState()` infers without a manual type argument.
    */
   readonly plugins: InferPluginApis<TPlugins>;
+  /**
+   * Union of error-code dictionaries declared by each registered plugin.
+   * Use instead of string literals so that renaming a code anywhere it's
+   * emitted is caught at compile time:
+   *
+   *     if (err.code === grid.$errorCodes.INVALID_FORMAT) { ... }
+   */
+  readonly $errorCodes: InferPluginErrorCodes<TPlugins>;
   getState(): GridState<TData>;
   getContainer(): HTMLElement | null;
   getHeaderLayout(): HeaderRow[] | undefined;
@@ -580,3 +599,24 @@ export type InferPluginApis<TPlugins extends readonly GridPlugin[] | undefined> 
   TPlugins extends readonly GridPlugin[]
     ? { readonly [P in TPlugins[number] as P['id']]: P extends GridPlugin<string, infer TApi> ? TApi : never }
     : Record<string, unknown>;
+
+/**
+ * Intersect all `$errorCodes` dictionaries declared by a plugin tuple into a
+ * single readonly record. A plugin without `$errorCodes` contributes `{}`
+ * (identity under intersection), so omitting the field costs nothing.
+ *
+ * When `TPlugins` isn't a literal tuple, falls back to `Record<string, string>`
+ * — consumers still get a sane type, just without literal narrowing.
+ */
+export type InferPluginErrorCodes<TPlugins extends readonly GridPlugin[] | undefined> =
+  TPlugins extends readonly GridPlugin[]
+    ? UnionToIntersection<
+        TPlugins[number] extends infer P
+          ? P extends { $errorCodes: infer E }
+            ? E
+            : Record<never, never>
+          : never
+      > extends infer R
+      ? { readonly [K in keyof R]: R[K] }
+      : Record<string, string>
+    : Record<string, string>;

@@ -81,7 +81,7 @@ export interface ExportApi {
   toCsvString(options?: { separator?: string }): string;
 }
 
-export function exportPlugin(options?: ExportOptions): GridPlugin<'export'> {
+export function exportPlugin(options?: ExportOptions): GridPlugin<'export', ExportApi> {
   const config = {
     filename: options?.filename ?? 'export',
     csvSeparator: options?.csvSeparator ?? ',',

@@ -41,13 +41,19 @@ export interface ValidationApi {
   isValid(): boolean;
 }
 
-export function validation(options?: ValidationOptions): GridPlugin<'validation'> {
+export const VALIDATION_ERROR_CODES = {
+  REQUIRED_FIELD: 'REQUIRED_FIELD',
+  VALIDATION_FAILED: 'VALIDATION_FAILED',
+} as const;
+
+export function validation(options?: ValidationOptions): GridPlugin<'validation', ValidationApi> {
   const config = {
     validateOn: options?.validateOn ?? 'commit',
   };
 
   return {
     id: 'validation',
+    $errorCodes: VALIDATION_ERROR_CODES,
 
     init(ctx: PluginContext) {
       const errors = new Map<string, ValidationError>();

@@ -142,3 +142,93 @@ describe('typed plugin accessor', () => {
     grid.destroy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// $errorCodes inference
+// ---------------------------------------------------------------------------
+
+const VALIDATION_CODES = { REQUIRED_FIELD: 'REQUIRED_FIELD', OUT_OF_RANGE: 'OUT_OF_RANGE' } as const;
+const CLIPBOARD_CODES = { READ_ONLY_COLUMN: 'READ_ONLY_COLUMN' } as const;
+
+function validationMock(): GridPlugin<'validation'> {
+  return { id: 'validation', $errorCodes: VALIDATION_CODES };
+}
+function clipboardMock(): GridPlugin<'clipboard'> {
+  return { id: 'clipboard', $errorCodes: CLIPBOARD_CODES };
+}
+function noCodesMock(): GridPlugin<'sorting'> {
+  return { id: 'sorting' };
+}
+
+describe('typed $errorCodes accessor', () => {
+  it('merges declared $errorCodes across plugins at runtime', () => {
+    const grid = createGrid({
+      columns,
+      data: [] as Row[],
+      plugins: [validationMock(), clipboardMock()],
+    });
+
+    expect(grid.$errorCodes.REQUIRED_FIELD).toBe('REQUIRED_FIELD');
+    expect(grid.$errorCodes.READ_ONLY_COLUMN).toBe('READ_ONLY_COLUMN');
+    expect(grid.$errorCodes.OUT_OF_RANGE).toBe('OUT_OF_RANGE');
+
+    grid.destroy();
+  });
+
+  it('Object.keys($errorCodes) returns the union of all declared codes', () => {
+    const grid = createGrid({
+      columns,
+      data: [] as Row[],
+      plugins: [validationMock(), clipboardMock()],
+    });
+
+    expect(Object.keys(grid.$errorCodes).sort()).toEqual(
+      ['OUT_OF_RANGE', 'READ_ONLY_COLUMN', 'REQUIRED_FIELD'],
+    );
+
+    grid.destroy();
+  });
+
+  it('hot-added plugin contributes its $errorCodes immediately', () => {
+    const grid = createGrid({
+      columns,
+      data: [] as Row[],
+      plugins: [validationMock()],
+    });
+
+    expect(grid.$errorCodes.READ_ONLY_COLUMN).toBeUndefined();
+    grid.addPlugin(clipboardMock());
+    expect(grid.$errorCodes.READ_ONLY_COLUMN).toBe('READ_ONLY_COLUMN');
+
+    grid.destroy();
+  });
+
+  it('removePlugin drops that plugin’s codes', () => {
+    const grid = createGrid({
+      columns,
+      data: [] as Row[],
+      plugins: [validationMock(), clipboardMock()],
+    });
+
+    expect(grid.$errorCodes.READ_ONLY_COLUMN).toBe('READ_ONLY_COLUMN');
+    grid.removePlugin('clipboard');
+    expect(grid.$errorCodes.READ_ONLY_COLUMN).toBeUndefined();
+    expect(grid.$errorCodes.REQUIRED_FIELD).toBe('REQUIRED_FIELD');
+
+    grid.destroy();
+  });
+
+  it('infers the merged shape at the type level', () => {
+    const grid = createGrid({
+      columns,
+      data: [] as Row[],
+      plugins: [validationMock(), clipboardMock(), noCodesMock()],
+    });
+
+    expectTypeOf(grid.$errorCodes.REQUIRED_FIELD).toEqualTypeOf<'REQUIRED_FIELD'>();
+    expectTypeOf(grid.$errorCodes.OUT_OF_RANGE).toEqualTypeOf<'OUT_OF_RANGE'>();
+    expectTypeOf(grid.$errorCodes.READ_ONLY_COLUMN).toEqualTypeOf<'READ_ONLY_COLUMN'>();
+
+    grid.destroy();
+  });
+});

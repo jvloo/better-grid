@@ -901,6 +901,50 @@ export function createGrid<
     },
   });
 
+  // `$errorCodes` walks the current plugin set each lookup so addPlugin /
+  // removePlugin reflect immediately without extra bookkeeping. The first
+  // plugin to declare a given key wins — duplicate keys should be rare and
+  // would indicate a name clash that the grid doesn't try to resolve.
+  const errorCodesProxy = new Proxy(Object.create(null) as Record<string, string>, {
+    get(_target, key) {
+      if (typeof key !== 'string') return undefined;
+      for (const plugin of pluginRegistry.getAllPlugins()) {
+        const codes = plugin.$errorCodes;
+        if (codes && Object.prototype.hasOwnProperty.call(codes, key)) {
+          return codes[key];
+        }
+      }
+      return undefined;
+    },
+    has(_target, key) {
+      if (typeof key !== 'string') return false;
+      for (const plugin of pluginRegistry.getAllPlugins()) {
+        if (plugin.$errorCodes && Object.prototype.hasOwnProperty.call(plugin.$errorCodes, key)) {
+          return true;
+        }
+      }
+      return false;
+    },
+    ownKeys() {
+      const seen = new Set<string>();
+      for (const plugin of pluginRegistry.getAllPlugins()) {
+        if (!plugin.$errorCodes) continue;
+        for (const k of Object.keys(plugin.$errorCodes)) seen.add(k);
+      }
+      return Array.from(seen);
+    },
+    getOwnPropertyDescriptor(_target, key) {
+      if (typeof key !== 'string') return undefined;
+      for (const plugin of pluginRegistry.getAllPlugins()) {
+        const codes = plugin.$errorCodes;
+        if (codes && Object.prototype.hasOwnProperty.call(codes, key)) {
+          return { configurable: true, enumerable: true, value: codes[key], writable: false };
+        }
+      }
+      return undefined;
+    },
+  });
+
   const instance: GridInstance<TData, TPlugins> = {
     mount(el: HTMLElement): void {
       if (mounted) instance.unmount();
@@ -1506,6 +1550,7 @@ export function createGrid<
 
     getPlugin: <T,>(id: string) => pluginRegistry.getPlugin<T>(id),
     plugins: pluginsProxy as GridInstance<TData, TPlugins>['plugins'],
+    $errorCodes: errorCodesProxy as GridInstance<TData, TPlugins>['$errorCodes'],
     getState: () => store.getState(),
     getContainer: () => container,
     getHeaderLayout: () => headerRows,

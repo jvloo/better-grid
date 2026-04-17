@@ -68,4 +68,4 @@ export { rowActions, RowActionIcons } from './pro/row-actions';
 export type { RowActionsOptions, RowActionsApi, RowAction } from './pro/row-actions';
 
 export { aggregation } from './pro/aggregation';
-export type { AggregationOptions, AggregationRule } from './pro/aggregation';
+export type { AggregationOptions, AggregationRule, AggregationApi } from './pro/aggregation';

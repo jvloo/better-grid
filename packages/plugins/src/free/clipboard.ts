@@ -249,7 +249,13 @@ function decodeHtmlEntities(str: string): string {
 // Plugin
 // ============================================================================
 
-export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard'> {
+export const CLIPBOARD_ERROR_CODES = {
+  READ_ONLY_COLUMN: 'READ_ONLY_COLUMN',
+  PASTE_SHAPE_MISMATCH: 'PASTE_SHAPE_MISMATCH',
+  CLIPBOARD_UNAVAILABLE: 'CLIPBOARD_UNAVAILABLE',
+} as const;
+
+export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', ClipboardApi> {
   const config = {
     includeHeaders: options?.includeHeaders ?? false,
     separator: options?.separator ?? '\t',
@@ -264,6 +270,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard'> {
 
   return {
     id: 'clipboard',
+    $errorCodes: CLIPBOARD_ERROR_CODES,
 
     init(ctx: PluginContext) {
       // -------------------------------------------------------------------

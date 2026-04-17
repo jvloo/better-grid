@@ -239,7 +239,7 @@ function flattenGroupTree(
 // Plugin factory
 // ---------------------------------------------------------------------------
 
-export function grouping<TData = unknown>(options?: GroupingOptions<TData>): GridPlugin<'grouping'> {
+export function grouping<TData = unknown>(options?: GroupingOptions<TData>): GridPlugin<'grouping', GroupingApi> {
   const indentSize = options?.indentSize ?? 20;
   const expandIcon = options?.expandIcon ?? '\u25b8';
   const collapseIcon = options?.collapseIcon ?? '\u25be';

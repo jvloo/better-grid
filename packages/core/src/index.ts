@@ -52,6 +52,7 @@ export type {
   InferRow,
   InferState,
   InferPluginApis,
+  InferPluginErrorCodes,
 } from './types';
 
 // Selection utilities

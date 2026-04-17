@@ -25,7 +25,7 @@ interface HistoryEntry {
   newValue: unknown;
 }
 
-export function undoRedo(options?: UndoRedoOptions): GridPlugin<'undoRedo'> {
+export function undoRedo(options?: UndoRedoOptions): GridPlugin<'undoRedo', UndoRedoApi> {
   const maxHistory = options?.maxHistory ?? 50;
 
   return {

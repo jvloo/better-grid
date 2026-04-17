@@ -42,7 +42,7 @@ export interface FormattingApi {
   parseValue(displayValue: string, type: string): unknown;
 }
 
-export function formatting(options?: FormattingOptions): GridPlugin<'formatting'> {
+export function formatting(options?: FormattingOptions): GridPlugin<'formatting', FormattingApi> {
   const locale = options?.locale ?? (typeof navigator !== 'undefined' ? navigator.language : 'en-US');
   const decimalPlaces = options?.decimalPlaces ?? 2;
   const currencyCode = options?.currencyCode ?? 'USD';

@@ -70,7 +70,7 @@ const INPUT_CSS = `
 // Chevron SVG for dropdown trigger
 const CHEVRON_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E")`;
 
-export function editing(options?: EditingOptions): GridPlugin<'editing'> {
+export function editing(options?: EditingOptions): GridPlugin<'editing', EditingApi> {
   const config = {
     editTrigger: options?.editTrigger ?? 'dblclick',
     commitOn: options?.commitOn ?? ['enter', 'tab'],
