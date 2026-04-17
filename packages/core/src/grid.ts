@@ -1428,6 +1428,13 @@ export function createGrid<
     getContainer: () => container,
     getHeaderLayout: () => headerRows,
 
+    addPlugin(plugin: GridPlugin): void {
+      pluginRegistry.addPlugin(plugin, createPluginContext);
+    },
+    removePlugin(pluginId: string): void {
+      pluginRegistry.removePlugin(pluginId);
+    },
+
     batch(fn: () => void): void {
       store.batch(fn);
       scheduleRender();

@@ -58,6 +58,60 @@ export class PluginRegistry {
     return [...this.plugins.values()];
   }
 
+  /** Add a single plugin at runtime and initialize it immediately. */
+  addPlugin(
+    plugin: GridPlugin,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    createContext: (plugin: GridPlugin) => PluginContext<any>,
+  ): void {
+    if (this.plugins.has(plugin.id)) {
+      throw new Error(`Plugin '${plugin.id}' is already registered`);
+    }
+
+    // Dependencies must already be installed — runtime adds don't re-sort the graph.
+    for (const dep of plugin.dependencies ?? []) {
+      if (!this.plugins.has(dep)) {
+        throw new Error(`Plugin '${plugin.id}' requires plugin '${dep}' to be installed`);
+      }
+    }
+
+    this.plugins.set(plugin.id, plugin);
+
+    if (plugin.init) {
+      const ctx = createContext(plugin);
+      const cleanup = plugin.init(ctx);
+      if (typeof cleanup === 'function') {
+        this.cleanupFns.set(plugin.id, cleanup);
+      }
+    }
+  }
+
+  /** Remove a plugin at runtime. Runs its cleanup fn and unregisters its API. */
+  removePlugin(pluginId: string): void {
+    if (!this.plugins.has(pluginId)) {
+      throw new Error(`Plugin '${pluginId}' is not registered`);
+    }
+
+    // Another plugin still depends on this one — removal would break its invariants.
+    for (const [otherId, other] of this.plugins) {
+      if (otherId === pluginId) continue;
+      if (other.dependencies?.includes(pluginId)) {
+        throw new Error(
+          `Cannot remove plugin '${pluginId}': plugin '${otherId}' depends on it`,
+        );
+      }
+    }
+
+    const cleanup = this.cleanupFns.get(pluginId);
+    if (cleanup) {
+      cleanup();
+      this.cleanupFns.delete(pluginId);
+    }
+
+    this.exposedApis.delete(pluginId);
+    this.plugins.delete(pluginId);
+  }
+
   /** Topological sort — ensures plugins init after their dependencies */
   private topologicalSort(plugins: GridPlugin[]): GridPlugin[] {
     const pluginMap = new Map(plugins.map((p) => [p.id, p]));

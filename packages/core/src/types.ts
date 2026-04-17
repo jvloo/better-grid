@@ -500,6 +500,9 @@ export interface GridInstance<TData = unknown> {
   getContainer(): HTMLElement | null;
   getHeaderLayout(): HeaderRow[] | undefined;
 
+  addPlugin(plugin: GridPlugin): void;
+  removePlugin(pluginId: string): void;
+
   batch(fn: () => void): void;
   refresh(): void;
 }
