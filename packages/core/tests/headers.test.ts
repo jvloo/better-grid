@@ -195,6 +195,111 @@ describe('createHeaderRenderer', () => {
     expect(deps.onHeaderClick).not.toHaveBeenCalled();
   });
 
+  it('fires tooltip.show via delegated mouseover when header text is clipped', () => {
+    const show = vi.fn();
+    const dismiss = vi.fn();
+    const { headerContainer } = setup(
+      [{ id: 'a', header: 'A very long header label that will clip' } as ColumnDef],
+      { tooltip: { show, dismiss } as unknown as HeaderRendererDeps['tooltip'] },
+    );
+    const cell = headerContainer.querySelector('.bg-header-cell') as HTMLElement;
+    const textSpan = cell.querySelector('.bg-header-cell__text') as HTMLElement;
+
+    // Simulate clipping (happy-dom doesn't provide real layout metrics).
+    Object.defineProperty(textSpan, 'scrollWidth', { value: 200, configurable: true });
+    Object.defineProperty(textSpan, 'clientWidth', { value: 50, configurable: true });
+
+    // Dispatch mouseover from the text span — should bubble up to the
+    // delegated listener on headerContainer.
+    textSpan.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true }));
+    expect(show).toHaveBeenCalledTimes(1);
+    expect(show).toHaveBeenCalledWith(cell, expect.stringContaining('A very long'));
+
+    // Dispatch mouseout leaving the cell — dismiss fires.
+    textSpan.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, cancelable: true }));
+    expect(dismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT re-fire tooltip.show when moving within the same cell (relatedTarget guard)', () => {
+    const show = vi.fn();
+    const dismiss = vi.fn();
+    const { headerContainer } = setup(
+      [{ id: 'a', header: 'Long clipped header' } as ColumnDef],
+      {
+        tooltip: { show, dismiss } as unknown as HeaderRendererDeps['tooltip'],
+        hasFilterPlugin: () => true,
+      },
+    );
+    const cell = headerContainer.querySelector('.bg-header-cell') as HTMLElement;
+    const textSpan = cell.querySelector('.bg-header-cell__text') as HTMLElement;
+    const filterBtn = cell.querySelector('.bg-header-cell__filter-btn') as HTMLElement;
+    Object.defineProperty(textSpan, 'scrollWidth', { value: 200, configurable: true });
+    Object.defineProperty(textSpan, 'clientWidth', { value: 50, configurable: true });
+
+    // Initial entry from outside the cell.
+    textSpan.dispatchEvent(
+      new MouseEvent('mouseover', { bubbles: true, cancelable: true, relatedTarget: document.body }),
+    );
+    expect(show).toHaveBeenCalledTimes(1);
+
+    // Move within the same cell (textSpan -> filterBtn). relatedTarget is
+    // still inside the cell, so show() must NOT be called again, and
+    // dismiss() must NOT be called on the corresponding mouseout.
+    textSpan.dispatchEvent(
+      new MouseEvent('mouseout', { bubbles: true, cancelable: true, relatedTarget: filterBtn }),
+    );
+    filterBtn.dispatchEvent(
+      new MouseEvent('mouseover', { bubbles: true, cancelable: true, relatedTarget: textSpan }),
+    );
+    expect(show).toHaveBeenCalledTimes(1);
+    expect(dismiss).not.toHaveBeenCalled();
+  });
+
+  it('attaches delegated tooltip listeners exactly once per renderer (not per cell)', () => {
+    // Monkey-patch addEventListener on a container to count how many
+    // mouseover/mouseout listeners get attached.
+    const headerContainer = document.createElement('div');
+    const frozenHeaderOverlay = document.createElement('div');
+    document.body.appendChild(headerContainer);
+    document.body.appendChild(frozenHeaderOverlay);
+
+    const counts: Record<string, number> = {};
+    const origAdd = headerContainer.addEventListener.bind(headerContainer);
+    headerContainer.addEventListener = ((type: string, ...rest: unknown[]) => {
+      counts[type] = (counts[type] ?? 0) + 1;
+      // @ts-expect-error — pass-through
+      return origAdd(type, ...rest);
+    }) as typeof headerContainer.addEventListener;
+
+    const deps: HeaderRendererDeps = {
+      headerContainer,
+      frozenHeaderOverlay,
+      headerRows: undefined,
+      headerHeight: 32,
+      singleHeaderRowHeight: 32,
+      tooltip: { show: vi.fn(), dismiss: vi.fn() },
+      hasFilterPlugin: () => false,
+      onHeaderClick: vi.fn(),
+      onHeaderContextMenu: vi.fn(),
+      onFilterButtonClick: vi.fn(),
+      onColumnResize: vi.fn(),
+    } as unknown as HeaderRendererDeps;
+
+    const renderer = createHeaderRenderer(deps);
+    const columns = Array.from({ length: 5 }, (_, i) => ({ id: `c${i}`, header: `H${i}` } as ColumnDef));
+    const widths = columns.map(() => 100);
+    renderer.render(makeState(columns), makeMeasurements(widths));
+
+    // Second render() is no-op (idempotent) — still 1 mouseover + 1 mouseout.
+    renderer.render(makeState(columns), makeMeasurements(widths));
+    // Invalidate + re-render must NOT re-attach.
+    renderer.invalidate();
+    renderer.render(makeState(columns), makeMeasurements(widths));
+
+    expect(counts.mouseover).toBe(1);
+    expect(counts.mouseout).toBe(1);
+  });
+
   it('renders multi-level header rows with group spans', () => {
     const headerRows: HeaderRow[] = [
       {
