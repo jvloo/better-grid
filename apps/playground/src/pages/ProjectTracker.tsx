@@ -158,18 +158,10 @@ export function ProjectTracker() {
     background: '#fff', cursor: 'pointer', fontSize: 12,
   } as const;
 
-  const handleExportCsv = useCallback(() => {
-    grid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv();
-  }, [grid]);
-  const handleExportExcel = useCallback(() => {
-    grid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
-  }, [grid]);
-  const handleUndo = useCallback(() => {
-    grid.getPlugin<{ undo: () => void }>('undoRedo')?.undo();
-  }, [grid]);
-  const handleRedo = useCallback(() => {
-    grid.getPlugin<{ redo: () => void }>('undoRedo')?.redo();
-  }, [grid]);
+  const handleExportCsv = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExportExcel = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
+  const handleUndo = useCallback(() => grid.plugins.undoRedo?.undo(), [grid]);
+  const handleRedo = useCallback(() => grid.plugins.undoRedo?.redo(), [grid]);
 
   return (
     <div>

@@ -152,12 +152,8 @@ export function DmSummary() {
     rowHeight: 44,
   });
 
-  const handleExportCsv = useCallback(() => {
-    grid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv();
-  }, [grid]);
-  const handleExportExcel = useCallback(() => {
-    grid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
-  }, [grid]);
+  const handleExportCsv = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExportExcel = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
 
   const btnStyle = { padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12 } as const;
 

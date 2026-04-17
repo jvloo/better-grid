@@ -139,20 +139,10 @@ export function DmTimeline() {
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
   const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
-  const handleExportCsv = useCallback(() => {
-    grid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv();
-  }, [grid]);
-  const handleExportExcel = useCallback(() => {
-    grid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
-  }, [grid]);
-  const handleUndo = useCallback(() => {
-    const api = grid.getPlugin<{ undo: () => void }>('undoRedo');
-    api?.undo();
-  }, [grid]);
-  const handleRedo = useCallback(() => {
-    const api = grid.getPlugin<{ redo: () => void }>('undoRedo');
-    api?.redo();
-  }, [grid]);
+  const handleExportCsv = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExportExcel = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
+  const handleUndo = useCallback(() => grid.plugins.undoRedo?.undo(), [grid]);
+  const handleRedo = useCallback(() => grid.plugins.undoRedo?.redo(), [grid]);
 
   const btnStyle = { padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12 } as const;
 

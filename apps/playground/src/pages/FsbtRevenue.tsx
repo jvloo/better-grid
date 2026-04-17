@@ -231,33 +231,17 @@ export function FsbtRevenue() {
   // Action Handlers
   // ════════════════════════════════════════════════════════════════════════════
 
-  const handleBtsUndo = useCallback(() => {
-    btsGrid.getPlugin<{ undo: () => void }>('undoRedo')?.undo();
-  }, [btsGrid]);
-  const handleBtsRedo = useCallback(() => {
-    btsGrid.getPlugin<{ redo: () => void }>('undoRedo')?.redo();
-  }, [btsGrid]);
-  const handleBtsCsv = useCallback(() => {
-    btsGrid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv();
-  }, [btsGrid]);
-  const handleBtsExcel = useCallback(() => {
-    btsGrid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
-  }, [btsGrid]);
+  const handleBtsUndo = useCallback(() => btsGrid.plugins.undoRedo?.undo(), [btsGrid]);
+  const handleBtsRedo = useCallback(() => btsGrid.plugins.undoRedo?.redo(), [btsGrid]);
+  const handleBtsCsv = useCallback(() => btsGrid.plugins.export?.exportToCsv(), [btsGrid]);
+  const handleBtsExcel = useCallback(() => btsGrid.plugins.export?.exportToExcel(), [btsGrid]);
 
   const handleHoldingExpandAll = useCallback(() => holdingGrid.expandAll(), [holdingGrid]);
   const handleHoldingCollapseAll = useCallback(() => holdingGrid.collapseAll(), [holdingGrid]);
-  const handleHoldingUndo = useCallback(() => {
-    holdingGrid.getPlugin<{ undo: () => void }>('undoRedo')?.undo();
-  }, [holdingGrid]);
-  const handleHoldingRedo = useCallback(() => {
-    holdingGrid.getPlugin<{ redo: () => void }>('undoRedo')?.redo();
-  }, [holdingGrid]);
-  const handleHoldingCsv = useCallback(() => {
-    holdingGrid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv();
-  }, [holdingGrid]);
-  const handleHoldingExcel = useCallback(() => {
-    holdingGrid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
-  }, [holdingGrid]);
+  const handleHoldingUndo = useCallback(() => holdingGrid.plugins.undoRedo?.undo(), [holdingGrid]);
+  const handleHoldingRedo = useCallback(() => holdingGrid.plugins.undoRedo?.redo(), [holdingGrid]);
+  const handleHoldingCsv = useCallback(() => holdingGrid.plugins.export?.exportToCsv(), [holdingGrid]);
+  const handleHoldingExcel = useCallback(() => holdingGrid.plugins.export?.exportToExcel(), [holdingGrid]);
 
   const btnStyle = { padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12 } as const;
 

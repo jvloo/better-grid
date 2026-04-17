@@ -8,7 +8,7 @@ import { useGrid } from './hooks/useGrid';
 
 export interface BetterGridProps<
   TData = unknown,
-  TPlugins extends GridPlugin[] = GridPlugin[],
+  TPlugins extends readonly GridPlugin[] = readonly GridPlugin[],
 > extends GridOptions<TData, TPlugins> {
   className?: string;
   style?: React.CSSProperties;
@@ -18,7 +18,7 @@ export interface BetterGridProps<
 
 function BetterGridInner<
   TData = unknown,
-  TPlugins extends GridPlugin[] = GridPlugin[],
+  const TPlugins extends readonly GridPlugin[] = readonly GridPlugin[],
 >(props: BetterGridProps<TData, TPlugins>) {
   const { className, style, width, height, ...gridOptions } = props;
   const { containerRef } = useGrid(gridOptions as GridOptions<TData, TPlugins>);

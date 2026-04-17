@@ -145,12 +145,8 @@ export function InventoryTracker() {
     background: '#fff', cursor: 'pointer', fontSize: 12,
   } as const;
 
-  const handleExportCsv = useCallback(() => {
-    grid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv();
-  }, [grid]);
-  const handleExportExcel = useCallback(() => {
-    grid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
-  }, [grid]);
+  const handleExportCsv = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExportExcel = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
 
   return (
     <div>

@@ -17,13 +17,50 @@ Monorepo with pnpm workspaces + Turborepo.
 | `@better-grid/mcp` | MCP server for developer tooling | MIT (future) |
 | `@better-grid/plugin-ai` | AI features: free NL filtering + pro data intelligence | Tiered (future) |
 
-### Core Design (Better Auth-inspired)
+### Core Design
 
 - **Plugin architecture** — features as composable plugins with `$types` for TypeScript inference
-- **Inference helpers** — `InferRow<typeof grid>` / `InferState<typeof grid>` recover row & state types from the instance
+- **Inference helpers** — `InferRow<typeof grid>` / `InferState<typeof grid>` / `InferPluginApis<Plugins>` / `InferPluginErrorCodes<Plugins>` recover row, state, per-plugin API, and error-code types from the instance
+- **Typed plugin accessor** — `grid.plugins.sorting.toggleSort(...)` is statically typed via the `$api` phantom field on each plugin; see "Typed plugins & error codes" below
 - **Config-driven DX** — works out of the box with `createGrid()`, one function call
 - **Framework adapters** — thin reactivity wrappers (~50 lines each)
 - **cellType registry** — plugins register renderers via `registerCellType()`; core just dispatches
+
+### Typed plugins & error codes
+
+Each plugin factory declares its exposed API and optional error-code dictionary in
+its return type:
+
+```ts
+export function sorting(...): GridPlugin<'sorting', SortingApi> { ... }
+export function validation(...): GridPlugin<'validation', ValidationApi> {
+  return {
+    id: 'validation',
+    $errorCodes: { REQUIRED_FIELD: 'REQUIRED_FIELD', VALIDATION_FAILED: 'VALIDATION_FAILED' } as const,
+    init(ctx) { ... ctx.expose(api); },
+  };
+}
+```
+
+`createGrid`'s `const TPlugins` type-parameter preserves the plugins tuple's literal
+types, so consumers get:
+
+```ts
+const grid = createGrid({ plugins: [sorting(), validation()], ... });
+grid.plugins.sorting.toggleSort('name');           // typed SortingApi
+grid.plugins.validation.isValid();                 // typed ValidationApi
+if (err.code === grid.$errorCodes.REQUIRED_FIELD)  // typed 'REQUIRED_FIELD'
+```
+
+Runtime: `grid.plugins` and `grid.$errorCodes` are lazy `Proxy` objects that walk
+the registry on lookup. Hot-added plugins (via `grid.addPlugin`) appear immediately
+at runtime but not in the static type — use `grid.getPlugin<Api>('id')` for those.
+
+When opting a new plugin in:
+1. Export an `*Api` interface with the shape the plugin puts on `ctx.expose(...)`.
+2. Change the factory return type to `GridPlugin<'id', FooApi>`.
+3. If the plugin emits errors, add `$errorCodes: { CODE: 'CODE', ... } as const` to
+   its returned object.
 
 ### Key Internals
 
@@ -45,12 +82,18 @@ Identity:    id, accessorKey, accessorFn, header
 Layout:      width, minWidth, maxWidth, resizable
 Alignment:   align ('left'|'center'|'right'), verticalAlign ('top'|'middle'|'bottom')
 Rendering:   cellType ('number'|'currency'|'percent'|'date'|'bigint'|'select'|'boolean'), cellRenderer
-Editing:     editable, cellEditor ('text'|'dropdown'), options, precision, valueParser
+Editing:     editable, cellEditor ('text'|'dropdown'), options, valueParser
 Sorting:     sortable, comparator
-Formatting:  dateFormat, hideZero, valueFormatter
-Validation:  required, rules
-Extension:   meta
+Formatting:  hideZero, valueFormatter
+Extension:   meta, cellStyle, cellClass
 ```
+
+Plugin-only fields (added via `declare module '@better-grid/core'` augmentation —
+they only exist when the relevant plugin is bundled):
+
+- `editing` → `precision`, `min`, `max`, `placeholder`, `mask`
+- `formatting` → `dateFormat`
+- `validation` → `required`, `rules`
 
 ## Build
 

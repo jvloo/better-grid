@@ -9,18 +9,18 @@ import { createReactAdapter } from '../adapters/react-adapter';
 
 export function useGrid<
   TData = unknown,
-  TPlugins extends GridPlugin[] = GridPlugin[],
+  const TPlugins extends readonly GridPlugin[] = readonly GridPlugin[],
 >(
   options: GridOptions<TData, TPlugins>,
 ): {
-  grid: GridInstance<TData>;
+  grid: GridInstance<TData, TPlugins>;
   containerRef: React.RefCallback<HTMLElement>;
 } {
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
   // Use useRef to create grid instance ONCE — survives StrictMode double-invoke
-  const gridRef = useRef<GridInstance<TData> | null>(null);
+  const gridRef = useRef<GridInstance<TData, TPlugins> | null>(null);
   if (!gridRef.current) {
     gridRef.current = createGrid<TData, TPlugins>(optionsRef.current);
   }

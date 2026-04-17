@@ -85,12 +85,8 @@ export function SearchExport() {
     selection: { mode: 'range' },
   });
 
-  const handleExportCsv = useCallback(() => {
-    grid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv();
-  }, [grid]);
-  const handleExportExcel = useCallback(() => {
-    grid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
-  }, [grid]);
+  const handleExportCsv = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExportExcel = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
 
   const handleSearch = useCallback(() => {
     // Ctrl+F is handled by the search plugin; this button triggers it programmatically

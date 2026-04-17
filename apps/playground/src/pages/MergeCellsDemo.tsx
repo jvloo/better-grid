@@ -97,9 +97,7 @@ export function MergeCellsDemo() {
     selection: { mode: 'range' },
   });
 
-  const handleExcel = useCallback(() => {
-    grid.getPlugin<{ exportToExcel: () => void }>('export')?.exportToExcel();
-  }, [grid]);
+  const handleExcel = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
 
   const btnStyle = {
     padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6,
