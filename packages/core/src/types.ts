@@ -509,14 +509,15 @@ export interface GridInstance<
   on<E extends keyof GridEvents<TData>>(event: E, handler: GridEvents<TData>[E]): () => void;
   off<E extends keyof GridEvents<TData>>(event: E, handler: GridEvents<TData>[E]): void;
 
-  getPlugin<T>(pluginId: string): T | undefined;
   /**
    * Typed access to plugin APIs keyed by plugin id. Populated lazily — reading
    * an entry returns the API previously published via `ctx.expose(...)`, or
    * undefined if the plugin hasn't exposed one yet.
    *
-   * Prefer this over {@link getPlugin} when the plugin tuple is statically known:
-   * `grid.plugins.sorting.getSortState()` infers without a manual type argument.
+   * For plugins declared in the `plugins` tuple passed to `createGrid`, each
+   * field is typed from the plugin's declared `$api`. For plugins added at
+   * runtime via `addPlugin`, read through a cast:
+   * `(grid.plugins as Record<string, MyApi>).foo`.
    */
   readonly plugins: InferPluginApis<TPlugins>;
   /**

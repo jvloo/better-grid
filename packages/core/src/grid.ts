@@ -1548,7 +1548,6 @@ export function createGrid<
     on: (event, handler) => emitter.on(event, handler),
     off: (event, handler) => emitter.off(event, handler),
 
-    getPlugin: <T,>(id: string) => pluginRegistry.getPlugin<T>(id),
     plugins: pluginsProxy as GridInstance<TData, TPlugins>['plugins'],
     $errorCodes: errorCodesProxy as GridInstance<TData, TPlugins>['$errorCodes'],
     getState: () => store.getState(),

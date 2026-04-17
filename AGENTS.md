@@ -54,7 +54,8 @@ if (err.code === grid.$errorCodes.REQUIRED_FIELD)  // typed 'REQUIRED_FIELD'
 
 Runtime: `grid.plugins` and `grid.$errorCodes` are lazy `Proxy` objects that walk
 the registry on lookup. Hot-added plugins (via `grid.addPlugin`) appear immediately
-at runtime but not in the static type — use `grid.getPlugin<Api>('id')` for those.
+at runtime but aren't reflected in the static `InferPluginApis<TPlugins>` type —
+read them through a cast: `(grid.plugins as Record<string, MyApi>).foo`.
 
 When opting a new plugin in:
 1. Export an `*Api` interface with the shape the plugin puts on `ctx.expose(...)`.

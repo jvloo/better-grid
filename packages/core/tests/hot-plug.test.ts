@@ -92,11 +92,12 @@ afterEach(() => {
 describe('hot-pluggable plugins', () => {
   it('addPlugin registers the plugin after creation and exposes its API', () => {
     const grid = createGrid<Row>({ columns, data: seedData() });
-    expect(grid.getPlugin<MiniSortApi>('sorting')).toBeUndefined();
+    const pluginsAsAny = grid.plugins as Record<string, MiniSortApi | undefined>;
+    expect(pluginsAsAny.sorting).toBeUndefined();
 
     grid.addPlugin(miniSorting());
 
-    const api = grid.getPlugin<MiniSortApi>('sorting');
+    const api = pluginsAsAny.sorting;
     expect(api).toBeDefined();
 
     api!.sortBy('value', 'asc');
@@ -108,14 +109,15 @@ describe('hot-pluggable plugins', () => {
 
   it('removePlugin runs cleanup so event listeners no longer fire (no zombie sort)', () => {
     const grid = createGrid<Row>({ columns, data: seedData() });
+    const pluginsAsAny = grid.plugins as Record<string, MiniSortApi | undefined>;
     grid.addPlugin(miniSorting());
-    const api = grid.getPlugin<MiniSortApi>('sorting')!;
+    const api = pluginsAsAny.sorting!;
 
     api.sortBy('value', 'asc');
     expect(grid.getData().map((r) => r.value)).toEqual([10, 20, 30]);
 
     grid.removePlugin('sorting');
-    expect(grid.getPlugin('sorting')).toBeUndefined();
+    expect(pluginsAsAny.sorting).toBeUndefined();
 
     // If the dataChange listener is still alive, this setData would re-sort into [10,20,30].
     const fresh: Row[] = [

@@ -40,8 +40,8 @@ A cheat-sheet for translating AG Grid column definitions and grid options to Bet
 | `onCellValueChanged`                     | `onDataChange` (receives `CellChange[]`)                                                                                                 |
 | `onColumnResized`                        | `onColumnResize(columnId, width)`                                                                                                        |
 | `ModuleRegistry.registerModules([...])`  | `plugins: [editing(), sorting(), filtering(), ...]` — passed as a grid option. No singleton registration.                                |
-| `GridOptions.api.exportDataAsCsv()`      | `grid.getPlugin<{ exportToCsv: () => void }>('export')?.exportToCsv()` — plugins expose their API through `grid.getPlugin(id)`           |
-| `gridOptions.api.undoRedo...`            | `grid.getPlugin<{ undo(): void; redo(): void }>('undoRedo')` (requires `undoRedo()` plugin)                                              |
+| `GridOptions.api.exportDataAsCsv()`      | `grid.plugins.export?.exportToCsv()` — plugins expose APIs on `grid.plugins.<id>`, fully typed from the `plugins` tuple                  |
+| `gridOptions.api.undoRedo...`            | `grid.plugins.undoRedo?.undo()` / `.redo()` (requires `undoRedo()` plugin)                                                               |
 
 ## What's different philosophically
 

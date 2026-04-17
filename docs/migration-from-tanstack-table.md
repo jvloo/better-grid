@@ -32,7 +32,7 @@ A cheat-sheet for translating TanStack Table column definitions and table option
 | `getPaginationRowModel: getPaginationRowModel()`      | `plugins: [pagination({ pageSize: 20 })]`                                                                                                   |
 | `getGroupedRowModel: getGroupedRowModel()`            | `plugins: [grouping({ groupBy: ['dept'] })]`                                                                                                |
 | `getExpandedRowModel: getExpandedRowModel()`          | `plugins: [hierarchy({ indentColumn: 'name' })]` + top-level `hierarchy: { getRowId, getParentId }` option                                  |
-| `state: { sorting, columnFilters, ... }`              | Plugin-local state. Query via `grid.getPlugin<SortingApi>('sorting')?.getSortState()` etc.                                                  |
+| `state: { sorting, columnFilters, ... }`              | Plugin-local state. Query via `grid.plugins.sorting?.getSortState()` etc. (typed from the plugins tuple)                                    |
 | `onSortingChange`                                     | `sorting({ onSortChange: (state) => ... })`                                                                                                 |
 | `onColumnFiltersChange`                               | `filtering({ onFilterChange: (filters) => ... })`                                                                                           |
 | `manualSorting: true`                                 | `sorting({ manualSorting: true })`                                                                                                          |
