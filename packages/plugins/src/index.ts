@@ -1,63 +1,71 @@
 // ============================================================================
 // @better-grid/plugins — Public API
+//
+// free/   — plugins available under the open-source license
+// pro/    — plugins planned for @better-grid/pro (bundled here during development)
 // ============================================================================
 
-export { editing } from './editing';
-export type { EditingOptions, EditingApi } from './editing';
+// --- Free plugins ----------------------------------------------------------
 
-export { sorting } from './sorting';
-export type { SortingOptions, SortingApi, SortState, SortDirection } from './sorting';
+export { editing } from './free/editing';
+export type { EditingOptions, EditingApi } from './free/editing';
 
-export { filtering } from './filtering';
-export type { FilteringOptions, FilteringApi, FilterState, FilterOperator } from './filtering';
+export { sorting } from './free/sorting';
+export type { SortingOptions, SortingApi, SortState, SortDirection } from './free/sorting';
 
-export { formatting } from './formatting';
-export type { FormattingOptions, FormattingApi, DateFormatPreset } from './formatting';
+export { filtering } from './free/filtering';
+export type { FilteringOptions, FilteringApi, FilterState, FilterOperator } from './free/filtering';
 
-export { validation } from './validation';
-export type { ValidationOptions, ValidationApi, ValidationError } from './validation';
+export { formatting } from './free/formatting';
+export type { FormattingOptions, FormattingApi, DateFormatPreset } from './free/formatting';
 
-export { clipboard } from './clipboard';
-export type { ClipboardOptions, ClipboardApi } from './clipboard';
+export { validation } from './free/validation';
+export type { ValidationOptions, ValidationApi, ValidationError } from './free/validation';
 
-export { hierarchy } from './hierarchy';
-export type { HierarchyOptions, HierarchyApi } from './hierarchy';
+export { clipboard } from './free/clipboard';
+export type { ClipboardOptions, ClipboardApi } from './free/clipboard';
 
-export { cellRenderers } from './cell-renderers';
+export { hierarchy } from './free/hierarchy';
+export type { HierarchyOptions, HierarchyApi } from './free/hierarchy';
 
-export { autoDetect } from './auto-detect';
-export type { AutoDetectOptions } from './auto-detect';
+export { cellRenderers } from './free/cell-renderers';
 
-export { undoRedo } from './undo-redo';
-export type { UndoRedoOptions, UndoRedoApi } from './undo-redo';
+export { autoDetect } from './free/auto-detect';
+export type { AutoDetectOptions } from './free/auto-detect';
 
-export { search } from './search';
-export type { SearchOptions, SearchApi } from './search';
+export { undoRedo } from './free/undo-redo';
+export type { UndoRedoOptions, UndoRedoApi } from './free/undo-redo';
 
-export { exportPlugin } from './export';
-export type { ExportOptions, ExportApi, ExportData, ExportCell } from './export';
+export { search } from './free/search';
+export type { SearchOptions, SearchApi } from './free/search';
 
-export { pagination } from './pagination';
-export type { PaginationOptions, PaginationApi } from './pagination';
+export { exportPlugin } from './free/export';
+export type { ExportOptions, ExportApi, ExportData, ExportCell } from './free/export';
 
-export { grouping } from './grouping';
-export type { GroupingOptions, GroupingApi, GroupRowInfo, BuiltinAggregation, AggregationSpec } from './grouping';
+export { pagination } from './free/pagination';
+export type { PaginationOptions, PaginationApi } from './free/pagination';
 
-// Builders — pure utilities that generate config, not GridPlugins
-export { timeSeries } from './time-series';
-export type { TimeSeriesOptions, TimeSeriesResult } from './time-series';
+export { grouping } from './free/grouping';
+export type {
+  GroupingOptions,
+  GroupingApi,
+  GroupRowInfo,
+  BuiltinAggregation,
+  AggregationSpec,
+} from './free/grouping';
 
-// Pro plugins (planned for @better-grid/pro, included here during development)
-export { mergeCells } from './merge-cells';
-export type { MergeCellsOptions, MergeCellsApi, MergeCellDef } from './merge-cells';
+// --- Pro plugins -----------------------------------------------------------
 
-export { proRenderers } from './pro-renderers';
+export { mergeCells } from './pro/merge-cells';
+export type { MergeCellsOptions, MergeCellsApi, MergeCellDef } from './pro/merge-cells';
 
-export { gantt } from './gantt';
-export type { GanttOptions, GanttApi } from './gantt';
+export { proRenderers } from './pro/pro-renderers';
 
-export { rowActions, RowActionIcons } from './row-actions';
-export type { RowActionsOptions, RowActionsApi, RowAction } from './row-actions';
+export { gantt } from './pro/gantt';
+export type { GanttOptions, GanttApi } from './pro/gantt';
 
-export { aggregation } from './aggregation';
-export type { AggregationOptions, AggregationRule } from './aggregation';
+export { rowActions, RowActionIcons } from './pro/row-actions';
+export type { RowActionsOptions, RowActionsApi, RowAction } from './pro/row-actions';
+
+export { aggregation } from './pro/aggregation';
+export type { AggregationOptions, AggregationRule } from './pro/aggregation';

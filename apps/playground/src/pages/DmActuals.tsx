@@ -210,7 +210,7 @@ export function DmActuals() {
   const { grid, containerRef } = useGrid<ActualRow>({
     data,
     columns,
-    headerRows: multiHeaders,
+    headerLayout: multiHeaders,
     plugins,
     frozenLeftColumns: 8,
     freezeClip: { minVisible: 2 },

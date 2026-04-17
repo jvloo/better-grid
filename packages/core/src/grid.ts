@@ -31,6 +31,8 @@ import { computeZoneDimensions } from './virtualization/layout';
 import { createFilterPanel, type FilterApi } from './ui/filter-panel';
 import { createContextMenu, type MenuItem } from './ui/context-menu';
 import { createTooltip } from './ui/tooltip';
+import { startColumnResize as startColumnResizeDrag } from './ui/column-resize';
+import { startFreezeClipDrag as startFreezeClipDragUI } from './ui/freeze-clip-drag';
 import { createHeaderRenderer, type HeaderRenderer } from './rendering/headers';
 import { createPinnedRowRenderer, getPinnedRowsHeight } from './rendering/pinned-rows';
 import { buildHierarchyState, buildInitialExpandedSet } from './hierarchy/build';
@@ -43,7 +45,7 @@ const DEFAULT_HEADER_HEIGHT = 40;
 export function createGrid<
   TData = unknown,
   TPlugins extends GridPlugin[] = GridPlugin[],
->(options: GridOptions<TData, TPlugins>): GridInstance<TData, TPlugins> {
+>(options: GridOptions<TData, TPlugins>): GridInstance<TData> {
   // ---------------------------------------------------------------------------
   // Internal state
   // ---------------------------------------------------------------------------
@@ -83,7 +85,7 @@ export function createGrid<
   let mounted = false;
 
   const singleHeaderRowHeight = options.headerHeight ?? DEFAULT_HEADER_HEIGHT;
-  const headerRows = options.headerRows;
+  const headerRows = options.headerLayout;
   const headerHeight = headerRows
     ? headerRows.reduce((sum, row) => sum + (row.height ?? singleHeaderRowHeight), 0)
     : singleHeaderRowHeight;
@@ -764,26 +766,13 @@ export function createGrid<
   // ---------------------------------------------------------------------------
 
   function startColumnResize(colIndex: number, startEvent: PointerEvent): void {
-    const startX = startEvent.clientX;
-    const startWidth = columnManager.getWidth(colIndex);
-
-    const onPointerMove = (e: PointerEvent) => {
-      const delta = e.clientX - startX;
-      const newWidth = Math.max(columnManager.getColumns()[colIndex]?.minWidth ?? 50, startWidth + delta);
-      instance.setColumnWidth(columnManager.getColumns()[colIndex]!.id, newWidth);
-    };
-
-    const onPointerUp = () => {
-      document.removeEventListener('pointermove', onPointerMove);
-      document.removeEventListener('pointerup', onPointerUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-
-    document.addEventListener('pointermove', onPointerMove);
-    document.addEventListener('pointerup', onPointerUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
+    const column = columnManager.getColumns()[colIndex]!;
+    startColumnResizeDrag({
+      startEvent,
+      startWidth: columnManager.getWidth(colIndex),
+      minWidth: column.minWidth,
+      onUpdate: (width) => instance.setColumnWidth(column.id, width),
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -791,43 +780,22 @@ export function createGrid<
   // ---------------------------------------------------------------------------
 
   function startFreezeClipDrag(startEvent: PointerEvent): void {
-    startEvent.preventDefault();
-    startEvent.stopPropagation();
-
     const measurements = virtualization.getMeasurements();
     const state = store.getState();
-    const fullFrozenWidth = measurements.colOffsets[state.frozenLeftColumns]!;
-    const containerRect = container!.getBoundingClientRect();
-    // minVisible columns must stay visible — use their actual cumulative width
-    const minCols = Math.min(freezeClipConfig.minVisible, state.frozenLeftColumns);
-    const minWidth = minCols > 0 ? measurements.colOffsets[minCols]! : 0;
-
-    const onPointerMove = (e: PointerEvent) => {
-      const currentX = e.clientX - containerRect.left;
-      // Clamp between minVisible-derived width and full frozen width
-      const clampedWidth = Math.max(minWidth, Math.min(fullFrozenWidth, currentX));
-
-      // Snap to full width if within 8px of the boundary (easy restore)
-      if (clampedWidth >= fullFrozenWidth - 8) {
-        freezeClipWidth = null; // null = no clip active
-      } else {
-        freezeClipWidth = clampedWidth;
-      }
-      scheduleRender();
-    };
-
-    const onPointerUp = () => {
-      document.removeEventListener('pointermove', onPointerMove);
-      document.removeEventListener('pointerup', onPointerUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      emitter.emit('freezeClip:change', freezeClipWidth ?? fullFrozenWidth, fullFrozenWidth);
-    };
-
-    document.addEventListener('pointermove', onPointerMove);
-    document.addEventListener('pointerup', onPointerUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
+    startFreezeClipDragUI({
+      startEvent,
+      containerRect: container!.getBoundingClientRect(),
+      colOffsets: measurements.colOffsets,
+      frozenLeftColumns: state.frozenLeftColumns,
+      minVisibleColumns: freezeClipConfig.minVisible,
+      setClipWidth: (width) => {
+        freezeClipWidth = width;
+        scheduleRender();
+      },
+      onComplete: (finalWidth, fullFrozenWidth) => {
+        emitter.emit('freezeClip:change', finalWidth, fullFrozenWidth);
+      },
+    });
   }
 
   function restoreAllFrozenColumns(): void {
@@ -952,55 +920,10 @@ export function createGrid<
   }
 
   // ---------------------------------------------------------------------------
-  // Plugin initialization
-  // ---------------------------------------------------------------------------
-
-  // Lazy reference to grid instance — plugins init before `instance` is assigned
-  let instanceRef: GridInstance<TData, TPlugins> | null = null;
-  const gridProxy = new Proxy({} as GridInstance<TData, TPlugins>, {
-    get(_target, prop) {
-      if (!instanceRef) throw new Error('Grid instance not yet initialized');
-      return (instanceRef as unknown as Record<string | symbol, unknown>)[prop];
-    },
-  });
-
-  function createPluginContext(plugin: GridPlugin): PluginContext<TData> {
-    return {
-      grid: gridProxy,
-      store,
-      on: (event, handler) => emitter.on(event, handler),
-      emit: (event, ...args) => emitter.emit(event, ...args),
-      registerKeyBinding: (binding) => {
-        keyBindings.push(binding);
-        return () => {
-          const idx = keyBindings.indexOf(binding);
-          if (idx >= 0) keyBindings.splice(idx, 1);
-        };
-      },
-      registerCellType: (type, renderer) => {
-        const unreg1 = rendering.registerCellType(type, renderer);
-        const unreg2 = frozenRendering.registerCellType(type, renderer);
-        return () => { unreg1(); unreg2(); };
-      },
-      registerCommand: (command) => {
-        commands.set(command.id, command);
-      },
-      expose: (api) => {
-        pluginRegistry.exposeApi(plugin.id, api);
-      },
-      getPluginApi: (id) => pluginRegistry.getPlugin(id),
-      showTooltip: (target: HTMLElement, text: string, cursorX?: number, cursorY?: number) => showTooltip(target, text, cursorX, cursorY),
-      dismissTooltip: () => dismissTooltip(),
-    };
-  }
-
-  // ---------------------------------------------------------------------------
   // Grid instance
   // ---------------------------------------------------------------------------
 
-  const instance: GridInstance<TData, TPlugins> = {
-    $Infer: null as never, // type-only, never accessed at runtime
-
+  const instance: GridInstance<TData> = {
     mount(el: HTMLElement): void {
       if (mounted) instance.unmount();
       container = el;
@@ -1561,7 +1484,7 @@ export function createGrid<
     getPlugin: <T,>(id: string) => pluginRegistry.getPlugin<T>(id),
     getState: () => store.getState(),
     getContainer: () => container,
-    getHeaderRows: () => headerRows,
+    getHeaderLayout: () => headerRows,
 
     batch(fn: () => void): void {
       store.batch(fn);
@@ -1574,10 +1497,40 @@ export function createGrid<
     },
   };
 
-  // Set the lazy reference so plugins can access the grid instance
-  instanceRef = instance;
+  // ---------------------------------------------------------------------------
+  // Plugin initialization (after `instance` is defined — plugins need to see it)
+  // ---------------------------------------------------------------------------
 
-  // Register and init plugins (after instance is created)
+  function createPluginContext(plugin: GridPlugin): PluginContext<TData> {
+    return {
+      grid: instance,
+      store,
+      on: (event, handler) => emitter.on(event, handler),
+      emit: (event, ...args) => emitter.emit(event, ...args),
+      registerKeyBinding: (binding) => {
+        keyBindings.push(binding);
+        return () => {
+          const idx = keyBindings.indexOf(binding);
+          if (idx >= 0) keyBindings.splice(idx, 1);
+        };
+      },
+      registerCellType: (type, renderer) => {
+        const unreg1 = rendering.registerCellType(type, renderer);
+        const unreg2 = frozenRendering.registerCellType(type, renderer);
+        return () => { unreg1(); unreg2(); };
+      },
+      registerCommand: (command) => {
+        commands.set(command.id, command);
+      },
+      expose: (api) => {
+        pluginRegistry.exposeApi(plugin.id, api);
+      },
+      getPluginApi: (id) => pluginRegistry.getPlugin(id),
+      showTooltip: (target, text, cursorX, cursorY) => showTooltip(target, text, cursorX, cursorY),
+      dismissTooltip: () => dismissTooltip(),
+    };
+  }
+
   if (options.plugins?.length) {
     pluginRegistry.register(options.plugins);
     pluginRegistry.initAll(createPluginContext);

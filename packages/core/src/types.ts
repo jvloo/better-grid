@@ -352,7 +352,7 @@ export interface GridOptions<
   freezeClip?: boolean | FreezeClipOptions;
   pinnedTopRows?: TData[];
   pinnedBottomRows?: TData[];
-  headerRows?: HeaderRow[];
+  headerLayout?: HeaderRow[];
   footerRows?: FooterRow[];
   selection?: SelectionOptions;
   virtualization?: VirtualizationOptions;
@@ -462,18 +462,7 @@ export interface GridPlugin<TId extends string = string> {
 // Grid Instance
 // ---------------------------------------------------------------------------
 
-export interface GridInstance<
-  TData = unknown,
-  TPlugins extends GridPlugin[] = GridPlugin[],
-> {
-  /** Type inference — use as `typeof grid.$Infer.Row` */
-  $Infer: {
-    Row: TData;
-    CellState: unknown;
-    GridState: GridState<TData>;
-    Plugins: TPlugins;
-  };
-
+export interface GridInstance<TData = unknown> {
   mount(container: HTMLElement): void;
   unmount(): void;
   destroy(): void;
@@ -515,7 +504,7 @@ export interface GridInstance<
   getPlugin<T>(pluginId: string): T | undefined;
   getState(): GridState<TData>;
   getContainer(): HTMLElement | null;
-  getHeaderRows(): HeaderRow[] | undefined;
+  getHeaderLayout(): HeaderRow[] | undefined;
 
   batch(fn: () => void): void;
   refresh(): void;
@@ -528,8 +517,8 @@ export interface GridInstance<
 /**
  * The methods plugins are allowed to call on the grid.
  * Deliberately narrower than GridInstance — excludes lifecycle (mount/unmount/destroy),
- * the raw event emitter (on/off — use ctx.on/ctx.emit instead), plugin lookup
- * (getPlugin — use ctx.getPluginApi), and type-only $Infer.
+ * the raw event emitter (on/off — use ctx.on/ctx.emit instead), and plugin lookup
+ * (getPlugin — use ctx.getPluginApi).
  *
  * If you're writing a plugin and need a method not on this type, consider whether
  * the grid should expose it or whether the plugin is reaching too far.
@@ -549,7 +538,7 @@ export interface PluginGridApi<TData = unknown> {
   // Rendering
   refresh(): void;
   getContainer(): HTMLElement | null;
-  getHeaderRows(): HeaderRow[] | undefined;
+  getHeaderLayout(): HeaderRow[] | undefined;
 
   // Selection
   setSelection(selection: Selection): void;
@@ -566,3 +555,20 @@ export interface PluginGridApi<TData = unknown> {
   expandAll(): void;
   collapseAll(): void;
 }
+
+// ---------------------------------------------------------------------------
+// Type-level inference helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract the row type from a grid instance.
+ * Usage: `type Row = InferRow<typeof grid>`
+ */
+export type InferRow<G> = G extends GridInstance<infer TData> ? TData : never;
+
+/**
+ * Extract the grid-state type from a grid instance.
+ * Usage: `type State = InferState<typeof grid>`
+ */
+export type InferState<G> =
+  G extends GridInstance<infer TData> ? GridState<TData> : never;

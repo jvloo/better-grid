@@ -134,7 +134,7 @@ export function MultiHeaderDemo() {
       <BetterGrid<CompanyRow>
         columns={columns}
         data={data}
-        headerRows={headerRows}
+        headerLayout={headerRows}
         frozenLeftColumns={1}
         selection={{ mode: 'range' }}
         plugins={plugins}

@@ -13,14 +13,14 @@ export function useGrid<
 >(
   options: GridOptions<TData, TPlugins>,
 ): {
-  grid: GridInstance<TData, TPlugins>;
+  grid: GridInstance<TData>;
   containerRef: React.RefCallback<HTMLElement>;
 } {
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
   // Use useRef to create grid instance ONCE — survives StrictMode double-invoke
-  const gridRef = useRef<GridInstance<TData, TPlugins> | null>(null);
+  const gridRef = useRef<GridInstance<TData> | null>(null);
   if (!gridRef.current) {
     gridRef.current = createGrid<TData, TPlugins>(optionsRef.current);
   }

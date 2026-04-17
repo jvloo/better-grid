@@ -111,7 +111,7 @@ export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
           <BetterGrid<HeroRow>
             columns={heroCols}
             data={heroData}
-            headerRows={heroHeaders}
+            headerLayout={heroHeaders}
             frozenLeftColumns={3}
             selection={{ mode: 'range' }}
             plugins={heroPlugins}
@@ -186,7 +186,7 @@ export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
               <CompRow feature="Free badge/progress/rating" ag="✗" hs="✗" bg="✓ (MIT)" />
               <CompRow feature="Range selection" ag="Enterprise" hs="Commercial" bg="MIT (free)" />
               <CompRow feature="Framework agnostic" ag="✓" hs="✓" bg="✓" />
-              <CompRow feature="Type-safe plugin DX" ag="✗ (modules)" hs="✗ (monolithic)" bg="✓ ($Infer)" />
+              <CompRow feature="Type-safe plugin DX" ag="✗ (modules)" hs="✗ (monolithic)" bg="✓ (InferRow)" />
               <CompRow feature="TypeScript-first" ag="Partial" hs="Partial" bg="✓ Strict" />
               <CompRow feature="Free tree data / collapse" ag="Enterprise" hs="✗" bg="✓ (MIT)" />
               <CompRow feature="Free clipboard (copy/paste)" ag="Enterprise" hs="Non-commercial" bg="✓ (MIT)" />

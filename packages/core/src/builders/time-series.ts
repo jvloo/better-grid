@@ -1,20 +1,16 @@
 // ============================================================================
-// timeSeries — Column Builder Utility (NOT a GridPlugin)
+// timeSeries — Column Builder Utility
 //
-// Unlike other files in this package, timeSeries is a pure function that
-// generates column definitions + FY header rows + date↔index helpers.
-// It runs at setup time, has no runtime init, and is composed into your
-// grid config by spreading `.columns` and `.headerRows`.
+// Pure function that generates column definitions + FY header rows + date↔index
+// helpers. Runs at setup time, has no runtime init, and is composed into grid
+// config by spreading `.columns` and `.headerRows`.
 //
 // Usage:
 //   const ts = timeSeries({ start: '2025-07-01', end: '2026-06-30', fiscalYearStart: 7 });
-//   const grid = createGrid({ columns: [...fixed, ...ts.columns], headerRows: ts.headerRows });
-//
-// Lives alongside plugins because it's commonly paired with gantt/aggregation,
-// but registers nothing and needs no cleanup.
+//   const grid = createGrid({ columns: [...fixed, ...ts.columns], headerLayout: ts.headerLayout });
 // ============================================================================
 
-import type { ColumnDef, HeaderRow } from '@better-grid/core';
+import type { ColumnDef, HeaderRow } from '../types';
 
 export interface TimeSeriesOptions {
   start: string;
@@ -30,7 +26,7 @@ export interface TimeSeriesOptions {
 
 export interface TimeSeriesResult {
   columns: ColumnDef[];
-  headerRows: HeaderRow[];
+  headerLayout: HeaderRow[];
   toIndex(date: string | Date): number;
   toDate(index: number): string;
   formatDate(date: string | Date): string;
@@ -157,7 +153,7 @@ export function timeSeries(options: TimeSeriesOptions): TimeSeriesResult {
     } as any;
   });
 
-  const headerRows: HeaderRow[] = [];
+  const headerLayout: HeaderRow[] = [];
   if (fiscalYearStart >= 1 && fiscalYearStart <= 12) {
     const groups: { fy: string; count: number }[] = [];
     for (const d of dates) {
@@ -168,7 +164,7 @@ export function timeSeries(options: TimeSeriesOptions): TimeSeriesResult {
         groups.push({ fy, count: 1 });
       }
     }
-    headerRows.push({
+    headerLayout.push({
       id: 'ts-fy-group',
       height: 32,
       cells: groups.map((g) => ({
@@ -196,7 +192,7 @@ export function timeSeries(options: TimeSeriesOptions): TimeSeriesResult {
 
   return {
     columns,
-    headerRows,
+    headerLayout,
     toIndex,
     toDate,
     formatDate: formatDateFn,

@@ -257,7 +257,7 @@ export function FrozenPinned() {
       <BetterGrid<SalesRow>
         columns={columns}
         data={sampleData}
-        headerRows={headerRows}
+        headerLayout={headerRows}
         frozenLeftColumns={3}
         pinnedBottomRows={[totalsRow]}
         selection={{ mode: 'range' }}

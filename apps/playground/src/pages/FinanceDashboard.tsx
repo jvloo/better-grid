@@ -164,7 +164,7 @@ export function FinanceDashboard() {
   const { grid, containerRef } = useGrid<BudgetRow>({
     data,
     columns,
-    headerRows: multiHeaders,
+    headerLayout: multiHeaders,
     plugins,
     pinnedBottomRows: [totalsRow],
     frozenLeftColumns: 2,

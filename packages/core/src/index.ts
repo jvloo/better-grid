@@ -49,6 +49,9 @@ export type {
   HierarchyState,
   // Utility
   UnionToIntersection,
+  // Type-level inference
+  InferRow,
+  InferState,
 } from './types';
 
 // Selection utilities
@@ -61,6 +64,10 @@ export {
   isCellInSelection,
   isCellActive,
 } from './selection/model';
+
+// Builders — pure utilities that generate config (not GridPlugins)
+export { timeSeries } from './builders/time-series';
+export type { TimeSeriesOptions, TimeSeriesResult } from './builders/time-series';
 
 // Internal classes (for advanced usage / plugin development)
 export { EventEmitter } from './events/emitter';
