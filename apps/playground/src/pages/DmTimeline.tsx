@@ -2,7 +2,8 @@ import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
-import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin, gantt } from '@better-grid/plugins';
+import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
+import { gantt } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
 
 interface TimelineRow {

@@ -12,8 +12,8 @@ Monorepo with pnpm workspaces + Turborepo.
 |---------|-------------|---------|
 | `@better-grid/core` | Framework-agnostic grid engine | MIT |
 | `@better-grid/react` | React adapter (hooks + component) | MIT |
-| `@better-grid/plugins` | Free plugins (editing, sorting, filtering, formatting, validation, hierarchy, clipboard) + built-in cell renderers | MIT |
-| `@better-grid/pro` | Paid plugins (grouping w/ aggregation, clipboard fill-down/series, undo/redo, export, advanced renderers) | Commercial (future) |
+| `@better-grid/plugins` | Free plugins (editing, sorting, filtering, formatting, validation, hierarchy, clipboard, grouping, pagination, search, export, undoRedo, cellRenderers, autoDetect) + built-in cell renderers | MIT |
+| `@better-grid/pro` | Commercial plugins (gantt, aggregation, merge-cells, row-actions, pro-renderers) | Commercial |
 | `@better-grid/mcp` | MCP server for developer tooling | MIT (future) |
 | `@better-grid/plugin-ai` | AI features: free NL filtering + pro data intelligence | Tiered (future) |
 
@@ -145,12 +145,21 @@ packages/react/src/
   BetterGrid.tsx        # React component
   hooks/useGrid.ts      # Main hook (useSyncExternalStore)
 
-packages/plugins/src/
+packages/plugins/src/free/
   editing.ts            # Cell editing (text, dropdown, boolean)
   sorting.ts            # Column sorting (header click, indicators)
   filtering.ts          # Column filtering (9 operators, context menu)
   formatting.ts         # Number/currency/percent/date via Intl
   validation.ts         # Cell validation (required, rules, error UI)
+  hierarchy.ts, clipboard.ts, grouping.ts, pagination.ts, search.ts,
+  export.ts, undo-redo.ts, cell-renderers.ts, auto-detect.ts
+
+packages/pro/src/
+  gantt.ts              # Timeline/Gantt chart cellType
+  aggregation.ts        # Pinned totals/averages with rules
+  merge-cells.ts        # Row/column cell spanning
+  row-actions.ts        # Per-row action menu (⋮)
+  pro-renderers.ts      # Sparklines, heatmaps, mini charts
 
 apps/playground/        # Vite + React dev playground (12 demo pages + landing)
 

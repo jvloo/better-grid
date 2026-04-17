@@ -2,8 +2,9 @@ import { useMemo, useCallback, useRef, useState } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { CellChange, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
-import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin, gantt, rowActions, RowActionIcons, validation } from '@better-grid/plugins';
-import type { RowAction } from '@better-grid/plugins';
+import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin, validation } from '@better-grid/plugins';
+import { gantt, rowActions, RowActionIcons } from '@better-grid/pro';
+import type { RowAction } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
 
 interface ProgramRow {

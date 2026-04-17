@@ -29,6 +29,9 @@ importers:
       '@better-grid/plugins':
         specifier: workspace:*
         version: link:../../packages/plugins
+      '@better-grid/pro':
+        specifier: workspace:*
+        version: link:../../packages/pro
       '@better-grid/react':
         specifier: workspace:*
         version: link:../../packages/react
@@ -68,6 +71,16 @@ importers:
         version: 2.1.9(@types/node@25.6.0)(happy-dom@20.9.0)
 
   packages/plugins:
+    dependencies:
+      '@better-grid/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      tsup:
+        specifier: ^8.3.0
+        version: 8.5.1(postcss@8.5.8)(typescript@5.9.3)
+
+  packages/pro:
     dependencies:
       '@better-grid/core':
         specifier: workspace:*

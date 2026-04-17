@@ -12,6 +12,7 @@
     "@better-grid/core": "workspace:*",
     "@better-grid/react": "workspace:*",
     "@better-grid/plugins": "workspace:*",
+    "@better-grid/pro": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

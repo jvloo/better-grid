@@ -25,6 +25,7 @@ const target = process.argv[2]; // 'core', 'plugins', 'react', or undefined for 
 const packages = [
   { name: 'core', dir: 'packages/core', external: [] },
   { name: 'plugins', dir: 'packages/plugins', external: ['@better-grid/core'] },
+  { name: 'pro', dir: 'packages/pro', external: ['@better-grid/core'] },
   { name: 'react', dir: 'packages/react', external: ['react', 'react-dom', '@better-grid/core'] },
 ];
 

@@ -1,11 +1,9 @@
 // ============================================================================
-// @better-grid/plugins — Public API
+// @better-grid/plugins — Free plugins for Better Grid
 //
-// free/   — plugins available under the open-source license
-// pro/    — plugins planned for @better-grid/pro (bundled here during development)
+// Commercial plugins (gantt, aggregation, merge-cells, row-actions, advanced
+// renderers) live in @better-grid/pro.
 // ============================================================================
-
-// --- Free plugins ----------------------------------------------------------
 
 export { editing } from './free/editing';
 export type { EditingOptions, EditingApi } from './free/editing';
@@ -53,19 +51,3 @@ export type {
   BuiltinAggregation,
   AggregationSpec,
 } from './free/grouping';
-
-// --- Pro plugins -----------------------------------------------------------
-
-export { mergeCells } from './pro/merge-cells';
-export type { MergeCellsOptions, MergeCellsApi, MergeCellDef } from './pro/merge-cells';
-
-export { proRenderers } from './pro/pro-renderers';
-
-export { gantt } from './pro/gantt';
-export type { GanttOptions, GanttApi } from './pro/gantt';
-
-export { rowActions, RowActionIcons } from './pro/row-actions';
-export type { RowActionsOptions, RowActionsApi, RowAction } from './pro/row-actions';
-
-export { aggregation } from './pro/aggregation';
-export type { AggregationOptions, AggregationRule, AggregationApi } from './pro/aggregation';

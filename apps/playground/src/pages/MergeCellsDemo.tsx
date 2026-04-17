@@ -1,7 +1,8 @@
 import { useMemo, useCallback } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, mergeCells, exportPlugin } from '@better-grid/plugins';
+import { formatting, exportPlugin } from '@better-grid/plugins';
+import { mergeCells } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
 
 interface ScheduleRow {
