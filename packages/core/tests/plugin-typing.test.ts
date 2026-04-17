@@ -232,3 +232,28 @@ describe('typed $errorCodes accessor', () => {
     grid.destroy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// PluginState augmentation via declaration merging
+// ---------------------------------------------------------------------------
+
+declare module '../src/types' {
+  interface PluginState {
+    testAugmentedSort: { direction: 'asc' | 'desc' };
+  }
+}
+
+describe('PluginState augmentation', () => {
+  it('lets plugins contribute typed state slices via declaration merging', () => {
+    const grid = createGrid({ columns, data: [] as Row[] });
+
+    // Runtime: pluginState is a plain object that plugins can write to.
+    grid.getState().pluginState.testAugmentedSort = { direction: 'asc' };
+    expect(grid.getState().pluginState.testAugmentedSort).toEqual({ direction: 'asc' });
+
+    // Compile-time: augmented field has its declared type.
+    expectTypeOf(grid.getState().pluginState.testAugmentedSort).toEqualTypeOf<{ direction: 'asc' | 'desc' }>();
+
+    grid.destroy();
+  });
+});

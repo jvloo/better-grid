@@ -41,6 +41,7 @@ export type {
   GridPlugin,
   PluginContext,
   PluginGridApi,
+  PluginState,
   KeyBinding,
   Command,
   // Hierarchy

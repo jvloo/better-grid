@@ -372,8 +372,30 @@ export interface GridState<TData = unknown> {
   pinnedTopRows: TData[];
   pinnedBottomRows: TData[];
   hierarchyState: HierarchyState | null;
-  pluginState: Record<string, unknown>;
+  /**
+   * Plugin-owned state slices. Plugins contribute typed fields here via
+   * declaration merging — the base shape is empty:
+   *
+   *     // inside a plugin package
+   *     declare module '@better-grid/core' {
+   *       interface PluginState {
+   *         sorting: { columnId: string; direction: 'asc' | 'desc' }[];
+   *       }
+   *     }
+   *
+   * Consumers then read `grid.getState().pluginState.sorting` with full
+   * inference, without the grid core needing to know the sorting plugin exists.
+   */
+  pluginState: PluginState;
 }
+
+/**
+ * Augmentation point for plugin-owned state slices. Plugins extend this
+ * interface via `declare module '@better-grid/core'` so that
+ * `GridState.pluginState` surfaces their fields with exact types.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface PluginState {}
 
 // ---------------------------------------------------------------------------
 // Plugin System

@@ -136,7 +136,7 @@ export function createGrid<
     pinnedTopRows: options.pinnedTopRows ?? [],
     pinnedBottomRows: options.pinnedBottomRows ?? [],
     hierarchyState: null,
-    pluginState: {},
+    pluginState: {} as GridState<TData>['pluginState'],
   };
 
   const store = new StateStore<TData>(initialState);

@@ -62,6 +62,36 @@ When opting a new plugin in:
 3. If the plugin emits errors, add `$errorCodes: { CODE: 'CODE', ... } as const` to
    its returned object.
 
+### Declaration-merging extension points
+
+Three interfaces in `@better-grid/core` are designed to be augmented by plugin
+packages via TypeScript's module-augmentation mechanism:
+
+- **`ColumnDef`** — add fields the plugin reads off each column. Example:
+  `editing` adds `precision`, `min`, `max`, `placeholder`, `mask`.
+- **`PluginState`** — add a typed slice under `grid.getState().pluginState`.
+  The base shape is an empty interface; each plugin fills its own slot.
+- **`PluginContext`** — add methods plugins can call on the context passed to
+  `init(ctx)`. Useful if one plugin wants to offer a lifecycle hook to other
+  plugins.
+
+Augmentation template (inside a plugin source file):
+
+```ts
+declare module '@better-grid/core' {
+  interface ColumnDef<TData = unknown> {
+    myPluginField?: string;
+  }
+  interface PluginState {
+    myPlugin: { whatever: number };
+  }
+}
+```
+
+Augmentations flow globally, so only augment fields your plugin actually owns.
+Consumers who import your plugin get the extra fields automatically; those who
+don't still see the unextended base interfaces.
+
 ### Key Internals
 
 - **Virtual scrolling**: prefix-sum arrays + binary search for O(log n) visible range
