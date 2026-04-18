@@ -266,7 +266,15 @@ export function FsbtProgram() {
         container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
       },
     },
-    // ── Col 1: Code (right-aligned with left gap) ───────────────────────
+    // ── Col 1: Collapse/expand chevron (handled by hierarchy plugin) ────
+    {
+      id: 'collapse', header: '', width: 40, editable: false,
+      cellRenderer: (container, ctx) => {
+        const row = ctx.row as ProgramRow;
+        container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
+      },
+    },
+    // ── Col 2: Code (right-aligned with left gap) ───────────────────────
     {
       id: 'code', accessorKey: 'code', header: 'Code', width: 55, align: 'right' as const, editable: false,
       cellRenderer: (container, ctx) => {
@@ -396,7 +404,7 @@ export function FsbtProgram() {
     () => [
       formatting({ locale: 'en-AU', dateFormat: 'month-year' }),
       editing({ editTrigger: 'click', inputStyle: true }),
-      hierarchy({ toggleColumn: 'code', toggleStyle: 'chevron' }),
+      hierarchy({ toggleColumn: 'collapse', toggleStyle: 'chevron' }),
       rowActions({
         column: 'actions',
         getActions: (row): RowAction[] | undefined => {
@@ -450,7 +458,7 @@ export function FsbtProgram() {
     data: rows,
     columns,
     plugins,
-    frozenLeftColumns: 6,
+    frozenLeftColumns: 7,
     freezeClip: { minVisible: 2 },
     tableStyle: 'striped' as const,
     headerHeight: 44,

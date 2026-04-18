@@ -26,6 +26,13 @@ export function FsbtProgramSummary() {
 
   const columns = useMemo<ColumnDef<FsbtProgramRow>[]>(() => [
     {
+      id: 'collapse', header: '', width: 40, editable: false,
+      cellRenderer: (container, ctx) => {
+        const row = ctx.row as FsbtProgramRow;
+        container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
+      },
+    },
+    {
       id: 'code', accessorKey: 'code', header: 'Code', width: 55, align: 'right' as const, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
@@ -92,7 +99,7 @@ export function FsbtProgramSummary() {
 
   const plugins = useMemo(() => [
     formatting({ locale: 'en-AU', dateFormat: 'month-year' }),
-    hierarchy({ toggleColumn: 'code', toggleStyle: 'chevron' }),
+    hierarchy({ toggleColumn: 'collapse', toggleStyle: 'chevron' }),
     cellRenderers(),
     gantt({
       dateColumnPrefix: 'm_',
@@ -111,7 +118,7 @@ export function FsbtProgramSummary() {
     data: FSBT_PROGRAM_ROWS,
     columns,
     plugins,
-    frozenLeftColumns: 5,
+    frozenLeftColumns: 6,
     freezeClip: { minVisible: 2 },
     tableStyle: 'striped' as const,
     hierarchy: {
