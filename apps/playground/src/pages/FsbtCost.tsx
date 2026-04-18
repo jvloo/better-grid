@@ -209,6 +209,28 @@ function formatMonYY(dateIso: string): string {
   return `${MONTH_NAMES[m] ?? mStr} ${yStr.slice(2)}`;
 }
 
+/** Convert YYYY-MM-DD → "MM/YY" for the masked editor (e.g. "08/23"). */
+function formatIsoToMMYY(v: unknown): string {
+  if (!v || typeof v !== 'string') return '';
+  const [yStr, mStr] = v.split('-');
+  if (!yStr || !mStr) return '';
+  return `${mStr}/${yStr.slice(2)}`;
+}
+
+/** Parse a partially-typed "MM/YY" (4 digits) into YYYY-MM-01 ISO. Matches FsbtProgram's parser exactly. */
+function parseMMYYToIso(v: string): string | undefined {
+  const digits = v.replace(/\D/g, '').slice(0, 4);
+  if (digits.length === 0) return '';
+  if (digits.length < 4) return undefined;
+
+  const month = digits.slice(0, 2);
+  const yearSuffix = digits.slice(2, 4);
+  if (!/^(0[1-9]|1[0-2])$/.test(month)) return undefined;
+
+  const year = 2000 + Number(yearSuffix);
+  return `${year}-${month}-01`;
+}
+
 export function FsbtCost() {
   const columns = useMemo<ColumnDef<CostRow>[]>(
     () => [
@@ -306,20 +328,28 @@ export function FsbtCost() {
           return { color: FSBT_STYLES.childText, fontSize: FSBT_STYLES.infoFontSize };
         },
       },
-      // ── Col 7: Start — display as "Mon YY", editable for non-parents ──
+      // ── Col 7: Start — masked MM/YY input (matches FsbtProgram's Start column) ──
       {
         id: 'start', accessorKey: 'start', header: 'Start', width: 85, align: 'center' as const,
+        placeholder: 'MM/YY',
+        cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
+        valueFormatter: formatIsoToMMYY,
+        valueParser: parseMMYYToIso,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.textContent = formatMonYY(row.start);
         },
         cellStyle: parentRowCellStyle,
       },
-      // ── Col 8: End — display as "Mon YY", editable for non-parents ──
+      // ── Col 8: End — masked MM/YY input (same pattern as Start / Program) ──
       {
         id: 'end', accessorKey: 'end', header: 'End', width: 85, align: 'center' as const,
+        placeholder: 'MM/YY',
+        cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
+        valueFormatter: formatIsoToMMYY,
+        valueParser: parseMMYYToIso,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.textContent = formatMonYY(row.end);
