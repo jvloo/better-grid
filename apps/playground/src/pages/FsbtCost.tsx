@@ -264,7 +264,7 @@ export function FsbtCost() {
       {
         id: 'input', accessorKey: 'input', header: 'Input', width: 110, align: 'center' as const,
         editable: ((row: CostRow) => row.inputType !== 'none') as unknown as boolean,
-        cellType: 'number' as const, precision: 2,
+        cellType: 'number' as const,
         unit: (row: CostRow) => (row.inputType === 'percent' ? '%' : undefined),
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
@@ -292,7 +292,12 @@ export function FsbtCost() {
       // ── Col 5: Escalation — CPI / Non-CPI dropdown, blank when 'none' or on parent rows ──
       {
         id: 'escalation', accessorKey: 'escalation', header: 'Escalation', width: 110, align: 'center' as const,
-        cellEditor: 'dropdown' as const, options: ['none', 'cpi', 'non-cpi'],
+        cellEditor: 'dropdown' as const,
+        options: [
+          { value: 'none', label: '' },
+          { value: 'cpi', label: 'CPI' },
+          { value: 'non-cpi', label: 'Non-CPI' },
+        ],
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;

@@ -144,12 +144,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           document.head.appendChild(style);
         }
 
-        // Wrap cellClass on editable columns — mark empty cells for flat input styling
+        // Wrap cellClass on editable columns — mark empty cells for flat input styling.
+        // Guard against double-wrapping when init runs more than once (HMR, plugin
+        // re-registration): skip any column we've already wrapped.
         const columns = ctx.store.getState().columns;
         let changed = false;
         for (const col of columns) {
           if (col.editable === false) continue;
           if (!col.accessorKey && !col.accessorFn) continue;
+          if ((col as { __inputStyleWrapped?: boolean }).__inputStyleWrapped) continue;
+          (col as { __inputStyleWrapped?: boolean }).__inputStyleWrapped = true;
 
           const origCellClass = col.cellClass;
           const placeholder = col.placeholder;
