@@ -154,17 +154,15 @@ const totalsRow = buildTotalsRow();
 export function FsbtCost() {
   const columns = useMemo<ColumnDef<CostRow>[]>(
     () => [
-      { id: 'menu', header: '', width: 50 },
-      { id: 'code', accessorKey: 'code', header: 'Code', width: 40, align: 'center' as const },
-      { id: 'name', accessorKey: 'name', header: 'Phase', width: 236 },
-      { id: 'input', accessorKey: 'input', header: 'Input', width: 110, cellType: 'currency' as const, precision: 0, align: 'right' as const, editable: true },
-      { id: 'inputNote', accessorKey: 'inputNote', header: '', width: 140 },
+      { id: 'code', accessorKey: 'code', header: 'Code', width: 50, align: 'center' as const },
+      { id: 'name', accessorKey: 'name', header: 'Phase', width: 260 },
+      { id: 'input', accessorKey: 'input', header: 'Input', width: 120, cellType: 'currency' as const, precision: 0, align: 'right' as const, editable: true },
+      { id: 'inputNote', accessorKey: 'inputNote', header: '', width: 90 },
       { id: 'escalation', accessorKey: 'escalation', header: 'Escalation', width: 110, cellEditor: 'dropdown' as const, options: ['none', 'cpi', 'non-cpi'] },
-      { id: 'amount', accessorKey: 'amount', header: 'Amount', width: 110, cellType: 'currency' as const, precision: 0, align: 'right' as const, cellStyle: () => ({ background: '#f5f5f5', fontWeight: '600' }) },
-      { id: 'start', accessorKey: 'start', header: 'Start', width: 85, cellType: 'date' as const, dateFormat: 'month-year' as const },
-      { id: 'end', accessorKey: 'end', header: 'End', width: 85, cellType: 'date' as const, dateFormat: 'month-year' as const },
-      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 85, cellType: 'change' as const },
-      { id: 'varianceStatus', header: '', width: 44 },
+      { id: 'amount', accessorKey: 'amount', header: 'Amount', width: 130, cellType: 'currency' as const, precision: 0, align: 'right' as const, cellStyle: () => ({ background: '#f5f5f5', fontWeight: '600' }) },
+      { id: 'start', accessorKey: 'start', header: 'Start', width: 90, cellType: 'date' as const, dateFormat: 'month-year' as const },
+      { id: 'end', accessorKey: 'end', header: 'End', width: 90, cellType: 'date' as const, dateFormat: 'month-year' as const },
+      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 90, cellType: 'change' as const },
       ...ts.columns,
     ],
     [],
@@ -191,8 +189,11 @@ export function FsbtCost() {
     data,
     columns,
     plugins,
-    frozenLeftColumns: 12,
-    freezeClip: { minVisible: 2 },
+    // Freeze the 9 left-hand info columns (code through variance) — matches
+    // Wiseway's Cost tab where monthly columns scroll horizontally and the
+    // info columns stay pinned. No freezeClip: we never want the user to be
+    // able to hide Amount / Variance behind the clip handle.
+    frozenLeftColumns: 9,
     tableStyle: 'striped' as const,
     hierarchy: {
       getRowId: (row: CostRow) => row.id,
