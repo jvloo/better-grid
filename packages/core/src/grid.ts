@@ -1270,9 +1270,13 @@ export function createGrid<
         scheduleRender();
       });
 
-      // Events — scroll on fakeScrollbar, wheel forwarded from viewport
+      // Events — scroll on fakeScrollbar, wheel forwarded from the whole grid
+      // container (covers viewport, frozen column overlay, and pinned rows; if
+      // we only bound to viewport, wheel events over the frozen overlay — an
+      // absolutely-positioned sibling on top of viewport — would bubble to the
+      // document and scroll the page instead of the grid).
       fakeScrollbar.addEventListener('scroll', handleScroll, { passive: true });
-      viewport.addEventListener('wheel', handleWheel, { passive: false });
+      container.addEventListener('wheel', handleWheel, { passive: false });
       cellContainer.addEventListener('pointerdown', handlePointerDown);
       cellContainer.addEventListener('dblclick', handleDblClick);
       cellContainer.addEventListener('mouseover', handleCellMouseOver);
@@ -1302,7 +1306,7 @@ export function createGrid<
       if (!mounted) return;
 
       fakeScrollbar?.removeEventListener('scroll', handleScroll);
-      viewport?.removeEventListener('wheel', handleWheel);
+      container?.removeEventListener('wheel', handleWheel);
       cellContainer?.removeEventListener('pointerdown', handlePointerDown);
       cellContainer?.removeEventListener('dblclick', handleDblClick);
       cellContainer?.removeEventListener('mouseover', handleCellMouseOver);
