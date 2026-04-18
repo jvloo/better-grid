@@ -386,14 +386,8 @@ export function FsbtProgram() {
         container.style.paddingLeft = '14px';
       },
     },
-    // ── Col 6: Collapse/expand arrow (handled by hierarchy plugin) ────
-    {
-      id: 'collapse', header: '', width: 55, editable: false,
-      cellRenderer: (container, ctx) => {
-        const row = ctx.row as ProgramRow;
-        container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
-      },
-    },
+    // Collapse chevron is injected into the Code column by the hierarchy
+    // plugin (toggleColumn: 'code'), matching the FsbtProgramSummary layout.
     // ── Monthly Gantt columns (111px each) ────────────────────────────
     ...ts.columns,
   ], []);
@@ -402,7 +396,7 @@ export function FsbtProgram() {
     () => [
       formatting({ locale: 'en-AU', dateFormat: 'month-year' }),
       editing({ editTrigger: 'click', inputStyle: true }),
-      hierarchy({ toggleColumn: 'collapse', toggleStyle: 'chevron' }),
+      hierarchy({ toggleColumn: 'code', toggleStyle: 'chevron' }),
       rowActions({
         column: 'actions',
         getActions: (row): RowAction[] | undefined => {
@@ -456,7 +450,7 @@ export function FsbtProgram() {
     data: rows,
     columns,
     plugins,
-    frozenLeftColumns: 7,
+    frozenLeftColumns: 6,
     freezeClip: { minVisible: 2 },
     tableStyle: 'striped' as const,
     headerHeight: 44,
