@@ -16,6 +16,9 @@ declare module '@better-grid/core' {
     placeholder?: string;
     /** Input mask pattern (e.g. 'MM/YY'). Each letter = editable digit section, other chars = fixed. */
     mask?: string;
+    /** Persistent suffix adornment (e.g. '%'). Rendered both in display and edit modes.
+     *  Can be a static string or a per-row function that returns a suffix or undefined. */
+    unit?: string | ((row: TData) => string | undefined);
   }
 }
 
@@ -116,6 +119,27 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             .bg-cell--input-editable .bg-input-box--placeholder {
               color: var(--bg-input-placeholder, #98A2B3);
             }
+            .bg-cell--input-editable .bg-input-box--has-unit {
+              position: relative;
+              padding-right: 20px;
+            }
+            .bg-cell--input-editable .bg-input-box__value {
+              display: inline-block;
+              text-align: inherit;
+            }
+            .bg-cell--input-editable .bg-input-box__unit {
+              position: absolute;
+              right: 8px;
+              top: 50%;
+              transform: translateY(-50%);
+              color: var(--bg-input-unit, #98A2B3);
+              pointer-events: none;
+              font-size: inherit;
+            }
+            .bg-cell--editing .bg-input-box__value .bg-cell-editor {
+              background: transparent !important;
+              box-shadow: none !important;
+            }
           `;
           document.head.appendChild(style);
         }
@@ -171,7 +195,27 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               text === placeholder &&
               (context.value == null || context.value === ''),
             );
-            if (text) {
+            const unit = typeof col.unit === 'function'
+              ? (col.unit as (row: unknown) => string | undefined)(context.row)
+              : col.unit;
+            if (unit) {
+              box.classList.add('bg-input-box--has-unit');
+              // Structured value + unit so editing can clear the value without destroying the suffix
+              const valueSpan = document.createElement('span');
+              valueSpan.className = 'bg-input-box__value';
+              if (text) {
+                valueSpan.textContent = text;
+                if (isPlaceholderText) box.classList.add('bg-input-box--placeholder');
+              } else if (placeholder) {
+                valueSpan.textContent = placeholder;
+                box.classList.add('bg-input-box--placeholder');
+              }
+              box.appendChild(valueSpan);
+              const unitSpan = document.createElement('span');
+              unitSpan.className = 'bg-input-box__unit';
+              unitSpan.textContent = unit;
+              box.appendChild(unitSpan);
+            } else if (text) {
               box.textContent = text;
               if (isPlaceholderText) box.classList.add('bg-input-box--placeholder');
             } else if (placeholder) {
@@ -390,7 +434,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // Prepare cell for editing
         // If the cell has an input box (inputStyle), use it as the editing anchor
         const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
-        if (inputBox) {
+        // If the input box is structured as value+unit, clear only the value span
+        // so the unit suffix stays visible throughout editing.
+        const valueSpan = inputBox?.querySelector('.bg-input-box__value') as HTMLElement | null;
+        if (valueSpan) {
+          valueSpan.textContent = '';
+        } else if (inputBox) {
           inputBox.textContent = '';
         } else {
           cellEl.textContent = '';
@@ -644,8 +693,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           function getAnchorRect(): DOMRect | null {
             const currentCell = gridEl?.querySelector(`.bg-cell[data-row="${editRow}"][data-col="${editCol}"]`) as HTMLElement | null;
             if (!currentCell) return null;
-            const anchor = currentCell.querySelector('.bg-input-box') as HTMLElement ?? currentCell;
-            return anchor.getBoundingClientRect();
+            const box = currentCell.querySelector('.bg-input-box') as HTMLElement | null;
+            if (!box) return currentCell.getBoundingClientRect();
+            const br = box.getBoundingClientRect();
+            // Leave room for a right-side unit adornment (has-unit padding is 20px)
+            if (box.classList.contains('bg-input-box--has-unit')) {
+              return new DOMRect(br.left, br.top, Math.max(0, br.width - 20), br.height);
+            }
+            return br;
           }
 
           function syncPosition(): void {
@@ -659,9 +714,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               return;
             }
 
-            // Use input-box as anchor (matches initial positioning in inputStyle mode)
-            const anchor = currentCell.querySelector('.bg-input-box') as HTMLElement ?? currentCell;
-            const cr = anchor.getBoundingClientRect();
+            const box = currentCell.querySelector('.bg-input-box') as HTMLElement | null;
+            let cr: DOMRect;
+            if (box) {
+              const br = box.getBoundingClientRect();
+              cr = box.classList.contains('bg-input-box--has-unit')
+                ? new DOMRect(br.left, br.top, Math.max(0, br.width - 20), br.height)
+                : br;
+            } else {
+              cr = currentCell.getBoundingClientRect();
+            }
             const headerH = parseFloat(gridEl?.querySelector('.bg-grid__headers')?.getBoundingClientRect().height + '' || '0');
             const cellVisible = cr.bottom > (gr.top + headerH) && cr.top < gr.bottom && cr.right > gr.left && cr.left < gr.right;
             floatBox.style.visibility = cellVisible ? 'visible' : 'hidden';
@@ -848,7 +910,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           });
         }
 
-        cellEl.appendChild(input);
+        // If the cell has a structured value/unit input-box, anchor the editor
+        // inside the value span so the unit suffix stays visible to its right.
+        const valueAnchor = cellEl.querySelector('.bg-input-box__value') as HTMLElement | null;
+        if (valueAnchor) {
+          input.style.width = 'auto';
+          input.style.minWidth = '40px';
+          valueAnchor.appendChild(input);
+        } else {
+          cellEl.appendChild(input);
+        }
         input.focus();
 
         if (cursorAtEnd) {

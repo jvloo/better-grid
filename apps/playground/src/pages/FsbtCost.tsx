@@ -265,30 +265,17 @@ export function FsbtCost() {
         id: 'input', accessorKey: 'input', header: 'Input', width: 110, align: 'center' as const,
         editable: ((row: CostRow) => row.inputType !== 'none') as unknown as boolean,
         cellType: 'number' as const, precision: 2,
+        unit: (row: CostRow) => (row.inputType === 'percent' ? '%' : undefined),
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
-
-          // Wiseway: parent rows render empty input UNLESS the parent has an explicit input (Land Cost, code='1')
+          // Parent rows (except Land Cost, code='1') render empty — Wiseway's convention.
           const isParent = row.parentId === null;
           const isParentWithoutInput = isParent && row.code !== '1';
-          container.innerHTML = '';
-          if (isParentWithoutInput || row.inputType === 'none') return;
-
-          container.style.display = 'flex';
-          container.style.alignItems = 'center';
-          container.style.justifyContent = 'center';
-          container.style.gap = '4px';
-
-          const val = document.createElement('span');
-          val.textContent = row.input !== null ? formatAU(row.input) : '';
-          container.appendChild(val);
-
-          if (row.inputType === 'percent') {
-            const unit = document.createElement('span');
-            unit.textContent = '%';
-            unit.style.color = '#98A2B3';
-            container.appendChild(unit);
+          if (isParentWithoutInput || row.inputType === 'none') {
+            container.textContent = '';
+            return;
           }
+          container.textContent = row.input !== null ? formatAU(row.input) : '';
         },
         cellStyle: parentRowCellStyle,
       },
@@ -414,7 +401,6 @@ export function FsbtCost() {
       defaultExpanded: true,
     },
     pinnedBottomRows,
-    selection: { mode: 'range' as const, fillHandle: true },
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
   });

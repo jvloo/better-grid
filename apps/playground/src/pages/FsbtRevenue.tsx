@@ -154,7 +154,6 @@ export function FsbtRevenue() {
     columns: btsColumns,
     plugins: btsPlugins,
     pinnedBottomRows: [btsTotalsRow],
-    selection: { mode: 'range' as const, fillHandle: true },
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
     pinnedBottomRowHeight: FSBT_STYLES.rowHeight,
@@ -231,7 +230,6 @@ export function FsbtRevenue() {
       getParentId: (row: HoldingRow) => row.parentId,
       defaultExpanded: true,
     },
-    selection: { mode: 'range' as const },
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
   });

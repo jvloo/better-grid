@@ -106,7 +106,6 @@ export function FsbtFunding() {
     frozenLeftColumns: 2,
     freezeClip: { minVisible: 2 },
     tableStyle: 'striped' as const,
-    selection: { mode: 'range' as const },
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
   });
