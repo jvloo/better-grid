@@ -4,6 +4,7 @@ import type { ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
 import { formatting, editing, cellRenderers, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
+import { FSBT_STYLES } from './_fsbt-cell-styles';
 
 interface FundingRow {
   id: number;
@@ -106,8 +107,8 @@ export function FsbtFunding() {
     freezeClip: { minVisible: 2 },
     tableStyle: 'striped' as const,
     selection: { mode: 'range' as const },
-    headerHeight: 44,
-    rowHeight: 44,
+    headerHeight: FSBT_STYLES.headerHeight,
+    rowHeight: FSBT_STYLES.rowHeight,
   });
 
   const handleUndo = useCallback(() => grid.plugins.undoRedo?.undo(), [grid]);

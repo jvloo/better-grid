@@ -3,6 +3,7 @@ import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { formatting, editing, sorting, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
+import { FSBT_STYLES, parentRowCellStyle, parentRowCellStyleIndented } from './_fsbt-cell-styles';
 
 // ============================================================================
 // Grid A: Build-to-Sell (BTS) General Table
@@ -154,9 +155,9 @@ export function FsbtRevenue() {
     plugins: btsPlugins,
     pinnedBottomRows: [btsTotalsRow],
     selection: { mode: 'range' as const, fillHandle: true },
-    headerHeight: 44,
-    rowHeight: 44,
-    pinnedBottomRowHeight: 44,
+    headerHeight: FSBT_STYLES.headerHeight,
+    rowHeight: FSBT_STYLES.rowHeight,
+    pinnedBottomRowHeight: FSBT_STYLES.rowHeight,
     tableStyle: 'striped' as const,
   });
 
@@ -166,9 +167,9 @@ export function FsbtRevenue() {
 
   const holdingColumns = useMemo<ColumnDef<HoldingRow>[]>(
     () => [
-      { id: 'type', accessorKey: 'type', header: 'Type', width: 200, align: 'left' as const },
-      { id: 'description', accessorKey: 'description', header: 'Description', width: 80, align: 'center' as const },
-      { id: 'input', accessorKey: 'input', header: 'Input', width: 100, cellType: 'currency' as const, precision: 0, align: 'center' as const, hideZero: true },
+      { id: 'type', accessorKey: 'type', header: 'Type', width: 200, align: 'left' as const, cellStyle: parentRowCellStyleIndented },
+      { id: 'description', accessorKey: 'description', header: 'Description', width: 80, align: 'center' as const, cellStyle: parentRowCellStyle },
+      { id: 'input', accessorKey: 'input', header: 'Input', width: 100, cellType: 'currency' as const, precision: 0, align: 'center' as const, hideZero: true, cellStyle: parentRowCellStyle },
       {
         id: 'amount',
         accessorKey: 'amount',
@@ -177,12 +178,16 @@ export function FsbtRevenue() {
         cellType: 'currency' as const,
         precision: 0,
         align: 'center' as const,
-        cellStyle: (v: unknown) => (typeof v === 'number' && v < 0) ? { color: '#dc2626' } : undefined,
+        cellStyle: (v: unknown, row: unknown) => {
+          const base = parentRowCellStyle(v, row) ?? {};
+          if (typeof v === 'number' && v < 0) return { ...base, color: '#dc2626' };
+          return base;
+        },
       },
-      { id: 'start', accessorKey: 'start', header: 'Start', width: 80, cellType: 'date' as const, dateFormat: 'month-year' as const, align: 'center' as const },
-      { id: 'end', accessorKey: 'end', header: 'End', width: 80, cellType: 'date' as const, dateFormat: 'month-year' as const, align: 'center' as const },
-      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 80, align: 'center' as const },
-      { id: 'varianceStatus', accessorKey: 'varianceStatus' as keyof HoldingRow, header: '', width: 44, align: 'center' as const },
+      { id: 'start', accessorKey: 'start', header: 'Start', width: 80, cellType: 'date' as const, dateFormat: 'month-year' as const, align: 'center' as const, cellStyle: parentRowCellStyle },
+      { id: 'end', accessorKey: 'end', header: 'End', width: 80, cellType: 'date' as const, dateFormat: 'month-year' as const, align: 'center' as const, cellStyle: parentRowCellStyle },
+      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 80, align: 'center' as const, cellStyle: parentRowCellStyle },
+      { id: 'varianceStatus', accessorKey: 'varianceStatus' as keyof HoldingRow, header: '', width: 44, align: 'center' as const, cellStyle: parentRowCellStyle },
       ...holdingMonths.map(m => ({
         id: m.key,
         accessorKey: m.key,
@@ -191,7 +196,11 @@ export function FsbtRevenue() {
         cellType: 'currency' as const,
         precision: 0,
         hideZero: true,
-        cellStyle: (v: unknown) => (typeof v === 'number' && v < 0) ? { color: '#dc2626' } : undefined,
+        cellStyle: (v: unknown, row: unknown) => {
+          const base = parentRowCellStyle(v, row) ?? {};
+          if (typeof v === 'number' && v < 0) return { ...base, color: '#dc2626' };
+          return base;
+        },
       })),
     ],
     [],
@@ -223,8 +232,8 @@ export function FsbtRevenue() {
       defaultExpanded: true,
     },
     selection: { mode: 'range' as const },
-    headerHeight: 44,
-    rowHeight: 44,
+    headerHeight: FSBT_STYLES.headerHeight,
+    rowHeight: FSBT_STYLES.rowHeight,
   });
 
   // ════════════════════════════════════════════════════════════════════════════
