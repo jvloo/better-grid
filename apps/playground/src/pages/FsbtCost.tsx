@@ -157,9 +157,69 @@ export function FsbtCost() {
     () => [
       { id: 'code', accessorKey: 'code', header: 'Code', width: 45, align: 'right' as const, cellStyle: parentRowCellStyle },
       { id: 'name', accessorKey: 'name', header: 'Phase', width: 260, cellStyle: parentRowCellStyleIndented },
-      { id: 'input', accessorKey: 'input', header: 'Input', width: 120, cellType: 'currency' as const, precision: 0, align: 'right' as const, editable: true, cellStyle: parentRowCellStyle },
-      { id: 'inputNote', accessorKey: 'inputNote', header: '', width: 90, cellStyle: parentRowCellStyle },
-      { id: 'escalation', accessorKey: 'escalation', header: 'Escalation', width: 110, cellEditor: 'dropdown' as const, options: ['none', 'cpi', 'non-cpi'], cellStyle: parentRowCellStyle },
+      // Input — Wiseway shows this as an editable-looking number without the $ prefix.
+      // Parent rows with input=0 and blank inputNote render empty so they read as rollups.
+      {
+        id: 'input', accessorKey: 'input', header: 'Input', width: 130, align: 'right' as const, editable: true,
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as CostRow;
+          const { input, inputNote } = row;
+          const percentMatch = inputNote?.match(/^(\d+(?:\.\d+)?)%$/);
+          const isParentRollup = row.parentId === null && !input && !inputNote;
+
+          container.innerHTML = '';
+          if (isParentRollup) return;
+          container.style.display = 'flex';
+          container.style.alignItems = 'center';
+          container.style.justifyContent = 'flex-end';
+          container.style.gap = '4px';
+          container.style.fontSize = FSBT_STYLES.infoFontSize;
+
+          if (percentMatch) {
+            const val = document.createElement('span');
+            val.textContent = percentMatch[1];
+            container.appendChild(val);
+            const unit = document.createElement('span');
+            unit.textContent = '%';
+            unit.style.color = '#98A2B3';
+            unit.style.fontSize = '11px';
+            container.appendChild(unit);
+          } else {
+            const val = document.createElement('span');
+            val.textContent = input ? Number(input).toLocaleString('en-AU') : '0';
+            container.appendChild(val);
+          }
+        },
+        cellStyle: parentRowCellStyle,
+      },
+      // inputNote — muted unit label sitting right next to the Input value (Wiseway
+      // renders this as "Per lot" / "p.a." / "Fixed" in a small, low-contrast style).
+      {
+        id: 'inputNote', accessorKey: 'inputNote', header: '', width: 80, align: 'left' as const,
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as CostRow;
+          const note = row.inputNote || '';
+          // Percent input already renders the "%" suffix inside the Input cell, so
+          // here we surface everything else (Per lot / p.a. / Fixed / cpi).
+          const isPercent = /^(\d+(?:\.\d+)?)%$/.test(note);
+          container.textContent = isPercent ? '' : note;
+          container.style.fontSize = '11px';
+          container.style.color = '#98A2B3';
+        },
+        cellStyle: parentRowCellStyle,
+      },
+      // Escalation — dropdown that capitalises 'cpi' on display to match Wiseway's "CPI".
+      {
+        id: 'escalation', accessorKey: 'escalation', header: 'Escalation', width: 110,
+        cellEditor: 'dropdown' as const, options: ['none', 'cpi', 'non-cpi'],
+        valueFormatter: (v) => {
+          if (v === 'cpi') return 'CPI';
+          if (v === 'non-cpi') return 'Non-CPI';
+          if (v === 'none' || !v) return '';
+          return String(v);
+        },
+        cellStyle: parentRowCellStyle,
+      },
       { id: 'amount', accessorKey: 'amount', header: 'Amount', width: 130, cellType: 'currency' as const, precision: 0, align: 'right' as const, cellStyle: (_v, row) => {
         const r = row as CostRow;
         // Amount always renders with the same mild highlight so it reads as the bottom-line figure,
@@ -170,6 +230,14 @@ export function FsbtCost() {
       { id: 'start', accessorKey: 'start', header: 'Start', width: 90, cellType: 'date' as const, dateFormat: 'month-year' as const, cellStyle: parentRowCellStyle },
       { id: 'end', accessorKey: 'end', header: 'End', width: 90, cellType: 'date' as const, dateFormat: 'month-year' as const, cellStyle: parentRowCellStyle },
       { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 90, cellType: 'change' as const, cellStyle: parentRowCellStyle },
+      // Collapse/expand chevron lives at the end of the fixed columns, matching FsbtProgram.
+      {
+        id: 'collapse', header: '', width: 40, editable: false,
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as CostRow;
+          container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
+        },
+      },
       ...ts.columns,
     ],
     [],
@@ -180,7 +248,7 @@ export function FsbtCost() {
       formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
       editing({ editTrigger: 'dblclick', precision: 0 }),
       sorting(),
-      hierarchy({ indentColumn: 'name', indentSize: 22 }),
+      hierarchy({ toggleColumn: 'collapse', toggleStyle: 'chevron' }),
       cellRenderers(),
       validation(),
       clipboard(),
@@ -196,11 +264,11 @@ export function FsbtCost() {
     data,
     columns,
     plugins,
-    // Freeze the 9 left-hand info columns (code through variance) — matches
+    // Freeze the 10 left-hand info columns (code through collapse) — matches
     // Wiseway's Cost tab where monthly columns scroll horizontally and the
     // info columns stay pinned. No freezeClip: we never want the user to be
-    // able to hide Amount / Variance behind the clip handle.
-    frozenLeftColumns: 9,
+    // able to hide Amount / Variance / the chevron behind the clip handle.
+    frozenLeftColumns: 10,
     tableStyle: 'striped' as const,
     hierarchy: {
       getRowId: (row: CostRow) => row.id,
