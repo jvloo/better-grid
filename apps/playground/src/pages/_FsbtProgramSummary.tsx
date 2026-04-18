@@ -26,14 +26,7 @@ export function FsbtProgramSummary() {
 
   const columns = useMemo<ColumnDef<FsbtProgramRow>[]>(() => [
     {
-      id: 'collapse', header: '', width: 40, editable: false,
-      cellRenderer: (container, ctx) => {
-        const row = ctx.row as FsbtProgramRow;
-        container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
-      },
-    },
-    {
-      id: 'code', accessorKey: 'code', header: 'Code', width: 55, align: 'right' as const, editable: false,
+      id: 'code', accessorKey: 'code', header: 'Code', width: 45, align: 'right' as const, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
         const isParent = row.parentId === null;
@@ -92,6 +85,13 @@ export function FsbtProgramSummary() {
         container.style.fontWeight = isParent ? '500' : '400';
         container.style.backgroundColor = isParent ? '#F8F8F8' : '';
         container.style.paddingLeft = '12px';
+      },
+    },
+    {
+      id: 'collapse', header: '', width: 40, editable: false,
+      cellRenderer: (container, ctx) => {
+        const row = ctx.row as FsbtProgramRow;
+        container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
       },
     },
     ...ts.columns,

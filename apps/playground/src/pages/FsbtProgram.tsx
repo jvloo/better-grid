@@ -266,17 +266,9 @@ export function FsbtProgram() {
         container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
       },
     },
-    // ── Col 1: Collapse/expand chevron (handled by hierarchy plugin) ────
+    // ── Col 1: Code (right-aligned with left gap) ───────────────────────
     {
-      id: 'collapse', header: '', width: 40, editable: false,
-      cellRenderer: (container, ctx) => {
-        const row = ctx.row as ProgramRow;
-        container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
-      },
-    },
-    // ── Col 2: Code (right-aligned with left gap) ───────────────────────
-    {
-      id: 'code', accessorKey: 'code', header: 'Code', width: 55, align: 'right' as const, editable: false,
+      id: 'code', accessorKey: 'code', header: 'Code', width: 45, align: 'right' as const, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
@@ -394,8 +386,14 @@ export function FsbtProgram() {
         container.style.paddingLeft = '14px';
       },
     },
-    // Collapse chevron is injected into the Code column by the hierarchy
-    // plugin (toggleColumn: 'code'), matching the FsbtProgramSummary layout.
+    // ── Col 6: Collapse/expand chevron (handled by hierarchy plugin) ────
+    {
+      id: 'collapse', header: '', width: 40, editable: false,
+      cellRenderer: (container, ctx) => {
+        const row = ctx.row as ProgramRow;
+        container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
+      },
+    },
     // ── Monthly Gantt columns (111px each) ────────────────────────────
     ...ts.columns,
   ], []);
