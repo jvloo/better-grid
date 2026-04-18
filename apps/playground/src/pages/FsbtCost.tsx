@@ -198,6 +198,17 @@ function phaseCellStyle(_v: unknown, row: unknown): Record<string, string> | und
   return { ...base, paddingLeft: r.parentId === null ? '8px' : '28px' };
 }
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'] as const;
+
+/** Convert YYYY-MM-DD → "Mon YY" (matches Program table). Blank pass-through. */
+function formatMonYY(dateIso: string): string {
+  if (!dateIso) return '';
+  const [yStr, mStr] = dateIso.split('-');
+  if (!yStr || !mStr) return dateIso;
+  const m = parseInt(mStr, 10) - 1;
+  return `${MONTH_NAMES[m] ?? mStr} ${yStr.slice(2)}`;
+}
+
 export function FsbtCost() {
   const columns = useMemo<ColumnDef<CostRow>[]>(
     () => [
@@ -209,13 +220,29 @@ export function FsbtCost() {
           container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
         },
       },
-      // ── Col 1: Code — right-aligned, no right padding ──
-      { id: 'code', accessorKey: 'code', header: 'Code', width: 40, align: 'right' as const, cellStyle: parentRowCellStyle },
-      // ── Col 2: Phase — 8px parent / 28px child padding, bold on parent ──
-      { id: 'name', accessorKey: 'name', header: 'Phase', width: 236, cellStyle: phaseCellStyle },
-      // ── Col 3: Input — percent rows show number + "%" suffix; parent rows except Land Cost render empty ──
+      // ── Col 1: Code — right-aligned, read-only. Explicit cellRenderer
+      //    keeps inputStyle: true from painting an empty input here. ──
       {
-        id: 'input', accessorKey: 'input', header: 'Input', width: 110, align: 'center' as const, editable: true,
+        id: 'code', accessorKey: 'code', header: 'Code', width: 40, align: 'right' as const, editable: false,
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as CostRow;
+          container.textContent = row.code;
+          container.style.paddingRight = '0';
+        },
+        cellStyle: parentRowCellStyle,
+      },
+      // ── Col 2: Phase — 8px parent / 28px child padding, bold on parent.
+      //    Editable only for custom children (Wiseway convention — only custom rows are named by the user).
+      {
+        id: 'name', accessorKey: 'name', header: 'Phase', width: 236, cellStyle: phaseCellStyle,
+        editable: ((row: CostRow) => row.parentId !== null && row.custom) as unknown as boolean,
+      },
+      // ── Col 3: Input — percent rows show number + "%" suffix; parent rows except Land Cost render empty.
+      //    Editable unless the row is inputType='none' (parent rollups). Land Cost (parent with code='1') is still editable.
+      {
+        id: 'input', accessorKey: 'input', header: 'Input', width: 110, align: 'center' as const,
+        editable: ((row: CostRow) => row.inputType !== 'none') as unknown as boolean,
+        cellType: 'number' as const, precision: 2,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
 
@@ -253,20 +280,22 @@ export function FsbtCost() {
         },
         cellStyle: parentRowCellStyle,
       },
-      // ── Col 5: Escalation — CPI / Non-CPI dropdown, blank when 'none' ──
+      // ── Col 5: Escalation — CPI / Non-CPI dropdown, blank when 'none' or on parent rows ──
       {
         id: 'escalation', accessorKey: 'escalation', header: 'Escalation', width: 110, align: 'center' as const,
         cellEditor: 'dropdown' as const, options: ['none', 'cpi', 'non-cpi'],
-        valueFormatter: (v) => {
-          if (v === 'cpi') return 'CPI';
-          if (v === 'non-cpi') return 'Non-CPI';
-          return '';
+        editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as CostRow;
+          if (row.escalation === 'cpi') container.textContent = 'CPI';
+          else if (row.escalation === 'non-cpi') container.textContent = 'Non-CPI';
+          else container.textContent = '';
         },
         cellStyle: parentRowCellStyle,
       },
-      // ── Col 6: Amount — plain number (Wiseway uses formatNumber, not currency) ──
+      // ── Col 6: Amount — plain number (Wiseway uses formatNumber, not currency), read-only ──
       {
-        id: 'amount', accessorKey: 'amount', header: 'Amount', width: 110, align: 'center' as const,
+        id: 'amount', accessorKey: 'amount', header: 'Amount', width: 110, align: 'center' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.textContent = typeof row.amount === 'number' ? formatAU(Math.round(row.amount)) : '';
@@ -277,15 +306,39 @@ export function FsbtCost() {
           return { color: FSBT_STYLES.childText, fontSize: FSBT_STYLES.infoFontSize };
         },
       },
-      // ── Col 7: Start ──
-      { id: 'start', accessorKey: 'start', header: 'Start', width: 85, cellType: 'date' as const, dateFormat: 'month-year' as const, align: 'center' as const, cellStyle: parentRowCellStyle },
-      // ── Col 8: End ──
-      { id: 'end', accessorKey: 'end', header: 'End', width: 85, cellType: 'date' as const, dateFormat: 'month-year' as const, align: 'center' as const, cellStyle: parentRowCellStyle },
-      // ── Col 9: Variance ──
-      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 85, cellType: 'change' as const, align: 'center' as const, cellStyle: parentRowCellStyle },
+      // ── Col 7: Start — display as "Mon YY", editable for non-parents ──
+      {
+        id: 'start', accessorKey: 'start', header: 'Start', width: 85, align: 'center' as const,
+        editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as CostRow;
+          container.textContent = formatMonYY(row.start);
+        },
+        cellStyle: parentRowCellStyle,
+      },
+      // ── Col 8: End — display as "Mon YY", editable for non-parents ──
+      {
+        id: 'end', accessorKey: 'end', header: 'End', width: 85, align: 'center' as const,
+        editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as CostRow;
+          container.textContent = formatMonYY(row.end);
+        },
+        cellStyle: parentRowCellStyle,
+      },
+      // ── Col 9: Variance (read-only, computed) ──
+      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 85, cellType: 'change' as const, align: 'center' as const, editable: false, cellStyle: parentRowCellStyle },
       // ── Col 10: Variance status — 44px icon slot (matches Wiseway's layout; status icon TBD) ──
       {
         id: 'varianceStatus', header: '', width: 44, editable: false,
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as CostRow;
+          container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
+        },
+      },
+      // ── Col 11: Collapse/expand chevron (at end of frozen row, matches FsbtProgram) ──
+      {
+        id: 'collapse', header: '', width: 40, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
@@ -299,9 +352,10 @@ export function FsbtCost() {
   const plugins = useMemo(
     () => [
       formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
-      editing({ editTrigger: 'dblclick', precision: 0 }),
+      // inputStyle: true makes editable cells always look like inputs/dropdowns (matching Wiseway), even when not focused.
+      editing({ editTrigger: 'click', inputStyle: true, precision: 0 }),
       sorting(),
-      hierarchy({ indentColumn: 'name', indentSize: 0 }),
+      hierarchy({ toggleColumn: 'collapse', toggleStyle: 'chevron' }),
       cellRenderers(),
       validation(),
       clipboard(),
@@ -317,10 +371,12 @@ export function FsbtCost() {
     data,
     columns,
     plugins,
-    // Freeze the 11 Wiseway-default columns (menu → varianceStatus). Monthly
-    // columns scroll horizontally. No freezeClip — we never want Amount or
-    // Variance collapsed behind the clip handle.
-    frozenLeftColumns: 11,
+    // Freeze 12 columns (Wiseway's 11 defaults + our trailing collapse column).
+    // Monthly columns scroll horizontally. freezeClip lets the user drag the
+    // clip handle to hide some pinned columns when the viewport is narrow;
+    // minVisible: 2 keeps at least Menu + Code visible at all times.
+    frozenLeftColumns: 12,
+    freezeClip: { minVisible: 2 },
     tableStyle: 'striped' as const,
     hierarchy: {
       getRowId: (row: CostRow) => row.id,
