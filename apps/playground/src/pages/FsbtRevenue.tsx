@@ -24,12 +24,12 @@ interface BtsRow {
   commBackend: number;
 }
 
+// Data from QA app project 4288: https://qa-app.wiseway.ai/projects/4288/revenue
+// Total Gross Revenue: $224,739,528
 const btsData: BtsRow[] = [
-  { id: 1, type: 'Residential - Apartments', stage: 1, nsa: 12500, units: 180, salePrice: 9200, growthRate: 3.5, launchDate: '2025-09-01', projectedPrice: 9842, grossRevenue: 115000000, gst: 10, commUpfront: 2.5, commBackend: 1.0 },
-  { id: 2, type: 'Residential - Penthouses', stage: 1, nsa: 2800, units: 8, salePrice: 15000, growthRate: 4.0, launchDate: '2025-10-01', projectedPrice: 16224, grossRevenue: 42000000, gst: 10, commUpfront: 3.0, commBackend: 1.5 },
-  { id: 3, type: 'Retail', stage: 1, nsa: 1500, units: 6, salePrice: 7500, growthRate: 2.5, launchDate: '2026-01-01', projectedPrice: 7688, grossRevenue: 11250000, gst: 10, commUpfront: 3.0, commBackend: 1.0 },
-  { id: 4, type: 'Commercial - Office', stage: 1, nsa: 3200, units: 12, salePrice: 8800, growthRate: 3.0, launchDate: '2026-01-01', projectedPrice: 9064, grossRevenue: 28160000, gst: 10, commUpfront: 2.0, commBackend: 1.0 },
-  { id: 5, type: 'Parking', stage: 1, nsa: 800, units: 40, salePrice: 3500, growthRate: 2.0, launchDate: '2026-03-01', projectedPrice: 3570, grossRevenue: 2800000, gst: 10, commUpfront: 1.5, commBackend: 0.5 },
+  { id: 1, type: 'Residential - BTS', stage: 1, nsa: 19500, units: 160, salePrice: 8803, growthRate: 6.0, launchDate: '2026-10-01', projectedPrice: 9331, grossRevenue: 181958010, gst: 9.09, commUpfront: 1.5, commBackend: 1.5 },
+  { id: 2, type: 'Retail - BTS', stage: 1, nsa: 2600, units: 30, salePrice: 15898, growthRate: 3.5, launchDate: '2026-10-01', projectedPrice: 16454, grossRevenue: 42781518, gst: 9.09, commUpfront: 1.75, commBackend: 0.25 },
+  { id: 3, type: 'Land - BTS', stage: 0, nsa: 0, units: 0, salePrice: 1960, growthRate: 'CPI', launchDate: '', projectedPrice: 1960, grossRevenue: 0, gst: 9.09, commUpfront: 0, commBackend: 0 },
 ];
 
 // ============================================================================

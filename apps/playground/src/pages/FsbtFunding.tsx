@@ -12,17 +12,18 @@ interface FundingRow {
   [key: string]: string | number | null;
 }
 
-// Data from QA app project 4288: Equity Peak $22,809,333
+// Data from QA app project 4288: https://qa-app.wiseway.ai/projects/4288/funding
+// Equity Peak: $22,809,333 | Cashflow: -$5,241,240
 const data: FundingRow[] = [
   { id: 1, equityItem: 'Opening Balance', amount: 0 },
-  { id: 2, equityItem: 'Cash Equity Injection', amount: 22809533, m_2023_08: 3104106, m_2023_09: 374107, m_2023_10: 374106, m_2023_11: 374106, m_2024_01: 24300000 },
-  { id: 3, equityItem: 'Non - Project Cost Equity Contribution', amount: 0 },
-  { id: 4, equityItem: 'Equity Repatriation', amount: 0 },
-  { id: 5, equityItem: 'Return Capital', amount: 0 },
+  { id: 2, equityItem: 'Cash Equity Injection', amount: 22185537, m_2023_08: 3104106, m_2023_09: 374106, m_2023_10: 374106, m_2023_11: 374106, m_2023_12: 236606, m_2024_01: 8724507 },
+  { id: 3, equityItem: 'Non - Project Cost Equity Contribution', amount: 3767202, m_2024_02: 239637, m_2024_03: 415299, m_2024_04: 239637 },
+  { id: 4, equityItem: 'Equity Repatriation', amount: -2284701 },
+  { id: 5, equityItem: 'Return Capital', amount: -18426798 },
   { id: 6, equityItem: 'Manual Input', amount: 0 },
   { id: 7, equityItem: 'Closing Balance', amount: 0 },
   { id: 8, equityItem: 'Profit release', amount: 0 },
-  { id: 9, equityItem: 'Cashflow', amount: 0 },
+  { id: 9, equityItem: 'Cashflow', amount: -5241240 },
 ];
 
 const highlightedRows = new Set(['Profit release', 'Cashflow']);
@@ -131,7 +132,7 @@ export function FsbtFunding() {
         Equity structure with monthly drawdown, repatriation, and capital return schedules.
       </p>
       <div style={{ marginBottom: 8, fontSize: 14, fontWeight: 600, color: '#1e3a5f' }}>
-        Equity Peak: $52,400,000
+        Equity Peak: $22,809,333
       </div>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
         <strong>Plugins:</strong> formatting, editing, cellRenderers, clipboard, undoRedo, export &bull;
