@@ -1345,24 +1345,31 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         requestAnimationFrame(() => {
           input.focus();
-          // Determine which section was clicked based on mouse position
+          // Determine which section was clicked based on mouse position. The
+          // cellRenderer may display a user-friendly text (e.g. "Aug 23") that
+          // is visually wider than the masked editor value (e.g. "08/23"), so
+          // we split the cell content area proportionally by mask-character
+          // count — click in the first 2/5 of a "MM/YY" cell → MM section,
+          // past that boundary → YY. This matches user intuition ("click left
+          // = MM, click right = YY") regardless of the displayed text width.
           let initialSection = 0;
           if (clickEvent && sectionLengths.length > 1) {
-            // Measure where each section sits by using a temporary canvas context
-            const ctx2d = document.createElement('canvas').getContext('2d');
-            if (ctx2d) {
-              ctx2d.font = `${anchorComputed.fontWeight} ${anchorComputed.fontSize} ${anchorComputed.fontFamily}`;
-              const display = buildDisplayValue();
-              const sepRange = getSectionRange(0);
-              // Text up to end of first section + separator = boundary between MM and YY
-              const boundaryText = display.slice(0, sepRange.end + 1);
-              const boundaryWidth = ctx2d.measureText(boundaryText).width;
-              // Compare click position relative to cell's text start
-              const paddingLeft = parseFloat(anchorComputed.paddingLeft) || 0;
-              const clickOffset = clickEvent.clientX - cellRect.left - paddingLeft;
-              if (clickOffset > boundaryWidth) {
-                initialSection = 1;
-              }
+            const paddingLeft = parseFloat(anchorComputed.paddingLeft) || 0;
+            const paddingRight = parseFloat(anchorComputed.paddingRight) || 0;
+            const contentWidth = Math.max(1, cellRect.width - paddingLeft - paddingRight);
+            const clickOffset = Math.max(0, Math.min(contentWidth,
+              clickEvent.clientX - cellRect.left - paddingLeft,
+            ));
+            const clickProp = clickOffset / contentWidth;
+
+            // Build cumulative mask-char boundaries between sections.
+            // For "MM/YY": after "MM/" = 3/5 → boundary 0.6
+            // For "MM/DD/YYYY": after "MM/" = 3/10 → 0.3; after "MM/DD/" = 6/10 → 0.6
+            let cumChars = 0;
+            for (let i = 0; i < sectionLengths.length - 1; i += 1) {
+              cumChars += sectionLengths[i]! + 1; // +1 for following separator
+              const boundary = cumChars / mask.length;
+              if (clickProp > boundary) initialSection = i + 1;
             }
           }
           activeSectionIdx = initialSection;
