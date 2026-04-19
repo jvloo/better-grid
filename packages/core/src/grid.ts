@@ -1558,6 +1558,7 @@ export function createGrid<
     getState: () => store.getState(),
     getContainer: () => container,
     getHeaderLayout: () => headerRows,
+    getCellType: (type: string) => rendering.getCellType(type),
 
     addPlugin(plugin: GridPlugin): void {
       pluginRegistry.addPlugin(plugin, createPluginContext);

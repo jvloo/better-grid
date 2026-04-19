@@ -568,6 +568,7 @@ export interface PluginGridApi<TData = unknown> {
   refresh(): void;
   getContainer(): HTMLElement | null;
   getHeaderLayout(): HeaderRow[] | undefined;
+  getCellType(type: string): CellTypeRenderer | undefined;
 
   // Selection
   setSelection(selection: Selection): void;

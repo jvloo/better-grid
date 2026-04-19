@@ -138,6 +138,11 @@ const data: CostRow[] = [
 ];
 
 // Monthly columns: Aug 2023 – Oct 2026 (39 months, matching Program)
+const monthValueFormatter = (v: unknown): string => {
+  if (v == null || v === 0 || typeof v !== 'number') return '';
+  return v.toLocaleString('en-AU', { maximumFractionDigits: 0 });
+};
+
 const ts = timeSeries({
   start: '2023-08-01',
   end: '2026-10-01',
@@ -146,6 +151,7 @@ const ts = timeSeries({
     cellType: 'currency' as never,
     precision: 0,
     hideZero: true,
+    valueFormatter: monthValueFormatter,
   },
 });
 
@@ -320,33 +326,41 @@ export function FsbtCost() {
           return { color: FSBT_STYLES.childText, fontSize: FSBT_STYLES.infoFontSize };
         },
       },
-      // ── Col 7: Start — masked MM/YY input (matches FsbtProgram's Start column) ──
+      // ── Col 7: Start — masked MM/YY input, matches FsbtProgram's Start column styling ──
       {
-        id: 'start', accessorKey: 'start', header: 'Start', width: 85, align: 'center' as const,
-        placeholder: 'MM/YY',
+        id: 'start', accessorKey: 'start', header: 'Start', width: 110, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
         valueFormatter: formatIsoToMMYY,
         valueParser: parseMMYYToIso,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
-          container.textContent = formatMonYY(row.start);
+          const isParent = row.parentId === null;
+          container.textContent = row.start ? formatMonYY(row.start) : '';
+          container.style.fontSize = FSBT_STYLES.infoFontSize;
+          container.style.fontWeight = isParent ? FSBT_STYLES.parentFontWeight : FSBT_STYLES.childFontWeight;
+          container.style.color = FSBT_STYLES.childText;
+          container.style.backgroundColor = isParent ? FSBT_STYLES.parentRowBg : '';
+          if (isParent) container.style.paddingLeft = '14px';
         },
-        cellStyle: parentRowCellStyle,
       },
-      // ── Col 8: End — masked MM/YY input (same pattern as Start / Program) ──
+      // ── Col 8: End — masked MM/YY input, matches Program styling ──
       {
-        id: 'end', accessorKey: 'end', header: 'End', width: 85, align: 'center' as const,
-        placeholder: 'MM/YY',
+        id: 'end', accessorKey: 'end', header: 'End', width: 110, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
         valueFormatter: formatIsoToMMYY,
         valueParser: parseMMYYToIso,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
-          container.textContent = formatMonYY(row.end);
+          const isParent = row.parentId === null;
+          container.textContent = row.end ? formatMonYY(row.end) : '';
+          container.style.fontSize = FSBT_STYLES.infoFontSize;
+          container.style.fontWeight = isParent ? FSBT_STYLES.parentFontWeight : FSBT_STYLES.childFontWeight;
+          container.style.color = isParent ? FSBT_STYLES.parentText : FSBT_STYLES.childText;
+          container.style.backgroundColor = isParent ? FSBT_STYLES.parentRowBg : '';
+          container.style.paddingLeft = '14px';
         },
-        cellStyle: parentRowCellStyle,
       },
       // ── Col 9: Variance (read-only, computed) ──
       { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 85, cellType: 'change' as const, align: 'center' as const, editable: false, cellStyle: parentRowCellStyle },

@@ -182,8 +182,24 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               return;
             }
 
-            // Run original renderer to set styles (bg, font, padding) on the cell
-            if (origRenderer) origRenderer(container, context);
+            // Run original renderer to set styles (bg, font, padding) on the cell.
+            // When no column.cellRenderer is set, fall back to valueFormatter or
+            // the raw value so editable cells without a custom renderer still
+            // produce text for the input box.
+            if (origRenderer) {
+              origRenderer(container, context);
+            } else if (col.valueFormatter) {
+              container.textContent = col.valueFormatter(context.value);
+            } else if (col.cellType) {
+              const typeRenderer = ctx.grid.getCellType(col.cellType);
+              if (typeRenderer?.getStringValue) {
+                container.textContent = typeRenderer.getStringValue(context);
+              } else {
+                container.textContent = context.value != null ? String(context.value) : '';
+              }
+            } else {
+              container.textContent = context.value != null ? String(context.value) : '';
+            }
 
             // Capture text set by original renderer, then replace with input box
             const text = container.textContent?.trim() || '';
