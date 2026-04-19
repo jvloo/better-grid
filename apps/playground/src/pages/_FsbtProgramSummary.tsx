@@ -111,6 +111,8 @@ export function FsbtProgramSummary() {
       parentRowBackground: '#F8F8F8',
       columnToDate,
       formatDate: formatMonYY,
+      // Read-only summary — no drag-to-move/resize on the Gantt bars
+      dragEnabled: false,
     }),
   ], []);
 

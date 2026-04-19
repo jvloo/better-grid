@@ -119,7 +119,7 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
       function formatValue(
         value: unknown,
         type: string,
-        column?: { hideZero?: boolean; dateFormat?: string; valueFormatter?: (value: unknown) => string },
+        column?: { hideZero?: boolean; dateFormat?: string; precision?: number; valueFormatter?: (value: unknown) => string },
       ): string {
         if (value == null) return '';
 
@@ -130,15 +130,37 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
 
         if (column?.hideZero && value === 0) return '';
 
+        // Column-level `precision` overrides the plugin-level decimalPlaces for
+        // numeric types, so a currency column with precision: 0 renders as
+        // "$2,700,000" instead of "$2,700,000.00".
+        const colPrecision = column?.precision;
+
         switch (type) {
-          case 'number':
-            return typeof value === 'number' ? numberFmt.format(value) : String(value);
-          case 'currency':
+          case 'number': {
             if (typeof value !== 'number') return String(value);
-            if (options?.accountingFormat && value < 0) {
-              return `(${currencyFmt.format(Math.abs(value))})`;
+            if (colPrecision != null) {
+              return value.toLocaleString(locale, {
+                minimumFractionDigits: colPrecision,
+                maximumFractionDigits: colPrecision,
+              });
             }
-            return currencyFmt.format(value);
+            return numberFmt.format(value);
+          }
+          case 'currency': {
+            if (typeof value !== 'number') return String(value);
+            const fmt = colPrecision != null
+              ? new Intl.NumberFormat(locale, {
+                  style: 'currency',
+                  currency: currencyCode,
+                  minimumFractionDigits: colPrecision,
+                  maximumFractionDigits: colPrecision,
+                })
+              : currencyFmt;
+            if (options?.accountingFormat && value < 0) {
+              return `(${fmt.format(Math.abs(value))})`;
+            }
+            return fmt.format(value);
+          }
           case 'percent':
             return typeof value === 'number' ? percentFmt.format(value) : String(value);
           case 'bigint': {
