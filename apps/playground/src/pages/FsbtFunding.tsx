@@ -136,7 +136,7 @@ export function FsbtFunding() {
       </div>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
         <strong>Plugins:</strong> formatting, editing, cellRenderers, clipboard, undoRedo, export &bull;
-        <strong> Core:</strong> frozenLeftColumns, selection
+        <strong> Core:</strong> frozenLeftColumns
       </div>
       <div
         ref={containerRef}
