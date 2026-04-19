@@ -531,6 +531,7 @@ export interface GridInstance<
   getState(): GridState<TData>;
   getContainer(): HTMLElement | null;
   getHeaderLayout(): HeaderRow[] | undefined;
+  getCellType(type: string): CellTypeRenderer | undefined;
 
   addPlugin(plugin: GridPlugin): void;
   removePlugin(pluginId: string): void;
