@@ -129,21 +129,24 @@ export function FsbtRevenue() {
     [],
   );
 
-  const btsTotalsRow = useMemo<BtsRow>(() => ({
+  // Totals row — sum only the meaningful columns (NSA, Units, Gross Revenue).
+  // Per-unit columns (salePrice, growthRate, projectedPrice, gst, commUpfront,
+  // commBackend, launchDate) are not additive and are left blank.
+  const btsTotalsRow = useMemo(() => ({
     id: -1,
     type: 'Total',
-    stage: 0,
+    stage: null,
     nsa: btsData.reduce((s, r) => s + r.nsa, 0),
     units: btsData.reduce((s, r) => s + r.units, 0),
-    salePrice: 0,
-    growthRate: 0,
-    launchDate: '',
-    projectedPrice: 0,
+    salePrice: null,
+    growthRate: null,
+    launchDate: null,
+    projectedPrice: null,
     grossRevenue: btsData.reduce((s, r) => s + r.grossRevenue, 0),
-    gst: 0,
-    commUpfront: 0,
-    commBackend: 0,
-  }), []);
+    gst: null,
+    commUpfront: null,
+    commBackend: null,
+  }) as unknown as BtsRow, []);
 
   const btsPlugins = useMemo(
     () => [
