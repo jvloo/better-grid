@@ -87,14 +87,22 @@ export function FsbtRevenue() {
   // BTS Grid Setup
   // ════════════════════════════════════════════════════════════════════════════
 
+  const formatInt = (v: unknown): string => (typeof v === 'number' ? v.toLocaleString('en-AU', { maximumFractionDigits: 0 }) : '');
+  const formatDollars = (v: unknown): string => (typeof v === 'number' ? '$' + v.toLocaleString('en-AU', { maximumFractionDigits: 0 }) : '');
+  const formatRate = (v: unknown): string => {
+    if (typeof v === 'number') return v.toFixed(2) + '%';
+    if (typeof v === 'string' && v) return v;
+    return '';
+  };
+
   const btsColumns = useMemo<ColumnDef<BtsRow>[]>(
     () => [
       { id: 'type', accessorKey: 'type', header: 'Type', width: 170, align: 'left' as const, sortable: true },
       { id: 'stage', accessorKey: 'stage', header: 'Stage', width: 105, align: 'center' as const },
-      { id: 'nsa', accessorKey: 'nsa', header: 'NSA (m2)', width: 105, align: 'center' as const },
-      { id: 'units', accessorKey: 'units', header: 'Unit/Lot/Tenancy', width: 105, align: 'center' as const },
-      { id: 'salePrice', accessorKey: 'salePrice', header: 'Current Sale Price ($/m2)', width: 190, align: 'center' as const, editable: true },
-      { id: 'growthRate', accessorKey: 'growthRate', header: 'Growth Rate', width: 190, align: 'center' as const, editable: true },
+      { id: 'nsa', accessorKey: 'nsa', header: 'NSA (m2)', width: 105, align: 'center' as const, valueFormatter: formatInt },
+      { id: 'units', accessorKey: 'units', header: 'Unit/Lot/Tenancy', width: 105, align: 'center' as const, valueFormatter: formatInt },
+      { id: 'salePrice', accessorKey: 'salePrice', header: 'Current Sale Price ($/m2)', width: 190, align: 'center' as const, editable: true, valueFormatter: formatDollars },
+      { id: 'growthRate', accessorKey: 'growthRate', header: 'Growth Rate', width: 190, align: 'center' as const, editable: true, valueFormatter: formatRate },
       { id: 'launchDate', accessorKey: 'launchDate', header: 'Sales Launch Date', width: 190, cellType: 'date' as const, dateFormat: 'month-year' as const, align: 'center' as const },
       {
         id: 'projectedPrice',
@@ -102,6 +110,7 @@ export function FsbtRevenue() {
         header: 'Projected Sale Price ($/m2)',
         width: 190,
         align: 'center' as const,
+        valueFormatter: formatDollars,
         cellStyle: () => ({ background: '#f5f5f5' }),
       },
       {
@@ -113,9 +122,9 @@ export function FsbtRevenue() {
         precision: 0,
         align: 'center' as const,
       },
-      { id: 'gst', accessorKey: 'gst', header: 'GST (%)', width: 120, align: 'center' as const },
-      { id: 'commUpfront', accessorKey: 'commUpfront', header: 'Sales Commission - Upfront (%)', width: 230, align: 'center' as const, editable: true },
-      { id: 'commBackend', accessorKey: 'commBackend', header: 'Sales Commission - Back End (%)', width: 230, align: 'center' as const, editable: true },
+      { id: 'gst', accessorKey: 'gst', header: 'GST (%)', width: 120, align: 'center' as const, valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
+      { id: 'commUpfront', accessorKey: 'commUpfront', header: 'Sales Commission - Upfront (%)', width: 230, align: 'center' as const, editable: true, valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
+      { id: 'commBackend', accessorKey: 'commBackend', header: 'Sales Commission - Back End (%)', width: 230, align: 'center' as const, editable: true, valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
     ],
     [],
   );
