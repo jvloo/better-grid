@@ -384,9 +384,10 @@ export function FsbtRevenue() {
       //    / Custom); if Custom, ALSO shows a percent input next to the select.
       //    `editable: false` disables the editing plugin's dropdown wrap so
       //    the native elements we render take the click events directly.
+      //    Width: 190 matches Wiseway BtsGeneralTable header minWidth.
       {
         id: 'growthRate', accessorKey: 'growthRate', header: 'Growth Rate',
-        width: 210, align: 'center' as const, editable: false,
+        width: 190, align: 'center' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as BtsRow;
           container.innerHTML = '';
@@ -408,21 +409,19 @@ export function FsbtRevenue() {
           container.style.padding = '0 8px';
 
           // Style the native <select> to blend with .bg-input-box siblings —
-          // subtle fill, no hard border, custom chevron via background image.
+          // same 30px height, #F8F8F8 fill, subtle shadow, custom chevron via
+          // inline-SVG background-image. `appearance:none` strips the native
+          // OS look so the chevron we draw takes over.
           const select = document.createElement('select');
           const hasCustomInput = selectValue === 'custom';
-          select.style.cssText = [
+          const INPUT_BOX_STYLE = 'height:30px;background:#F8F8F8;border:none;border-radius:4px;box-shadow:0 1px 2px 0 rgba(16,24,40,0.05);font-size:12px;color:#101828;box-sizing:border-box;';
+          select.style.cssText = INPUT_BOX_STYLE + [
             'flex:' + (hasCustomInput ? '0 0 auto' : '1 1 auto'),
             'min-width:86px',
-            'padding:4px 22px 4px 8px',
-            'border:none',
-            'border-radius:4px',
-            'background:#F2F4F7',
+            'padding:0 22px 0 8px',
             'background-image:url("data:image/svg+xml;utf8,<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"10\\" height=\\"6\\" viewBox=\\"0 0 10 6\\"><path d=\\"M1 1l4 4 4-4\\" stroke=\\"%23667085\\" stroke-width=\\"1.5\\" fill=\\"none\\" stroke-linecap=\\"round\\"/></svg>")',
             'background-repeat:no-repeat',
             'background-position:right 8px center',
-            'font-size:12px',
-            'color:#101828',
             'cursor:pointer',
             'appearance:none',
             '-webkit-appearance:none',
@@ -448,7 +447,7 @@ export function FsbtRevenue() {
             input.type = 'number';
             input.step = '0.01';
             input.value = typeof currentValue === 'number' ? currentValue.toString() : '0';
-            input.style.cssText = 'flex:0 0 auto;width:60px;padding:4px 6px;border:none;border-radius:4px;background:#F2F4F7;text-align:right;font-size:12px;color:#101828;';
+            input.style.cssText = INPUT_BOX_STYLE + 'flex:0 0 auto;width:60px;padding:0 6px;text-align:right;';
             input.addEventListener('change', () => {
               const n = Number(input.value);
               btsGridRef.current?.updateCell(rowIndex, 'growthRate', isNaN(n) ? 0 : n);
@@ -463,7 +462,10 @@ export function FsbtRevenue() {
       },
       {
         id: 'launchDate', accessorKey: 'launchDate', header: 'Sales Launch Date', width: 190, align: 'center' as const,
-        editable: true, placeholder: 'MM/YY',
+        // Pinned Total row (id === -1) is display-only — otherwise the
+        // inputStyle wrap renders the "MM/YY" placeholder over a null value.
+        editable: ((row: BtsRow) => row.id !== -1) as unknown as boolean,
+        placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         valueFormatter: formatIsoToMMYY,
         valueParser: parseMMYYToIso,
@@ -484,13 +486,12 @@ export function FsbtRevenue() {
         cellStyle: () => ({ background: '#f5f5f5' }),
       },
       // Gross Revenue — computed from Projected × NSA; read-only. Plain number
-      //    (no $ prefix) matching Wiseway; values are large so comma grouping
-      //    carries the meaning.
+      //    (no $ prefix) matching Wiseway; width: 105 matches Wiseway source.
       {
         id: 'grossRevenue',
         accessorKey: 'grossRevenue',
         header: 'Gross Revenue',
-        width: 140,
+        width: 105,
         align: 'center' as const,
         editable: false,
         valueFormatter: formatInt,
@@ -561,13 +562,12 @@ export function FsbtRevenue() {
 
   const holdingColumns = useMemo<ColumnDef<HoldingRow>[]>(
     () => [
-      // ── Type — left column, shows parent labels; children have type='' and
-      //    rely on Description for their label, so the Type column is blank on
-      //    children but styled with the parent/child tokens.
+      // ── Type — left column, shows parent labels; width 200 matches
+      //    Wiseway holding-rental-details-table defaultColumns.
       { id: 'type', accessorKey: 'type', header: 'Type', width: 200, align: 'left' as const, cellStyle: parentRowCellStyle },
-      // ── Description — widened from 80 to 180 so labels like "Maintenance &
-      //    Repairs" and "Leasing Incentive (5%)" don't get clipped.
-      { id: 'description', accessorKey: 'description', header: 'Description', width: 180, align: 'left' as const, cellStyle: parentRowCellStyle },
+      // ── Description — 80 matches Wiseway; longer labels truncate per
+      //    native CSS (same behaviour as the live app).
+      { id: 'description', accessorKey: 'description', header: 'Description', width: 80, align: 'left' as const, cellStyle: parentRowCellStyle },
       // ── Input — per-m2 rate on children, blank on parents. READ-ONLY per
       //    Wiseway: the Input value is sourced from the Holding General table
       //    above and never edited in the Details table. Only monthly cells
@@ -587,12 +587,13 @@ export function FsbtRevenue() {
       },
       // ── Amount — sum for the section. Red when negative. Explicit
       //    cellRenderer: inputStyle wrap bypasses the currency cellType when
-      //    no renderer/valueFormatter is set, so we format by hand here. ──
+      //    no renderer/valueFormatter is set, so we format by hand here.
+      //    Width 100 matches Wiseway.
       {
         id: 'amount',
         accessorKey: 'amount',
         header: 'Amount',
-        width: 120,
+        width: 100,
         align: 'center' as const,
         editable: false,
         cellRenderer: (container, ctx) => {
@@ -610,9 +611,10 @@ export function FsbtRevenue() {
           return base;
         },
       },
-      // ── Start / End — masked MM/YY editor, Mon-YY display, widths match Cost ──
+      // ── Start / End — masked MM/YY editor, Mon-YY display, width 80
+      //    matches Wiseway holding-rental-details-table.
       {
-        id: 'start', accessorKey: 'start', header: 'Start', width: 110, align: 'left' as const, placeholder: 'MM/YY',
+        id: 'start', accessorKey: 'start', header: 'Start', width: 80, align: 'left' as const, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: HoldingRow) => row.parentId !== null) as unknown as boolean,
         valueFormatter: formatIsoToMMYY,
@@ -629,7 +631,7 @@ export function FsbtRevenue() {
         },
       },
       {
-        id: 'end', accessorKey: 'end', header: 'End', width: 110, align: 'left' as const, placeholder: 'MM/YY',
+        id: 'end', accessorKey: 'end', header: 'End', width: 80, align: 'left' as const, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: HoldingRow) => row.parentId !== null) as unknown as boolean,
         valueFormatter: formatIsoToMMYY,
@@ -645,8 +647,8 @@ export function FsbtRevenue() {
           container.style.paddingLeft = '14px';
         },
       },
-      // ── Variance — shown via change cellType (same as Cost) ──
-      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 85, cellType: 'change' as const, align: 'center' as const, editable: false, cellStyle: parentRowCellStyle },
+      // ── Variance — shown via change cellType. Width 80 matches Wiseway.
+      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 80, cellType: 'change' as const, align: 'center' as const, editable: false, cellStyle: parentRowCellStyle },
       // ── Variance status icon slot ──
       {
         id: 'varianceStatus', header: '', width: 44, editable: false,
@@ -714,9 +716,10 @@ export function FsbtRevenue() {
 
   const btsDetailsColumns = useMemo<ColumnDef<BtsDetailRow>[]>(
     () => [
-      // Type column — item rows show product name, section rows show section label
+      // Type column — item rows show product name, section rows show section
+      //    label. Width 200 matches Wiseway bts-details-table defaultColumns.
       {
-        id: 'type', accessorKey: 'type', header: 'Type', width: 170, align: 'left' as const, editable: false,
+        id: 'type', accessorKey: 'type', header: 'Type', width: 200, align: 'left' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as BtsDetailRow;
           if (row.kind === 'section') {
@@ -729,7 +732,9 @@ export function FsbtRevenue() {
         },
         cellStyle: btsDetailCellStyle,
       },
-      { id: 'description', accessorKey: 'description', header: 'Description', width: 150, align: 'left' as const, editable: false, cellStyle: btsDetailCellStyle },
+      // Description — 80px matches Wiseway; labels like "West G Floor"
+      //    truncate to "West G Flo…" per native CSS text-overflow.
+      { id: 'description', accessorKey: 'description', header: 'Description', width: 80, align: 'left' as const, editable: false, cellStyle: btsDetailCellStyle },
       // Input — editable on Gross (flat $) / GST+Commission (percent);
       //    read-only on Net per Wiseway's EDITABLE_FIELD matrix.
       {
@@ -750,9 +755,10 @@ export function FsbtRevenue() {
         },
         cellStyle: btsDetailCellStyle,
       },
-      // Amount — formatted currency, blank on section rows
+      // Amount — formatted currency, blank on section rows. Width 100
+      //    matches Wiseway.
       {
-        id: 'amount', accessorKey: 'amount', header: 'Amount', width: 130, align: 'center' as const, editable: false,
+        id: 'amount', accessorKey: 'amount', header: 'Amount', width: 100, align: 'center' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as BtsDetailRow;
           if (row.kind === 'section' || row.amount == null) { container.textContent = ''; return; }
@@ -762,7 +768,7 @@ export function FsbtRevenue() {
       },
       // Start / End — Mon YY display, masked MM/YY editor on items
       {
-        id: 'start', accessorKey: 'start', header: 'Start', width: 85, align: 'left' as const, placeholder: 'MM/YY',
+        id: 'start', accessorKey: 'start', header: 'Start', width: 80, align: 'left' as const, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: BtsDetailRow) => row.kind === 'item') as unknown as boolean,
         valueFormatter: formatIsoToMMYY,
@@ -774,7 +780,7 @@ export function FsbtRevenue() {
         cellStyle: btsDetailCellStyle,
       },
       {
-        id: 'end', accessorKey: 'end', header: 'End', width: 85, align: 'left' as const, placeholder: 'MM/YY',
+        id: 'end', accessorKey: 'end', header: 'End', width: 80, align: 'left' as const, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: BtsDetailRow) => row.kind === 'item') as unknown as boolean,
         valueFormatter: formatIsoToMMYY,
@@ -785,7 +791,7 @@ export function FsbtRevenue() {
         },
         cellStyle: btsDetailCellStyle,
       },
-      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 85, cellType: 'change' as const, align: 'center' as const, editable: false, cellStyle: btsDetailCellStyle },
+      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 80, cellType: 'change' as const, align: 'center' as const, editable: false, cellStyle: btsDetailCellStyle },
       // Monthly — editable on every section per Wiseway (users can override
       // the auto-computed per-month distribution).
       ...holdingTs.columns.map(c => ({

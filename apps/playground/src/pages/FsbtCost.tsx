@@ -480,14 +480,20 @@ function validateCostInput(value: unknown, row: unknown): boolean | string {
   const n = Number(value);
   if (!Number.isFinite(n)) return 'Input must be a valid number.';
 
+  if (cost.code === '3.08') {
+    if (n < 0 || n > 999.99) return 'Input must be between 0 and 999.99.';
+    if (!hasMaxTwoDecimals(n)) return 'Input allows up to 2 decimal places.';
+    return true;
+  }
+
   if (cost.inputType === 'percent') {
     if (n < 0 || n > 100) return 'Input must be between 0 and 100.';
     if (!hasMaxTwoDecimals(n)) return 'Input allows up to 2 decimal places.';
   }
 
-  if (cost.code === '3.08') {
-    if (n < 0 || n > 999.99) return 'Input must be between 0 and 999.99.';
-    if (!hasMaxTwoDecimals(n)) return 'Input allows up to 2 decimal places.';
+  if (cost.inputType === 'number') {
+    if (n < 0 || n > 2147483647) return 'Input must be between 0 and 2147483647.';
+    if (!Number.isInteger(n)) return 'Input must be a whole number.';
   }
 
   return true;
@@ -543,6 +549,22 @@ export function FsbtCost() {
     });
   }, []);
 
+  const validateLandCostPercentTotal = useCallback((value: unknown, row: unknown): boolean | string => {
+    const cost = row as CostRow;
+    if (cost.parentId !== 1 || cost.inputType !== 'percent') return true;
+
+    const n = Number(value);
+    if (!Number.isFinite(n)) return true;
+
+    const total = rowsRef.current.reduce((sum, candidate) => {
+      if (candidate.parentId !== 1 || candidate.inputType !== 'percent') return sum;
+      const input = candidate.id === cost.id ? n : Number(candidate.input ?? 0);
+      return sum + (Number.isFinite(input) ? input : 0);
+    }, 0);
+
+    return total <= 100 || 'Land Cost percentage inputs must total 100 or less.';
+  }, []);
+
   const columns = useMemo<ColumnDef<CostRow>[]>(
     () => [
       // ── Col 0: Menu — Wiseway's add/delete ⋮ (handled by rowActions plugin) ──
@@ -578,8 +600,14 @@ export function FsbtCost() {
         editable: ((row: CostRow) => row.inputType !== 'none') as unknown as boolean,
         cellType: 'number' as const,
         min: 0,
+        max: ((row: CostRow) => {
+          if (row.code === '3.08') return 999.99;
+          if (row.inputType === 'percent') return 100;
+          if (row.inputType === 'number') return 2147483647;
+          return undefined;
+        }) as never,
         precision: ((row: CostRow) => (row.inputType === 'percent' || row.code === '3.08' ? 2 : undefined)) as never,
-        rules: [{ validate: validateCostInput }],
+        rules: [{ validate: validateCostInput }, { validate: validateLandCostPercentTotal }],
         unit: (row: CostRow) => (row.inputType === 'percent' ? '%' : undefined),
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
@@ -703,7 +731,7 @@ export function FsbtCost() {
       },
       ...ts.columns,
     ],
-    [],
+    [validateLandCostPercentTotal],
   );
 
   const plugins = useMemo(
