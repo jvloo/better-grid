@@ -377,7 +377,9 @@ export function FsbtRevenue() {
       { id: 'stage', accessorKey: 'stage', header: 'Stage', width: 105, align: 'center' as const, editable: false },
       { id: 'nsa', accessorKey: 'nsa', header: 'NSA (m2)', width: 105, align: 'center' as const, valueFormatter: formatInt, editable: false },
       { id: 'units', accessorKey: 'units', header: 'Unit/Lot/Tenancy', width: 105, align: 'center' as const, valueFormatter: formatInt, editable: false },
-      { id: 'salePrice', accessorKey: 'salePrice', header: 'Current Sale Price ($/m2)', width: 190, align: 'center' as const, editable: true, valueFormatter: formatDollars },
+      // Wiseway shows plain numbers here (no $ prefix) — the column header
+      //    already says "$/m²" so the unit is implied.
+      { id: 'salePrice', accessorKey: 'salePrice', header: 'Current Sale Price ($/m2)', width: 190, align: 'center' as const, editable: true, valueFormatter: formatInt },
       // Growth Rate — compound cell: always a 3-option select (Non CPI / CPI
       //    / Custom); if Custom, ALSO shows a percent input next to the select.
       //    `editable: false` disables the editing plugin's dropdown wrap so
@@ -403,9 +405,28 @@ export function FsbtRevenue() {
           container.style.alignItems = 'center';
           container.style.justifyContent = 'center';
           container.style.gap = '4px';
+          container.style.padding = '0 8px';
 
+          // Style the native <select> to blend with .bg-input-box siblings —
+          // subtle fill, no hard border, custom chevron via background image.
           const select = document.createElement('select');
-          select.style.cssText = 'flex:0 0 auto;min-width:86px;padding:2px 4px;border:1px solid #D0D5DD;border-radius:4px;background:#fff;font-size:12px;cursor:pointer;';
+          const hasCustomInput = selectValue === 'custom';
+          select.style.cssText = [
+            'flex:' + (hasCustomInput ? '0 0 auto' : '1 1 auto'),
+            'min-width:86px',
+            'padding:4px 22px 4px 8px',
+            'border:none',
+            'border-radius:4px',
+            'background:#F2F4F7',
+            'background-image:url("data:image/svg+xml;utf8,<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"10\\" height=\\"6\\" viewBox=\\"0 0 10 6\\"><path d=\\"M1 1l4 4 4-4\\" stroke=\\"%23667085\\" stroke-width=\\"1.5\\" fill=\\"none\\" stroke-linecap=\\"round\\"/></svg>")',
+            'background-repeat:no-repeat',
+            'background-position:right 8px center',
+            'font-size:12px',
+            'color:#101828',
+            'cursor:pointer',
+            'appearance:none',
+            '-webkit-appearance:none',
+          ].join(';');
           for (const opt of GROWTH_RATE_OPTIONS) {
             const option = document.createElement('option');
             option.value = opt.value;
@@ -427,7 +448,7 @@ export function FsbtRevenue() {
             input.type = 'number';
             input.step = '0.01';
             input.value = typeof currentValue === 'number' ? currentValue.toString() : '0';
-            input.style.cssText = 'flex:0 0 auto;width:64px;padding:2px 6px;border:1px solid #D0D5DD;border-radius:4px;text-align:right;font-size:12px;';
+            input.style.cssText = 'flex:0 0 auto;width:60px;padding:4px 6px;border:none;border-radius:4px;background:#F2F4F7;text-align:right;font-size:12px;color:#101828;';
             input.addEventListener('change', () => {
               const n = Number(input.value);
               btsGridRef.current?.updateCell(rowIndex, 'growthRate', isNaN(n) ? 0 : n);
@@ -459,10 +480,12 @@ export function FsbtRevenue() {
         width: 190,
         align: 'center' as const,
         editable: false,
-        valueFormatter: formatDollars,
+        valueFormatter: formatInt,
         cellStyle: () => ({ background: '#f5f5f5' }),
       },
-      // Gross Revenue — computed from Projected × NSA; read-only
+      // Gross Revenue — computed from Projected × NSA; read-only. Plain number
+      //    (no $ prefix) matching Wiseway; values are large so comma grouping
+      //    carries the meaning.
       {
         id: 'grossRevenue',
         accessorKey: 'grossRevenue',
@@ -470,11 +493,13 @@ export function FsbtRevenue() {
         width: 140,
         align: 'center' as const,
         editable: false,
-        valueFormatter: formatDollars,
+        valueFormatter: formatInt,
       },
-      { id: 'gst', accessorKey: 'gst', header: 'GST (%)', width: 120, align: 'center' as const, editable: true, valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
-      { id: 'commUpfront', accessorKey: 'commUpfront', header: 'Sales Commission - Upfront (%)', width: 230, align: 'center' as const, editable: true, valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
-      { id: 'commBackend', accessorKey: 'commBackend', header: 'Sales Commission - Back End (%)', width: 230, align: 'center' as const, editable: true, valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
+      // Percent columns use '%' unit adornment (shows on both body input-box
+      //    and the pinned Total row via the same valueFormatter path).
+      { id: 'gst',         accessorKey: 'gst',         header: 'GST (%)',                      width: 120, align: 'center' as const, editable: true, unit: '%', valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
+      { id: 'commUpfront', accessorKey: 'commUpfront', header: 'Sales Commission - Upfront (%)', width: 230, align: 'center' as const, editable: true, unit: '%', valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
+      { id: 'commBackend', accessorKey: 'commBackend', header: 'Sales Commission - Back End (%)', width: 230, align: 'center' as const, editable: true, unit: '%', valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
     ],
     [],
   );

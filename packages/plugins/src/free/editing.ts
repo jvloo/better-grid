@@ -7,11 +7,11 @@ import type { GridPlugin, PluginContext, CellPosition, ColumnDef } from '@better
 declare module '@better-grid/core' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnDef<TData = unknown> {
-    precision?: number;
+    precision?: number | ((row: TData) => number | undefined);
     /** Minimum allowed numeric value (used for ArrowUp/Down clamping) */
-    min?: number;
+    min?: number | ((row: TData) => number | undefined);
     /** Maximum allowed numeric value (used for ArrowUp/Down clamping) */
-    max?: number;
+    max?: number | ((row: TData) => number | undefined);
     /** Placeholder text shown in empty editable cells when inputStyle is enabled */
     placeholder?: string;
     /** Input mask pattern (e.g. 'MM/YY'). Each letter = editable digit section, other chars = fixed. */
@@ -123,6 +123,24 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               position: relative;
               padding-right: 20px;
             }
+            .bg-cell--input-editable .bg-input-box--dropdown {
+              position: relative;
+              padding-right: 28px;
+            }
+            .bg-cell--input-editable .bg-input-box--dropdown::after {
+              content: "";
+              position: absolute;
+              right: 8px;
+              top: 50%;
+              width: 8px;
+              height: 5px;
+              transform: translateY(-50%);
+              background-image: ${CHEVRON_SVG};
+              background-repeat: no-repeat;
+              background-size: 8px 5px;
+              opacity: 0.65;
+              pointer-events: none;
+            }
             .bg-cell--input-editable .bg-input-box__value {
               display: inline-block;
               text-align: inherit;
@@ -218,6 +236,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             const unit = typeof col.unit === 'function'
               ? (col.unit as (row: unknown) => string | undefined)(context.row)
               : col.unit;
+            const isDropdown = (Array.isArray(col.options) && col.options.length > 0) || typeof context.value === 'boolean';
+            if (isDropdown) box.classList.add('bg-input-box--dropdown');
             if (unit) {
               box.classList.add('bg-input-box--has-unit');
               // Structured value + unit so editing can clear the value without destroying the suffix
@@ -494,7 +514,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             typeof originalValue === 'number'
           ) {
             // Apply precision formatting when starting edit
-            const prec = getPrecision(column);
+            const prec = getPrecision(column, rowData);
             if (prec != null) {
               rawStr = originalValue.toFixed(prec);
             }
@@ -513,9 +533,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           } else if (isDateEditor) {
             activeEditor = createDateInput(cellEl, rawStr);
           } else if (config.editorMode === 'inline') {
-            activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined);
+            activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined, rowData);
           } else if (isNumberEditor) {
-            activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, column);
+            activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, column, rowData);
           } else {
             activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined);
           }
@@ -531,6 +551,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         value: string,
         cursorAtEnd: boolean,
         numberColumn?: ColumnDef,
+        rowData?: unknown,
       ): HTMLInputElement {
           // Use input box rect if present (inputStyle mode), otherwise cell rect
           const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
@@ -603,7 +624,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           // Number editor: add inputmode hint and restrict input to numeric characters
           if (numberColumn) {
             ed.setAttribute('inputmode', 'decimal');
-            const numberPrecision = getPrecision(numberColumn);
+            const numberPrecision = getPrecision(numberColumn, rowData);
+            const numberMin = getMin(numberColumn, rowData);
+            const numberMax = getMax(numberColumn, rowData);
 
             ed.addEventListener('keydown', (e) => {
               // Allow control-modified keys (Ctrl+A/C/V/X etc.)
@@ -619,8 +642,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                 if (numberPrecision != null) {
                   next = parseFloat(next.toFixed(numberPrecision));
                 }
-                if (numberColumn!.min != null && next < numberColumn!.min) next = numberColumn!.min;
-                if (numberColumn!.max != null && next > numberColumn!.max) next = numberColumn!.max;
+                if (numberMin != null && next < numberMin) next = numberMin;
+                if (numberMax != null && next > numberMax) next = numberMax;
                 ed.textContent = String(next);
                 // Select all text after update
                 const range = document.createRange();
@@ -859,6 +882,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         value: string,
         cursorAtEnd: boolean,
         numberColumn?: ColumnDef,
+        rowData?: unknown,
       ): HTMLInputElement {
         // Capture computed styles BEFORE clearing cell content
         const computed = getComputedStyle(cellEl);
@@ -884,7 +908,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // Number filtering (same as float mode)
         if (numberColumn) {
           input.inputMode = 'decimal';
-          const numberPrecision = getPrecision(numberColumn);
+          const numberPrecision = getPrecision(numberColumn, rowData);
+          const numberMin = getMin(numberColumn, rowData);
+          const numberMax = getMax(numberColumn, rowData);
 
           input.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -898,8 +924,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               if (numberPrecision != null) {
                 next = parseFloat(next.toFixed(numberPrecision));
               }
-              if (numberColumn!.min != null && next < numberColumn!.min) next = numberColumn!.min;
-              if (numberColumn!.max != null && next > numberColumn!.max) next = numberColumn!.max;
+              if (numberMin != null && next < numberMin) next = numberMin;
+              if (numberMax != null && next > numberMax) next = numberMax;
               input.value = String(next);
               input.select();
               return;
@@ -2080,9 +2106,20 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       // Precision helper
       // -----------------------------------------------------------------------
 
-      function getPrecision(column: ColumnDef): number | undefined {
+      function getPrecision(column: ColumnDef, row?: unknown): number | undefined {
+        if (typeof column.precision === 'function') return column.precision(row as never);
         if (typeof column.precision === 'number') return column.precision;
         return config.precision;
+      }
+
+      function getMin(column: ColumnDef, row?: unknown): number | undefined {
+        if (typeof column.min === 'function') return column.min(row as never);
+        return column.min;
+      }
+
+      function getMax(column: ColumnDef, row?: unknown): number | undefined {
+        if (typeof column.max === 'function') return column.max(row as never);
+        return column.max;
       }
 
       // -----------------------------------------------------------------------
@@ -2106,10 +2143,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         const prevValue = originalValue;
         const state = ctx.grid.getState();
         const column = state.columns[position.colIndex];
+        const rowData = state.data[position.rowIndex];
 
         // Text input: parse based on cell type
         const newValue = activeEditor.value;
-        const parsedValue = parseTextValue(newValue, column, prevValue);
+        const parsedValue = parseTextValue(newValue, column, prevValue, rowData);
 
         // Update grid data BEFORE cleanup
         if (column?.accessorKey && parsedValue !== prevValue) {
@@ -2124,6 +2162,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         newValue: string,
         column: ColumnDef | undefined,
         prevValue: unknown,
+        row?: unknown,
       ): unknown {
         if (!column) return newValue;
 
@@ -2156,7 +2195,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const num = Number(cleaned);
           if (isNaN(num)) return prevValue;
           // Apply precision rounding if configured
-          const prec = getPrecision(column);
+          const prec = getPrecision(column, row);
           if (prec != null) {
             return Number(num.toFixed(prec));
           }

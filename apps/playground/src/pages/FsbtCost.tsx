@@ -1,8 +1,10 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useRef, useState } from 'react';
 import { useGrid } from '@better-grid/react';
-import type { ColumnDef } from '@better-grid/core';
+import type { CellChange, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
 import { formatting, editing, sorting, hierarchy, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
+import { rowActions, RowActionIcons } from '@better-grid/pro';
+import type { RowAction } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
 import { FsbtProgramSummary } from './_FsbtProgramSummary';
 import { FSBT_STYLES, parentRowCellStyle } from './_fsbt-cell-styles';
@@ -31,6 +33,83 @@ interface CostRow {
   variance: number;
   custom: boolean;
   [key: string]: string | number | boolean | null;
+}
+
+const COST_PARENT_MAX_CUSTOM_ROWS = 50;
+const PROJECT_START = '2023-08-01';
+const PROJECT_END = '2026-10-01';
+
+function compareMonthIso(a: string, b: string): number {
+  const first = parseIsoMonth(a);
+  const second = parseIsoMonth(b);
+  return first.getTime() - second.getTime();
+}
+
+function getChildCodeSuffix(code: string): number | undefined {
+  const suffix = Number(code.split('.').at(-1));
+  return Number.isFinite(suffix) ? suffix : undefined;
+}
+
+function formatChildCode(parentCode: string, suffix: number): string {
+  return `${parentCode}.${String(suffix).padStart(2, '0')}`;
+}
+
+function renumberCustomCostChildren(rows: CostRow[], parentId: number): CostRow[] {
+  const parent = rows.find(row => row.id === parentId);
+  if (!parent) return rows;
+
+  const regularSuffixes = rows
+    .filter(row => row.parentId === parentId && !row.custom)
+    .map(row => getChildCodeSuffix(row.code))
+    .filter((suffix): suffix is number => typeof suffix === 'number');
+  let nextSuffix = Math.max(0, ...regularSuffixes) + 1;
+
+  return rows.map(row => {
+    if (row.parentId !== parentId || !row.custom) return row;
+    return { ...row, code: formatChildCode(parent.code, nextSuffix++) };
+  });
+}
+
+function insertCustomCostRow(rows: CostRow[], sourceRow: CostRow): CostRow[] {
+  const parentId = sourceRow.parentId ?? sourceRow.id;
+  const parent = rows.find(row => row.id === parentId);
+  if (!parent) return rows;
+
+  const customCount = rows.filter(row => row.parentId === parentId && row.custom).length;
+  if (customCount >= COST_PARENT_MAX_CUSTOM_ROWS) return rows;
+
+  const nextId = Math.max(...rows.map(row => row.id)) + 1;
+  const children = rows.filter(row => row.parentId === parentId);
+  const lastChildIndex = Math.max(...children.map(child => rows.findIndex(row => row.id === child.id)));
+  const insertIndex = lastChildIndex >= 0 ? lastChildIndex + 1 : rows.findIndex(row => row.id === parentId) + 1;
+  const inputType: CostInputType = parent.code === '1' ? 'percent' : 'number';
+  const row: CostRow = {
+    id: nextId,
+    parentId,
+    code: formatChildCode(parent.code, 0),
+    name: '',
+    inputType,
+    input: 0,
+    escalation: 'cpi',
+    amount: 0,
+    start: sourceRow.start || parent.start,
+    end: sourceRow.end || parent.end,
+    variance: 0,
+    custom: true,
+  };
+
+  const next = [...rows.slice(0, insertIndex), row, ...rows.slice(insertIndex)];
+  return renumberCustomCostChildren(next, parentId);
+}
+
+function deleteCustomCostRow(rows: CostRow[], sourceRow: CostRow): CostRow[] {
+  if (!sourceRow.custom || sourceRow.parentId == null) return rows;
+
+  const othersLength = rows.filter(row => row.code.startsWith('13.')).length;
+  if (sourceRow.code.startsWith('13') && othersLength <= 1) return rows;
+
+  const next = rows.filter(row => row.id !== sourceRow.id);
+  return renumberCustomCostChildren(next, sourceRow.parentId);
 }
 
 // Port of getCostInputNote from wise-frontend-app/src/modules/feasibility/utils/cost.utils.ts
@@ -262,7 +341,7 @@ const rawData: CostRow[] = [
   { id: 52, parentId: 51, code: '13.01', name: 'Others', inputType: 'number', input: 0, escalation: 'cpi', amount: 0, start: '2023-08-01', end: '2026-10-31', variance: 0, custom: false },
 ];
 
-const data: CostRow[] = buildCostRows(rawData);
+const INITIAL_COST_DATA: CostRow[] = buildCostRows(rawData);
 
 // Monthly columns: Aug 2023 – Oct 2026 (39 months, matching Program)
 const monthValueFormatter = (v: unknown): string => {
@@ -276,6 +355,7 @@ const ts = timeSeries({
   locale: 'en-AU',
   columnWidth: 111,
   columnDefaults: {
+    align: 'center' as never,
     cellType: 'currency' as never,
     precision: 0,
     hideZero: false,
@@ -289,8 +369,8 @@ const ts = timeSeries({
 });
 
 // Compute pinned bottom totals row from root-level rows
-function buildTotalsRow(): CostRow {
-  const rootRows = data.filter(r => r.parentId === null);
+function buildTotalsRow(rows: CostRow[]): CostRow {
+  const rootRows = rows.filter(r => r.parentId === null);
   const totals: CostRow = {
     id: -1,
     parentId: null,
@@ -320,8 +400,6 @@ function buildTotalsRow(): CostRow {
   return totals;
 }
 
-const totalsRow = buildTotalsRow();
-
 // ---------------------------------------------------------------------------
 // Cell-level helpers that mirror Wiseway's per-component styling
 // ---------------------------------------------------------------------------
@@ -335,6 +413,10 @@ function phaseCellStyle(_v: unknown, row: unknown): Record<string, string> | und
   const base = parentRowCellStyle(_v, row) ?? {};
   // Wiseway's phase cell: parent padL 8px, child padL 28px (theme.spacing(1) / theme.spacing(3.5))
   return { ...base, paddingLeft: r.parentId === null ? '8px' : '28px' };
+}
+
+function inputNoteCellStyle(value: unknown, row: unknown): Record<string, string> | undefined {
+  return { ...(parentRowCellStyle(value, row) ?? {}), color: '#667085' };
 }
 
 function renderVarianceStatusIcon(container: HTMLElement, variance: number | undefined): void {
@@ -388,12 +470,84 @@ function parseMMYYToIso(v: string): string | undefined {
   return `${year}-${month}-01`;
 }
 
+function hasMaxTwoDecimals(value: number): boolean {
+  return Number.isInteger(value * 100);
+}
+
+function validateCostInput(value: unknown, row: unknown): boolean | string {
+  const cost = row as CostRow;
+  if (value == null || value === '') return true;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 'Input must be a valid number.';
+
+  if (cost.inputType === 'percent') {
+    if (n < 0 || n > 100) return 'Input must be between 0 and 100.';
+    if (!hasMaxTwoDecimals(n)) return 'Input allows up to 2 decimal places.';
+  }
+
+  if (cost.code === '3.08') {
+    if (n < 0 || n > 999.99) return 'Input must be between 0 and 999.99.';
+    if (!hasMaxTwoDecimals(n)) return 'Input allows up to 2 decimal places.';
+  }
+
+  return true;
+}
+
+function validateStartDate(value: unknown, row: unknown): boolean | string {
+  const cost = row as CostRow;
+  if (!value) return true;
+  const date = String(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'Invalid date.';
+  if (compareMonthIso(date, PROJECT_START) < 0) return 'Date must be after or equal to the project start date.';
+  if (cost.end && compareMonthIso(date, cost.end) > 0) return 'Date must be before or equal to the end date.';
+  return true;
+}
+
+function validateEndDate(value: unknown, row: unknown): boolean | string {
+  const cost = row as CostRow;
+  if (!value) return true;
+  const date = String(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'Invalid date.';
+  if (compareMonthIso(date, PROJECT_END) > 0) return 'Date must be before or equal to the project end date.';
+  if (cost.start && compareMonthIso(date, cost.start) < 0) return 'Date must be after or equal to the start date.';
+  return true;
+}
+
 export function FsbtCost() {
+  const [rows, setRows] = useState<CostRow[]>(() => INITIAL_COST_DATA);
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+
+  const totalsRow = useMemo(() => buildTotalsRow(rows), [rows]);
+
+  const handleCostDataChange = useCallback((changes: CellChange<CostRow>[]) => {
+    setRows(prevRows => {
+      const byId = new Map(changes.map(change => [change.row.id, change.row]));
+      let changed = false;
+      const nextRows = prevRows.map(row => {
+        const updated = byId.get(row.id);
+        if (!updated) return row;
+        changed = true;
+        return { ...row, ...updated };
+      });
+      return changed ? nextRows : prevRows;
+    });
+  }, []);
+
+  const handleRowAction = useCallback((actionId: string, row: unknown) => {
+    const sourceRow = row as CostRow;
+    setRows(prevRows => {
+      if (actionId === 'add') return insertCustomCostRow(prevRows, sourceRow);
+      if (actionId === 'delete') return deleteCustomCostRow(prevRows, sourceRow);
+      return prevRows;
+    });
+  }, []);
+
   const columns = useMemo<ColumnDef<CostRow>[]>(
     () => [
-      // ── Col 0: Menu — Wiseway's add/delete ⋮ (only shown on custom children when editable) ──
+      // ── Col 0: Menu — Wiseway's add/delete ⋮ (handled by rowActions plugin) ──
       {
-        id: 'menu', header: '', width: 50, editable: false,
+        id: 'actions', header: '', width: 50, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
@@ -415,6 +569,7 @@ export function FsbtCost() {
       {
         id: 'name', accessorKey: 'name', header: 'Phase', width: 236, cellStyle: phaseCellStyle,
         editable: ((row: CostRow) => row.parentId !== null && row.custom) as unknown as boolean,
+        rules: [{ validate: (v: unknown) => !v || String(v).trim().length >= 3 || 'Name is too short. Please re-enter.' }],
       },
       // ── Col 3: Input — percent rows show number + "%" suffix; parent rows except Land Cost render empty.
       //    Editable unless the row is inputType='none' (parent rollups). Land Cost (parent with code='1') is still editable.
@@ -422,6 +577,9 @@ export function FsbtCost() {
         id: 'input', accessorKey: 'input', header: 'Input', width: 110, align: 'center' as const,
         editable: ((row: CostRow) => row.inputType !== 'none') as unknown as boolean,
         cellType: 'number' as const,
+        min: 0,
+        precision: ((row: CostRow) => (row.inputType === 'percent' || row.code === '3.08' ? 2 : undefined)) as never,
+        rules: [{ validate: validateCostInput }],
         unit: (row: CostRow) => (row.inputType === 'percent' ? '%' : undefined),
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
@@ -446,9 +604,8 @@ export function FsbtCost() {
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.textContent = getCostInputNote(row.code);
-          container.style.color = '#667085';
         },
-        cellStyle: parentRowCellStyle,
+        cellStyle: inputNoteCellStyle,
       },
       // ── Col 5: Escalation — CPI / Non-CPI dropdown, blank when 'none' or on parent rows ──
       {
@@ -485,6 +642,7 @@ export function FsbtCost() {
         id: 'start', accessorKey: 'start', header: 'Start', width: 85, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
+        rules: [{ validate: validateStartDate }],
         valueFormatter: formatIsoToMMYY,
         valueParser: parseMMYYToIso,
         cellRenderer: (container, ctx) => {
@@ -503,6 +661,7 @@ export function FsbtCost() {
         id: 'end', accessorKey: 'end', header: 'End', width: 85, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
+        rules: [{ validate: validateEndDate }],
         valueFormatter: formatIsoToMMYY,
         valueParser: parseMMYYToIso,
         cellRenderer: (container, ctx) => {
@@ -554,19 +713,45 @@ export function FsbtCost() {
       editing({ editTrigger: 'click', inputStyle: true, precision: 0 }),
       sorting(),
       hierarchy({ toggleColumn: 'collapse', toggleStyle: 'chevron' }),
+      rowActions({
+        column: 'actions',
+        getActions: (row): RowAction[] | undefined => {
+          const r = row as CostRow;
+          if (r.parentId === null) return undefined;
+
+          const customCount = rowsRef.current.filter(candidate => candidate.parentId === r.parentId && candidate.custom).length;
+          const actions: RowAction[] = [
+            {
+              id: 'add',
+              label: 'Add',
+              icon: RowActionIcons.plus,
+              disabled: customCount >= COST_PARENT_MAX_CUSTOM_ROWS,
+              disabledTooltip: 'You have reached the maximum row limit.',
+            },
+          ];
+
+          const othersLength = rowsRef.current.filter(candidate => candidate.code.startsWith('13.')).length;
+          if (r.custom && (!r.code.startsWith('13') || othersLength > 1)) {
+            actions.push({ id: 'delete', label: 'Delete', icon: RowActionIcons.trash });
+          }
+
+          return actions;
+        },
+        onAction: handleRowAction,
+      }),
       cellRenderers(),
       validation(),
       clipboard(),
       undoRedo({ maxHistory: 50 }),
       exportPlugin({ filename: 'fsbt-cost-breakdown' }),
     ],
-    [],
+    [handleRowAction],
   );
 
-  const pinnedBottomRows = useMemo(() => [totalsRow], []);
+  const pinnedBottomRows = useMemo(() => [totalsRow], [totalsRow]);
 
   const { grid, containerRef } = useGrid<CostRow>({
-    data,
+    data: rows,
     columns,
     plugins,
     // Freeze 12 columns (Wiseway's 11 defaults + our trailing collapse column).
@@ -584,6 +769,7 @@ export function FsbtCost() {
     pinnedBottomRows,
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
+    onDataChange: handleCostDataChange,
   });
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);

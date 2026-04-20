@@ -327,9 +327,16 @@ export function createHeaderRenderer<TData = unknown>(
     if (opts.isLastFrozenCol) cls += ' bg-header-cell--frozen-col-last';
     cell.className = cls;
 
-    if (opts.align === 'right') cell.style.justifyContent = 'flex-end';
-    else if (opts.align === 'center') cell.style.justifyContent = 'center';
-    else if (opts.align === 'left') cell.style.justifyContent = 'flex-start';
+    if (opts.align === 'right') {
+      cell.style.justifyContent = 'flex-end';
+      cell.style.textAlign = 'right';
+    } else if (opts.align === 'center') {
+      cell.style.justifyContent = 'center';
+      cell.style.textAlign = 'center';
+    } else if (opts.align === 'left') {
+      cell.style.justifyContent = 'flex-start';
+      cell.style.textAlign = 'left';
+    }
     cell.style.position = 'absolute';
     cell.style.transform = `translate3d(${snapToDevicePixel(opts.left)}px, ${snapToDevicePixel(opts.top)}px, 0)`;
     cell.style.width = `${snapToDevicePixel(opts.width)}px`;
@@ -349,6 +356,7 @@ export function createHeaderRenderer<TData = unknown>(
 
     const textSpan = document.createElement('span');
     textSpan.className = 'bg-header-cell__text';
+    if (opts.align) textSpan.style.textAlign = opts.align;
     if (typeof opts.content === 'function') {
       const content = opts.content();
       if (typeof content === 'string') {
