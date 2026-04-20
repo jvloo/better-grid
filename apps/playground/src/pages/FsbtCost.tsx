@@ -8,6 +8,7 @@ import type { RowAction } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
 import { FsbtProgramSummary } from './_FsbtProgramSummary';
 import { FSBT_STYLES, parentRowCellStyle } from './_fsbt-cell-styles';
+import { buildStyledSelect, prepareDropdownContainer } from './_fsbt-dropdown';
 
 // ---------------------------------------------------------------------------
 // Data model — mirrors Wiseway's feasibility/types/project-cost.ts
@@ -474,37 +475,12 @@ function hasMaxTwoDecimals(value: number): boolean {
   return Number.isInteger(value * 100);
 }
 
-// ---------------------------------------------------------------------------
-// Styled <select> helper — matches Revenue's Growth Rate dropdown styling so
-// every FSBT dropdown (Escalation, Growth Rate, etc.) is visually identical.
-// Reuses the .bg-input-box sizing tokens: 30px height, #F8F8F8 fill, custom
-// SVG chevron instead of native OS arrow.
-// ---------------------------------------------------------------------------
-
-const DROPDOWN_BOX_STYLE = 'height:30px;background:#F8F8F8;border:none;border-radius:4px;box-shadow:0 1px 2px 0 rgba(16,24,40,0.05);font-size:12px;color:#101828;box-sizing:border-box;padding:0 22px 0 8px;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\' viewBox=\'0 0 10 6\'><path d=\'M1 1l4 4 4-4\' stroke=\'%23667085\' stroke-width=\'1.5\' fill=\'none\' stroke-linecap=\'round\'/></svg>");background-repeat:no-repeat;background-position:right 8px center;width:100%;';
-
-const ESCALATION_OPTIONS: ReadonlyArray<{ value: 'cpi' | 'non-cpi'; label: string }> = [
+// Options for the Cost Escalation column. Styling + <select> construction
+// live in _fsbt-dropdown.ts so Revenue / DmForecast share the same look.
+const ESCALATION_OPTIONS = [
   { value: 'cpi',     label: 'CPI' },
   { value: 'non-cpi', label: 'Non-CPI' },
-];
-
-function buildStyledSelect(
-  options: ReadonlyArray<{ value: string; label: string }>,
-  currentValue: string,
-  onChange: (nextValue: string) => void,
-): HTMLSelectElement {
-  const select = document.createElement('select');
-  select.style.cssText = DROPDOWN_BOX_STYLE;
-  for (const opt of options) {
-    const option = document.createElement('option');
-    option.value = opt.value;
-    option.textContent = opt.label;
-    if (opt.value === currentValue) option.selected = true;
-    select.appendChild(option);
-  }
-  select.addEventListener('change', () => onChange(select.value));
-  return select;
-}
+] as const;
 
 function validateCostInput(value: unknown, row: unknown): boolean | string {
   const cost = row as CostRow;
@@ -682,17 +658,14 @@ export function FsbtCost() {
         editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
-          container.innerHTML = '';
           // Blank on parent rows, the TOTAL row, and rows where escalation is
           // structurally 'none' (e.g. Land Cost deposit / settlement).
-          if (row.parentId === null || row.escalation === 'none') return;
-
-          container.style.display = 'flex';
-          container.style.alignItems = 'center';
-          container.style.justifyContent = 'center';
-          container.style.padding = '0 8px';
-
-          const select = buildStyledSelect(
+          if (row.parentId === null || row.escalation === 'none') {
+            container.innerHTML = '';
+            return;
+          }
+          prepareDropdownContainer(container);
+          const select = buildStyledSelect<'cpi' | 'non-cpi'>(
             ESCALATION_OPTIONS,
             row.escalation,
             (next) => {

@@ -7,6 +7,7 @@ import { formatting, editing, sorting, hierarchy, cellRenderers, validation, cli
 import '@better-grid/core/styles.css';
 import { FsbtProgramSummary } from './_FsbtProgramSummary';
 import { FSBT_STYLES, parentRowCellStyle } from './_fsbt-cell-styles';
+import { DROPDOWN_BOX_STYLE } from './_fsbt-dropdown';
 
 // ============================================================================
 // Shared helpers — match FsbtCost's date formatting so every FSBT table has
@@ -408,24 +409,13 @@ export function FsbtRevenue() {
           container.style.gap = '4px';
           container.style.padding = '0 8px';
 
-          // Style the native <select> to blend with .bg-input-box siblings —
-          // same 30px height, #F8F8F8 fill, subtle shadow, custom chevron via
-          // inline-SVG background-image. `appearance:none` strips the native
-          // OS look so the chevron we draw takes over.
+          // Native <select> with the shared DROPDOWN_BOX_STYLE (30px height,
+          // #F8F8F8 fill, custom chevron). Shrink to auto width only when the
+          // Custom-mode percent <input> is being shown alongside it.
           const select = document.createElement('select');
           const hasCustomInput = selectValue === 'custom';
-          const INPUT_BOX_STYLE = 'height:30px;background:#F8F8F8;border:none;border-radius:4px;box-shadow:0 1px 2px 0 rgba(16,24,40,0.05);font-size:12px;color:#101828;box-sizing:border-box;';
-          select.style.cssText = INPUT_BOX_STYLE + [
-            'flex:' + (hasCustomInput ? '0 0 auto' : '1 1 auto'),
-            'min-width:86px',
-            'padding:0 22px 0 8px',
-            'background-image:url("data:image/svg+xml;utf8,<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"10\\" height=\\"6\\" viewBox=\\"0 0 10 6\\"><path d=\\"M1 1l4 4 4-4\\" stroke=\\"%23667085\\" stroke-width=\\"1.5\\" fill=\\"none\\" stroke-linecap=\\"round\\"/></svg>")',
-            'background-repeat:no-repeat',
-            'background-position:right 8px center',
-            'cursor:pointer',
-            'appearance:none',
-            '-webkit-appearance:none',
-          ].join(';');
+          select.style.cssText = DROPDOWN_BOX_STYLE
+            + (hasCustomInput ? 'flex:0 0 auto;min-width:86px;width:auto;' : 'flex:1 1 auto;');
           for (const opt of GROWTH_RATE_OPTIONS) {
             const option = document.createElement('option');
             option.value = opt.value;
@@ -447,7 +437,13 @@ export function FsbtRevenue() {
             input.type = 'number';
             input.step = '0.01';
             input.value = typeof currentValue === 'number' ? currentValue.toString() : '0';
-            input.style.cssText = INPUT_BOX_STYLE + 'flex:0 0 auto;width:60px;padding:0 6px;text-align:right;';
+            // Percent input matches the dropdown's fill/shadow via the
+            // shared style; override padding + text-align for a right-aligned
+            // numeric input.
+            input.style.cssText =
+              'height:30px;background:#F8F8F8;border:none;border-radius:4px;' +
+              'box-shadow:0 1px 2px 0 rgba(16,24,40,0.05);font-size:12px;color:#101828;' +
+              'box-sizing:border-box;flex:0 0 auto;width:60px;padding:0 6px;text-align:right;';
             input.addEventListener('change', () => {
               const n = Number(input.value);
               btsGridRef.current?.updateCell(rowIndex, 'growthRate', isNaN(n) ? 0 : n);

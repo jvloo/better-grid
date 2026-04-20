@@ -1,9 +1,10 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useRef } from 'react';
 import { useGrid } from '@better-grid/react';
-import type { ColumnDef } from '@better-grid/core';
+import type { ColumnDef, GridInstance } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
 import { formatting, editing, sorting, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
+import { buildStyledSelect, prepareDropdownContainer } from './_fsbt-dropdown';
 
 interface ForecastRow {
   id: number;
@@ -122,30 +123,82 @@ function buildNetTotalRow(): ForecastRow {
 
 const netTotalRow = buildNetTotalRow();
 
+// Dropdown option constants for the styled <select> cells below. Values
+// match the raw strings already stored on ForecastRow so no data migration
+// is needed when the user switches options.
+const ESCALATION_OPTIONS = [
+  { value: 'none',    label: 'None' },
+  { value: 'cpi',     label: 'CPI - 3%' },
+  { value: 'non-cpi', label: 'Non-CPI - 2%' },
+] as const;
+
+const FREQUENCY_OPTIONS = [
+  { value: 'monthly',   label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'annually',  label: 'Annually' },
+  { value: 'one-off',   label: 'One-off' },
+  { value: 'other',     label: 'Other' },
+  { value: 'scurve',    label: 'S-curve' },
+] as const;
+
+type EscalationValue = typeof ESCALATION_OPTIONS[number]['value'];
+type FrequencyValue = typeof FREQUENCY_OPTIONS[number]['value'];
+
 export function DmForecast() {
+  // Grid ref for the styled Escalation / Frequency <select> cells. Set after
+  // useGrid() resolves; the cellRenderers close over the ref so updateCell()
+  // reaches the right instance.
+  const gridRef = useRef<GridInstance<ForecastRow> | null>(null);
+
   const columns = useMemo<ColumnDef<ForecastRow>[]>(
     () => [
       { id: 'toggle', header: '', width: 30 },
       { id: 'accountCode', accessorKey: 'accountCode', header: 'ID', width: 70, align: 'center' as const },
       { id: 'accountName', accessorKey: 'accountName', header: 'Description', width: 210 },
+      // Escalation — styled <select> matching FsbtCost / FsbtRevenue dropdowns.
+      //    editable: false disables the editing plugin's dropdown wrap; parent
+      //    rows skip rendering so only child rows show the dropdown.
       {
-        id: 'escalationRate', accessorKey: 'escalationRate', header: 'Escalation', width: 100, cellEditor: 'dropdown' as const,
-        options: [
-          { label: 'None', value: 'none' },
-          { label: 'CPI - 3%', value: 'cpi' },
-          { label: 'Non-CPI - 2%', value: 'non-cpi' },
-        ],
+        id: 'escalationRate', accessorKey: 'escalationRate', header: 'Escalation', width: 130, align: 'center' as const, editable: false,
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as ForecastRow;
+          if (row.type === 'parent' || !row.escalationRate) {
+            container.innerHTML = '';
+            return;
+          }
+          prepareDropdownContainer(container);
+          const select = buildStyledSelect<EscalationValue>(
+            ESCALATION_OPTIONS,
+            row.escalationRate,
+            (next) => {
+              const idx = data.findIndex(r => r.id === row.id);
+              if (idx >= 0) gridRef.current?.updateCell(idx, 'escalationRate', next);
+            },
+          );
+          container.appendChild(select);
+        },
       },
+      // Frequency — same pattern, different options. 130px width accommodates
+      //    the longer "Quarterly" / "Annually" labels with the chevron.
       {
-        id: 'frequency', accessorKey: 'frequency', header: 'Frequency', width: 100, cellEditor: 'dropdown' as const,
-        options: [
-          { label: 'Monthly', value: 'monthly' },
-          { label: 'Quarterly', value: 'quarterly' },
-          { label: 'Annually', value: 'annually' },
-          { label: 'One-off', value: 'one-off' },
-          { label: 'Other', value: 'other' },
-          { label: 'S-curve', value: 'scurve' },
-        ],
+        id: 'frequency', accessorKey: 'frequency', header: 'Frequency', width: 130, align: 'center' as const, editable: false,
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as ForecastRow;
+          if (row.type === 'parent' || !row.frequency) {
+            container.innerHTML = '';
+            return;
+          }
+          prepareDropdownContainer(container);
+          const select = buildStyledSelect<FrequencyValue>(
+            FREQUENCY_OPTIONS,
+            row.frequency,
+            (next) => {
+              const idx = data.findIndex(r => r.id === row.id);
+              if (idx >= 0) gridRef.current?.updateCell(idx, 'frequency', next);
+            },
+          );
+          container.appendChild(select);
+        },
       },
       { id: 'startDate', accessorKey: 'startDate', header: 'Start', width: 80, cellType: 'date' as const, dateFormat: 'month-year' as const },
       { id: 'endDate', accessorKey: 'endDate', header: 'End', width: 80, cellType: 'date' as const, dateFormat: 'month-year' as const },
@@ -204,6 +257,8 @@ export function DmForecast() {
     headerHeight: 44,
     rowHeight: 44,
   });
+  // Expose the grid instance to the Escalation / Frequency cellRenderers.
+  gridRef.current = grid as unknown as GridInstance<ForecastRow>;
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
   const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
