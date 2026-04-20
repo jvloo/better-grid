@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useRef, useState } from 'react';
 import { useGrid } from '@better-grid/react';
-import type { CellChange, ColumnDef } from '@better-grid/core';
+import type { CellChange, ColumnDef, GridInstance } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
 import { formatting, editing, sorting, hierarchy, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import { rowActions, RowActionIcons } from '@better-grid/pro';
@@ -474,6 +474,38 @@ function hasMaxTwoDecimals(value: number): boolean {
   return Number.isInteger(value * 100);
 }
 
+// ---------------------------------------------------------------------------
+// Styled <select> helper — matches Revenue's Growth Rate dropdown styling so
+// every FSBT dropdown (Escalation, Growth Rate, etc.) is visually identical.
+// Reuses the .bg-input-box sizing tokens: 30px height, #F8F8F8 fill, custom
+// SVG chevron instead of native OS arrow.
+// ---------------------------------------------------------------------------
+
+const DROPDOWN_BOX_STYLE = 'height:30px;background:#F8F8F8;border:none;border-radius:4px;box-shadow:0 1px 2px 0 rgba(16,24,40,0.05);font-size:12px;color:#101828;box-sizing:border-box;padding:0 22px 0 8px;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\' viewBox=\'0 0 10 6\'><path d=\'M1 1l4 4 4-4\' stroke=\'%23667085\' stroke-width=\'1.5\' fill=\'none\' stroke-linecap=\'round\'/></svg>");background-repeat:no-repeat;background-position:right 8px center;width:100%;';
+
+const ESCALATION_OPTIONS: ReadonlyArray<{ value: 'cpi' | 'non-cpi'; label: string }> = [
+  { value: 'cpi',     label: 'CPI' },
+  { value: 'non-cpi', label: 'Non-CPI' },
+];
+
+function buildStyledSelect(
+  options: ReadonlyArray<{ value: string; label: string }>,
+  currentValue: string,
+  onChange: (nextValue: string) => void,
+): HTMLSelectElement {
+  const select = document.createElement('select');
+  select.style.cssText = DROPDOWN_BOX_STYLE;
+  for (const opt of options) {
+    const option = document.createElement('option');
+    option.value = opt.value;
+    option.textContent = opt.label;
+    if (opt.value === currentValue) option.selected = true;
+    select.appendChild(option);
+  }
+  select.addEventListener('change', () => onChange(select.value));
+  return select;
+}
+
 function validateCostInput(value: unknown, row: unknown): boolean | string {
   const cost = row as CostRow;
   if (value == null || value === '') return true;
@@ -523,6 +555,11 @@ export function FsbtCost() {
   const [rows, setRows] = useState<CostRow[]>(() => INITIAL_COST_DATA);
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
+
+  // Grid ref for custom compound cellRenderers (e.g. Escalation <select>).
+  // Populated after useGrid() resolves — the column closures read from the
+  // ref so they don't fight the chicken-and-egg between columns and grid.
+  const gridRef = useRef<GridInstance<CostRow> | null>(null);
 
   const totalsRow = useMemo(() => buildTotalsRow(rows), [rows]);
 
@@ -635,20 +672,37 @@ export function FsbtCost() {
         },
         cellStyle: inputNoteCellStyle,
       },
-      // ── Col 5: Escalation — CPI / Non-CPI dropdown, blank when 'none' or on parent rows ──
+      // ── Col 5: Escalation — CPI / Non-CPI dropdown. Uses the same styled
+      //    <select> pattern as Revenue's Growth Rate for visual parity:
+      //    30px .bg-input-box fill, custom SVG chevron, one-click interaction.
+      //    editable: false disables the editing plugin's dropdown wrap so
+      //    our native <select> handles clicks directly.
       {
         id: 'escalation', accessorKey: 'escalation', header: 'Escalation', width: 110, align: 'center' as const,
-        cellEditor: 'dropdown' as const,
-        options: [
-          { value: 'cpi', label: 'CPI' },
-          { value: 'non-cpi', label: 'Non-CPI' },
-        ],
-        editable: ((row: CostRow) => row.parentId !== null && row.escalation !== 'none') as unknown as boolean,
+        editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
-          if (row.escalation === 'cpi') container.textContent = 'CPI';
-          else if (row.escalation === 'non-cpi') container.textContent = 'Non-CPI';
-          else container.textContent = '';
+          container.innerHTML = '';
+          // Blank on parent rows, the TOTAL row, and rows where escalation is
+          // structurally 'none' (e.g. Land Cost deposit / settlement).
+          if (row.parentId === null || row.escalation === 'none') return;
+
+          container.style.display = 'flex';
+          container.style.alignItems = 'center';
+          container.style.justifyContent = 'center';
+          container.style.padding = '0 8px';
+
+          const select = buildStyledSelect(
+            ESCALATION_OPTIONS,
+            row.escalation,
+            (next) => {
+              const rowIndex = rowsRef.current.findIndex(r => r.id === row.id);
+              if (rowIndex >= 0) {
+                gridRef.current?.updateCell(rowIndex, 'escalation', next);
+              }
+            },
+          );
+          container.appendChild(select);
         },
         cellStyle: parentRowCellStyle,
       },
@@ -799,6 +853,8 @@ export function FsbtCost() {
     rowHeight: FSBT_STYLES.rowHeight,
     onDataChange: handleCostDataChange,
   });
+  // Expose the grid instance to the Escalation compound cellRenderer above.
+  gridRef.current = grid as unknown as GridInstance<CostRow>;
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
   const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
