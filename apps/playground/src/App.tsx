@@ -23,7 +23,6 @@ import { TableStyles } from './pages/TableStyles';
 import { FsbtProgram } from './pages/FsbtProgram';
 import { FsbtCost } from './pages/FsbtCost';
 import { FsbtRevenue } from './pages/FsbtRevenue';
-import { FsbtFunding } from './pages/FsbtFunding';
 import { DmTimeline } from './pages/DmTimeline';
 import { DmForecast } from './pages/DmForecast';
 import { DmActuals } from './pages/DmActuals';
@@ -51,7 +50,6 @@ type Page =
   | 'fsbt-program'
   | 'fsbt-cost'
   | 'fsbt-revenue'
-  | 'fsbt-funding'
   | 'dm-timeline'
   | 'dm-forecast'
   | 'dm-actuals'
@@ -62,12 +60,12 @@ const VALID_PAGES = new Set<Page>([
   'finance', 'project-tracker', 'hr-directory', 'inventory', 'editors', 'cell-types', 'clipboard',
   'sort-filter', 'search-export', 'hierarchy', 'frozen-pinned', 'multi-header', 'merge-cells',
   'core-only', 'plugin-toggle', 'performance', 'selection-modes', 'pro',
-  'fsbt-program', 'fsbt-cost', 'fsbt-revenue', 'fsbt-funding',
+  'fsbt-program', 'fsbt-cost', 'fsbt-revenue',
   'dm-timeline', 'dm-forecast', 'dm-actuals', 'dm-summary',
 ]);
 
 const WISEWAY_PAGES = new Set<Page>([
-  'fsbt-program', 'fsbt-cost', 'fsbt-revenue', 'fsbt-funding',
+  'fsbt-program', 'fsbt-cost', 'fsbt-revenue',
   'dm-timeline', 'dm-forecast', 'dm-actuals', 'dm-summary',
 ]);
 
@@ -156,7 +154,6 @@ export function App() {
             <WwNavButton active={page === 'fsbt-program'} onClick={() => navigatePage('fsbt-program')}>Program</WwNavButton>
             <WwNavButton active={page === 'fsbt-cost'} onClick={() => navigatePage('fsbt-cost')}>Cost</WwNavButton>
             <WwNavButton active={page === 'fsbt-revenue'} onClick={() => navigatePage('fsbt-revenue')}>Revenue</WwNavButton>
-            <WwNavButton active={page === 'fsbt-funding'} onClick={() => navigatePage('fsbt-funding')}>Funding</WwNavButton>
 
             <WwSectionLabel>Development Management</WwSectionLabel>
             <WwNavButton active={page === 'dm-timeline'} onClick={() => navigatePage('dm-timeline')}>Timeline</WwNavButton>
@@ -251,7 +248,6 @@ export function App() {
           {page === 'fsbt-program' && <div className="wiseway-theme"><FsbtProgram /></div>}
           {page === 'fsbt-cost' && <div className="wiseway-theme"><FsbtCost /></div>}
           {page === 'fsbt-revenue' && <div className="wiseway-theme"><FsbtRevenue /></div>}
-          {page === 'fsbt-funding' && <div className="wiseway-theme"><FsbtFunding /></div>}
           {page === 'dm-timeline' && <div className="wiseway-theme"><DmTimeline /></div>}
           {page === 'dm-forecast' && <div className="wiseway-theme"><DmForecast /></div>}
           {page === 'dm-actuals' && <div className="wiseway-theme"><DmActuals /></div>}

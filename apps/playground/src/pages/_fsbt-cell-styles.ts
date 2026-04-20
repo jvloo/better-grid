@@ -1,7 +1,7 @@
 // Shared cell-styling tokens used by every FSBT demo grid so they look
 // visually consistent with FsbtProgram — which is the reference table.
 // Extracted from the inline styling in FsbtProgram.tsx so downstream demos
-// (FsbtCost, FsbtRevenue, FsbtFunding) can reuse it without duplicating
+// (FsbtCost, FsbtRevenue) can reuse it without duplicating
 // magic numbers.
 
 export const FSBT_STYLES = {

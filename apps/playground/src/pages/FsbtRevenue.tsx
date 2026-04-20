@@ -1,4 +1,5 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useRef } from 'react';
+import type { GridInstance } from '@better-grid/core';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
@@ -73,11 +74,27 @@ interface BtsRow {
 
 // Data from QA app project 4288: https://qa-app.wiseway.ai/projects/4288/revenue
 // Total Gross Revenue: $224,739,528
+//
+// growthRate encodes escalation using the same convention as Wiseway's
+// `RevenueBTSEscalationCPI | number` union: string 'cpi' / 'non-cpi' for the
+// two preset options, or a number for the "Custom" percent option.
 const btsData: BtsRow[] = [
   { id: 1, type: 'Residential - BTS', stage: 1, nsa: 19500, units: 160, salePrice: 8803, growthRate: 6.0, launchDate: '2026-10-01', projectedPrice: 9331, grossRevenue: 181958010, gst: 9.09, commUpfront: 1.5, commBackend: 1.5 },
   { id: 2, type: 'Retail - BTS', stage: 1, nsa: 2600, units: 30, salePrice: 15898, growthRate: 3.5, launchDate: '2026-10-01', projectedPrice: 16454, grossRevenue: 42781518, gst: 9.09, commUpfront: 1.75, commBackend: 0.25 },
-  { id: 3, type: 'Land - BTS', stage: 0, nsa: 0, units: 0, salePrice: 1960, growthRate: 'CPI', launchDate: '', projectedPrice: 1960, grossRevenue: 0, gst: 9.09, commUpfront: 0, commBackend: 0 },
+  { id: 3, type: 'Land - BTS', stage: 0, nsa: 0, units: 0, salePrice: 1960, growthRate: 'cpi', launchDate: '', projectedPrice: 1960, grossRevenue: 0, gst: 9.09, commUpfront: 0, commBackend: 0 },
 ];
+
+// Growth Rate select options — three fixed choices per Wiseway spec.
+const GROWTH_RATE_OPTIONS: Array<{ value: 'cpi' | 'non-cpi' | 'custom'; label: string }> = [
+  { value: 'non-cpi', label: 'Non CPI' },
+  { value: 'cpi',     label: 'CPI' },
+  { value: 'custom',  label: 'Custom' },
+];
+
+function growthRateSelectValue(v: number | string): 'cpi' | 'non-cpi' | 'custom' {
+  if (v === 'cpi' || v === 'non-cpi') return v;
+  return 'custom';
+}
 
 const TOTAL_GROSS_REVENUE = btsData.reduce((s, r) => s + r.grossRevenue, 0); // $224,739,528
 
@@ -93,9 +110,16 @@ const TOTAL_GROSS_REVENUE = btsData.reduce((s, r) => s + r.grossRevenue, 0); // 
 // overkill. Flat array + cellStyle based on `kind` keeps it simple.
 type BtsDetailKind = 'section' | 'item' | 'total';
 
+// Section name maps to Wiseway's RevenueBTSItemKeys: 'gross' | 'gst' |
+// 'commission' | 'net'. The edit matrix depends on this field — per
+// Wiseway, Gross/GST/Commission allow editing both Input and Monthly cells,
+// while Net allows only Monthly edits.
+type BtsSectionName = 'gross' | 'gst' | 'commission' | 'net' | 'sale-commission' | 'remaining-incentive' | 'net-sale';
+
 interface BtsDetailRow {
   id: number;
   kind: BtsDetailKind;
+  sectionName?: BtsSectionName; // carried on item+total rows so edit rules apply
   sectionLabel?: string;     // 'Gross Revenue', 'GST', etc. (section rows only)
   type?: string;             // 'Residential - BTS' on items, '' on sections
   description?: string;      // 'Apt', 'West G Floor', 'Park' on items
@@ -113,33 +137,38 @@ interface BtsDetailRow {
 // unsold, so every section has it at $0.
 const btsDetailsData: BtsDetailRow[] = [
   // ── Gross Revenue ──
-  { id: 101, kind: 'section', sectionLabel: 'Gross Revenue' },
-  { id: 102, kind: 'item', type: 'Residential - BTS', description: 'Apt',           input: null, amount: 181958010, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 181958010 },
-  { id: 103, kind: 'item', type: 'Retail - BTS',       description: 'West G Floor', input: null, amount: 42781518,  start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 42781518 },
-  { id: 104, kind: 'item', type: 'Land - BTS',         description: 'Park',         input: null, amount: 0,         start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 0 },
-  { id: 105, kind: 'total', amount: 224739528, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 224739528 },
+  { id: 101, kind: 'section', sectionName: 'gross',      sectionLabel: 'Gross Revenue' },
+  { id: 102, kind: 'item',    sectionName: 'gross',      type: 'Residential - BTS', description: 'Apt',           input: null, amount: 181958010, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 181958010 },
+  { id: 103, kind: 'item',    sectionName: 'gross',      type: 'Retail - BTS',       description: 'West G Floor', input: null, amount: 42781518,  start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 42781518 },
+  { id: 104, kind: 'item',    sectionName: 'gross',      type: 'Land - BTS',         description: 'Park',         input: null, amount: 0,         start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 0 },
+  { id: 105, kind: 'total',   sectionName: 'gross',      amount: 224739528, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 224739528 },
 
   // ── GST (9.09% ≈ 1/11 — Australian GST) ──
-  { id: 201, kind: 'section', sectionLabel: 'GST' },
-  { id: 202, kind: 'item', type: 'Residential - BTS', description: 'Apt',           input: 9.09, amount: 16540099,  start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 16540099 },
-  { id: 203, kind: 'item', type: 'Retail - BTS',       description: 'West G Floor', input: 9.09, amount: 3888810,   start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 3888810 },
-  { id: 204, kind: 'item', type: 'Land - BTS',         description: 'Park',         input: 9.09, amount: 0,         start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 0 },
-  { id: 205, kind: 'total', amount: 20428909, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 20428909 },
+  { id: 201, kind: 'section', sectionName: 'gst',        sectionLabel: 'GST' },
+  { id: 202, kind: 'item',    sectionName: 'gst',        type: 'Residential - BTS', description: 'Apt',           input: 9.09, amount: 16540099,  start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 16540099 },
+  { id: 203, kind: 'item',    sectionName: 'gst',        type: 'Retail - BTS',       description: 'West G Floor', input: 9.09, amount: 3888810,   start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 3888810 },
+  { id: 204, kind: 'item',    sectionName: 'gst',        type: 'Land - BTS',         description: 'Park',         input: 9.09, amount: 0,         start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 0 },
+  { id: 205, kind: 'total',   sectionName: 'gst',        amount: 20428909, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 20428909 },
 
   // ── Sales Commission - Back End (from General: Res 1.5%, Retail 0.25%) ──
-  { id: 301, kind: 'section', sectionLabel: 'Sales Commission - Back End' },
-  { id: 302, kind: 'item', type: 'Residential - BTS', description: 'Apt',           input: 1.50, amount: 2550893,   start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 2550893 },
-  { id: 303, kind: 'item', type: 'Retail - BTS',       description: 'West G Floor', input: 0.25, amount: 63911,     start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 63911 },
-  { id: 304, kind: 'item', type: 'Land - BTS',         description: 'Park',         input: 0.00, amount: 0,         start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 0 },
-  { id: 305, kind: 'total', amount: 2614804, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 2614804 },
+  { id: 301, kind: 'section', sectionName: 'commission', sectionLabel: 'Sales Commission - Back End' },
+  { id: 302, kind: 'item',    sectionName: 'commission', type: 'Residential - BTS', description: 'Apt',           input: 1.50, amount: 2550893,   start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 2550893 },
+  { id: 303, kind: 'item',    sectionName: 'commission', type: 'Retail - BTS',       description: 'West G Floor', input: 0.25, amount: 63911,     start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 63911 },
+  { id: 304, kind: 'item',    sectionName: 'commission', type: 'Land - BTS',         description: 'Park',         input: 0.00, amount: 0,         start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 0 },
+  { id: 305, kind: 'total',   sectionName: 'commission', amount: 2614804, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 2614804 },
 
   // ── Net Revenue (= Gross − GST − Commission − other incentive deductions) ──
-  { id: 401, kind: 'section', sectionLabel: 'Net Revenue' },
-  { id: 402, kind: 'item', type: 'Residential - BTS', description: 'Apt',           input: null, amount: 152050199, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 152050199 },
-  { id: 403, kind: 'item', type: 'Retail - BTS',       description: 'West G Floor', input: null, amount: 23176776,  start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 23176776 },
-  { id: 404, kind: 'item', type: 'Land - BTS',         description: 'Park',         input: null, amount: 0,         start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 0 },
-  { id: 405, kind: 'total', amount: 175226975, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 175226975 },
+  { id: 401, kind: 'section', sectionName: 'net',        sectionLabel: 'Net Revenue' },
+  { id: 402, kind: 'item',    sectionName: 'net',        type: 'Residential - BTS', description: 'Apt',           input: null, amount: 152050199, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 152050199 },
+  { id: 403, kind: 'item',    sectionName: 'net',        type: 'Retail - BTS',       description: 'West G Floor', input: null, amount: 23176776,  start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 23176776 },
+  { id: 404, kind: 'item',    sectionName: 'net',        type: 'Land - BTS',         description: 'Park',         input: null, amount: 0,         start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 0 },
+  { id: 405, kind: 'total',   sectionName: 'net',        amount: 175226975, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 175226975 },
 ];
+
+// Edit matrix from Wiseway's bts-details-table.tsx:EDITABLE_FIELD —
+// Gross/GST/Commission allow Input + Monthly edits; Net allows only Monthly.
+const BTS_DETAILS_INPUT_EDITABLE = new Set<BtsSectionName>(['gross', 'gst', 'commission']);
+const BTS_DETAILS_MONTHLY_EDITABLE = new Set<BtsSectionName>(['gross', 'gst', 'commission', 'net']);
 
 // Section/total row styling — Wiseway shades sections with a grey rule and
 // bolds total rows. Centralised here so every column picks up the same look.
@@ -165,22 +194,93 @@ function btsDetailCellStyle(_v: unknown, row: unknown): Record<string, string> |
 // breakdown that appears in the Holding Rental Details table below.
 // ============================================================================
 
+// Shape mirrors Wiseway's RevenueHoldingGeneralItem exactly — 30 fields
+// across 4 logical groups (basic / development-costs / on-completion / exit).
 interface HoldingGeneralRow {
   id: number;
+  // Basic (read-only metadata + editable rate inputs)
   type: string;
   description: string;
   stage: number | null;
   nla: number;
   unit: number;
-  grossRent: number;   // $/m² per annum
-  outgoings: number;   // $/m² per annum
+  grossRent: number;             // $/m² per annum — editable
+  outgoings: number;             // $/m² per annum — editable
+  netRent: number;               // = grossRent − outgoings (computed)
+  annualNetRent: number;         // = netRent × nla (computed)
+  preCommit: string;             // month string e.g. 'Jan 26' — editable
+  leaseTerm: number;             // months — editable
+  leaseStart: string;            // ISO — editable
+  leaseEnd: string;              // ISO — computed from start + term
+  rentReview: number;            // % — editable
+  reviewFrequency: number;       // years — editable
+  // Development Costs group (8)
+  lettingFee: number;            // % — editable
+  payableCommitment: number;     // % — editable
+  totalLettingFee: number;       // computed
+  incentives: number;            // % — editable
+  incentivesPaidUpfront: number; // % — editable
+  remainingIncentives: number;   // computed
+  discountMonths: number;        // months — editable
+  totalIncentives: number;       // computed
+  // On Completion group (2)
+  completionCapRate: number;     // % — editable
+  completionCapValue: number;    // computed
+  // Exit group (5)
+  exitCapRate: number;           // % — editable
+  exitCapValue: number;          // computed
+  exitGST: number;               // % — editable
+  exitCommission: number;        // % — editable
+  settlementDate: string;        // ISO — editable
 }
 
+// Plausible mock — project 4288 has no holding stock, so these are illustrative
+// values sized in line with the Holding Rental Details table (which does have data).
 const holdingGeneralData: HoldingGeneralRow[] = [
-  { id: 1, type: 'Residential', description: 'Apt',           stage: 1, nla: 6600, unit: 60, grossRent: 520, outgoings: 80 },
-  { id: 2, type: 'Commercial',  description: 'Level 1-3',     stage: 1, nla: 3200, unit: 12, grossRent: 650, outgoings: 95 },
-  { id: 3, type: 'Retail',      description: 'West G Floor',  stage: 1, nla: 1500, unit: 8,  grossRent: 850, outgoings: 120 },
-  { id: 4, type: 'Parking',     description: 'Basement',      stage: 0, nla: 3124, unit: 40, grossRent: 250, outgoings: 40 },
+  {
+    id: 1, type: 'Residential', description: 'Apt',          stage: 1, nla: 6600, unit: 60,
+    grossRent: 520, outgoings: 80, netRent: 440, annualNetRent: 2904000,
+    preCommit: '2026-01-01', leaseTerm: 24, leaseStart: '2026-01-01', leaseEnd: '2028-01-01',
+    rentReview: 3.5, reviewFrequency: 1,
+    lettingFee: 2.0, payableCommitment: 100, totalLettingFee: 58080,
+    incentives: 5.0, incentivesPaidUpfront: 100, remainingIncentives: 0,
+    discountMonths: 0, totalIncentives: 145200,
+    completionCapRate: 5.25, completionCapValue: 55314286,
+    exitCapRate: 5.50, exitCapValue: 52800000, exitGST: 9.09, exitCommission: 1.5, settlementDate: '2028-06-30',
+  },
+  {
+    id: 2, type: 'Commercial', description: 'Level 1-3',     stage: 1, nla: 3200, unit: 12,
+    grossRent: 650, outgoings: 95, netRent: 555, annualNetRent: 1776000,
+    preCommit: '2026-01-01', leaseTerm: 60, leaseStart: '2026-01-01', leaseEnd: '2031-01-01',
+    rentReview: 3.0, reviewFrequency: 1,
+    lettingFee: 3.0, payableCommitment: 100, totalLettingFee: 62400,
+    incentives: 10.0, incentivesPaidUpfront: 50, remainingIncentives: 104000,
+    discountMonths: 3, totalIncentives: 208000,
+    completionCapRate: 6.00, completionCapValue: 29600000,
+    exitCapRate: 6.25, exitCapValue: 28416000, exitGST: 9.09, exitCommission: 1.5, settlementDate: '2028-06-30',
+  },
+  {
+    id: 3, type: 'Retail', description: 'West G Floor',      stage: 1, nla: 1500, unit: 8,
+    grossRent: 850, outgoings: 120, netRent: 730, annualNetRent: 1095000,
+    preCommit: '2026-01-01', leaseTerm: 60, leaseStart: '2026-01-01', leaseEnd: '2031-01-01',
+    rentReview: 3.0, reviewFrequency: 1,
+    lettingFee: 3.0, payableCommitment: 100, totalLettingFee: 38250,
+    incentives: 15.0, incentivesPaidUpfront: 50, remainingIncentives: 82125,
+    discountMonths: 6, totalIncentives: 164250,
+    completionCapRate: 5.75, completionCapValue: 19043478,
+    exitCapRate: 6.00, exitCapValue: 18250000, exitGST: 9.09, exitCommission: 1.5, settlementDate: '2028-06-30',
+  },
+  {
+    id: 4, type: 'Parking', description: 'Basement',         stage: 0, nla: 3124, unit: 40,
+    grossRent: 250, outgoings: 40, netRent: 210, annualNetRent: 656040,
+    preCommit: '2026-01-01', leaseTerm: 12, leaseStart: '2026-01-01', leaseEnd: '2027-01-01',
+    rentReview: 3.0, reviewFrequency: 1,
+    lettingFee: 1.0, payableCommitment: 100, totalLettingFee: 6560,
+    incentives: 0, incentivesPaidUpfront: 100, remainingIncentives: 0,
+    discountMonths: 0, totalIncentives: 0,
+    completionCapRate: 7.00, completionCapValue: 9372000,
+    exitCapRate: 7.25, exitCapValue: 9048000, exitGST: 9.09, exitCommission: 1.5, settlementDate: '2028-06-30',
+  },
 ];
 
 interface HoldingRow {
@@ -228,12 +328,12 @@ const holdingData: HoldingRow[] = [
 // ============================================================================
 
 const holdingSaleData: BtsDetailRow[] = [
-  { id: 501, kind: 'section', sectionLabel: 'Sale Commission' },
-  { id: 502, kind: 'total', amount: 0, start: '2028-06-30', end: '2028-06-30', variance: 0 },
-  { id: 503, kind: 'section', sectionLabel: 'Remaining Incentive (PV)' },
-  { id: 504, kind: 'total', amount: 0, start: '2028-06-30', end: '2028-06-30', variance: 0 },
-  { id: 505, kind: 'section', sectionLabel: 'Net Sale Revenue' },
-  { id: 506, kind: 'total', amount: 0, start: '2028-06-30', end: '2028-06-30', variance: 0 },
+  { id: 501, kind: 'section', sectionName: 'sale-commission',      sectionLabel: 'Sale Commission' },
+  { id: 502, kind: 'total',   sectionName: 'sale-commission',      amount: 0, start: '2028-06-30', end: '2028-06-30', variance: 0 },
+  { id: 503, kind: 'section', sectionName: 'remaining-incentive',  sectionLabel: 'Remaining Incentive (PV)' },
+  { id: 504, kind: 'total',   sectionName: 'remaining-incentive',  amount: 0, start: '2028-06-30', end: '2028-06-30', variance: 0 },
+  { id: 505, kind: 'section', sectionName: 'net-sale',             sectionLabel: 'Net Sale Revenue' },
+  { id: 506, kind: 'total',   sectionName: 'net-sale',             amount: 0, start: '2028-06-30', end: '2028-06-30', variance: 0 },
 ];
 
 // Monthly columns cover the same window as Program/Cost (Aug 2023 – Oct 2026)
@@ -255,22 +355,91 @@ export function FsbtRevenue() {
   // BTS Grid Setup
   // ════════════════════════════════════════════════════════════════════════════
 
+  // Grid instance is captured via ref so the Growth Rate compound cell
+  // renderer can call updateCell() when the user changes the select / input.
+  // Ref resolves the chicken-and-egg between useGrid(columns) and columns
+  // needing to close over `grid`.
+  const btsGridRef = useRef<GridInstance<BtsRow> | null>(null);
+
   const formatInt = (v: unknown): string => (typeof v === 'number' ? v.toLocaleString('en-AU', { maximumFractionDigits: 0 }) : '');
   const formatDollars = (v: unknown): string => (typeof v === 'number' ? '$' + v.toLocaleString('en-AU', { maximumFractionDigits: 0 }) : '');
   const formatRate = (v: unknown): string => {
     if (typeof v === 'number') return v.toFixed(2) + '%';
-    if (typeof v === 'string' && v) return v;
+    if (v === 'cpi') return 'CPI';
+    if (v === 'non-cpi') return 'Non-CPI';
     return '';
   };
 
   const btsColumns = useMemo<ColumnDef<BtsRow>[]>(
     () => [
-      { id: 'type', accessorKey: 'type', header: 'Type', width: 170, align: 'left' as const, sortable: true },
-      { id: 'stage', accessorKey: 'stage', header: 'Stage', width: 105, align: 'center' as const },
-      { id: 'nsa', accessorKey: 'nsa', header: 'NSA (m2)', width: 105, align: 'center' as const, valueFormatter: formatInt },
-      { id: 'units', accessorKey: 'units', header: 'Unit/Lot/Tenancy', width: 105, align: 'center' as const, valueFormatter: formatInt },
+      // Type/Stage/NSA/Unit — read-only metadata (sourced from Project Brief)
+      { id: 'type', accessorKey: 'type', header: 'Type', width: 170, align: 'left' as const, sortable: true, editable: false },
+      { id: 'stage', accessorKey: 'stage', header: 'Stage', width: 105, align: 'center' as const, editable: false },
+      { id: 'nsa', accessorKey: 'nsa', header: 'NSA (m2)', width: 105, align: 'center' as const, valueFormatter: formatInt, editable: false },
+      { id: 'units', accessorKey: 'units', header: 'Unit/Lot/Tenancy', width: 105, align: 'center' as const, valueFormatter: formatInt, editable: false },
       { id: 'salePrice', accessorKey: 'salePrice', header: 'Current Sale Price ($/m2)', width: 190, align: 'center' as const, editable: true, valueFormatter: formatDollars },
-      { id: 'growthRate', accessorKey: 'growthRate', header: 'Growth Rate', width: 190, align: 'center' as const, editable: true, valueFormatter: formatRate },
+      // Growth Rate — compound cell: always a 3-option select (Non CPI / CPI
+      //    / Custom); if Custom, ALSO shows a percent input next to the select.
+      //    `editable: false` disables the editing plugin's dropdown wrap so
+      //    the native elements we render take the click events directly.
+      {
+        id: 'growthRate', accessorKey: 'growthRate', header: 'Growth Rate',
+        width: 210, align: 'center' as const, editable: false,
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as BtsRow;
+          container.innerHTML = '';
+          // Skip rendering on the pinned Total row (growthRate = null there).
+          // Wiseway's Total row leaves this column blank — mixed types +
+          // averages wouldn't be meaningful.
+          if (row.growthRate == null) return;
+          const rowIndex = btsData.findIndex(r => r.id === row.id);
+          const currentValue = row.growthRate;
+          const selectValue = growthRateSelectValue(currentValue as number | string);
+
+          // Reset children without touching the inline styles the grid set
+          // (absolute top/left/width/height come from the virtualization layer
+          // and must survive — otherwise the cell collapses out of place).
+          container.style.display = 'flex';
+          container.style.alignItems = 'center';
+          container.style.justifyContent = 'center';
+          container.style.gap = '4px';
+
+          const select = document.createElement('select');
+          select.style.cssText = 'flex:0 0 auto;min-width:86px;padding:2px 4px;border:1px solid #D0D5DD;border-radius:4px;background:#fff;font-size:12px;cursor:pointer;';
+          for (const opt of GROWTH_RATE_OPTIONS) {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.label;
+            if (opt.value === selectValue) option.selected = true;
+            select.appendChild(option);
+          }
+          select.addEventListener('change', () => {
+            const next = select.value as 'cpi' | 'non-cpi' | 'custom';
+            // Switching to Custom seeds the numeric value at 0, matching
+            // Wiseway's BtsGeneralTableCellEscalation.onChange handler.
+            const nextValue: number | string = next === 'custom' ? 0 : next;
+            btsGridRef.current?.updateCell(rowIndex, 'growthRate', nextValue);
+          });
+          container.appendChild(select);
+
+          if (selectValue === 'custom') {
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.step = '0.01';
+            input.value = typeof currentValue === 'number' ? currentValue.toString() : '0';
+            input.style.cssText = 'flex:0 0 auto;width:64px;padding:2px 6px;border:1px solid #D0D5DD;border-radius:4px;text-align:right;font-size:12px;';
+            input.addEventListener('change', () => {
+              const n = Number(input.value);
+              btsGridRef.current?.updateCell(rowIndex, 'growthRate', isNaN(n) ? 0 : n);
+            });
+            container.appendChild(input);
+            const pctLabel = document.createElement('span');
+            pctLabel.textContent = '%';
+            pctLabel.style.cssText = 'font-size:12px;color:#667085;';
+            container.appendChild(pctLabel);
+          }
+        },
+      },
       {
         id: 'launchDate', accessorKey: 'launchDate', header: 'Sales Launch Date', width: 190, align: 'center' as const,
         editable: true, placeholder: 'MM/YY',
@@ -282,24 +451,28 @@ export function FsbtRevenue() {
           container.textContent = row.launchDate ? formatMonYY(row.launchDate) : '';
         },
       },
+      // Projected Sale Price — computed from Current × growth; read-only
       {
         id: 'projectedPrice',
         accessorKey: 'projectedPrice',
         header: 'Projected Sale Price ($/m2)',
         width: 190,
         align: 'center' as const,
+        editable: false,
         valueFormatter: formatDollars,
         cellStyle: () => ({ background: '#f5f5f5' }),
       },
+      // Gross Revenue — computed from Projected × NSA; read-only
       {
         id: 'grossRevenue',
         accessorKey: 'grossRevenue',
         header: 'Gross Revenue',
         width: 140,
         align: 'center' as const,
+        editable: false,
         valueFormatter: formatDollars,
       },
-      { id: 'gst', accessorKey: 'gst', header: 'GST (%)', width: 120, align: 'center' as const, valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
+      { id: 'gst', accessorKey: 'gst', header: 'GST (%)', width: 120, align: 'center' as const, editable: true, valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
       { id: 'commUpfront', accessorKey: 'commUpfront', header: 'Sales Commission - Upfront (%)', width: 230, align: 'center' as const, editable: true, valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
       { id: 'commBackend', accessorKey: 'commBackend', header: 'Sales Commission - Back End (%)', width: 230, align: 'center' as const, editable: true, valueFormatter: (v) => (typeof v === 'number' ? v.toFixed(2) : '') },
     ],
@@ -354,6 +527,8 @@ export function FsbtRevenue() {
     rowHeight: FSBT_STYLES.rowHeight,
     tableStyle: 'striped' as const,
   });
+  // Expose the grid instance to the Growth Rate compound cellRenderer above.
+  btsGridRef.current = btsGrid as unknown as GridInstance<BtsRow>;
 
   // ════════════════════════════════════════════════════════════════════════════
   // Holding Revenue Grid Setup
@@ -368,13 +543,13 @@ export function FsbtRevenue() {
       // ── Description — widened from 80 to 180 so labels like "Maintenance &
       //    Repairs" and "Leasing Incentive (5%)" don't get clipped.
       { id: 'description', accessorKey: 'description', header: 'Description', width: 180, align: 'left' as const, cellStyle: parentRowCellStyle },
-      // ── Input — per-m2 rate on children, blank on parents (matches Cost's
-      //    pattern: explicit cellRenderer so non-editable parent cells don't
-      //    fall through to raw String(0) when inputStyle wraps the column). ──
+      // ── Input — per-m2 rate on children, blank on parents. READ-ONLY per
+      //    Wiseway: the Input value is sourced from the Holding General table
+      //    above and never edited in the Details table. Only monthly cells
+      //    are editable here (see holdingTs.columns below).
       {
         id: 'input', accessorKey: 'input', header: 'Input', width: 100, align: 'center' as const,
-        cellType: 'currency' as const, precision: 0, hideZero: true,
-        editable: ((row: HoldingRow) => row.parentId !== null) as unknown as boolean,
+        cellType: 'currency' as const, precision: 0, hideZero: true, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as HoldingRow;
           if (row.parentId === null) {
@@ -530,14 +705,23 @@ export function FsbtRevenue() {
         cellStyle: btsDetailCellStyle,
       },
       { id: 'description', accessorKey: 'description', header: 'Description', width: 150, align: 'left' as const, editable: false, cellStyle: btsDetailCellStyle },
-      // Input — percent rate on GST / Commission items only
+      // Input — editable on Gross (flat $) / GST+Commission (percent);
+      //    read-only on Net per Wiseway's EDITABLE_FIELD matrix.
       {
         id: 'input', accessorKey: 'input', header: 'Input', width: 100, align: 'center' as const,
-        editable: ((row: BtsDetailRow) => row.kind === 'item' && row.input !== null) as unknown as boolean,
+        editable: ((row: BtsDetailRow) =>
+          row.kind === 'item' && !!row.sectionName && BTS_DETAILS_INPUT_EDITABLE.has(row.sectionName)
+        ) as unknown as boolean,
+        // Percent unit badge for GST/Commission rows (Wiseway shows "1.50 %")
+        unit: ((row: BtsDetailRow) =>
+          row.sectionName === 'gst' || row.sectionName === 'commission' ? '%' : undefined
+        ) as unknown as string,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as BtsDetailRow;
           if (row.kind !== 'item' || row.input == null) { container.textContent = ''; return; }
-          container.textContent = row.input.toFixed(2) + ' %';
+          // GST/Commission display percent; Gross would display flat $ (blank here — Wiseway default)
+          const suffix = (row.sectionName === 'gst' || row.sectionName === 'commission') ? '' : '';
+          container.textContent = row.input.toFixed(2) + suffix;
         },
         cellStyle: btsDetailCellStyle,
       },
@@ -577,9 +761,13 @@ export function FsbtRevenue() {
         cellStyle: btsDetailCellStyle,
       },
       { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 85, cellType: 'change' as const, align: 'center' as const, editable: false, cellStyle: btsDetailCellStyle },
+      // Monthly — editable on every section per Wiseway (users can override
+      // the auto-computed per-month distribution).
       ...holdingTs.columns.map(c => ({
         ...c,
-        editable: false,
+        editable: ((row: BtsDetailRow) =>
+          row.kind === 'item' && !!row.sectionName && BTS_DETAILS_MONTHLY_EDITABLE.has(row.sectionName)
+        ) as unknown as boolean,
         cellStyle: btsDetailCellStyle,
       })),
     ],
@@ -613,31 +801,74 @@ export function FsbtRevenue() {
   // Holding Rental General Grid Setup
   // ════════════════════════════════════════════════════════════════════════════
 
+  // Sum fields that are additive across rows; average per-m² rates.
   const holdingGeneralTotalsRow = useMemo(() => {
-    const n = holdingGeneralData.length;
-    const avg = (pick: (r: HoldingGeneralRow) => number) =>
-      holdingGeneralData.reduce((s, r) => s + pick(r), 0) / n;
+    const sum = (pick: (r: HoldingGeneralRow) => number) =>
+      holdingGeneralData.reduce((s, r) => s + pick(r), 0);
     return {
       id: -1,
       type: 'Total',
       description: '',
       stage: 1,
-      nla: holdingGeneralData.reduce((s, r) => s + r.nla, 0),
-      unit: holdingGeneralData.reduce((s, r) => s + r.unit, 0),
-      grossRent: Math.round(avg(r => r.grossRent)),
-      outgoings: Math.round(avg(r => r.outgoings)),
+      nla: sum(r => r.nla),
+      unit: sum(r => r.unit),
+      // per-m² rates: totals shown blank; Wiseway Footer leaves them empty
+      grossRent: null,
+      outgoings: null,
+      netRent: null,
+      annualNetRent: sum(r => r.annualNetRent),
+      preCommit: '', leaseTerm: null, leaseStart: '', leaseEnd: '',
+      rentReview: null, reviewFrequency: null,
+      lettingFee: null, payableCommitment: null, totalLettingFee: sum(r => r.totalLettingFee),
+      incentives: null, incentivesPaidUpfront: null, remainingIncentives: sum(r => r.remainingIncentives),
+      discountMonths: null, totalIncentives: sum(r => r.totalIncentives),
+      completionCapRate: null, completionCapValue: sum(r => r.completionCapValue),
+      exitCapRate: null, exitCapValue: sum(r => r.exitCapValue),
+      exitGST: null, exitCommission: null, settlementDate: '',
     } as unknown as HoldingGeneralRow;
   }, []);
 
+  // Shared formatter factories (kept inline so the 30-column array stays readable).
+  const pct = (v: unknown) => (typeof v === 'number' ? v.toFixed(2) + '%' : '');
+  const dateMonYY = (v: unknown) => (typeof v === 'string' && v ? formatMonYY(v) : '');
+  const computedCellStyle = () => ({ background: '#f5f5f5' });
+
   const holdingGeneralColumns = useMemo<ColumnDef<HoldingGeneralRow>[]>(
     () => [
-      { id: 'type', accessorKey: 'type', header: 'Type', width: 170, align: 'left' as const },
-      { id: 'description', accessorKey: 'description', header: 'Description', width: 150, align: 'left' as const, editable: true },
-      { id: 'stage', accessorKey: 'stage', header: 'Stage', width: 90, align: 'center' as const },
-      { id: 'nla', accessorKey: 'nla', header: 'NLA (m2)', width: 110, align: 'center' as const, valueFormatter: formatInt, editable: true },
-      { id: 'unit', accessorKey: 'unit', header: 'Unit', width: 90, align: 'center' as const, valueFormatter: formatInt, editable: true },
-      { id: 'grossRent', accessorKey: 'grossRent', header: 'Gross Rent p.a. ($/m2)', width: 190, align: 'center' as const, valueFormatter: formatDollars, editable: true },
-      { id: 'outgoings', accessorKey: 'outgoings', header: 'Outgoings p.a. ($/m2)', width: 190, align: 'center' as const, valueFormatter: formatDollars, editable: true },
+      // ── Basic (15) — read-only metadata + editable rate inputs ──
+      { id: 'type',               accessorKey: 'type',               header: 'Type',                    width: 130, align: 'left' as const,   editable: false },
+      { id: 'description',        accessorKey: 'description',        header: 'Description',             width: 140, align: 'left' as const,   editable: false },
+      { id: 'stage',              accessorKey: 'stage',              header: 'Stage',                   width: 80,  align: 'center' as const, editable: false },
+      { id: 'nla',                accessorKey: 'nla',                header: 'NLA (m²)',                width: 100, align: 'center' as const, editable: false, valueFormatter: formatInt },
+      { id: 'unit',               accessorKey: 'unit',               header: 'Unit',                    width: 70,  align: 'center' as const, editable: false, valueFormatter: formatInt },
+      { id: 'grossRent',          accessorKey: 'grossRent',          header: 'Gross Rent p.a. ($/m²)',  width: 130, align: 'center' as const, editable: true,  valueFormatter: formatDollars },
+      { id: 'outgoings',          accessorKey: 'outgoings',          header: 'Outgoings p.a. ($/m²)',   width: 130, align: 'center' as const, editable: true,  valueFormatter: formatDollars },
+      { id: 'netRent',            accessorKey: 'netRent',            header: 'Net Rent p.a. ($/m²)',    width: 130, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
+      { id: 'annualNetRent',      accessorKey: 'annualNetRent',      header: 'Annual Net Rent',         width: 140, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
+      { id: 'preCommit',          accessorKey: 'preCommit',          header: 'Pre-commit Month',        width: 110, align: 'center' as const, editable: true,  valueFormatter: dateMonYY },
+      { id: 'leaseTerm',          accessorKey: 'leaseTerm',          header: 'Lease Term (months)',     width: 110, align: 'center' as const, editable: true },
+      { id: 'leaseStart',         accessorKey: 'leaseStart',         header: 'Lease Start Date',        width: 110, align: 'center' as const, editable: true,  valueFormatter: dateMonYY },
+      { id: 'leaseEnd',           accessorKey: 'leaseEnd',           header: 'Lease End Date',          width: 110, align: 'center' as const, editable: false, valueFormatter: dateMonYY, cellStyle: computedCellStyle },
+      { id: 'rentReview',         accessorKey: 'rentReview',         header: 'Rent Review (%)',         width: 110, align: 'center' as const, editable: true,  valueFormatter: pct },
+      { id: 'reviewFrequency',    accessorKey: 'reviewFrequency',    header: 'Review Frequency (year)', width: 100, align: 'center' as const, editable: true },
+      // ── Development Costs group (8) ──
+      { id: 'lettingFee',         accessorKey: 'lettingFee',         header: 'Letting Fee (%)',         width: 110, align: 'center' as const, editable: true,  valueFormatter: pct },
+      { id: 'payableCommitment',  accessorKey: 'payableCommitment',  header: '% Payable Commitment',    width: 130, align: 'center' as const, editable: true,  valueFormatter: pct },
+      { id: 'totalLettingFee',    accessorKey: 'totalLettingFee',    header: 'Total Letting Fee',       width: 140, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
+      { id: 'incentives',         accessorKey: 'incentives',         header: 'Incentives (%)',          width: 110, align: 'center' as const, editable: true,  valueFormatter: pct },
+      { id: 'incentivesPaidUpfront', accessorKey: 'incentivesPaidUpfront', header: '% Incentives Paid Upfront', width: 140, align: 'center' as const, editable: true, valueFormatter: pct },
+      { id: 'remainingIncentives',accessorKey: 'remainingIncentives',header: 'Remaining Incentives',    width: 140, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
+      { id: 'discountMonths',     accessorKey: 'discountMonths',     header: 'Discount Months',         width: 110, align: 'center' as const, editable: true },
+      { id: 'totalIncentives',    accessorKey: 'totalIncentives',    header: 'Total Incentives',        width: 140, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
+      // ── On Completion group (2) ──
+      { id: 'completionCapRate',  accessorKey: 'completionCapRate',  header: 'Completion Cap Rate (%)', width: 130, align: 'center' as const, editable: true,  valueFormatter: pct },
+      { id: 'completionCapValue', accessorKey: 'completionCapValue', header: 'Completion Cap Value',    width: 150, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
+      // ── Exit group (5) ──
+      { id: 'exitCapRate',        accessorKey: 'exitCapRate',        header: 'Exit Cap Rate (%)',       width: 120, align: 'center' as const, editable: true,  valueFormatter: pct },
+      { id: 'exitCapValue',       accessorKey: 'exitCapValue',       header: 'Exit Cap Value',          width: 140, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
+      { id: 'exitGST',            accessorKey: 'exitGST',            header: 'Exit GST (%)',            width: 110, align: 'center' as const, editable: true,  valueFormatter: pct },
+      { id: 'exitCommission',     accessorKey: 'exitCommission',     header: 'Exit Sales Commission (%)', width: 150, align: 'center' as const, editable: true, valueFormatter: pct },
+      { id: 'settlementDate',     accessorKey: 'settlementDate',     header: 'Settlement Date',         width: 120, align: 'center' as const, editable: true,  valueFormatter: dateMonYY },
     ],
     [],
   );
@@ -661,6 +892,10 @@ export function FsbtRevenue() {
     columns: holdingGeneralColumns,
     plugins: holdingGeneralPlugins,
     pinnedBottomRows: [holdingGeneralTotalsRow],
+    // Freeze Type + Description so category context is visible while the
+    // user scrolls across the 30-column rent / lease / cap-rate layout.
+    frozenLeftColumns: 2,
+    freezeClip: { minVisible: 1 },
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
     tableStyle: 'striped' as const,

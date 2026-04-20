@@ -83,7 +83,7 @@ function getMonthlyEntries(row: CostRow): Array<[string, number]> {
 }
 
 function setMonthlyValue(row: CostRow, key: string, value: number): void {
-  if (value !== 0) row[key] = value;
+  row[key] = value;
 }
 
 function distributeEvenly(row: CostRow): Array<[string, number]> {
@@ -186,6 +186,7 @@ const rawData: CostRow[] = [
   { id: 1, parentId: null, code: '1', name: 'Land Cost', inputType: 'number', input: 27000000, escalation: 'none', amount: 27000000, start: '2023-08-01', end: '2024-01-31', variance: 0, custom: false, m_2023_08: 27000000 },
   { id: 2, parentId: 1, code: '1.01', name: 'Deposit', inputType: 'percent', input: 10, escalation: 'none', amount: 2700000, start: '2023-08-01', end: '2023-08-31', variance: 0, custom: false, m_2023_08: 2700000 },
   { id: 3, parentId: 1, code: '1.02', name: 'Settlement', inputType: 'percent', input: 90, escalation: 'none', amount: 24300000, start: '2024-01-01', end: '2024-01-31', variance: 0, custom: false, m_2024_01: 24300000 },
+  { id: 53, parentId: 1, code: '1.03', name: '', inputType: 'percent', input: 0, escalation: 'cpi', amount: 0, start: '2023-08-01', end: '2024-01-31', variance: 0, custom: true, m_2023_08: 0, m_2023_09: 0, m_2023_10: 0, m_2023_11: 0, m_2023_12: 0, m_2024_01: 0 },
 
   // 2. Acquisition Cost — $1,964,870
   { id: 4, parentId: null, code: '2', name: 'Acquisition Cost', inputType: 'none', input: null, escalation: 'none', amount: 1964870, start: '2023-08-01', end: '2024-01-31', variance: 0, custom: false },
@@ -265,7 +266,7 @@ const data: CostRow[] = buildCostRows(rawData);
 
 // Monthly columns: Aug 2023 – Oct 2026 (39 months, matching Program)
 const monthValueFormatter = (v: unknown): string => {
-  if (v == null || v === 0 || typeof v !== 'number') return '';
+  if (v == null || typeof v !== 'number') return '';
   return v.toLocaleString('en-AU', { maximumFractionDigits: 0 });
 };
 
@@ -273,11 +274,11 @@ const ts = timeSeries({
   start: '2023-08-01',
   end: '2026-10-01',
   locale: 'en-AU',
-  columnWidth: 100,
+  columnWidth: 111,
   columnDefaults: {
     cellType: 'currency' as never,
     precision: 0,
-    hideZero: true,
+    hideZero: false,
     editable: isMonthlyEditable as never,
     valueFormatter: monthValueFormatter,
     cellRenderer: (container, ctx) => {
@@ -431,7 +432,11 @@ export function FsbtCost() {
             container.textContent = '';
             return;
           }
-          container.textContent = row.input !== null ? formatAU(row.input) : '';
+          if (row.input === null) {
+            container.textContent = '';
+            return;
+          }
+          container.textContent = row.inputType === 'percent' ? row.input.toFixed(2) : formatAU(row.input);
         },
         cellStyle: parentRowCellStyle,
       },
@@ -477,7 +482,7 @@ export function FsbtCost() {
       },
       // ── Col 7: Start — masked MM/YY input, matches FsbtProgram's Start column styling ──
       {
-        id: 'start', accessorKey: 'start', header: 'Start', width: 110, placeholder: 'MM/YY',
+        id: 'start', accessorKey: 'start', header: 'Start', width: 85, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
         valueFormatter: formatIsoToMMYY,
@@ -495,7 +500,7 @@ export function FsbtCost() {
       },
       // ── Col 8: End — masked MM/YY input, matches Program styling ──
       {
-        id: 'end', accessorKey: 'end', header: 'End', width: 110, placeholder: 'MM/YY',
+        id: 'end', accessorKey: 'end', header: 'End', width: 85, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
         valueFormatter: formatIsoToMMYY,
