@@ -1116,10 +1116,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         `;
 
         // Display layer: spans with per-section coloring (digits = normal, labels = grey)
+        const displayJustify = anchorComputed.textAlign === 'center'
+          ? 'center'
+          : (anchorComputed.textAlign === 'right' || anchorComputed.textAlign === 'end') ? 'flex-end' : 'flex-start';
         const displayLayer = document.createElement('div');
         displayLayer.style.cssText = `
           position: absolute; top: 0; left: 0; right: 0; bottom: 0;
           display: flex; align-items: center;
+          justify-content: ${displayJustify};
           font-family: ${anchorComputed.fontFamily};
           font-size: ${anchorComputed.fontSize};
           font-weight: ${anchorComputed.fontWeight};
@@ -1130,9 +1134,36 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         `;
 
         const placeholderColor = getComputedStyle(cellEl).color;
+        const sectionSpans: HTMLElement[] = [];
+
+        function getSectionAtClientX(clientX: number): number {
+          let closestSection = activeSectionIdx;
+          let closestDistance = Infinity;
+
+          for (let i = 0; i < sectionSpans.length; i += 1) {
+            const span = sectionSpans[i];
+            if (!span) continue;
+
+            const rect = span.getBoundingClientRect();
+            if (rect.width <= 0) continue;
+
+            if (clientX >= rect.left && clientX <= rect.right) return i;
+
+            const distance = clientX < rect.left
+              ? rect.left - clientX
+              : clientX - rect.right;
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closestSection = i;
+            }
+          }
+
+          return closestSection;
+        }
 
         function syncDisplayLayer(): void {
           displayLayer.innerHTML = '';
+          sectionSpans.length = 0;
           for (let i = 0; i < sectionLengths.length; i += 1) {
             // Separators before this section
             for (const sep of separators) {
@@ -1147,6 +1178,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             const filled = sectionValues[i];
             span.textContent = filled || sectionLabels[i] || '';
             span.style.color = filled ? 'inherit' : placeholderColor;
+            sectionSpans[i] = span;
             displayLayer.appendChild(span);
           }
           // Trailing separators
@@ -1186,8 +1218,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         input.addEventListener('beforeinput', (e) => { e.preventDefault(); });
 
         // Click on MM or YY → select that section
-        input.addEventListener('mouseup', () => {
-          activeSectionIdx = getSectionAtCursor(input.selectionStart ?? 0);
+        input.addEventListener('mouseup', (e) => {
+          activeSectionIdx = getSectionAtClientX(e.clientX);
           const range = getSectionRange(activeSectionIdx);
           input.setSelectionRange(range.start, range.end);
         });
@@ -1347,31 +1379,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           input.focus();
           // Determine which section was clicked based on mouse position. The
           // cellRenderer may display a user-friendly text (e.g. "Aug 23") that
-          // is visually wider than the masked editor value (e.g. "08/23"), so
-          // we split the cell content area proportionally by mask-character
-          // count — click in the first 2/5 of a "MM/YY" cell → MM section,
-          // past that boundary → YY. This matches user intuition ("click left
-          // = MM, click right = YY") regardless of the displayed text width.
-          let initialSection = 0;
-          if (clickEvent && sectionLengths.length > 1) {
-            const paddingLeft = parseFloat(anchorComputed.paddingLeft) || 0;
-            const paddingRight = parseFloat(anchorComputed.paddingRight) || 0;
-            const contentWidth = Math.max(1, cellRect.width - paddingLeft - paddingRight);
-            const clickOffset = Math.max(0, Math.min(contentWidth,
-              clickEvent.clientX - cellRect.left - paddingLeft,
-            ));
-            const clickProp = clickOffset / contentWidth;
-
-            // Build cumulative mask-char boundaries between sections.
-            // For "MM/YY": after "MM/" = 3/5 → boundary 0.6
-            // For "MM/DD/YYYY": after "MM/" = 3/10 → 0.3; after "MM/DD/" = 6/10 → 0.6
-            let cumChars = 0;
-            for (let i = 0; i < sectionLengths.length - 1; i += 1) {
-              cumChars += sectionLengths[i]! + 1; // +1 for following separator
-              const boundary = cumChars / mask.length;
-              if (clickProp > boundary) initialSection = i + 1;
-            }
-          }
+          // is visually wider than the masked editor value (e.g. "08/23").
+          // Hit-test the rendered section spans directly so clicking on the
+          // visible "MM" or "YY" text selects that exact mask section.
+          const initialSection = clickEvent
+            ? getSectionAtClientX(clickEvent.clientX)
+            : getSectionAtCursor(input.selectionStart ?? 0);
           activeSectionIdx = initialSection;
           const range = getSectionRange(initialSection);
           input.setSelectionRange(range.start, range.end);

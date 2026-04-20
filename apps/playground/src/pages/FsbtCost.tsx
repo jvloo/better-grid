@@ -55,9 +55,133 @@ function getCostInputNote(code: string): string {
   }
 }
 
+const MONTH_KEY_RE = /^m_(\d{4})_(\d{2})$/;
+
+function parseIsoMonth(dateIso: string): Date {
+  const [year, month] = dateIso.split('-').map(Number);
+  return new Date(year!, month! - 1, 1);
+}
+
+function monthKey(date: Date): string {
+  return `m_${date.getFullYear()}_${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthDiffInclusive(startIso: string, endIso: string): number {
+  const start = parseIsoMonth(startIso);
+  const end = parseIsoMonth(endIso);
+  return (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+}
+
+function addMonthsLocal(date: Date, months: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1);
+}
+
+function getMonthlyEntries(row: CostRow): Array<[string, number]> {
+  return Object.entries(row).filter(
+    (entry): entry is [string, number] => MONTH_KEY_RE.test(entry[0]) && typeof entry[1] === 'number',
+  );
+}
+
+function setMonthlyValue(row: CostRow, key: string, value: number): void {
+  if (value !== 0) row[key] = value;
+}
+
+function distributeEvenly(row: CostRow): Array<[string, number]> {
+  if (!row.start || !row.end || !row.amount) return [];
+
+  const duration = monthDiffInclusive(row.start, row.end);
+  if (duration <= 0) return [];
+
+  const start = parseIsoMonth(row.start);
+  const base = Math.floor(row.amount / duration);
+  let remainder = row.amount - base * duration;
+  const entries: Array<[string, number]> = [];
+
+  for (let i = 0; i < duration; i += 1) {
+    const value = base + (i === duration - 1 ? remainder : 0);
+    remainder = 0;
+    entries.push([monthKey(addMonthsLocal(start, i)), value]);
+  }
+
+  return entries;
+}
+
+function distributeMainConstruction(row: CostRow): Array<[string, number]> {
+  if (!row.start || !row.end || !row.amount) return [];
+
+  const duration = monthDiffInclusive(row.start, row.end);
+  if (duration <= 0) return [];
+
+  const start = parseIsoMonth(row.start);
+  const cumulative = (monthNumber: number) => Math.sin(((monthNumber / duration) * Math.PI) / 2) ** 2;
+  const entries: Array<[string, number]> = [];
+  let roundedTotal = 0;
+
+  for (let i = 0; i < duration; i += 1) {
+    const weight = cumulative(i + 1) - cumulative(i);
+    const value = i === duration - 1 ? row.amount - roundedTotal : Math.round(row.amount * weight);
+    roundedTotal += value;
+    entries.push([monthKey(addMonthsLocal(start, i)), value]);
+  }
+
+  return entries;
+}
+
+function buildCostRows(rows: CostRow[]): CostRow[] {
+  const byId = new Map<number, CostRow>();
+  const result = rows.map((row) => {
+    const next = { ...row };
+    for (const key of Object.keys(next)) {
+      if (MONTH_KEY_RE.test(key)) delete next[key];
+    }
+    byId.set(next.id, next);
+    return next;
+  });
+
+  for (const original of rows) {
+    if (original.parentId === null) continue;
+
+    const row = byId.get(original.id);
+    if (!row) continue;
+
+    const entries = getMonthlyEntries(original);
+    const monthlyEntries = entries.length
+      ? entries
+      : original.code === '3.05'
+        ? distributeMainConstruction(original)
+        : distributeEvenly(original);
+
+    for (const [key, value] of monthlyEntries) {
+      setMonthlyValue(row, key, value);
+
+      const parent = byId.get(original.parentId);
+      if (parent) {
+        const current = typeof parent[key] === 'number' ? parent[key] : 0;
+        setMonthlyValue(parent, key, current + value);
+      }
+    }
+  }
+
+  return result;
+}
+
+function isMonthlyEditable(row: CostRow, column: ColumnDef<CostRow>): boolean {
+  if (row.parentId === null || !row.start || !row.end || !row.amount) return false;
+  const match = MONTH_KEY_RE.exec(column.id);
+  if (!match) return false;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const start = parseIsoMonth(row.start);
+  const end = parseIsoMonth(row.end);
+  const current = new Date(year, month - 1, 1);
+
+  return current >= start && current <= end;
+}
+
 // Data from QA app project 4288: https://qa-app.wiseway.ai/projects/4288/cost
 // Total Development Cost: $161,041,739 (13 phases, 39 months Aug 2023 – Oct 2026)
-const data: CostRow[] = [
+const rawData: CostRow[] = [
   // 1. Land Cost — $27,000,000 (Wiseway special-cases this parent to show its input)
   { id: 1, parentId: null, code: '1', name: 'Land Cost', inputType: 'number', input: 27000000, escalation: 'none', amount: 27000000, start: '2023-08-01', end: '2024-01-31', variance: 0, custom: false, m_2023_08: 27000000 },
   { id: 2, parentId: 1, code: '1.01', name: 'Deposit', inputType: 'percent', input: 10, escalation: 'none', amount: 2700000, start: '2023-08-01', end: '2023-08-31', variance: 0, custom: false, m_2023_08: 2700000 },
@@ -137,6 +261,8 @@ const data: CostRow[] = [
   { id: 52, parentId: 51, code: '13.01', name: 'Others', inputType: 'number', input: 0, escalation: 'cpi', amount: 0, start: '2023-08-01', end: '2026-10-31', variance: 0, custom: false },
 ];
 
+const data: CostRow[] = buildCostRows(rawData);
+
 // Monthly columns: Aug 2023 – Oct 2026 (39 months, matching Program)
 const monthValueFormatter = (v: unknown): string => {
   if (v == null || v === 0 || typeof v !== 'number') return '';
@@ -147,11 +273,17 @@ const ts = timeSeries({
   start: '2023-08-01',
   end: '2026-10-01',
   locale: 'en-AU',
+  columnWidth: 100,
   columnDefaults: {
     cellType: 'currency' as never,
     precision: 0,
     hideZero: true,
+    editable: isMonthlyEditable as never,
     valueFormatter: monthValueFormatter,
+    cellRenderer: (container, ctx) => {
+      container.textContent = monthValueFormatter(ctx.value);
+    },
+    cellStyle: parentRowCellStyle,
   },
 });
 
@@ -178,7 +310,7 @@ function buildTotalsRow(): CostRow {
   }
   for (const col of ts.columns) {
     let sum = 0;
-    for (const row of data) {
+    for (const row of rootRows) {
       const val = row[col.id];
       if (typeof val === 'number') sum += val;
     }
@@ -202,6 +334,24 @@ function phaseCellStyle(_v: unknown, row: unknown): Record<string, string> | und
   const base = parentRowCellStyle(_v, row) ?? {};
   // Wiseway's phase cell: parent padL 8px, child padL 28px (theme.spacing(1) / theme.spacing(3.5))
   return { ...base, paddingLeft: r.parentId === null ? '8px' : '28px' };
+}
+
+function renderVarianceStatusIcon(container: HTMLElement, variance: number | undefined): void {
+  container.style.display = 'flex';
+  container.style.alignItems = 'center';
+  container.style.justifyContent = 'center';
+
+  if (typeof variance !== 'number') {
+    container.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#F7F7F7"/></svg>';
+    return;
+  }
+
+  if (variance === 0) {
+    container.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#E0F2FE"/><path d="M9.75 12L11.25 13.5L14.25 10.5M17 12C17 14.7614 14.7614 17 12 17C9.23858 17 7 14.7614 7 12C7 9.23858 9.23858 7 12 7C14.7614 7 17 9.23858 17 12Z" stroke="#026AA2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    return;
+  }
+
+  container.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#FEF0C7"/><path d="M13.5 10.5L10.5 13.5M10.5 10.5L13.5 13.5M17 12C17 14.7614 14.7614 17 12 17C9.23858 17 7 14.7614 7 12C7 9.23858 9.23858 7 12 7C14.7614 7 17 9.23858 17 12Z" stroke="#B54708" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'] as const;
@@ -300,11 +450,10 @@ export function FsbtCost() {
         id: 'escalation', accessorKey: 'escalation', header: 'Escalation', width: 110, align: 'center' as const,
         cellEditor: 'dropdown' as const,
         options: [
-          { value: 'none', label: '' },
           { value: 'cpi', label: 'CPI' },
           { value: 'non-cpi', label: 'Non-CPI' },
         ],
-        editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
+        editable: ((row: CostRow) => row.parentId !== null && row.escalation !== 'none') as unknown as boolean,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           if (row.escalation === 'cpi') container.textContent = 'CPI';
@@ -363,13 +512,21 @@ export function FsbtCost() {
         },
       },
       // ── Col 9: Variance (read-only, computed) ──
-      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 85, cellType: 'change' as const, align: 'center' as const, editable: false, cellStyle: parentRowCellStyle },
-      // ── Col 10: Variance status — 44px icon slot (matches Wiseway's layout; status icon TBD) ──
+      {
+        id: 'variance', accessorKey: 'variance', header: 'Variance', width: 85, align: 'center' as const, editable: false,
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as CostRow;
+          container.textContent = typeof row.variance === 'number' ? formatAU(Math.round(row.variance)) : '';
+        },
+        cellStyle: parentRowCellStyle,
+      },
+      // ── Col 10: Variance status — valid/warning/empty circle icon ──
       {
         id: 'varianceStatus', header: '', width: 44, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
+          renderVarianceStatusIcon(container, typeof row.variance === 'number' ? row.variance : undefined);
         },
       },
       // ── Col 11: Collapse/expand chevron (at end of frozen row, matches FsbtProgram) ──
