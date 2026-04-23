@@ -1,13 +1,11 @@
-import { useMemo, useCallback, useRef } from 'react';
-import type { GridInstance } from '@better-grid/core';
+import { useMemo, useCallback, useState } from 'react';
 import { useGrid } from '@better-grid/react';
-import type { ColumnDef } from '@better-grid/core';
+import type { CellChange, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
 import { formatting, editing, sorting, hierarchy, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 import { FsbtProgramSummary } from './_FsbtProgramSummary';
 import { FSBT_STYLES, parentRowCellStyle } from './_fsbt-cell-styles';
-import { DROPDOWN_BOX_STYLE } from './_fsbt-dropdown';
 
 // ============================================================================
 // Shared helpers — match FsbtCost's date formatting so every FSBT table has
@@ -356,11 +354,7 @@ export function FsbtRevenue() {
   // BTS Grid Setup
   // ════════════════════════════════════════════════════════════════════════════
 
-  // Grid instance is captured via ref so the Growth Rate compound cell
-  // renderer can call updateCell() when the user changes the select / input.
-  // Ref resolves the chicken-and-egg between useGrid(columns) and columns
-  // needing to close over `grid`.
-  const btsGridRef = useRef<GridInstance<BtsRow> | null>(null);
+  const [btsRows, setBtsRows] = useState<BtsRow[]>(() => btsData);
 
   const formatInt = (v: unknown): string => (typeof v === 'number' ? v.toLocaleString('en-AU', { maximumFractionDigits: 0 }) : '');
   const formatDollars = (v: unknown): string => (typeof v === 'number' ? '$' + v.toLocaleString('en-AU', { maximumFractionDigits: 0 }) : '');
@@ -381,80 +375,21 @@ export function FsbtRevenue() {
       // Wiseway shows plain numbers here (no $ prefix) — the column header
       //    already says "$/m²" so the unit is implied.
       { id: 'salePrice', accessorKey: 'salePrice', header: 'Current Sale Price ($/m2)', width: 190, align: 'center' as const, editable: true, valueFormatter: formatInt },
-      // Growth Rate — compound cell: always a 3-option select (Non CPI / CPI
-      //    / Custom); if Custom, ALSO shows a percent input next to the select.
-      //    `editable: false` disables the editing plugin's dropdown wrap so
-      //    the native elements we render take the click events directly.
+      // Growth Rate — native Better Grid compound select. Custom reveals a
+      // sibling percent input and stores the numeric percentage directly.
       //    Width: 190 matches Wiseway BtsGeneralTable header minWidth.
       {
         id: 'growthRate', accessorKey: 'growthRate', header: 'Growth Rate',
-        width: 190, align: 'center' as const, editable: false,
-        cellRenderer: (container, ctx) => {
-          const row = ctx.row as BtsRow;
-          container.innerHTML = '';
-          // Skip rendering on the pinned Total row (growthRate = null there).
-          // Wiseway's Total row leaves this column blank — mixed types +
-          // averages wouldn't be meaningful.
-          if (row.growthRate == null) return;
-          const rowIndex = btsData.findIndex(r => r.id === row.id);
-          const currentValue = row.growthRate;
-          const selectValue = growthRateSelectValue(currentValue as number | string);
-
-          // Reset children without touching the inline styles the grid set
-          // (absolute top/left/width/height come from the virtualization layer
-          // and must survive — otherwise the cell collapses out of place).
-          container.style.display = 'flex';
-          container.style.alignItems = 'center';
-          container.style.justifyContent = 'center';
-          container.style.gap = '4px';
-          container.style.padding = '0 8px';
-
-          // Native <select> with the shared DROPDOWN_BOX_STYLE (30px height,
-          // #F8F8F8 fill, custom chevron). Shrink to auto width only when the
-          // Custom-mode percent <input> is being shown alongside it.
-          const select = document.createElement('select');
-          const hasCustomInput = selectValue === 'custom';
-          select.style.cssText = DROPDOWN_BOX_STYLE
-            + (hasCustomInput ? 'flex:0 0 auto;min-width:86px;width:auto;' : 'flex:1 1 auto;');
-          for (const opt of GROWTH_RATE_OPTIONS) {
-            const option = document.createElement('option');
-            option.value = opt.value;
-            option.textContent = opt.label;
-            if (opt.value === selectValue) option.selected = true;
-            select.appendChild(option);
-          }
-          select.addEventListener('change', () => {
-            const next = select.value as 'cpi' | 'non-cpi' | 'custom';
-            // Switching to Custom seeds the numeric value at 0, matching
-            // Wiseway's BtsGeneralTableCellEscalation.onChange handler.
-            const nextValue: number | string = next === 'custom' ? 0 : next;
-            btsGridRef.current?.updateCell(rowIndex, 'growthRate', nextValue);
-          });
-          container.appendChild(select);
-
-          if (selectValue === 'custom') {
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.step = '0.01';
-            input.value = typeof currentValue === 'number' ? currentValue.toString() : '0';
-            // Percent input matches the dropdown's fill/shadow via the
-            // shared style; override padding + text-align for a right-aligned
-            // numeric input.
-            input.style.cssText =
-              'height:30px;background:#F8F8F8;border:none;border-radius:4px;' +
-              'box-shadow:0 1px 2px 0 rgba(16,24,40,0.05);font-size:12px;color:#101828;' +
-              'box-sizing:border-box;flex:0 0 auto;width:60px;padding:0 6px;text-align:right;';
-            input.addEventListener('change', () => {
-              const n = Number(input.value);
-              btsGridRef.current?.updateCell(rowIndex, 'growthRate', isNaN(n) ? 0 : n);
-            });
-            container.appendChild(input);
-            const pctLabel = document.createElement('span');
-            pctLabel.textContent = '%';
-            pctLabel.style.cssText = 'font-size:12px;color:#667085;';
-            container.appendChild(pctLabel);
-          }
-        },
+        width: 190, align: 'center' as const,
+        editable: ((row: BtsRow) => row.id !== -1) as unknown as boolean,
+        cellEditor: 'selectWithInput' as const,
+        options: GROWTH_RATE_OPTIONS,
+        selectInput: { optionValue: 'custom', type: 'number', unit: '%', precision: 2, width: 60, defaultValue: 0, min: 0 },
+        selectValue: (value) => growthRateSelectValue(value as number | string),
+        selectInputValue: (value) => (typeof value === 'number' ? value : 0),
+        parseSelectWithInputValue: ({ optionValue, inputValue }) =>
+          optionValue === 'custom' ? Number(inputValue) : optionValue,
+        valueFormatter: formatRate,
       },
       {
         id: 'launchDate', accessorKey: 'launchDate', header: 'Sales Launch Date', width: 190, align: 'center' as const,
@@ -506,24 +441,38 @@ export function FsbtRevenue() {
   // (8,803 + 15,898 + 1,960) / 3 = 8,887 — matches the live app exactly.
   // Sum columns (NSA, Units, Gross Revenue) are additive as you'd expect.
   const btsTotalsRow = useMemo(() => {
-    const n = btsData.length;
+    const n = btsRows.length;
     const avg = (pick: (r: BtsRow) => number) =>
-      btsData.reduce((s, r) => s + pick(r), 0) / n;
+      btsRows.reduce((s, r) => s + pick(r), 0) / n;
     return {
       id: -1,
       type: 'Total',
       stage: 1, // Wiseway shows the project stage (not a sum)
-      nsa: btsData.reduce((s, r) => s + r.nsa, 0),
-      units: btsData.reduce((s, r) => s + r.units, 0),
+      nsa: btsRows.reduce((s, r) => s + r.nsa, 0),
+      units: btsRows.reduce((s, r) => s + r.units, 0),
       salePrice: Math.round(avg(r => r.salePrice)),
       growthRate: null, // mix of number and 'CPI' — not averageable
       launchDate: null,
       projectedPrice: Math.round(avg(r => r.projectedPrice)),
-      grossRevenue: btsData.reduce((s, r) => s + r.grossRevenue, 0),
+      grossRevenue: btsRows.reduce((s, r) => s + r.grossRevenue, 0),
       gst: avg(r => r.gst),
       commUpfront: avg(r => r.commUpfront),
       commBackend: avg(r => r.commBackend),
     } as unknown as BtsRow;
+  }, [btsRows]);
+
+  const handleBtsDataChange = useCallback((changes: CellChange<BtsRow>[]) => {
+    setBtsRows(prevRows => {
+      const byId = new Map(changes.map(change => [change.row.id, change.row]));
+      let changed = false;
+      const nextRows = prevRows.map(row => {
+        const updated = byId.get(row.id);
+        if (!updated) return row;
+        changed = true;
+        return { ...row, ...updated };
+      });
+      return changed ? nextRows : prevRows;
+    });
   }, []);
 
   const btsPlugins = useMemo(
@@ -541,17 +490,15 @@ export function FsbtRevenue() {
   );
 
   const { grid: btsGrid, containerRef: btsRef } = useGrid<BtsRow>({
-    data: btsData,
+    data: btsRows,
     columns: btsColumns,
     plugins: btsPlugins,
     pinnedBottomRows: [btsTotalsRow],
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
     tableStyle: 'striped' as const,
+    onDataChange: handleBtsDataChange,
   });
-  // Expose the grid instance to the Growth Rate compound cellRenderer above.
-  btsGridRef.current = btsGrid as unknown as GridInstance<BtsRow>;
-
   // ════════════════════════════════════════════════════════════════════════════
   // Holding Revenue Grid Setup
   // ════════════════════════════════════════════════════════════════════════════

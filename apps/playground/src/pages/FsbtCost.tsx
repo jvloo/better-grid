@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useRef, useState } from 'react';
 import { useGrid } from '@better-grid/react';
-import type { CellChange, ColumnDef, GridInstance } from '@better-grid/core';
+import type { CellChange, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
 import { formatting, editing, sorting, hierarchy, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import { rowActions, RowActionIcons } from '@better-grid/pro';
@@ -8,7 +8,6 @@ import type { RowAction } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
 import { FsbtProgramSummary } from './_FsbtProgramSummary';
 import { FSBT_STYLES, parentRowCellStyle } from './_fsbt-cell-styles';
-import { buildStyledSelect, prepareDropdownContainer } from './_fsbt-dropdown';
 
 // ---------------------------------------------------------------------------
 // Data model — mirrors Wiseway's feasibility/types/project-cost.ts
@@ -475,8 +474,6 @@ function hasMaxTwoDecimals(value: number): boolean {
   return Number.isInteger(value * 100);
 }
 
-// Options for the Cost Escalation column. Styling + <select> construction
-// live in _fsbt-dropdown.ts so Revenue / DmForecast share the same look.
 const ESCALATION_OPTIONS = [
   { value: 'cpi',     label: 'CPI' },
   { value: 'non-cpi', label: 'Non-CPI' },
@@ -531,11 +528,6 @@ export function FsbtCost() {
   const [rows, setRows] = useState<CostRow[]>(() => INITIAL_COST_DATA);
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
-
-  // Grid ref for custom compound cellRenderers (e.g. Escalation <select>).
-  // Populated after useGrid() resolves — the column closures read from the
-  // ref so they don't fight the chicken-and-egg between columns and grid.
-  const gridRef = useRef<GridInstance<CostRow> | null>(null);
 
   const totalsRow = useMemo(() => buildTotalsRow(rows), [rows]);
 
@@ -648,35 +640,13 @@ export function FsbtCost() {
         },
         cellStyle: inputNoteCellStyle,
       },
-      // ── Col 5: Escalation — CPI / Non-CPI dropdown. Uses the same styled
-      //    <select> pattern as Revenue's Growth Rate for visual parity:
-      //    30px .bg-input-box fill, custom SVG chevron, one-click interaction.
-      //    editable: false disables the editing plugin's dropdown wrap so
-      //    our native <select> handles clicks directly.
+      // ── Col 5: Escalation — native Better Grid select (CPI / Non-CPI).
       {
         id: 'escalation', accessorKey: 'escalation', header: 'Escalation', width: 110, align: 'center' as const,
-        editable: false,
-        cellRenderer: (container, ctx) => {
-          const row = ctx.row as CostRow;
-          // Blank on parent rows, the TOTAL row, and rows where escalation is
-          // structurally 'none' (e.g. Land Cost deposit / settlement).
-          if (row.parentId === null || row.escalation === 'none') {
-            container.innerHTML = '';
-            return;
-          }
-          prepareDropdownContainer(container);
-          const select = buildStyledSelect<'cpi' | 'non-cpi'>(
-            ESCALATION_OPTIONS,
-            row.escalation,
-            (next) => {
-              const rowIndex = rowsRef.current.findIndex(r => r.id === row.id);
-              if (rowIndex >= 0) {
-                gridRef.current?.updateCell(rowIndex, 'escalation', next);
-              }
-            },
-          );
-          container.appendChild(select);
-        },
+        editable: ((row: CostRow) => row.parentId !== null && row.escalation !== 'none') as unknown as boolean,
+        cellEditor: 'select' as const,
+        options: [...ESCALATION_OPTIONS],
+        valueFormatter: (value) => ESCALATION_OPTIONS.find(option => option.value === value)?.label ?? '',
         cellStyle: parentRowCellStyle,
       },
       // ── Col 6: Amount — plain number (Wiseway uses formatNumber, not currency), read-only ──
@@ -826,8 +796,6 @@ export function FsbtCost() {
     rowHeight: FSBT_STYLES.rowHeight,
     onDataChange: handleCostDataChange,
   });
-  // Expose the grid instance to the Escalation compound cellRenderer above.
-  gridRef.current = grid as unknown as GridInstance<CostRow>;
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
   const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);

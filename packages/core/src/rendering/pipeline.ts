@@ -111,6 +111,7 @@ export class RenderingPipeline<TData = unknown> {
           cell.setAttribute('aria-colindex', String(col + 1));
           this.cellPool.set(key, cell);
         }
+        cell.className = 'bg-cell';
 
         // Position — snap to device pixel boundaries for crisp rendering at all zoom levels
         const top = snapToDevicePixel(measurements.rowOffsets[row]!);

@@ -2,7 +2,31 @@
 // Editing Plugin — Cell editing with text input & dropdown support
 // ============================================================================
 
-import type { GridPlugin, PluginContext, CellPosition, ColumnDef } from '@better-grid/core';
+import type { GridPlugin, PluginContext, CellPosition, ColumnDef, CellRenderContext } from '@better-grid/core';
+
+export interface SelectInputConfig<TData = unknown> {
+  /** Select option value that reveals the sibling input. */
+  optionValue: unknown;
+  /** Input flavor shown next to the selected option. Default: 'number'. */
+  type?: 'number' | 'text';
+  /** Suffix shown after the input, e.g. '%'. */
+  unit?: string | ((row: TData) => string | undefined);
+  /** Width in px for the sibling input. Default: 60. */
+  width?: number;
+  /** Default sibling input value when switching into the input option. */
+  defaultValue?: string | number;
+  min?: number | ((row: TData) => number | undefined);
+  max?: number | ((row: TData) => number | undefined);
+  precision?: number | ((row: TData) => number | undefined);
+}
+
+export interface SelectWithInputValue<TData = unknown> {
+  optionValue: unknown;
+  inputValue: string | number;
+  row: TData;
+  column: ColumnDef<TData>;
+  previousValue: unknown;
+}
 
 declare module '@better-grid/core' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -19,6 +43,14 @@ declare module '@better-grid/core' {
     /** Persistent suffix adornment (e.g. '%'). Rendered both in display and edit modes.
      *  Can be a static string or a per-row function that returns a suffix or undefined. */
     unit?: string | ((row: TData) => string | undefined);
+    /** Resolve the selected option for selectWithInput columns from the stored cell value. */
+    selectValue?: (value: unknown, row: TData, column: ColumnDef<TData>) => unknown;
+    /** Resolve the sibling input value for selectWithInput columns from the stored cell value. */
+    selectInputValue?: (value: unknown, row: TData, column: ColumnDef<TData>) => string | number | undefined;
+    /** Sibling input config for selectWithInput columns. */
+    selectInput?: SelectInputConfig<TData>;
+    /** Convert selectWithInput UI state back into the stored cell value. */
+    parseSelectWithInputValue?: (value: SelectWithInputValue<TData>) => unknown;
   }
 }
 
@@ -120,8 +152,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               color: var(--bg-input-placeholder, #98A2B3);
             }
             .bg-cell--input-editable .bg-input-box--has-unit {
-              position: relative;
-              padding-right: 20px;
+              gap: 2px;
             }
             .bg-cell--input-editable .bg-input-box--dropdown {
               position: relative;
@@ -141,18 +172,75 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               opacity: 0.65;
               pointer-events: none;
             }
+            .bg-cell--input-editable .bg-select-trigger,
+            .bg-cell--input-editable .bg-select-compound-input-wrap,
+            .bg-cell--input-editable .bg-select-compound-input {
+              pointer-events: auto;
+            }
+            .bg-cell--input-editable .bg-select-trigger {
+              border: none;
+              cursor: pointer;
+              color: inherit;
+              font: inherit;
+              text-align: inherit;
+            }
+            .bg-cell--input-editable .bg-select-compound {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 4px;
+              width: 100%;
+            }
+            .bg-cell--input-editable .bg-select-compound-input-wrap {
+              display: flex;
+              align-items: center;
+              height: 30px;
+              border-radius: 4px;
+              box-shadow: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
+              background: var(--bg-input-bg, #F8F8F8);
+              box-sizing: border-box;
+              flex: 0 0 auto;
+              overflow: hidden;
+            }
+            .bg-cell--input-editable .bg-select-compound-input {
+              height: 100%;
+              min-width: 0;
+              border: none;
+              box-shadow: none;
+              background: transparent;
+              box-sizing: border-box;
+              color: inherit;
+              flex: 1 1 auto;
+              font: inherit;
+              font-size: 12px;
+              outline: none;
+              padding: 0 4px 0 6px;
+              text-align: right;
+            }
+            .bg-cell--input-editable .bg-select-compound-unit {
+              display: inline-flex;
+              align-items: center;
+              align-self: stretch;
+              color: var(--bg-input-unit, #98A2B3);
+              font-size: 12px;
+              line-height: 1;
+              padding: 0 6px 0 0;
+              pointer-events: none;
+            }
             .bg-cell--input-editable .bg-input-box__value {
-              display: inline-block;
+              display: inline-flex;
+              align-items: center;
+              min-width: 0;
               text-align: inherit;
             }
             .bg-cell--input-editable .bg-input-box__unit {
-              position: absolute;
-              right: 8px;
-              top: 50%;
-              transform: translateY(-50%);
+              display: inline-flex;
+              align-items: center;
+              align-self: stretch;
               color: var(--bg-input-unit, #98A2B3);
               pointer-events: none;
               font-size: inherit;
+              line-height: 1;
             }
             .bg-cell--editing .bg-input-box__value .bg-cell-editor {
               background: transparent !important;
@@ -182,12 +270,15 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             if (typeof col.editable === 'function') {
               isEditable = col.editable(row as never, col as never);
             }
-            if (isEditable) cls += ' bg-cell--input-editable';
+            if (isEditable && !cls.split(/\s+/).includes('bg-cell--input-editable')) {
+              cls += ' bg-cell--input-editable';
+            }
             return cls.trim() || undefined;
           };
 
           // Wrap cellRenderer to add inner input box
           const origRenderer = col.cellRenderer;
+          (col as { __inputStyleOriginalRenderer?: typeof origRenderer }).__inputStyleOriginalRenderer = origRenderer;
           col.cellRenderer = (container, context) => {
             let isEditable = col.editable !== false;
             if (typeof col.editable === 'function') {
@@ -196,7 +287,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
             if (!isEditable) {
               if (origRenderer) return origRenderer(container, context);
-              container.textContent = context.value != null ? String(context.value) : '';
+              renderFormattedDisplay(container, context, col);
+              return;
+            }
+
+            const selectDisplayOpts = getDropdownOptions(col, context.value);
+            if (
+              selectDisplayOpts &&
+              (col.cellEditor === 'select' || col.cellEditor === 'selectWithInput')
+            ) {
+              renderSelectDisplayCell(container, context, col, selectDisplayOpts);
               return;
             }
 
@@ -207,16 +307,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             if (origRenderer) {
               origRenderer(container, context);
             } else if (col.valueFormatter) {
-              container.textContent = col.valueFormatter(context.value);
+              renderFormattedDisplay(container, context, col);
             } else if (col.cellType) {
-              const typeRenderer = ctx.grid.getCellType(col.cellType);
-              if (typeRenderer?.getStringValue) {
-                container.textContent = typeRenderer.getStringValue(context);
-              } else {
-                container.textContent = context.value != null ? String(context.value) : '';
-              }
+              renderFormattedDisplay(container, context, col);
             } else {
-              container.textContent = context.value != null ? String(context.value) : '';
+              renderFormattedDisplay(container, context, col);
             }
 
             // Capture text set by original renderer, then replace with input box
@@ -233,9 +328,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               text === placeholder &&
               (context.value == null || context.value === ''),
             );
-            const unit = typeof col.unit === 'function'
-              ? (col.unit as (row: unknown) => string | undefined)(context.row)
-              : col.unit;
+            const unit = resolveColumnUnit(col, context.row);
             const isDropdown = (Array.isArray(col.options) && col.options.length > 0) || typeof context.value === 'boolean';
             if (isDropdown) box.classList.add('bg-input-box--dropdown');
             if (unit) {
@@ -276,6 +369,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       let activeEditor: HTMLInputElement | null = null;
       let activeFloatBox: HTMLElement | null = null;
       let activeDropdownPanel: HTMLElement | null = null;
+      let activeDisplaySelectPanel: HTMLElement | null = null;
+      let activeDisplaySelectCleanup: (() => void) | null = null;
       /** Cleanup function for the current editor's outside-click listener */
       let activeOutsideClickCleanup: (() => void) | null = null;
       let activeDropdownOptions: DropdownOption[] | null = null;
@@ -290,6 +385,443 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       function getCellElement(pos: CellPosition): HTMLElement | null {
         const selector = `.bg-cell[data-row="${pos.rowIndex}"][data-col="${pos.colIndex}"]`;
         return getGridContainer().querySelector(selector);
+      }
+
+      function renderFormattedDisplay(
+        container: HTMLElement,
+        context: CellRenderContext,
+        column: ColumnDef,
+      ): void {
+        container.textContent = getFormattedDisplayText(column, context.row, context.value, context.rowIndex, context.colIndex);
+      }
+
+      function getFormattedDisplayText(
+        column: ColumnDef,
+        row: unknown,
+        value: unknown,
+        rowIndex: number,
+        colIndex: number,
+      ): string {
+        if (column.valueFormatter) return column.valueFormatter(value);
+        if (column.cellType) {
+          const typeRenderer = ctx.grid.getCellType(column.cellType);
+          if (typeRenderer?.getStringValue) {
+            return typeRenderer.getStringValue({
+              rowIndex,
+              colIndex,
+              row,
+              column,
+              value,
+              isSelected: false,
+              isActive: false,
+              style: { top: 0, left: 0, width: 0, height: 0 },
+            });
+          }
+        }
+        const unit = resolveColumnUnit(column, row);
+        if (unit && typeof value === 'number') {
+          const precision = getPrecision(column, row);
+          return precision != null ? value.toFixed(precision) : String(value);
+        }
+        return value != null ? String(value) : '';
+      }
+
+      function getInputStyleDisplayText(
+        column: ColumnDef,
+        row: unknown,
+        value: unknown,
+        rowIndex: number,
+        colIndex: number,
+      ): string {
+        const origRenderer = (column as { __inputStyleOriginalRenderer?: ColumnDef['cellRenderer'] }).__inputStyleOriginalRenderer;
+        if (origRenderer) {
+          const temp = document.createElement('div');
+          const cleanup = origRenderer(temp, {
+            rowIndex,
+            colIndex,
+            row,
+            column,
+            value,
+            isSelected: false,
+            isActive: false,
+            style: { top: 0, left: 0, width: 0, height: 0 },
+          });
+          if (typeof cleanup === 'function') cleanup();
+          return temp.textContent?.trim() ?? '';
+        }
+        return getFormattedDisplayText(column, row, value, rowIndex, colIndex);
+      }
+
+      function resolveColumnUnit(column: ColumnDef, row: unknown): string | undefined {
+        return typeof column.unit === 'function'
+          ? (column.unit as (row: unknown) => string | undefined)(row)
+          : column.unit;
+      }
+
+      function optionValuesEqual(a: unknown, b: unknown): boolean {
+        return a === b || String(a) === String(b);
+      }
+
+      function getSelectedOptionValue(
+        column: ColumnDef,
+        context: CellRenderContext,
+      ): unknown {
+        if (column.selectValue) {
+          return column.selectValue(context.value, context.row as never, column as never);
+        }
+        return context.value;
+      }
+
+      function getSelectedOption(
+        opts: DropdownOption[],
+        value: unknown,
+      ): DropdownOption | undefined {
+        return opts.find((opt) => optionValuesEqual(opt.value, value));
+      }
+
+      function getSelectInputConfig(column: ColumnDef): SelectInputConfig | undefined {
+        return column.selectInput as SelectInputConfig | undefined;
+      }
+
+      function getCompoundInputRawValue(
+        column: ColumnDef,
+        context: CellRenderContext,
+      ): string | number {
+        if (column.selectInputValue) {
+          const resolved = column.selectInputValue(context.value, context.row as never, column as never);
+          if (resolved != null) return resolved;
+        }
+        const cfg = getSelectInputConfig(column);
+        return cfg?.defaultValue ?? '';
+      }
+
+      function resolveSelectInputUnit(
+        cfg: SelectInputConfig | undefined,
+        row: unknown,
+      ): string | undefined {
+        if (!cfg?.unit) return undefined;
+        return typeof cfg.unit === 'function'
+          ? (cfg.unit as (row: unknown) => string | undefined)(row)
+          : cfg.unit;
+      }
+
+      function coerceCompoundInputValue(
+        rawValue: string | number,
+        cfg: SelectInputConfig | undefined,
+        row: unknown,
+      ): string | number {
+        if (cfg?.type === 'text') return String(rawValue);
+
+        const raw = String(rawValue).trim();
+        const n = raw === '' ? Number(cfg?.defaultValue ?? 0) : Number(raw);
+        if (!Number.isFinite(n)) return Number(cfg?.defaultValue ?? 0);
+
+        const precision = cfg?.precision != null
+          ? (typeof cfg.precision === 'function'
+            ? (cfg.precision as (row: unknown) => number | undefined)(row)
+            : cfg.precision)
+          : undefined;
+        const min = cfg?.min != null
+          ? (typeof cfg.min === 'function'
+            ? (cfg.min as (row: unknown) => number | undefined)(row)
+            : cfg.min)
+          : undefined;
+        const max = cfg?.max != null
+          ? (typeof cfg.max === 'function'
+            ? (cfg.max as (row: unknown) => number | undefined)(row)
+            : cfg.max)
+          : undefined;
+
+        let next = precision != null ? Number(n.toFixed(precision)) : n;
+        if (min != null && next < min) next = min;
+        if (max != null && next > max) next = max;
+        return next;
+      }
+
+      function buildSelectWithInputValue(
+        column: ColumnDef,
+        context: CellRenderContext,
+        optionValue: unknown,
+        inputValue: string | number,
+      ): unknown {
+        if (column.parseSelectWithInputValue) {
+          return column.parseSelectWithInputValue({
+            optionValue,
+            inputValue,
+            row: context.row as never,
+            column: column as never,
+            previousValue: context.value,
+          });
+        }
+
+        const cfg = getSelectInputConfig(column);
+        if (cfg && optionValuesEqual(optionValue, cfg.optionValue)) {
+          return coerceCompoundInputValue(inputValue, cfg, context.row);
+        }
+        return optionValue;
+      }
+
+      function commitDisplaySelectValue(
+        context: CellRenderContext,
+        value: unknown,
+      ): void {
+        if (!context.column.accessorKey) return;
+        if (value === context.value) return;
+        ctx.grid.updateCell(context.rowIndex, context.column.id, value);
+      }
+
+      function closeDisplaySelectPanel(): void {
+        if (activeDisplaySelectCleanup) {
+          activeDisplaySelectCleanup();
+          activeDisplaySelectCleanup = null;
+        }
+        activeDisplaySelectPanel?.remove();
+        activeDisplaySelectPanel = null;
+      }
+
+      function openDisplaySelectPanel(
+        anchorEl: HTMLElement,
+        opts: DropdownOption[],
+        selectedValue: unknown,
+        onSelect: (option: DropdownOption) => void,
+      ): void {
+        closeDisplaySelectPanel();
+
+        const rect = anchorEl.getBoundingClientRect();
+        const panel = document.createElement('div');
+        panel.className = 'bg-dropdown-panel bg-select-panel';
+        panel.style.cssText = `
+          position: fixed;
+          left: ${rect.left}px;
+          top: ${rect.bottom + 2}px;
+          min-width: ${rect.width}px;
+          z-index: 10000;
+          background: var(--bg-dropdown-bg, #fff);
+          border: 1px solid var(--bg-dropdown-border, #EAECF0);
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(16, 24, 40, 0.12);
+          padding: 4px 0;
+          max-height: 220px;
+          overflow-y: auto;
+          font: ${getComputedStyle(anchorEl).font};
+          line-height: normal;
+        `;
+
+        let selectedIndex = Math.max(0, opts.findIndex((opt) => optionValuesEqual(opt.value, selectedValue)));
+
+        const highlight = (index: number): void => {
+          selectedIndex = index;
+          const items = panel.querySelectorAll('.bg-dropdown-item');
+          items.forEach((item, i) => {
+            const el = item as HTMLElement;
+            const selected = i === selectedIndex;
+            el.classList.toggle('bg-dropdown-item--selected', selected);
+            el.style.background = selected ? 'var(--bg-dropdown-selected-bg, #F2F4F7)' : '';
+            el.style.fontWeight = selected ? '500' : '';
+            if (selected) el.scrollIntoView({ block: 'nearest' });
+          });
+        };
+
+        opts.forEach((opt, index) => {
+          const item = document.createElement('div');
+          item.className = 'bg-dropdown-item';
+          item.textContent = opt.label;
+          item.style.cssText = `
+            padding: 8px 12px;
+            cursor: pointer;
+            user-select: none;
+            font: inherit;
+            color: #344054;
+            white-space: nowrap;
+          `;
+          item.addEventListener('mouseenter', () => {
+            if (index !== selectedIndex) item.style.background = 'var(--bg-dropdown-hover-bg, #F9FAFB)';
+          });
+          item.addEventListener('mouseleave', () => {
+            item.style.background = index === selectedIndex ? 'var(--bg-dropdown-selected-bg, #F2F4F7)' : '';
+          });
+          item.addEventListener('mousedown', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            closeDisplaySelectPanel();
+            onSelect(opt);
+          });
+          panel.appendChild(item);
+        });
+
+        document.body.appendChild(panel);
+        activeDisplaySelectPanel = panel;
+        highlight(selectedIndex);
+
+        const closeOnOutside = (event: MouseEvent) => {
+          const target = event.target as Node;
+          if (panel.contains(target) || anchorEl.contains(target)) return;
+          closeDisplaySelectPanel();
+        };
+        const closeOnScroll = () => closeDisplaySelectPanel();
+        const onKeyDown = (event: KeyboardEvent) => {
+          if (!activeDisplaySelectPanel) return;
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            closeDisplaySelectPanel();
+          } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            highlight(Math.min(selectedIndex + 1, opts.length - 1));
+          } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            highlight(Math.max(selectedIndex - 1, 0));
+          } else if (event.key === 'Enter') {
+            event.preventDefault();
+            closeDisplaySelectPanel();
+            const opt = opts[selectedIndex];
+            if (opt) onSelect(opt);
+          }
+        };
+
+        const syncTargets = getFloatingSyncTargets(anchorEl);
+        setTimeout(() => document.addEventListener('mousedown', closeOnOutside, true), 0);
+        document.addEventListener('keydown', onKeyDown, true);
+        for (const target of syncTargets) target.addEventListener('scroll', closeOnScroll, { passive: true });
+        window.addEventListener('resize', closeOnScroll);
+
+        activeDisplaySelectCleanup = () => {
+          document.removeEventListener('mousedown', closeOnOutside, true);
+          document.removeEventListener('keydown', onKeyDown, true);
+          for (const target of syncTargets) target.removeEventListener('scroll', closeOnScroll);
+          window.removeEventListener('resize', closeOnScroll);
+        };
+      }
+
+      function createSelectTrigger(
+        label: string,
+        column: ColumnDef,
+      ): HTMLButtonElement {
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'bg-input-box bg-input-box--dropdown bg-select-trigger';
+        trigger.textContent = label;
+        trigger.style.justifyContent = column.align === 'center'
+          ? 'center'
+          : column.align === 'right'
+            ? 'flex-end'
+            : 'flex-start';
+        trigger.style.width = '100%';
+        trigger.style.pointerEvents = 'auto';
+        trigger.addEventListener('pointerdown', (event) => event.stopPropagation());
+        return trigger;
+      }
+
+      function renderSelectDisplayCell(
+        container: HTMLElement,
+        context: CellRenderContext,
+        column: ColumnDef,
+        opts: DropdownOption[],
+      ): void {
+        container.textContent = '';
+        container.style.display = 'flex';
+        container.style.alignItems = 'center';
+        container.style.justifyContent = 'center';
+        container.style.padding = '0 8px';
+
+        const selectedValue = getSelectedOptionValue(column, context);
+        const selectedOption = getSelectedOption(opts, selectedValue);
+
+        if (column.cellEditor !== 'selectWithInput') {
+          const trigger = createSelectTrigger(selectedOption?.label ?? String(selectedValue ?? ''), column);
+          trigger.addEventListener('click', (event) => {
+            event.stopPropagation();
+            openDisplaySelectPanel(trigger, opts, selectedValue, (option) => {
+              commitDisplaySelectValue(context, option.value);
+            });
+          });
+          trigger.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+              event.preventDefault();
+              openDisplaySelectPanel(trigger, opts, selectedValue, (option) => {
+                commitDisplaySelectValue(context, option.value);
+              });
+            }
+          });
+          container.appendChild(trigger);
+          return;
+        }
+
+        const cfg = getSelectInputConfig(column);
+        const inputSelected = !!cfg && optionValuesEqual(selectedValue, cfg.optionValue);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'bg-select-compound';
+
+        const trigger = createSelectTrigger(selectedOption?.label ?? String(selectedValue ?? ''), column);
+        trigger.style.flex = inputSelected ? '0 0 auto' : '1 1 auto';
+        if (inputSelected) {
+          trigger.style.minWidth = '86px';
+          trigger.style.width = 'auto';
+        }
+        const selectOption = (option: DropdownOption) => {
+          const inputRaw = inputSelected
+            ? getCompoundInputRawValue(column, context)
+            : cfg?.defaultValue ?? '';
+          const next = cfg && optionValuesEqual(option.value, cfg.optionValue)
+            ? buildSelectWithInputValue(column, context, option.value, inputRaw)
+            : option.value;
+          commitDisplaySelectValue(context, next);
+        };
+        trigger.addEventListener('click', (event) => {
+          event.stopPropagation();
+          openDisplaySelectPanel(trigger, opts, selectedValue, selectOption);
+        });
+        trigger.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+            event.preventDefault();
+            openDisplaySelectPanel(trigger, opts, selectedValue, selectOption);
+          }
+        });
+        wrapper.appendChild(trigger);
+
+        if (inputSelected && cfg) {
+          const inputWrap = document.createElement('div');
+          inputWrap.className = 'bg-select-compound-input-wrap';
+          inputWrap.style.width = `${cfg.width ?? 60}px`;
+          inputWrap.addEventListener('pointerdown', (event) => event.stopPropagation());
+
+          const input = document.createElement('input');
+          input.className = 'bg-select-compound-input';
+          input.type = cfg.type === 'text' ? 'text' : 'number';
+          if (cfg.type !== 'text') {
+            input.step = cfg.precision != null ? String(Math.pow(10, -(typeof cfg.precision === 'number' ? cfg.precision : 2))) : 'any';
+            input.inputMode = 'decimal';
+          }
+          input.value = String(getCompoundInputRawValue(column, context));
+          input.addEventListener('pointerdown', (event) => event.stopPropagation());
+          input.addEventListener('change', () => {
+            const inputValue = coerceCompoundInputValue(input.value, cfg, context.row);
+            input.value = String(inputValue);
+            commitDisplaySelectValue(
+              context,
+              buildSelectWithInputValue(column, context, selectedValue, inputValue),
+            );
+          });
+          input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+              input.blur();
+            } else if (event.key === 'Escape') {
+              input.value = String(getCompoundInputRawValue(column, context));
+              input.blur();
+            }
+          });
+          inputWrap.appendChild(input);
+
+          const unit = resolveSelectInputUnit(cfg, context.row);
+          if (unit) {
+            const unitEl = document.createElement('span');
+            unitEl.className = 'bg-select-compound-unit';
+            unitEl.textContent = unit;
+            inputWrap.appendChild(unitEl);
+          }
+          wrapper.appendChild(inputWrap);
+        }
+
+        container.appendChild(wrapper);
       }
 
       function getCellPositionFromElement(el: Element | null): CellPosition | null {
@@ -445,6 +977,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         const state = ctx.grid.getState();
         const column = state.columns[position.colIndex];
         if (!column) return;
+        if (column.cellEditor === 'selectWithInput') return;
 
         // Map visual row index to data index (hierarchy may reorder/filter rows)
         const hs = state.hierarchyState;
@@ -527,12 +1060,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             (!column.cellEditor && (column.cellType === 'number' || column.cellType === 'currency'));
 
           const editValue = initialValue ?? rawStr;
+          const hasUnitInputBox = !!cellEl.querySelector('.bg-input-box--has-unit .bg-input-box__value');
 
           if (column.cellEditor === 'masked' && column.mask) {
             activeEditor = createMaskedInput(cellEl, rawStr, column.mask, clickEvent);
           } else if (isDateEditor) {
             activeEditor = createDateInput(cellEl, rawStr);
-          } else if (config.editorMode === 'inline') {
+          } else if (config.editorMode === 'inline' || hasUnitInputBox) {
             activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined, rowData);
           } else if (isNumberEditor) {
             activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, column, rowData);
@@ -960,8 +1494,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // inside the value span so the unit suffix stays visible to its right.
         const valueAnchor = cellEl.querySelector('.bg-input-box__value') as HTMLElement | null;
         if (valueAnchor) {
-          input.style.width = 'auto';
+          input.style.width = `${Math.max(40, Math.min(72, value.length * 8 + 14))}px`;
           input.style.minWidth = '40px';
+          input.style.height = '30px';
+          input.style.textAlign = 'right';
           valueAnchor.appendChild(input);
         } else {
           cellEl.appendChild(input);
@@ -980,15 +1516,25 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         });
 
         // Commit on click outside the cell
-        function onOutsideClick(e: MouseEvent): void {
-          if (cellEl.contains(e.target as Node)) return;
+        let outsideClickActive = true;
+        function cleanupOutsideClick(): void {
+          if (!outsideClickActive) return;
+          outsideClickActive = false;
           document.removeEventListener('mousedown', onOutsideClick, true);
+          activeOutsideClickCleanup = null;
+        }
+
+        function onOutsideClick(e: MouseEvent): void {
+          if (!outsideClickActive) return;
+          if (cellEl.contains(e.target as Node)) return;
+          cleanupOutsideClick();
           if (editingCell) {
             commitEdit();
           }
           // Don't clearSelection — let handlePointerDown select the clicked cell
         }
         setTimeout(() => document.addEventListener('mousedown', onOutsideClick, true), 0);
+        activeOutsideClickCleanup = cleanupOutsideClick;
 
         return input;
       }
@@ -2241,10 +2787,29 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         // Remove inline editor if present
         if (editingCell) {
+          const position = editingCell;
           const cellEl = getCellElement(editingCell);
           if (cellEl) {
             const inlineEditor = cellEl.querySelector('.bg-cell-editor--inline');
+            const valueAnchor = inlineEditor?.closest('.bg-input-box__value') as HTMLElement | null;
             if (inlineEditor) inlineEditor.remove();
+            if (valueAnchor) {
+              const state = ctx.grid.getState();
+              const column = state.columns[position.colIndex];
+              const hs = state.hierarchyState;
+              const dataIndex = hs ? (hs.visibleRows[position.rowIndex] ?? position.rowIndex) : position.rowIndex;
+              const rowData = state.data[dataIndex];
+              if (column && rowData) {
+                const value = column.accessorFn
+                  ? column.accessorFn(rowData, dataIndex)
+                  : column.accessorKey
+                    ? (rowData as Record<string, unknown>)[column.accessorKey]
+                    : originalValue;
+                valueAnchor.textContent = getInputStyleDisplayText(column, rowData, value, position.rowIndex, position.colIndex);
+              } else {
+                valueAnchor.textContent = originalValue != null ? String(originalValue) : '';
+              }
+            }
           }
         }
 
@@ -2429,6 +2994,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         unbindEnter();
         unbindEscape?.();
         unbindType();
+        closeDisplaySelectPanel();
         if (editingCell) cancelEdit();
       };
     },
