@@ -382,20 +382,30 @@ const ts = timeSeries({
   },
 });
 
-// Compute pinned bottom totals row from root-level rows
+// Compute pinned bottom totals row from root-level rows. Matches Wiseway's
+// cost-table footer: the "Total Development Cost" label spans the first
+// informational columns, Amount/Start/End/Variance show aggregated values,
+// and monthly columns show the grand total per month.
 function buildTotalsRow(rows: CostRow[]): CostRow {
   const rootRows = rows.filter(r => r.parentId === null);
+  // Min start, max end across root rows
+  let earliestStart = '';
+  let latestEnd = '';
+  for (const row of rootRows) {
+    if (row.start && (!earliestStart || row.start < earliestStart)) earliestStart = row.start;
+    if (row.end && (!latestEnd || row.end > latestEnd)) latestEnd = row.end;
+  }
   const totals: CostRow = {
     id: -1,
     parentId: null,
     code: '',
-    name: 'TOTAL',
+    name: 'Total Development Cost',
     inputType: 'none',
     input: null,
     escalation: 'none',
     amount: 0,
-    start: '',
-    end: '',
+    start: earliestStart,
+    end: latestEnd,
     variance: 0,
     custom: false,
   };
@@ -669,7 +679,11 @@ export function FsbtCost() {
         id: 'amount', accessorKey: 'amount', header: 'Amount', width: 110, align: 'center' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
-          container.textContent = typeof row.amount === 'number' ? formatAU(Math.round(row.amount)) : '';
+          if (typeof row.amount !== 'number') { container.textContent = ''; return; }
+          // Pinned TOTAL row (id=-1) gets a $ prefix to match Wiseway's
+          // "Total Development Cost → $161,041,739" footer emphasis.
+          const prefix = row.id === -1 ? '$' : '';
+          container.textContent = prefix + formatAU(Math.round(row.amount));
         },
         cellStyle: (_v, row) => {
           const r = row as CostRow;
