@@ -21,16 +21,47 @@ function cellKey(row: number, col: number): number {
 // Apply a style record to an element, routing CSS custom properties through
 // setProperty (Object.assign silently drops `--*` keys because CSSStyleDeclaration
 // only recognizes spec-defined slots).
+//
+// Tracks previously-applied keys on the element so repeat applications clear
+// anything the previous cellStyle/rowStyles set but the new one doesn't.
+// Prevents stale styles leaking across pool reuse when a cell gets reassigned
+// to a different data row (e.g. after hierarchy collapse/expand shifts rows).
+interface StyledElement extends HTMLElement {
+  __bgAppliedStyleKeys?: string[];
+}
 function applyCellStyles(el: HTMLElement, styles: Record<string, string>): void {
+  const styled = el as StyledElement;
+  // Clear any keys the previous application set that this one doesn't include
+  const prev = styled.__bgAppliedStyleKeys;
+  if (prev && prev.length > 0) {
+    for (const prevKey of prev) {
+      if (prevKey in styles && styles[prevKey] != null) continue;
+      if (prevKey.charCodeAt(0) === 45 && prevKey.charCodeAt(1) === 45) {
+        el.style.removeProperty(prevKey);
+      } else {
+        (el.style as unknown as Record<string, string>)[prevKey] = '';
+      }
+    }
+  }
+  const appliedKeys: string[] = [];
   for (const key in styles) {
     const value = styles[key];
     if (value == null) continue;
+    appliedKeys.push(key);
     if (key.charCodeAt(0) === 45 /* '-' */ && key.charCodeAt(1) === 45) {
       el.style.setProperty(key, value);
     } else {
       (el.style as unknown as Record<string, string>)[key] = value;
     }
   }
+  styled.__bgAppliedStyleKeys = appliedKeys;
+}
+
+// Reset applyCellStyles' tracking so a subsequent call starts fresh — used
+// when a cell is recycled (pool → new row) and its cssText has been cleared
+// externally, so we shouldn't try to remove properties that are already gone.
+function resetAppliedStyles(el: HTMLElement): void {
+  (el as StyledElement).__bgAppliedStyleKeys = undefined;
 }
 
 export class RenderingPipeline<TData = unknown> {
@@ -121,6 +152,7 @@ export class RenderingPipeline<TData = unknown> {
           if (strip) {
             strip.className = 'bg-row-bg';
             strip.style.cssText = 'position: absolute';
+            resetAppliedStyles(strip);
           } else {
             strip = document.createElement('div');
             strip.className = 'bg-row-bg';
@@ -137,11 +169,13 @@ export class RenderingPipeline<TData = unknown> {
         strip.style.width = `${totalWidth}px`;
         strip.style.height = `${height}px`;
 
+        // Always call applyCellStyles (with {} when getRowStyle returns
+        // undefined) so keys from the previous row's styles get cleared.
+        // Without this, a strip reassigned from a parent row (grey bg) to
+        // a child row (no bg) would keep the stale grey.
         const rowData = data[row];
-        if (rowData !== undefined) {
-          const rs = this.getRowStyle(rowData, row);
-          if (rs) applyCellStyles(strip, rs);
-        }
+        const rs = rowData !== undefined ? this.getRowStyle(rowData, row) : undefined;
+        applyCellStyles(strip, rs ?? {});
       }
     }
 
@@ -169,6 +203,7 @@ export class RenderingPipeline<TData = unknown> {
             // Reset recycled element — clear stale inline styles from plugins
             cell.className = 'bg-cell';
             cell.style.cssText = 'position: absolute';
+            resetAppliedStyles(cell);
           } else {
             cell = document.createElement('div');
             cell.className = 'bg-cell';
@@ -266,18 +301,23 @@ export class RenderingPipeline<TData = unknown> {
           this.cleanupFns.set(key, cleanup);
         }
 
-        // Apply row-level style presets (rowStyles) before column cellStyle
+        // Merge row-level presets (rowStyles) and column-level styles (cellStyle)
+        // into a single object, then apply once so the applyCellStyles' clear-
+        // old-keys logic runs with the full new keyset. A single call per cell
+        // guarantees stale styles from a previous data row (after hierarchy
+        // collapse/expand or scroll reuse) are wiped before new ones land.
+        let combinedStyles: Record<string, string> | null = null;
         if (this.rowStyles) {
           const fieldVal = String((rowData as Record<string, unknown>)[this.rowStyles.field] ?? '');
           const rs = this.rowStyles.styles[fieldVal];
-          if (rs) applyCellStyles(cell, rs);
+          if (rs) combinedStyles = { ...(rs as Record<string, string>) };
         }
-
-        // Apply conditional cellStyle / cellClass after rendering
         if (column.cellStyle) {
           const styles = column.cellStyle(value, rowData);
-          if (styles) applyCellStyles(cell, styles);
+          if (styles) combinedStyles = { ...(combinedStyles ?? {}), ...styles };
         }
+        applyCellStyles(cell, combinedStyles ?? {});
+
         if (column.cellClass) {
           const cls = column.cellClass(value, rowData);
           if (cls) cell.className += ' ' + cls;
