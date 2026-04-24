@@ -872,14 +872,14 @@ export function FsbtRevenue() {
       },
       { id: 'discountMonths',     accessorKey: 'discountMonths',     header: 'Discount Months',         width: 110, align: 'center' as const, editable: true },
       { id: 'totalIncentives',    accessorKey: 'totalIncentives',    header: 'Total Incentives',        width: 140, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
-      // ── On Completion group (2) ──
-      { id: 'completionCapRate',  accessorKey: 'completionCapRate',  header: 'Completion Cap Rate (%)', width: 130, align: 'center' as const, editable: true,  unit: '%', valueFormatter: pct },
-      { id: 'completionCapValue', accessorKey: 'completionCapValue', header: 'Completion Cap Value',    width: 150, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
-      // ── Exit group (5) ──
-      { id: 'exitCapRate',        accessorKey: 'exitCapRate',        header: 'Exit Cap Rate (%)',       width: 120, align: 'center' as const, editable: true,  unit: '%', valueFormatter: pct },
-      { id: 'exitCapValue',       accessorKey: 'exitCapValue',       header: 'Exit Cap Value',          width: 140, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
-      { id: 'exitGST',            accessorKey: 'exitGST',            header: 'Exit GST (%)',            width: 110, align: 'center' as const, editable: true,  unit: '%', valueFormatter: pct },
-      { id: 'exitCommission',     accessorKey: 'exitCommission',     header: 'Exit Sales Commission (%)', width: 150, align: 'center' as const, editable: true, unit: '%', valueFormatter: pct },
+      // ── On Completion group (2) — headers intentionally brief; the group header provides "On Completion" context ──
+      { id: 'completionCapRate',  accessorKey: 'completionCapRate',  header: 'Cap Rate (%)',            width: 130, align: 'center' as const, editable: true,  unit: '%', valueFormatter: pct },
+      { id: 'completionCapValue', accessorKey: 'completionCapValue', header: 'Cap Value',               width: 150, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
+      // ── Exit group (5) — headers intentionally brief; the group header provides "Exit" context ──
+      { id: 'exitCapRate',        accessorKey: 'exitCapRate',        header: 'Cap Rate (%)',            width: 120, align: 'center' as const, editable: true,  unit: '%', valueFormatter: pct },
+      { id: 'exitCapValue',       accessorKey: 'exitCapValue',       header: 'Cap Value',               width: 140, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
+      { id: 'exitGST',            accessorKey: 'exitGST',            header: 'GST (%)',                 width: 110, align: 'center' as const, editable: true,  unit: '%', valueFormatter: pct },
+      { id: 'exitCommission',     accessorKey: 'exitCommission',     header: 'Sales Commission (%)',    width: 150, align: 'center' as const, editable: true, unit: '%', valueFormatter: pct },
       { id: 'settlementDate',     accessorKey: 'settlementDate',     header: 'Settlement Date',         width: 120, align: 'center' as const, editable: true,  valueFormatter: dateMonYY },
     ],
     [],
@@ -899,11 +899,43 @@ export function FsbtRevenue() {
     [],
   );
 
+  // Multi-header groups match Wiseway's holding-general-table layout —
+  // "Development Costs" / "On Completion" / "Exit" banner above the 15 detail
+  // columns that make up each logical section. Since `headerLayout` replaces
+  // the grid's default per-column header row, we also emit a second row that
+  // mirrors each column's `header` so the normal column labels still show
+  // below the group banner.
+  const holdingGeneralHeaderLayout = useMemo(
+    () => [
+      {
+        id: 'holding-general-groups',
+        height: 32,
+        cells: [
+          { id: 'hg-empty',          content: '',                  colSpan: 15 },
+          { id: 'hg-dev-costs',      content: 'Development Costs', colSpan: 8 },
+          { id: 'hg-on-completion',  content: 'On Completion',     colSpan: 2 },
+          { id: 'hg-exit',           content: 'Exit',              colSpan: 5 },
+        ],
+      },
+      {
+        id: 'holding-general-columns',
+        height: FSBT_STYLES.headerHeight,
+        cells: holdingGeneralColumns.map((col) => ({
+          id: `hg-col-${col.id}`,
+          columnId: col.id,
+          content: typeof col.header === 'string' ? col.header : '',
+        })),
+      },
+    ],
+    [holdingGeneralColumns],
+  );
+
   const { grid: holdingGeneralGrid, containerRef: holdingGeneralRef } = useGrid<HoldingGeneralRow>({
     data: holdingGeneralData,
     columns: holdingGeneralColumns,
     plugins: holdingGeneralPlugins,
     pinnedBottomRows: [holdingGeneralTotalsRow],
+    headerLayout: holdingGeneralHeaderLayout,
     // Freeze Type + Description so category context is visible while the
     // user scrolls across the 30-column rent / lease / cap-rate layout.
     frozenLeftColumns: 2,
