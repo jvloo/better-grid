@@ -6,6 +6,14 @@ import { formatting, editing, sorting, hierarchy, cellRenderers, validation, cli
 import '@better-grid/core/styles.css';
 import { FsbtProgramSummary } from './_FsbtProgramSummary';
 import { FSBT_STYLES, parentRowCellStyle, parentRowStyle } from './_fsbt-cell-styles';
+import {
+  IconButton,
+  ExpandAllIcon,
+  CollapseAllIcon,
+  UndoIcon,
+  RedoIcon,
+  ExportIcon,
+} from './_fsbt-toolbar-icons';
 
 // ============================================================================
 // Shared helpers — match FsbtCost's date formatting so every FSBT table has
@@ -934,7 +942,6 @@ export function FsbtRevenue() {
   const handleHoldingGeneralExport = useCallback(() => holdingGeneralGrid.plugins.export?.exportToCsv(), [holdingGeneralGrid]);
   const handleHoldingSaleExport = useCallback(() => holdingSaleGrid.plugins.export?.exportToCsv(), [holdingSaleGrid]);
 
-  const btnStyle = { padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12 } as const;
   const pillStyle = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', border: '1px solid #E4E7EC', borderRadius: 999, background: '#F9FAFB', fontSize: 13, color: '#101828' } as const;
 
   return (
@@ -972,9 +979,9 @@ export function FsbtRevenue() {
             <strong style={{ fontWeight: 600 }}>${TOTAL_GROSS_REVENUE.toLocaleString('en-AU')}</strong>
           </span>
           <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
-            <button onClick={handleBtsUndo} style={btnStyle}>Undo</button>
-            <button onClick={handleBtsRedo} style={btnStyle}>Redo</button>
-            <button onClick={handleBtsExport} style={btnStyle}>Export</button>
+            <IconButton title="Undo" onClick={handleBtsUndo}><UndoIcon /></IconButton>
+            <IconButton title="Redo" onClick={handleBtsRedo}><RedoIcon /></IconButton>
+            <IconButton title="Export" onClick={handleBtsExport}><ExportIcon /></IconButton>
           </div>
         </div>
         <div
@@ -992,7 +999,7 @@ export function FsbtRevenue() {
       {/* BTS Details — multi-section breakdown (Gross / GST / Commission / Net) */}
       <div style={{ marginTop: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, justifyContent: 'flex-end' }}>
-          <button onClick={handleBtsDetailsExport} style={btnStyle}>Export</button>
+          <IconButton title="Export" onClick={handleBtsDetailsExport}><ExportIcon /></IconButton>
         </div>
         <div
           ref={btsDetailsRef}
@@ -1009,7 +1016,7 @@ export function FsbtRevenue() {
             <strong style={{ fontWeight: 600 }}>$8,400,000</strong>
           </span>
           <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
-            <button onClick={handleHoldingGeneralExport} style={btnStyle}>Export</button>
+            <IconButton title="Export" onClick={handleHoldingGeneralExport}><ExportIcon /></IconButton>
           </div>
         </div>
         <div
@@ -1018,11 +1025,11 @@ export function FsbtRevenue() {
         />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, justifyContent: 'flex-end' }}>
-          <button onClick={handleHoldingExpandAll} style={btnStyle}>Expand All</button>
-          <button onClick={handleHoldingCollapseAll} style={btnStyle}>Collapse All</button>
-          <button onClick={handleHoldingUndo} style={btnStyle}>Undo</button>
-          <button onClick={handleHoldingRedo} style={btnStyle}>Redo</button>
-          <button onClick={handleHoldingExport} style={btnStyle}>Export</button>
+          <IconButton title="Expand All" onClick={handleHoldingExpandAll}><ExpandAllIcon /></IconButton>
+          <IconButton title="Collapse All" onClick={handleHoldingCollapseAll}><CollapseAllIcon /></IconButton>
+          <IconButton title="Undo" onClick={handleHoldingUndo}><UndoIcon /></IconButton>
+          <IconButton title="Redo" onClick={handleHoldingRedo}><RedoIcon /></IconButton>
+          <IconButton title="Export" onClick={handleHoldingExport}><ExportIcon /></IconButton>
         </div>
         <div
           ref={holdingRef}
@@ -1039,7 +1046,7 @@ export function FsbtRevenue() {
             <strong style={{ fontWeight: 600 }}>$0</strong>
           </span>
           <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
-            <button onClick={handleHoldingSaleExport} style={btnStyle}>Export</button>
+            <IconButton title="Export" onClick={handleHoldingSaleExport}><ExportIcon /></IconButton>
           </div>
         </div>
         <div

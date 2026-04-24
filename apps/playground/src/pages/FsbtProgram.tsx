@@ -6,6 +6,14 @@ import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exp
 import { gantt, rowActions, RowActionIcons } from '@better-grid/pro';
 import type { RowAction } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
+import {
+  IconButton,
+  ExpandAllIcon,
+  CollapseAllIcon,
+  UndoIcon,
+  RedoIcon,
+  ExportIcon,
+} from './_fsbt-toolbar-icons';
 
 interface ProgramRow {
   id: number;
@@ -475,18 +483,16 @@ export function FsbtProgram() {
   const handleUndo = useCallback(() => grid.plugins.undoRedo?.undo(), [grid]);
   const handleRedo = useCallback(() => grid.plugins.undoRedo?.redo(), [grid]);
 
-  const btnStyle = { padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12 } as const;
-
   return (
     <div className="fsbt-program-demo">
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>FSBT Program</h1>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={handleExpandAll} style={btnStyle}>Expand All</button>
-          <button onClick={handleCollapseAll} style={btnStyle}>Collapse All</button>
-          <button onClick={handleUndo} style={btnStyle}>Undo</button>
-          <button onClick={handleRedo} style={btnStyle}>Redo</button>
-          <button onClick={handleExport} style={btnStyle}>Export</button>
+          <IconButton title="Expand All" onClick={handleExpandAll}><ExpandAllIcon /></IconButton>
+          <IconButton title="Collapse All" onClick={handleCollapseAll}><CollapseAllIcon /></IconButton>
+          <IconButton title="Undo" onClick={handleUndo}><UndoIcon /></IconButton>
+          <IconButton title="Redo" onClick={handleRedo}><RedoIcon /></IconButton>
+          <IconButton title="Export" onClick={handleExport}><ExportIcon /></IconButton>
         </div>
       </div>
       <p style={{ margin: '0 0 12px', color: '#666', fontSize: 13, lineHeight: 1.5 }}>
