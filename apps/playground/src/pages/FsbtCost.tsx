@@ -613,6 +613,7 @@ export function FsbtCost() {
         }) as never,
         precision: ((row: CostRow) => (row.inputType === 'percent' || row.code === '3.08' ? 2 : undefined)) as never,
         rules: [{ validate: validateCostInput }, { validate: validateLandCostPercentTotal }],
+        prefix: (row: CostRow) => (row.inputType === 'number' ? '$' : undefined),
         unit: (row: CostRow) => (row.inputType === 'percent' ? '%' : undefined),
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;

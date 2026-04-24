@@ -9,7 +9,11 @@ export interface SelectInputConfig<TData = unknown> {
   optionValue: unknown;
   /** Input flavor shown next to the selected option. Default: 'number'. */
   type?: 'number' | 'text';
+  /** Prefix shown inside the input, pinned to the left edge, e.g. '$'. */
+  prefix?: string | ((row: TData) => string | undefined);
   /** Suffix shown after the input, e.g. '%'. */
+  suffix?: string | ((row: TData) => string | undefined);
+  /** Alias for suffix. Prefer `suffix` for new columns. */
   unit?: string | ((row: TData) => string | undefined);
   /** Width in px for the sibling input. Default: 60. */
   width?: number;
@@ -42,6 +46,8 @@ declare module '@better-grid/core' {
     mask?: string;
     /** Persistent suffix adornment (e.g. '%'). Rendered both in display and edit modes.
      *  Can be a static string or a per-row function that returns a suffix or undefined. */
+    prefix?: string | ((row: TData) => string | undefined);
+    suffix?: string | ((row: TData) => string | undefined);
     unit?: string | ((row: TData) => string | undefined);
     /** Resolve the selected option for selectWithInput columns from the stored cell value. */
     selectValue?: (value: unknown, row: TData, column: ColumnDef<TData>) => unknown;
@@ -151,8 +157,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             .bg-cell--input-editable .bg-input-box--placeholder {
               color: var(--bg-input-placeholder, #98A2B3);
             }
-            .bg-cell--input-editable .bg-input-box--has-unit {
-              gap: 2px;
+            .bg-cell--input-editable .bg-input-box--has-adornment {
+              position: relative;
             }
             .bg-cell--input-editable .bg-input-box--dropdown {
               position: relative;
@@ -214,37 +220,74 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               font: inherit;
               font-size: 12px;
               outline: none;
-              padding: 0 4px 0 6px;
-              text-align: right;
+              padding: 0 var(--bg-input-suffix-space, 6px) 0 var(--bg-input-prefix-space, 6px);
+              text-align: center;
             }
+            .bg-cell--input-editable .bg-select-compound-prefix,
+            .bg-cell--input-editable .bg-select-compound-suffix,
             .bg-cell--input-editable .bg-select-compound-unit {
               display: inline-flex;
               align-items: center;
-              align-self: stretch;
+              bottom: 0;
               color: var(--bg-input-unit, #98A2B3);
               font-size: 12px;
+              justify-content: center;
               line-height: 1;
-              padding: 0 6px 0 0;
               pointer-events: none;
+              position: absolute;
+              top: 0;
+            }
+            .bg-cell--input-editable .bg-select-compound-prefix {
+              left: 6px;
+            }
+            .bg-cell--input-editable .bg-select-compound-suffix,
+            .bg-cell--input-editable .bg-select-compound-unit {
+              right: 6px;
             }
             .bg-cell--input-editable .bg-input-box__value {
-              display: inline-flex;
+              display: block;
               align-items: center;
               min-width: 0;
+              width: 100%;
+              padding: 0 var(--bg-input-suffix-space, 0px) 0 var(--bg-input-prefix-space, 0px);
+              box-sizing: border-box;
               text-align: inherit;
             }
+            .bg-cell--input-editable .bg-input-box__prefix,
+            .bg-cell--input-editable .bg-input-box__suffix,
             .bg-cell--input-editable .bg-input-box__unit {
               display: inline-flex;
               align-items: center;
-              align-self: stretch;
+              bottom: 0;
               color: var(--bg-input-unit, #98A2B3);
+              justify-content: center;
               pointer-events: none;
               font-size: inherit;
               line-height: 1;
+              position: absolute;
+              top: 0;
+            }
+            .bg-cell--input-editable .bg-input-box__prefix {
+              left: 8px;
+            }
+            .bg-cell--input-editable .bg-input-box__suffix,
+            .bg-cell--input-editable .bg-input-box__unit {
+              right: 8px;
             }
             .bg-cell--editing .bg-input-box__value .bg-cell-editor {
               background: transparent !important;
               box-shadow: none !important;
+            }
+            .bg-cell--editing .bg-input-box--has-adornment .bg-input-box__value {
+              display: flex;
+              align-items: center;
+              height: 100%;
+            }
+            .bg-cell--editing .bg-input-box--has-adornment .bg-input-box__value .bg-cell-editor--inline {
+              width: 100% !important;
+              min-width: 0 !important;
+              height: 100% !important;
+              text-align: inherit;
             }
           `;
           document.head.appendChild(style);
@@ -328,26 +371,40 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               text === placeholder &&
               (context.value == null || context.value === ''),
             );
-            const unit = resolveColumnUnit(col, context.row);
+            const prefix = resolveColumnPrefix(col, context.row);
+            const suffix = resolveColumnSuffix(col, context.row);
             const isDropdown = (Array.isArray(col.options) && col.options.length > 0) || typeof context.value === 'boolean';
             if (isDropdown) box.classList.add('bg-input-box--dropdown');
-            if (unit) {
-              box.classList.add('bg-input-box--has-unit');
-              // Structured value + unit so editing can clear the value without destroying the suffix
+            if (prefix || suffix) {
+              box.classList.add('bg-input-box--has-adornment');
+              if (suffix) box.classList.add('bg-input-box--has-unit');
+              const adornmentSpace = getBalancedAdornmentSpace(prefix, suffix);
+              box.style.setProperty('--bg-input-prefix-space', `${adornmentSpace}px`);
+              box.style.setProperty('--bg-input-suffix-space', `${adornmentSpace}px`);
+              // Structured value + adornments so editing can clear the value without destroying either edge.
+              if (prefix) {
+                const prefixSpan = document.createElement('span');
+                prefixSpan.className = 'bg-input-box__prefix';
+                prefixSpan.textContent = prefix;
+                box.appendChild(prefixSpan);
+              }
               const valueSpan = document.createElement('span');
               valueSpan.className = 'bg-input-box__value';
+              const displayText = stripInputAdornments(text, prefix, suffix);
               if (text) {
-                valueSpan.textContent = text;
+                valueSpan.textContent = displayText;
                 if (isPlaceholderText) box.classList.add('bg-input-box--placeholder');
               } else if (placeholder) {
                 valueSpan.textContent = placeholder;
                 box.classList.add('bg-input-box--placeholder');
               }
               box.appendChild(valueSpan);
-              const unitSpan = document.createElement('span');
-              unitSpan.className = 'bg-input-box__unit';
-              unitSpan.textContent = unit;
-              box.appendChild(unitSpan);
+              if (suffix) {
+                const suffixSpan = document.createElement('span');
+                suffixSpan.className = 'bg-input-box__suffix bg-input-box__unit';
+                suffixSpan.textContent = suffix;
+                box.appendChild(suffixSpan);
+              }
             } else if (text) {
               box.textContent = text;
               if (isPlaceholderText) box.classList.add('bg-input-box--placeholder');
@@ -418,8 +475,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             });
           }
         }
-        const unit = resolveColumnUnit(column, row);
-        if (unit && typeof value === 'number') {
+        const suffix = resolveColumnSuffix(column, row);
+        if ((resolveColumnPrefix(column, row) || suffix) && typeof value === 'number') {
           const precision = getPrecision(column, row);
           return precision != null ? value.toFixed(precision) : String(value);
         }
@@ -452,10 +509,39 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         return getFormattedDisplayText(column, row, value, rowIndex, colIndex);
       }
 
-      function resolveColumnUnit(column: ColumnDef, row: unknown): string | undefined {
+      function resolveColumnPrefix(column: ColumnDef, row: unknown): string | undefined {
+        return typeof column.prefix === 'function'
+          ? (column.prefix as (row: unknown) => string | undefined)(row)
+          : column.prefix;
+      }
+
+      function resolveColumnSuffix(column: ColumnDef, row: unknown): string | undefined {
+        if (column.suffix) {
+          return typeof column.suffix === 'function'
+            ? (column.suffix as (row: unknown) => string | undefined)(row)
+            : column.suffix;
+        }
         return typeof column.unit === 'function'
           ? (column.unit as (row: unknown) => string | undefined)(row)
           : column.unit;
+      }
+
+      function getAdornmentSpace(adornment: string): number {
+        return Math.max(16, Math.ceil(adornment.length * 8 + 10));
+      }
+
+      function getBalancedAdornmentSpace(prefix?: string, suffix?: string, fallback = 0): number {
+        return Math.max(
+          prefix ? getAdornmentSpace(prefix) : fallback,
+          suffix ? getAdornmentSpace(suffix) : fallback,
+        );
+      }
+
+      function stripInputAdornments(text: string, prefix?: string, suffix?: string): string {
+        let next = text.trim();
+        if (prefix && next.startsWith(prefix)) next = next.slice(prefix.length).trimStart();
+        if (suffix && next.endsWith(suffix)) next = next.slice(0, -suffix.length).trimEnd();
+        return next;
       }
 
       function optionValuesEqual(a: unknown, b: unknown): boolean {
@@ -495,10 +581,25 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         return cfg?.defaultValue ?? '';
       }
 
-      function resolveSelectInputUnit(
+      function resolveSelectInputPrefix(
         cfg: SelectInputConfig | undefined,
         row: unknown,
       ): string | undefined {
+        if (!cfg?.prefix) return undefined;
+        return typeof cfg.prefix === 'function'
+          ? (cfg.prefix as (row: unknown) => string | undefined)(row)
+          : cfg.prefix;
+      }
+
+      function resolveSelectInputSuffix(
+        cfg: SelectInputConfig | undefined,
+        row: unknown,
+      ): string | undefined {
+        if (cfg?.suffix) {
+          return typeof cfg.suffix === 'function'
+            ? (cfg.suffix as (row: unknown) => string | undefined)(row)
+            : cfg.suffix;
+        }
         if (!cfg?.unit) return undefined;
         return typeof cfg.unit === 'function'
           ? (cfg.unit as (row: unknown) => string | undefined)(row)
@@ -783,6 +884,19 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           inputWrap.className = 'bg-select-compound-input-wrap';
           inputWrap.style.width = `${cfg.width ?? 60}px`;
           inputWrap.addEventListener('pointerdown', (event) => event.stopPropagation());
+          const prefix = resolveSelectInputPrefix(cfg, context.row);
+          const suffix = resolveSelectInputSuffix(cfg, context.row);
+          inputWrap.style.position = 'relative';
+          const inputAdornmentSpace = Math.max(6, getBalancedAdornmentSpace(prefix, suffix, 6) - 4);
+          inputWrap.style.setProperty('--bg-input-prefix-space', `${inputAdornmentSpace}px`);
+          inputWrap.style.setProperty('--bg-input-suffix-space', `${inputAdornmentSpace}px`);
+
+          if (prefix) {
+            const prefixEl = document.createElement('span');
+            prefixEl.className = 'bg-select-compound-prefix';
+            prefixEl.textContent = prefix;
+            inputWrap.appendChild(prefixEl);
+          }
 
           const input = document.createElement('input');
           input.className = 'bg-select-compound-input';
@@ -811,12 +925,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           });
           inputWrap.appendChild(input);
 
-          const unit = resolveSelectInputUnit(cfg, context.row);
-          if (unit) {
-            const unitEl = document.createElement('span');
-            unitEl.className = 'bg-select-compound-unit';
-            unitEl.textContent = unit;
-            inputWrap.appendChild(unitEl);
+          if (suffix) {
+            const suffixEl = document.createElement('span');
+            suffixEl.className = 'bg-select-compound-suffix bg-select-compound-unit';
+            suffixEl.textContent = suffix;
+            inputWrap.appendChild(suffixEl);
           }
           wrapper.appendChild(inputWrap);
         }
@@ -1052,6 +1165,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               rawStr = originalValue.toFixed(prec);
             }
           }
+          rawStr = stripInputAdornments(
+            rawStr,
+            resolveColumnPrefix(column, rowData),
+            resolveColumnSuffix(column, rowData),
+          );
 
           // Check editor type or auto-detect from cellType
           const isDateEditor = column.cellEditor === 'date' ||
@@ -1060,13 +1178,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             (!column.cellEditor && (column.cellType === 'number' || column.cellType === 'currency'));
 
           const editValue = initialValue ?? rawStr;
-          const hasUnitInputBox = !!cellEl.querySelector('.bg-input-box--has-unit .bg-input-box__value');
+          const hasAdornedInputBox = !!cellEl.querySelector('.bg-input-box--has-adornment .bg-input-box__value');
 
           if (column.cellEditor === 'masked' && column.mask) {
             activeEditor = createMaskedInput(cellEl, rawStr, column.mask, clickEvent);
           } else if (isDateEditor) {
             activeEditor = createDateInput(cellEl, rawStr);
-          } else if (config.editorMode === 'inline' || hasUnitInputBox) {
+          } else if (config.editorMode === 'inline' || hasAdornedInputBox) {
             activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined, rowData);
           } else if (isNumberEditor) {
             activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, column, rowData);
@@ -1490,14 +1608,21 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           });
         }
 
-        // If the cell has a structured value/unit input-box, anchor the editor
-        // inside the value span so the unit suffix stays visible to its right.
+        // If the cell has a structured value/adornment input-box, anchor the
+        // editor inside the value span so edge adornments stay visible.
         const valueAnchor = cellEl.querySelector('.bg-input-box__value') as HTMLElement | null;
         if (valueAnchor) {
-          input.style.width = `${Math.max(40, Math.min(72, value.length * 8 + 14))}px`;
-          input.style.minWidth = '40px';
+          const adornedBox = valueAnchor.closest('.bg-input-box--has-adornment') as HTMLElement | null;
+          if (adornedBox) {
+            input.style.width = '100%';
+            input.style.minWidth = '0';
+            input.style.textAlign = getComputedStyle(valueAnchor).textAlign || cellTextAlign;
+          } else {
+            input.style.width = `${Math.max(40, Math.min(72, value.length * 8 + 14))}px`;
+            input.style.minWidth = '40px';
+            input.style.textAlign = 'right';
+          }
           input.style.height = '30px';
-          input.style.textAlign = 'right';
           valueAnchor.appendChild(input);
         } else {
           cellEl.appendChild(input);
@@ -2805,7 +2930,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                   : column.accessorKey
                     ? (rowData as Record<string, unknown>)[column.accessorKey]
                     : originalValue;
-                valueAnchor.textContent = getInputStyleDisplayText(column, rowData, value, position.rowIndex, position.colIndex);
+                valueAnchor.textContent = stripInputAdornments(
+                  getInputStyleDisplayText(column, rowData, value, position.rowIndex, position.colIndex),
+                  resolveColumnPrefix(column, rowData),
+                  resolveColumnSuffix(column, rowData),
+                );
               } else {
                 valueAnchor.textContent = originalValue != null ? String(originalValue) : '';
               }
