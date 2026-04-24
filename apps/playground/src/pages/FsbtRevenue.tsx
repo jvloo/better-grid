@@ -922,19 +922,17 @@ export function FsbtRevenue() {
 
   const handleBtsUndo = useCallback(() => btsGrid.plugins.undoRedo?.undo(), [btsGrid]);
   const handleBtsRedo = useCallback(() => btsGrid.plugins.undoRedo?.redo(), [btsGrid]);
-  const handleBtsCsv = useCallback(() => btsGrid.plugins.export?.exportToCsv(), [btsGrid]);
-  const handleBtsExcel = useCallback(() => btsGrid.plugins.export?.exportToExcel(), [btsGrid]);
+  const handleBtsExport = useCallback(() => btsGrid.plugins.export?.exportToCsv(), [btsGrid]);
 
   const handleHoldingExpandAll = useCallback(() => holdingGrid.expandAll(), [holdingGrid]);
   const handleHoldingCollapseAll = useCallback(() => holdingGrid.collapseAll(), [holdingGrid]);
   const handleHoldingUndo = useCallback(() => holdingGrid.plugins.undoRedo?.undo(), [holdingGrid]);
   const handleHoldingRedo = useCallback(() => holdingGrid.plugins.undoRedo?.redo(), [holdingGrid]);
-  const handleHoldingCsv = useCallback(() => holdingGrid.plugins.export?.exportToCsv(), [holdingGrid]);
-  const handleHoldingExcel = useCallback(() => holdingGrid.plugins.export?.exportToExcel(), [holdingGrid]);
+  const handleHoldingExport = useCallback(() => holdingGrid.plugins.export?.exportToCsv(), [holdingGrid]);
 
-  const handleBtsDetailsCsv = useCallback(() => btsDetailsGrid.plugins.export?.exportToCsv(), [btsDetailsGrid]);
-  const handleHoldingGeneralCsv = useCallback(() => holdingGeneralGrid.plugins.export?.exportToCsv(), [holdingGeneralGrid]);
-  const handleHoldingSaleCsv = useCallback(() => holdingSaleGrid.plugins.export?.exportToCsv(), [holdingSaleGrid]);
+  const handleBtsDetailsExport = useCallback(() => btsDetailsGrid.plugins.export?.exportToCsv(), [btsDetailsGrid]);
+  const handleHoldingGeneralExport = useCallback(() => holdingGeneralGrid.plugins.export?.exportToCsv(), [holdingGeneralGrid]);
+  const handleHoldingSaleExport = useCallback(() => holdingSaleGrid.plugins.export?.exportToCsv(), [holdingSaleGrid]);
 
   const btnStyle = { padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12 } as const;
   const pillStyle = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', border: '1px solid #E4E7EC', borderRadius: 999, background: '#F9FAFB', fontSize: 13, color: '#101828' } as const;
@@ -976,8 +974,7 @@ export function FsbtRevenue() {
           <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
             <button onClick={handleBtsUndo} style={btnStyle}>Undo</button>
             <button onClick={handleBtsRedo} style={btnStyle}>Redo</button>
-            <button onClick={handleBtsCsv} style={btnStyle}>CSV</button>
-            <button onClick={handleBtsExcel} style={btnStyle}>Excel</button>
+            <button onClick={handleBtsExport} style={btnStyle}>Export</button>
           </div>
         </div>
         <div
@@ -995,7 +992,7 @@ export function FsbtRevenue() {
       {/* BTS Details — multi-section breakdown (Gross / GST / Commission / Net) */}
       <div style={{ marginTop: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, justifyContent: 'flex-end' }}>
-          <button onClick={handleBtsDetailsCsv} style={btnStyle}>CSV</button>
+          <button onClick={handleBtsDetailsExport} style={btnStyle}>Export</button>
         </div>
         <div
           ref={btsDetailsRef}
@@ -1012,7 +1009,7 @@ export function FsbtRevenue() {
             <strong style={{ fontWeight: 600 }}>$8,400,000</strong>
           </span>
           <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
-            <button onClick={handleHoldingGeneralCsv} style={btnStyle}>General CSV</button>
+            <button onClick={handleHoldingGeneralExport} style={btnStyle}>Export</button>
           </div>
         </div>
         <div
@@ -1025,8 +1022,7 @@ export function FsbtRevenue() {
           <button onClick={handleHoldingCollapseAll} style={btnStyle}>Collapse All</button>
           <button onClick={handleHoldingUndo} style={btnStyle}>Undo</button>
           <button onClick={handleHoldingRedo} style={btnStyle}>Redo</button>
-          <button onClick={handleHoldingCsv} style={btnStyle}>CSV</button>
-          <button onClick={handleHoldingExcel} style={btnStyle}>Excel</button>
+          <button onClick={handleHoldingExport} style={btnStyle}>Export</button>
         </div>
         <div
           ref={holdingRef}
@@ -1043,7 +1039,7 @@ export function FsbtRevenue() {
             <strong style={{ fontWeight: 600 }}>$0</strong>
           </span>
           <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
-            <button onClick={handleHoldingSaleCsv} style={btnStyle}>CSV</button>
+            <button onClick={handleHoldingSaleExport} style={btnStyle}>Export</button>
           </div>
         </div>
         <div

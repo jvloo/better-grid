@@ -471,8 +471,7 @@ export function FsbtProgram() {
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
   const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
-  const handleExportCsv = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
-  const handleExportExcel = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
+  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
   const handleUndo = useCallback(() => grid.plugins.undoRedo?.undo(), [grid]);
   const handleRedo = useCallback(() => grid.plugins.undoRedo?.redo(), [grid]);
 
@@ -487,8 +486,7 @@ export function FsbtProgram() {
           <button onClick={handleCollapseAll} style={btnStyle}>Collapse All</button>
           <button onClick={handleUndo} style={btnStyle}>Undo</button>
           <button onClick={handleRedo} style={btnStyle}>Redo</button>
-          <button onClick={handleExportCsv} style={btnStyle}>CSV</button>
-          <button onClick={handleExportExcel} style={btnStyle}>Excel</button>
+          <button onClick={handleExport} style={btnStyle}>Export</button>
         </div>
       </div>
       <p style={{ margin: '0 0 12px', color: '#666', fontSize: 13, lineHeight: 1.5 }}>
