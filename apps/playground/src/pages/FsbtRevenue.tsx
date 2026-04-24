@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, type CSSProperties } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { CellChange, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
@@ -980,15 +980,15 @@ export function FsbtRevenue() {
   // Action Handlers
   // ════════════════════════════════════════════════════════════════════════════
 
-  const handleBtsExport = useCallback(() => btsGrid.plugins.export?.exportToCsv(), [btsGrid]);
+  const handleBtsExport = useCallback(() => btsGrid.plugins.export?.exportToExcel(), [btsGrid]);
 
   const handleHoldingExpandAll = useCallback(() => holdingGrid.expandAll(), [holdingGrid]);
   const handleHoldingCollapseAll = useCallback(() => holdingGrid.collapseAll(), [holdingGrid]);
-  const handleHoldingExport = useCallback(() => holdingGrid.plugins.export?.exportToCsv(), [holdingGrid]);
+  const handleHoldingExport = useCallback(() => holdingGrid.plugins.export?.exportToExcel(), [holdingGrid]);
 
-  const handleBtsDetailsExport = useCallback(() => btsDetailsGrid.plugins.export?.exportToCsv(), [btsDetailsGrid]);
-  const handleHoldingGeneralExport = useCallback(() => holdingGeneralGrid.plugins.export?.exportToCsv(), [holdingGeneralGrid]);
-  const handleHoldingSaleExport = useCallback(() => holdingSaleGrid.plugins.export?.exportToCsv(), [holdingSaleGrid]);
+  const handleBtsDetailsExport = useCallback(() => btsDetailsGrid.plugins.export?.exportToExcel(), [btsDetailsGrid]);
+  const handleHoldingGeneralExport = useCallback(() => holdingGeneralGrid.plugins.export?.exportToExcel(), [holdingGeneralGrid]);
+  const handleHoldingSaleExport = useCallback(() => holdingSaleGrid.plugins.export?.exportToExcel(), [holdingSaleGrid]);
 
   const pillStyle = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', border: '1px solid #E4E7EC', borderRadius: 999, background: '#F9FAFB', fontSize: 13, color: '#101828' } as const;
 
@@ -1038,7 +1038,8 @@ export function FsbtRevenue() {
             position: 'relative',
             overflow: 'hidden',
             borderRadius: 12,
-          }}
+            '--bg-scrollbar-inset': '12px',
+          } as CSSProperties}
         />
       </div>
 
@@ -1049,7 +1050,7 @@ export function FsbtRevenue() {
         </div>
         <div
           ref={btsDetailsRef}
-          style={{ height: 720, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12 }}
+          style={{ height: 720, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, '--bg-scrollbar-inset': '12px' } as CSSProperties}
         />
       </div>
 
@@ -1067,7 +1068,7 @@ export function FsbtRevenue() {
         </div>
         <div
           ref={holdingGeneralRef}
-          style={{ height: 260, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, marginBottom: 24 }}
+          style={{ height: 260, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, marginBottom: 24, '--bg-scrollbar-inset': '12px' } as CSSProperties}
         />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, justifyContent: 'flex-end' }}>
@@ -1077,7 +1078,7 @@ export function FsbtRevenue() {
         </div>
         <div
           ref={holdingRef}
-          style={{ height: 480, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12 }}
+          style={{ height: 480, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, '--bg-scrollbar-inset': '12px' } as CSSProperties}
         />
       </div>
 
@@ -1095,7 +1096,7 @@ export function FsbtRevenue() {
         </div>
         <div
           ref={holdingSaleRef}
-          style={{ height: 320, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12 }}
+          style={{ height: 320, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, '--bg-scrollbar-inset': '12px' } as CSSProperties}
         />
       </div>
     </div>

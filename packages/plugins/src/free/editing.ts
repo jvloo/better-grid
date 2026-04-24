@@ -150,6 +150,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               box-sizing: border-box;
               width: 100%;
               font-size: 12px;
+              /* Clip text that exceeds the box width with an ellipsis in
+                 display mode — matches Wiseway's MUI TextField behaviour. */
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              min-width: 0;
             }
             .bg-cell--input-editable .bg-input-box:hover {
               background: var(--bg-input-hover-bg, #F0F0F0);

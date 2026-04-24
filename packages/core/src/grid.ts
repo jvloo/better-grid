@@ -1063,7 +1063,15 @@ export function createGrid<
       // Stable selector — editing, gantt, row-actions plugins all query `.bg-grid__scroll`.
       fakeScrollbar.className = 'bg-grid__scroll';
       fakeScrollbar.style.position = 'absolute';
-      fakeScrollbar.style.inset = '0';
+      // Inset the scrollbar-bearing element from the right/bottom so the
+      // scrollbar track doesn't get clipped by a rounded-corner container.
+      // Controlled via --bg-scrollbar-inset (default 0). Set e.g. 12px on
+      // a grid whose wrapper has border-radius: 12px so the scrollbar sits
+      // inside the rounded area.
+      fakeScrollbar.style.top = '0';
+      fakeScrollbar.style.left = '0';
+      fakeScrollbar.style.right = 'var(--bg-scrollbar-inset, 0)';
+      fakeScrollbar.style.bottom = 'var(--bg-scrollbar-inset, 0)';
       fakeScrollbar.style.overflow = 'auto';
       fakeScrollbar.style.zIndex = '1';
 

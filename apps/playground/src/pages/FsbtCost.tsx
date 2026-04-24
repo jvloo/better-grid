@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useState } from 'react';
+import { useMemo, useCallback, useRef, useState, type CSSProperties } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { CellChange, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
@@ -355,6 +355,14 @@ const monthValueFormatter = (v: unknown): string => {
   return v.toLocaleString('en-AU', { maximumFractionDigits: 0 });
 };
 
+// tableStyle 'striped' strips every cell's right border — monthly cells
+// should still have vertical dividers to separate each month's value, so
+// add borderRight explicitly via cellStyle on the generated columns.
+const monthlyCellStyle = (v: unknown, row: unknown): Record<string, string> => ({
+  ...(parentRowCellStyle(v, row) ?? {}),
+  borderRight: '1px solid #E4E7EC',
+});
+
 const ts = timeSeries({
   start: '2023-08-01',
   end: '2026-10-01',
@@ -370,7 +378,7 @@ const ts = timeSeries({
     cellRenderer: (container, ctx) => {
       container.textContent = monthValueFormatter(ctx.value);
     },
-    cellStyle: parentRowCellStyle,
+    cellStyle: monthlyCellStyle,
   },
 });
 
@@ -807,7 +815,7 @@ export function FsbtCost() {
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
   const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
-  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExport = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
 
   const pillStyle = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', border: '1px solid #E4E7EC', borderRadius: 999, background: '#F9FAFB', fontSize: 13, color: '#101828' } as const;
 
@@ -849,7 +857,8 @@ export function FsbtCost() {
           position: 'relative',
           overflow: 'hidden',
           borderRadius: 12,
-        }}
+          '--bg-scrollbar-inset': '12px',
+        } as CSSProperties}
       />
     </div>
   );

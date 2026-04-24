@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useState } from 'react';
+import { useMemo, useCallback, useRef, useState, type CSSProperties } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { CellChange, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
@@ -477,7 +477,10 @@ export function FsbtProgram() {
 
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
   const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
-  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  // Export to XLSX so Excel-side formatting + the gantt visualization
+  // survive the round-trip. CSV strips all styling and collapses the
+  // monthly cashflow grid into unlabelled columns.
+  const handleExport = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
 
   return (
     <div className="fsbt-program-demo">
@@ -500,7 +503,10 @@ export function FsbtProgram() {
           position: 'relative',
           overflow: 'hidden',
           borderRadius: 12,
-        }}
+          // Inset the scrollbar by the same radius so it doesn't get
+          // clipped at the rounded corners.
+          '--bg-scrollbar-inset': '12px',
+        } as CSSProperties}
       />
     </div>
   );

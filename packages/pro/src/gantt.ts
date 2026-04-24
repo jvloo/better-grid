@@ -393,8 +393,11 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
           // Reset gantt cell — clean slate
           container.textContent = '';
           container.style.padding = '0';
+          // Strip the vertical divider (gantt bar overlays would otherwise
+          // show seams at cell boundaries) but keep the horizontal row
+          // divider so each row is visually delimited like the fixed-column
+          // portion of the grid.
           container.style.borderRight = 'none';
-          container.style.borderBottom = 'none';
           container.style.overflow = 'hidden';
           container.style.display = 'block';
           container.style.lineHeight = 'normal';
