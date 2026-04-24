@@ -2074,14 +2074,18 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         requestAnimationFrame(() => {
           input.focus();
-          // Determine which section was clicked based on mouse position. The
-          // cellRenderer may display a user-friendly text (e.g. "Aug 23") that
-          // is visually wider than the masked editor value (e.g. "08/23").
-          // Hit-test the rendered section spans directly so clicking on the
-          // visible "MM" or "YY" text selects that exact mask section.
-          const initialSection = clickEvent
-            ? getSectionAtClientX(clickEvent.clientX)
-            : getSectionAtCursor(input.selectionStart ?? 0);
+          // Determine which section to select first. An empty cell (all
+          // sections blank, showing the placeholder e.g. "MM/YY") always
+          // starts at section 0 so typing flows naturally left-to-right — a
+          // user clicking anywhere on an empty mask expects "start from the
+          // beginning", not mid-field. Filled cells honour the clicked X so
+          // clicking "25" in "08/25" jumps straight to YY editing.
+          const hasAnyValue = sectionValues.some((s) => s && s.length > 0);
+          const initialSection = !hasAnyValue
+            ? 0
+            : clickEvent
+              ? getSectionAtClientX(clickEvent.clientX)
+              : getSectionAtCursor(input.selectionStart ?? 0);
           activeSectionIdx = initialSection;
           const range = getSectionRange(initialSection);
           input.setSelectionRange(range.start, range.end);
