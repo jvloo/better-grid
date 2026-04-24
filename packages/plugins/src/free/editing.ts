@@ -378,9 +378,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             if (prefix || suffix) {
               box.classList.add('bg-input-box--has-adornment');
               if (suffix) box.classList.add('bg-input-box--has-unit');
-              const adornmentSpace = getBalancedAdornmentSpace(prefix, suffix);
-              box.style.setProperty('--bg-input-prefix-space', `${adornmentSpace}px`);
-              box.style.setProperty('--bg-input-suffix-space', `${adornmentSpace}px`);
+              // Reserve space only for the side that actually has an
+              // adornment — asymmetric padding lets the editor extend to
+              // the opposite edge when only one side has a prefix/suffix
+              // (e.g., `$27,000,000` should give the number full width to
+              // the right, not reserve phantom right-side padding).
+              box.style.setProperty('--bg-input-prefix-space', prefix ? `${getAdornmentSpace(prefix)}px` : '0px');
+              box.style.setProperty('--bg-input-suffix-space', suffix ? `${getAdornmentSpace(suffix)}px` : '0px');
               // Structured value + adornments so editing can clear the value without destroying either edge.
               if (prefix) {
                 const prefixSpan = document.createElement('span');
@@ -1632,7 +1636,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         if (cursorAtEnd) {
           input.setSelectionRange(value.length, value.length);
         } else {
-          input.select();
+          // Cursor at the START of the value — matches user expectation of
+          // "click to start editing from the beginning", and means typing
+          // a digit prepends rather than wholesale-replaces (which the
+          // previous selectAll behaviour did).
+          input.setSelectionRange(0, 0);
         }
 
         // Keyboard handling
