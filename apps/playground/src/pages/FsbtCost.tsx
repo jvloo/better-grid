@@ -12,8 +12,6 @@ import {
   IconButton,
   ExpandAllIcon,
   CollapseAllIcon,
-  UndoIcon,
-  RedoIcon,
   ExportIcon,
 } from './_fsbt-toolbar-icons';
 
@@ -810,8 +808,6 @@ export function FsbtCost() {
   const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
   const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
   const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
-  const handleUndo = useCallback(() => grid.plugins.undoRedo?.undo(), [grid]);
-  const handleRedo = useCallback(() => grid.plugins.undoRedo?.redo(), [grid]);
 
   const pillStyle = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', border: '1px solid #E4E7EC', borderRadius: 999, background: '#F9FAFB', fontSize: 13, color: '#101828' } as const;
 
@@ -839,8 +835,6 @@ export function FsbtCost() {
         <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
           <IconButton title="Expand All" onClick={handleExpandAll}><ExpandAllIcon /></IconButton>
           <IconButton title="Collapse All" onClick={handleCollapseAll}><CollapseAllIcon /></IconButton>
-          <IconButton title="Undo" onClick={handleUndo}><UndoIcon /></IconButton>
-          <IconButton title="Redo" onClick={handleRedo}><RedoIcon /></IconButton>
           <IconButton title="Export" onClick={handleExport}><ExportIcon /></IconButton>
         </div>
       </div>

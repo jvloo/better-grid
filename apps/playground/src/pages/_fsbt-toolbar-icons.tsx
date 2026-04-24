@@ -56,35 +56,20 @@ const svgProps = {
   strokeLinejoin: 'round' as const,
 };
 
-/** Two arrows pointing away from a central axis — "expand all". */
+/** Rounded square with a `+` inside — "expand all" (tree-style plus). */
 export const ExpandAllIcon = () => (
   <svg {...svgProps} aria-hidden="true">
-    <path d="m7 15 5 5 5-5" />
-    <path d="m7 9 5-5 5 5" />
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M8 12h8" />
+    <path d="M12 8v8" />
   </svg>
 );
 
-/** Two arrows pointing toward a central axis — "collapse all". */
+/** Rounded square with a `−` inside — "collapse all" (tree-style minus). */
 export const CollapseAllIcon = () => (
   <svg {...svgProps} aria-hidden="true">
-    <path d="m7 20 5-5 5 5" />
-    <path d="m7 4 5 5 5-5" />
-  </svg>
-);
-
-/** Counter-clockwise rotate — "undo". */
-export const UndoIcon = () => (
-  <svg {...svgProps} aria-hidden="true">
-    <path d="M3 7v6h6" />
-    <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
-  </svg>
-);
-
-/** Clockwise rotate — "redo". */
-export const RedoIcon = () => (
-  <svg {...svgProps} aria-hidden="true">
-    <path d="M21 7v6h-6" />
-    <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M8 12h8" />
   </svg>
 );
 

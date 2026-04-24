@@ -10,8 +10,6 @@ import {
   IconButton,
   ExpandAllIcon,
   CollapseAllIcon,
-  UndoIcon,
-  RedoIcon,
   ExportIcon,
 } from './_fsbt-toolbar-icons';
 
@@ -313,21 +311,21 @@ interface HoldingRow {
 // Holding data — sourced from QA project 4288. Parent rows (parentId: null)
 // are the category rollups; children carry the per-item breakdown.
 const holdingData: HoldingRow[] = [
-  // Gross Rent
-  { id: 1, parentId: null, type: 'Gross Rental Revenue', description: '', input: 0, amount: 8400000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
+  // Gross Rental Income (matches Wiseway holding-general-table section label)
+  { id: 1, parentId: null, type: 'Gross Rental Income', description: '', input: 0, amount: 8400000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
   { id: 2, parentId: 1, type: '', description: 'Residential', input: 520, amount: 4264000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: 710667, m_2026_02: 710667, m_2026_03: 710667, m_2026_04: 710667, m_2026_05: 710667, m_2026_06: 710665 },
   { id: 3, parentId: 1, type: '', description: 'Commercial', input: 650, amount: 2080000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: 346667, m_2026_02: 346667, m_2026_03: 346667, m_2026_04: 346667, m_2026_05: 346667, m_2026_06: 346665 },
   { id: 4, parentId: 1, type: '', description: 'Retail', input: 850, amount: 1275000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: 212500, m_2026_02: 212500, m_2026_03: 212500, m_2026_04: 212500, m_2026_05: 212500, m_2026_06: 212500 },
   { id: 5, parentId: 1, type: '', description: 'Parking', input: 250, amount: 781000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: 130167, m_2026_02: 130167, m_2026_03: 130167, m_2026_04: 130167, m_2026_05: 130167, m_2026_06: 130165 },
 
-  // Less Outgoings
-  { id: 6, parentId: null, type: 'Less: Outgoings', description: '', input: 0, amount: -1260000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
+  // Outgoings (matches Wiseway exactly — no "Less:" prefix)
+  { id: 6, parentId: null, type: 'Outgoings', description: '', input: 0, amount: -1260000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
   { id: 7, parentId: 6, type: '', description: 'Property Management', input: 0, amount: -504000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: -84000, m_2026_02: -84000, m_2026_03: -84000, m_2026_04: -84000, m_2026_05: -84000, m_2026_06: -84000 },
   { id: 8, parentId: 6, type: '', description: 'Maintenance & Repairs', input: 0, amount: -378000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: -63000, m_2026_02: -63000, m_2026_03: -63000, m_2026_04: -63000, m_2026_05: -63000, m_2026_06: -63000 },
   { id: 9, parentId: 6, type: '', description: 'Insurance & Rates', input: 0, amount: -378000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: -63000, m_2026_02: -63000, m_2026_03: -63000, m_2026_04: -63000, m_2026_05: -63000, m_2026_06: -63000 },
 
-  // Incentive
-  { id: 10, parentId: null, type: 'Less: Incentives', description: '', input: 0, amount: -420000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
+  // Incentive (singular, matches Wiseway exactly — no "Less:" prefix)
+  { id: 10, parentId: null, type: 'Incentive', description: '', input: 0, amount: -420000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
   { id: 11, parentId: 10, type: '', description: 'Leasing Incentive (5%)', input: 5, amount: -420000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: -70000, m_2026_02: -70000, m_2026_03: -70000, m_2026_04: -70000, m_2026_05: -70000, m_2026_06: -70000 },
 
   // Net (rollup)
@@ -928,14 +926,10 @@ export function FsbtRevenue() {
   // Action Handlers
   // ════════════════════════════════════════════════════════════════════════════
 
-  const handleBtsUndo = useCallback(() => btsGrid.plugins.undoRedo?.undo(), [btsGrid]);
-  const handleBtsRedo = useCallback(() => btsGrid.plugins.undoRedo?.redo(), [btsGrid]);
   const handleBtsExport = useCallback(() => btsGrid.plugins.export?.exportToCsv(), [btsGrid]);
 
   const handleHoldingExpandAll = useCallback(() => holdingGrid.expandAll(), [holdingGrid]);
   const handleHoldingCollapseAll = useCallback(() => holdingGrid.collapseAll(), [holdingGrid]);
-  const handleHoldingUndo = useCallback(() => holdingGrid.plugins.undoRedo?.undo(), [holdingGrid]);
-  const handleHoldingRedo = useCallback(() => holdingGrid.plugins.undoRedo?.redo(), [holdingGrid]);
   const handleHoldingExport = useCallback(() => holdingGrid.plugins.export?.exportToCsv(), [holdingGrid]);
 
   const handleBtsDetailsExport = useCallback(() => btsDetailsGrid.plugins.export?.exportToCsv(), [btsDetailsGrid]);
@@ -979,8 +973,6 @@ export function FsbtRevenue() {
             <strong style={{ fontWeight: 600 }}>${TOTAL_GROSS_REVENUE.toLocaleString('en-AU')}</strong>
           </span>
           <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
-            <IconButton title="Undo" onClick={handleBtsUndo}><UndoIcon /></IconButton>
-            <IconButton title="Redo" onClick={handleBtsRedo}><RedoIcon /></IconButton>
             <IconButton title="Export" onClick={handleBtsExport}><ExportIcon /></IconButton>
           </div>
         </div>
@@ -1027,8 +1019,6 @@ export function FsbtRevenue() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, justifyContent: 'flex-end' }}>
           <IconButton title="Expand All" onClick={handleHoldingExpandAll}><ExpandAllIcon /></IconButton>
           <IconButton title="Collapse All" onClick={handleHoldingCollapseAll}><CollapseAllIcon /></IconButton>
-          <IconButton title="Undo" onClick={handleHoldingUndo}><UndoIcon /></IconButton>
-          <IconButton title="Redo" onClick={handleHoldingRedo}><RedoIcon /></IconButton>
           <IconButton title="Export" onClick={handleHoldingExport}><ExportIcon /></IconButton>
         </div>
         <div
