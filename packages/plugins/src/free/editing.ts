@@ -1682,11 +1682,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         if (cursorAtEnd) {
           input.setSelectionRange(value.length, value.length);
         } else {
-          // Cursor at the START of the value — matches user expectation of
-          // "click to start editing from the beginning", and means typing
-          // a digit prepends rather than wholesale-replaces (which the
-          // previous selectAll behaviour did).
-          input.setSelectionRange(0, 0);
+          // Select all on click-to-edit — pressing a digit then replaces the
+          // entire value, matching Excel / spreadsheet convention. The
+          // masked MM/YY editor has its own cursor-positioning logic that
+          // favours "start at section 0" on empty placeholder cells.
+          input.select();
         }
 
         // Keyboard handling
