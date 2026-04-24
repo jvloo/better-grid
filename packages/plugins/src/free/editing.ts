@@ -1568,12 +1568,58 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const numberMin = getMin(numberColumn, rowData);
           const numberMax = getMax(numberColumn, rowData);
 
+          // Thousand-separator formatting — Wiseway retains comma grouping
+          // while editing ("27,000,000") rather than reverting to the raw
+          // "27000000". Uses toLocaleString to insert commas in the integer
+          // portion; decimal portion is kept verbatim so mid-typing strings
+          // like "10." don't lose the trailing dot.
+          const formatWithCommas = (raw: string): string => {
+            if (!raw) return raw;
+            // Keep a leading minus if present
+            const negative = raw.startsWith('-');
+            const body = negative ? raw.slice(1) : raw;
+            const [intPart, ...decParts] = body.split('.');
+            const decPart = decParts.join('.');
+            const cleanInt = intPart.replace(/\D/g, '');
+            const formattedInt = cleanInt
+              ? Number(cleanInt).toLocaleString('en-AU', { useGrouping: true, maximumFractionDigits: 0 })
+              : '';
+            const result = decPart !== undefined && body.includes('.')
+              ? `${formattedInt}.${decPart.replace(/\D/g, '')}`
+              : formattedInt;
+            return negative ? `-${result}` : result;
+          };
+
+          // Format initial display with commas so open-edit matches the
+          // read-only display. stripInputAdornments already removed any
+          // $/% adornment before this function was called.
+          input.value = formatWithCommas(input.value);
+
+          // Reformat on every keystroke + preserve cursor position by
+          // counting digits before the caret before + after reformat.
+          input.addEventListener('input', () => {
+            const before = input.value;
+            const caret = input.selectionStart ?? before.length;
+            const digitsBeforeCaret = before.slice(0, caret).replace(/[^0-9.-]/g, '').length;
+            const reformatted = formatWithCommas(before);
+            if (reformatted === before) return;
+            input.value = reformatted;
+            // Walk forward through the new string until we've passed the
+            // same number of digits we had before, then park the caret there.
+            let pos = 0, seen = 0;
+            while (pos < reformatted.length && seen < digitsBeforeCaret) {
+              if (/[0-9.-]/.test(reformatted[pos]!)) seen++;
+              pos++;
+            }
+            input.setSelectionRange(pos, pos);
+          });
+
           input.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey || e.altKey) return;
             // ArrowUp/Down: increment/decrement value, clamped to min/max
             if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
               e.preventDefault();
-              const cur = parseFloat(input.value) || 0;
+              const cur = parseFloat(input.value.replace(/,/g, '')) || 0;
               const step = numberPrecision != null ? Math.pow(10, -numberPrecision) : 1;
               const delta = e.key === 'ArrowUp' ? step : -step;
               let next = cur + delta;
@@ -1582,7 +1628,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               }
               if (numberMin != null && next < numberMin) next = numberMin;
               if (numberMax != null && next > numberMax) next = numberMax;
-              input.value = String(next);
+              input.value = formatWithCommas(String(next));
               input.select();
               return;
             }
@@ -2905,7 +2951,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           return prevValue;
         }
         if (typeof prevValue === 'number') {
-          const num = Number(newValue);
+          // Strip thousand separators ("27,000,000" → "27000000") so Number()
+          // parses correctly; the inline editor maintains comma grouping
+          // while editing.
+          const num = Number(newValue.replace(/,/g, ''));
           return isNaN(num) ? prevValue : num;
         }
         return newValue;
