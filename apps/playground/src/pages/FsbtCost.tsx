@@ -7,7 +7,7 @@ import { rowActions, RowActionIcons } from '@better-grid/pro';
 import type { RowAction } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
 import { FsbtProgramSummary } from './_FsbtProgramSummary';
-import { FSBT_STYLES, parentRowCellStyle } from './_fsbt-cell-styles';
+import { FSBT_STYLES, parentRowCellStyle, parentRowStyle } from './_fsbt-cell-styles';
 
 // ---------------------------------------------------------------------------
 // Data model — mirrors Wiseway's feasibility/types/project-cost.ts
@@ -795,6 +795,7 @@ export function FsbtCost() {
     pinnedBottomRows,
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
+    getRowStyle: parentRowStyle,
     onDataChange: handleCostDataChange,
   });
 

@@ -353,6 +353,18 @@ export interface GridOptions<
    * Example: `{ field: 'type', styles: { title: { background: '#eee', fontWeight: '600' } } }`
    */
   rowStyles?: RowStylesConfig<TData>;
+  /**
+   * Compute row-level styles for the row-background layer. Unlike column
+   * cellStyle which paints per-cell, these styles apply to a single
+   * full-width strip rendered behind every cell in the row — so the row
+   * background + divider extend continuously from the first column to the
+   * rightmost edge regardless of per-cell rendering or scroll gaps.
+   *
+   * Returned keys are merged onto the strip element via inline styles;
+   * `--*` CSS custom properties are routed through `setProperty` and
+   * inherit to nested elements (cells, input boxes).
+   */
+  getRowStyle?: (row: TData, rowIndex: number) => Record<string, string> | undefined;
 }
 
 export interface RowStylesConfig<TData = unknown> {

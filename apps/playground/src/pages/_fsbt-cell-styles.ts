@@ -26,6 +26,22 @@ export const FSBT_STYLES = {
 } as const;
 
 /**
+ * getRowStyle callback — paints the parent row's grey background on a single
+ * row-wide strip behind the cells, so the bg + divider extend edge-to-edge
+ * regardless of per-cell gaps. CSS custom properties like `--bg-input-bg`
+ * must stay in {@link parentRowCellStyle} instead, since the strip is a
+ * sibling of cells (not an ancestor) and custom properties only inherit
+ * down the DOM tree.
+ */
+export function parentRowStyle(row: unknown): Record<string, string> | undefined {
+  const r = row as { parentId: number | null };
+  if (r.parentId === null) {
+    return { background: FSBT_STYLES.parentRowBg };
+  }
+  return undefined;
+}
+
+/**
  * cellStyle callback that applies the Program table's parent/child styling
  * to any row whose type shape is `{ parentId: number | null }`. Rows with
  * `parentId === null` get the highlighted background + bold weight; children
@@ -40,6 +56,11 @@ export function parentRowCellStyle(_value: unknown, row: unknown): Record<string
       fontWeight: FSBT_STYLES.parentFontWeight,
       color: FSBT_STYLES.parentText,
       fontSize: FSBT_STYLES.infoFontSize,
+      // Parent rows share the same #F8F8F8 background as the default input box,
+      // so the box would disappear. Flip to white on parent rows to match
+      // Wiseway's cost-table-cell-input.tsx override.
+      '--bg-input-bg': '#FFFFFF',
+      '--bg-input-hover-bg': FSBT_STYLES.parentRowBg,
     };
   }
   return {
@@ -61,6 +82,11 @@ export function parentRowCellStyleIndented(_value: unknown, row: unknown): Recor
       fontWeight: FSBT_STYLES.parentFontWeight,
       color: FSBT_STYLES.parentText,
       fontSize: FSBT_STYLES.infoFontSize,
+      // Parent rows share the same #F8F8F8 background as the default input box,
+      // so the box would disappear. Flip to white on parent rows to match
+      // Wiseway's cost-table-cell-input.tsx override.
+      '--bg-input-bg': '#FFFFFF',
+      '--bg-input-hover-bg': FSBT_STYLES.parentRowBg,
     };
   }
   return {

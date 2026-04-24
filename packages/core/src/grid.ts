@@ -70,6 +70,8 @@ export function createGrid<
   const frozenRendering = new RenderingPipeline<TData>();
   rendering.rowStyles = options.rowStyles;
   frozenRendering.rowStyles = options.rowStyles;
+  rendering.getRowStyle = options.getRowStyle;
+  frozenRendering.getRowStyle = options.getRowStyle;
   const pluginRegistry = new PluginRegistry();
   const keyBindings: KeyBinding[] = [];
   const commands = new Map<string, Command>();

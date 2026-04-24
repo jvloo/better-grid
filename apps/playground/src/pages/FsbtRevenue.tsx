@@ -5,7 +5,7 @@ import { timeSeries } from '@better-grid/core';
 import { formatting, editing, sorting, hierarchy, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 import { FsbtProgramSummary } from './_FsbtProgramSummary';
-import { FSBT_STYLES, parentRowCellStyle } from './_fsbt-cell-styles';
+import { FSBT_STYLES, parentRowCellStyle, parentRowStyle } from './_fsbt-cell-styles';
 
 // ============================================================================
 // Shared helpers — match FsbtCost's date formatting so every FSBT table has
@@ -183,6 +183,13 @@ function btsDetailCellStyle(_v: unknown, row: unknown): Record<string, string> |
     return { fontWeight: '600', borderTop: TOTAL_BORDER_TOP, fontSize: FSBT_STYLES.infoFontSize };
   }
   return { color: FSBT_STYLES.childText, fontSize: FSBT_STYLES.infoFontSize };
+}
+
+// Row-strip style for BTS Details / Holding Sale. Section rows paint a
+// full-width grey band so the monthly area doesn't break the grey visually.
+function btsDetailRowStyle(row: BtsDetailRow): Record<string, string> | undefined {
+  if (row.kind === 'section') return { background: SECTION_BG };
+  return undefined;
 }
 
 // ============================================================================
@@ -497,6 +504,7 @@ export function FsbtRevenue() {
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
     tableStyle: 'striped' as const,
+    getRowStyle: parentRowStyle,
     onDataChange: handleBtsDataChange,
   });
   // ════════════════════════════════════════════════════════════════════════════
@@ -651,6 +659,7 @@ export function FsbtRevenue() {
     },
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
+    getRowStyle: parentRowStyle,
   });
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -769,6 +778,7 @@ export function FsbtRevenue() {
     tableStyle: 'striped' as const,
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
+    getRowStyle: btsDetailRowStyle,
   });
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -873,6 +883,7 @@ export function FsbtRevenue() {
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
     tableStyle: 'striped' as const,
+    getRowStyle: parentRowStyle,
   });
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -902,6 +913,7 @@ export function FsbtRevenue() {
     tableStyle: 'striped' as const,
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
+    getRowStyle: btsDetailRowStyle,
   });
 
   // ════════════════════════════════════════════════════════════════════════════

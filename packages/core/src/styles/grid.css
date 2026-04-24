@@ -141,6 +141,20 @@
   contain: layout style paint;
 }
 
+/* Row-background strip — single full-width element per row painted behind
+   cells so the row bg + bottom divider extend continuously across the full
+   content width, even through scroll seams or gaps where no cell rendered. */
+.bg-row-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  background: transparent;
+  border-bottom: 1px solid var(--bg-cell-border-color, #e8e8e8);
+  pointer-events: none;
+  z-index: 0;
+}
+
 .bg-cell {
   box-sizing: border-box;
   display: block;
@@ -157,6 +171,7 @@
   /* line-height set inline to match cell height for vertical centering */
   cursor: default;
   user-select: none;
+  z-index: 1;
 }
 
 .bg-cell--selected {
