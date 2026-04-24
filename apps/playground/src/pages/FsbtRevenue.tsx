@@ -232,7 +232,10 @@ interface HoldingGeneralRow {
   totalLettingFee: number;       // computed
   incentives: number;            // % — editable
   incentivesPaidUpfront: number; // % — editable
-  remainingIncentives: number;   // computed
+  // Remaining Incentives: toggle between "rent-free" and "discount" — matches
+  // Wiseway's holding-general-table-row.tsx:57-68 (remainingIncentiveOptions).
+  // Controls how Discount Months is applied downstream.
+  remainingIncentives: 'rent-free' | 'discount';
   discountMonths: number;        // months — editable
   totalIncentives: number;       // computed
   // On Completion group (2)
@@ -255,7 +258,7 @@ const holdingGeneralData: HoldingGeneralRow[] = [
     preCommit: '2026-01-01', leaseTerm: 24, leaseStart: '2026-01-01', leaseEnd: '2028-01-01',
     rentReview: 3.5, reviewFrequency: 1,
     lettingFee: 2.0, payableCommitment: 100, totalLettingFee: 58080,
-    incentives: 5.0, incentivesPaidUpfront: 100, remainingIncentives: 0,
+    incentives: 5.0, incentivesPaidUpfront: 100, remainingIncentives: 'discount' as const,
     discountMonths: 0, totalIncentives: 145200,
     completionCapRate: 5.25, completionCapValue: 55314286,
     exitCapRate: 5.50, exitCapValue: 52800000, exitGST: 9.09, exitCommission: 1.5, settlementDate: '2028-06-30',
@@ -266,7 +269,7 @@ const holdingGeneralData: HoldingGeneralRow[] = [
     preCommit: '2026-01-01', leaseTerm: 60, leaseStart: '2026-01-01', leaseEnd: '2031-01-01',
     rentReview: 3.0, reviewFrequency: 1,
     lettingFee: 3.0, payableCommitment: 100, totalLettingFee: 62400,
-    incentives: 10.0, incentivesPaidUpfront: 50, remainingIncentives: 104000,
+    incentives: 10.0, incentivesPaidUpfront: 50, remainingIncentives: 'discount' as const,
     discountMonths: 3, totalIncentives: 208000,
     completionCapRate: 6.00, completionCapValue: 29600000,
     exitCapRate: 6.25, exitCapValue: 28416000, exitGST: 9.09, exitCommission: 1.5, settlementDate: '2028-06-30',
@@ -277,7 +280,7 @@ const holdingGeneralData: HoldingGeneralRow[] = [
     preCommit: '2026-01-01', leaseTerm: 60, leaseStart: '2026-01-01', leaseEnd: '2031-01-01',
     rentReview: 3.0, reviewFrequency: 1,
     lettingFee: 3.0, payableCommitment: 100, totalLettingFee: 38250,
-    incentives: 15.0, incentivesPaidUpfront: 50, remainingIncentives: 82125,
+    incentives: 15.0, incentivesPaidUpfront: 50, remainingIncentives: 'rent-free' as const,
     discountMonths: 6, totalIncentives: 164250,
     completionCapRate: 5.75, completionCapValue: 19043478,
     exitCapRate: 6.00, exitCapValue: 18250000, exitGST: 9.09, exitCommission: 1.5, settlementDate: '2028-06-30',
@@ -288,7 +291,7 @@ const holdingGeneralData: HoldingGeneralRow[] = [
     preCommit: '2026-01-01', leaseTerm: 12, leaseStart: '2026-01-01', leaseEnd: '2027-01-01',
     rentReview: 3.0, reviewFrequency: 1,
     lettingFee: 1.0, payableCommitment: 100, totalLettingFee: 6560,
-    incentives: 0, incentivesPaidUpfront: 100, remainingIncentives: 0,
+    incentives: 0, incentivesPaidUpfront: 100, remainingIncentives: 'discount' as const,
     discountMonths: 0, totalIncentives: 0,
     completionCapRate: 7.00, completionCapValue: 9372000,
     exitCapRate: 7.25, exitCapValue: 9048000, exitGST: 9.09, exitCommission: 1.5, settlementDate: '2028-06-30',
@@ -810,7 +813,9 @@ export function FsbtRevenue() {
       preCommit: '', leaseTerm: null, leaseStart: '', leaseEnd: '',
       rentReview: null, reviewFrequency: null,
       lettingFee: null, payableCommitment: null, totalLettingFee: sum(r => r.totalLettingFee),
-      incentives: null, incentivesPaidUpfront: null, remainingIncentives: sum(r => r.remainingIncentives),
+      // Remaining Incentives is a per-row toggle (rent-free / discount), not a
+      // summable number — totals row leaves it blank, matching Wiseway.
+      incentives: null, incentivesPaidUpfront: null, remainingIncentives: null,
       discountMonths: null, totalIncentives: sum(r => r.totalIncentives),
       completionCapRate: null, completionCapValue: sum(r => r.completionCapValue),
       exitCapRate: null, exitCapValue: sum(r => r.exitCapValue),
@@ -847,7 +852,24 @@ export function FsbtRevenue() {
       { id: 'totalLettingFee',    accessorKey: 'totalLettingFee',    header: 'Total Letting Fee',       width: 140, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
       { id: 'incentives',         accessorKey: 'incentives',         header: 'Incentives (%)',          width: 110, align: 'center' as const, editable: true,  unit: '%', valueFormatter: pct },
       { id: 'incentivesPaidUpfront', accessorKey: 'incentivesPaidUpfront', header: '% Incentives Paid Upfront', width: 140, align: 'center' as const, editable: true, unit: '%', valueFormatter: pct },
-      { id: 'remainingIncentives',accessorKey: 'remainingIncentives',header: 'Remaining Incentives',    width: 140, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
+      // Remaining Incentives — dropdown matching Wiseway's
+      // holding-general-table-row.tsx:57-68 (remainingIncentiveOptions):
+      // 'rent-free' → "Rent Free" vs 'discount' → "Discount".
+      {
+        id: 'remainingIncentives',
+        accessorKey: 'remainingIncentives',
+        header: 'Remaining Incentives',
+        width: 140,
+        align: 'center' as const,
+        editable: ((row: HoldingGeneralRow) => row.type !== 'Total') as unknown as boolean,
+        cellEditor: 'select' as const,
+        options: [
+          { value: 'rent-free', label: 'Rent Free' },
+          { value: 'discount',  label: 'Discount' },
+        ],
+        valueFormatter: (v) =>
+          v === 'rent-free' ? 'Rent Free' : v === 'discount' ? 'Discount' : '',
+      },
       { id: 'discountMonths',     accessorKey: 'discountMonths',     header: 'Discount Months',         width: 110, align: 'center' as const, editable: true },
       { id: 'totalIncentives',    accessorKey: 'totalIncentives',    header: 'Total Incentives',        width: 140, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
       // ── On Completion group (2) ──
