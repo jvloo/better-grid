@@ -1195,7 +1195,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           } else if (isDateEditor) {
             activeEditor = createDateInput(cellEl, rawStr);
           } else if (config.editorMode === 'inline' || hasAdornedInputBox) {
-            activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined, rowData);
+            activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined, rowData, clickEvent);
           } else if (isNumberEditor) {
             activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, column, rowData);
           } else {
@@ -1545,6 +1545,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         cursorAtEnd: boolean,
         numberColumn?: ColumnDef,
         rowData?: unknown,
+        clickEventRef?: MouseEvent,
       ): HTMLInputElement {
         // Capture computed styles BEFORE clearing cell content
         const computed = getComputedStyle(cellEl);
@@ -1688,11 +1689,32 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         if (cursorAtEnd) {
           input.setSelectionRange(value.length, value.length);
         } else {
-          // Select all on click-to-edit — pressing a digit then replaces the
-          // entire value, matching Excel / spreadsheet convention. The
-          // masked MM/YY editor has its own cursor-positioning logic that
-          // favours "start at section 0" on empty placeholder cells.
-          input.select();
+          // Place the caret at the clicked character position — matches
+          // Wiseway's always-visible-input UX where single-clicking a
+          // number lands the cursor exactly where the pointer is. A
+          // double-click (handled in the cell:dblclick listener below)
+          // selects the whole value. Falls back to end when
+          // caretPositionFromPoint / caretRangeFromPoint isn't available
+          // or the click coords don't resolve to a position inside the
+          // newly-created input.
+          const clickX = clickEventRef?.clientX;
+          const clickY = clickEventRef?.clientY;
+          let offset: number | null = null;
+          if (clickX != null && clickY != null) {
+            const docAny = document as unknown as {
+              caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+              caretRangeFromPoint?: (x: number, y: number) => Range | null;
+            };
+            if (docAny.caretPositionFromPoint) {
+              const pos = docAny.caretPositionFromPoint(clickX, clickY);
+              if (pos && input.contains(pos.offsetNode)) offset = pos.offset;
+            } else if (docAny.caretRangeFromPoint) {
+              const range = docAny.caretRangeFromPoint(clickX, clickY);
+              if (range && input.contains(range.startContainer)) offset = range.startOffset;
+            }
+          }
+          if (offset == null) offset = value.length;
+          input.setSelectionRange(offset, offset);
         }
 
         // Keyboard handling
@@ -3129,6 +3151,31 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             clickEditFrame = null;
             startEdit(cell, undefined, event);
           });
+        });
+        // Double-click anywhere in the cell → select the editor's full
+        // value (spreadsheet convention: click places the cursor, double-
+        // click selects the whole number ready to be overwritten). Works
+        // whether the cell is already being edited or not — the first
+        // click opens the editor, then the second click (which makes it a
+        // dblclick) selects all.
+        ctx.on('cell:dblclick', (cell) => {
+          if (editingCell && isSameCell(editingCell, cell)) {
+            const ae = activeEditor;
+            if (ae && typeof (ae as HTMLInputElement).select === 'function') {
+              (ae as HTMLInputElement).select();
+            }
+          } else {
+            // Cell wasn't open — open it with full selection
+            startEdit(cell);
+            // startEdit places cursor via the click logic; override to
+            // select-all after the editor settles.
+            requestAnimationFrame(() => {
+              const ae = activeEditor;
+              if (ae && typeof (ae as HTMLInputElement).select === 'function') {
+                (ae as HTMLInputElement).select();
+              }
+            });
+          }
         });
       }
 
