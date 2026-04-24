@@ -6,6 +6,7 @@ import {
   search, exportPlugin, pagination,
 } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
+import { IconButton, ExportIcon } from './_toolbar-icons';
 
 interface EmployeeRow {
   id: number;
@@ -85,8 +86,7 @@ export function SearchExport() {
     selection: { mode: 'range' },
   });
 
-  const handleExportCsv = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
-  const handleExportExcel = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
+  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
 
   const handleSearch = useCallback(() => {
     // Ctrl+F is handled by the search plugin; this button triggers it programmatically
@@ -109,24 +109,7 @@ export function SearchExport() {
       </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <button
-          onClick={handleExportCsv}
-          style={{
-            padding: '8px 16px', border: '1px solid #d0d0d0', borderRadius: 6,
-            background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-          }}
-        >
-          CSV
-        </button>
-        <button
-          onClick={handleExportExcel}
-          style={{
-            padding: '8px 16px', border: '1px solid #d0d0d0', borderRadius: 6,
-            background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-          }}
-        >
-          Excel
-        </button>
+        <IconButton title="Export" onClick={handleExport}><ExportIcon /></IconButton>
         <button
           onClick={handleSearch}
           style={{

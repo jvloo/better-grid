@@ -4,6 +4,7 @@ import type { ColumnDef, HeaderRow } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
 import { formatting, editing, sorting, filtering, cellRenderers, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
+import { IconButton, ExportIcon } from './_toolbar-icons';
 
 interface ActualRow {
   id: number;
@@ -207,30 +208,16 @@ export function DmActuals() {
     rowHeight: 44,
   });
 
-  const handleExportCsv = useCallback(() => {
+  const handleExport = useCallback(() => {
     grid.plugins.export?.exportToCsv();
   }, [grid]);
-  const handleExportExcel = useCallback(() => {
-    grid.plugins.export?.exportToExcel();
-  }, [grid]);
-  const handleUndo = useCallback(() => {
-    grid.plugins.undoRedo?.undo();
-  }, [grid]);
-  const handleRedo = useCallback(() => {
-    grid.plugins.undoRedo?.redo();
-  }, [grid]);
-
-  const btnStyle = { padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12 } as const;
 
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>DM Input Actuals</h1>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={handleUndo} style={btnStyle}>Undo</button>
-          <button onClick={handleRedo} style={btnStyle}>Redo</button>
-          <button onClick={handleExportCsv} style={btnStyle}>CSV</button>
-          <button onClick={handleExportExcel} style={btnStyle}>Excel</button>
+          <IconButton title="Export" onClick={handleExport}><ExportIcon /></IconButton>
         </div>
       </div>
       <p style={{ margin: '0 0 12px', color: '#666', fontSize: 13, lineHeight: 1.5 }}>

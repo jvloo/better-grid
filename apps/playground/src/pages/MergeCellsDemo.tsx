@@ -4,6 +4,7 @@ import type { ColumnDef } from '@better-grid/core';
 import { formatting, exportPlugin } from '@better-grid/plugins';
 import { mergeCells } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
+import { IconButton, ExportIcon } from './_toolbar-icons';
 
 interface ScheduleRow {
   day: string;
@@ -98,12 +99,7 @@ export function MergeCellsDemo() {
     selection: { mode: 'range' },
   });
 
-  const handleExcel = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
-
-  const btnStyle = {
-    padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6,
-    background: '#fff', cursor: 'pointer', fontSize: 12,
-  } as const;
+  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
 
   return (
     <div>
@@ -111,7 +107,7 @@ export function MergeCellsDemo() {
         <h1 style={{ margin: 0, fontSize: 24 }}>
           Merge Cells <span style={{ fontSize: 12, color: '#999', fontWeight: 400 }}>Pro</span>
         </h1>
-        <button onClick={handleExcel} style={btnStyle}>Excel</button>
+        <IconButton title="Export" onClick={handleExport}><ExportIcon /></IconButton>
       </div>
       <p style={{ marginBottom: 8, color: '#666', lineHeight: 1.5 }}>
         Body cell spanning — consecutive identical values merged into a single cell.

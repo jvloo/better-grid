@@ -1,8 +1,8 @@
-// Shared toolbar icons for FSBT demo pages. Paths lifted from Lucide
-// (https://lucide.dev) — 24x24 canvas, 2px stroke, rounded caps/joins.
-// Kept inline rather than as SVG imports so the playground stays
-// dependency-light and each icon renders at whatever size/colour the
-// caller sets.
+// Shared toolbar icons + IconButton wrapper for playground demo pages.
+// Paths lifted from Lucide (https://lucide.dev) — 24x24 canvas, 2px stroke,
+// rounded caps/joins. Kept inline rather than as SVG imports so the
+// playground stays dependency-light and each icon renders at whatever
+// size/colour the caller sets.
 
 import type { CSSProperties, MouseEventHandler, ReactNode } from 'react';
 
@@ -56,31 +56,19 @@ const svgProps = {
   strokeLinejoin: 'round' as const,
 };
 
-/** Arrows radiating away from a central axis — "unfold vertical" / expand all. */
+/** Two stacked chevrons pointing down — "expand all" / unfold rows. */
 export const ExpandAllIcon = () => (
   <svg {...svgProps} aria-hidden="true">
-    <path d="M12 22v-6" />
-    <path d="M12 8V2" />
-    <path d="M4 12H2" />
-    <path d="M10 12H8" />
-    <path d="M16 12h-2" />
-    <path d="M22 12h-2" />
-    <path d="m15 19-3 3-3-3" />
-    <path d="m15 5-3-3-3 3" />
+    <path d="m7 6 5 5 5-5" />
+    <path d="m7 13 5 5 5-5" />
   </svg>
 );
 
-/** Arrows converging onto a central axis — "fold vertical" / collapse all. */
+/** Two stacked chevrons pointing up — "collapse all" / fold rows. */
 export const CollapseAllIcon = () => (
   <svg {...svgProps} aria-hidden="true">
-    <path d="M12 22v-6" />
-    <path d="M12 8V2" />
-    <path d="M4 12H2" />
-    <path d="M10 12H8" />
-    <path d="M16 12h-2" />
-    <path d="M22 12h-2" />
-    <path d="m15 19-3-3-3 3" />
-    <path d="m15 5-3 3-3-3" />
+    <path d="m17 11-5-5-5 5" />
+    <path d="m17 18-5-5-5 5" />
   </svg>
 );
 

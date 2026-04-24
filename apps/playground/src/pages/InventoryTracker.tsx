@@ -3,6 +3,7 @@ import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { formatting, editing, sorting, filtering, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
+import { IconButton, ExportIcon } from './_toolbar-icons';
 
 interface StockRow {
   sku: string;
@@ -140,21 +141,14 @@ export function InventoryTracker() {
     },
   });
 
-  const btnStyle = {
-    padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6,
-    background: '#fff', cursor: 'pointer', fontSize: 12,
-  } as const;
-
-  const handleExportCsv = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
-  const handleExportExcel = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
+  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
 
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>Inventory Tracker</h1>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={handleExportCsv} style={btnStyle}>CSV</button>
-          <button onClick={handleExportExcel} style={btnStyle}>Excel</button>
+          <IconButton title="Export" onClick={handleExport}><ExportIcon /></IconButton>
         </div>
       </div>
       <p style={{ marginBottom: 8, color: '#666', lineHeight: 1.5 }}>

@@ -11,7 +11,7 @@ import {
   ExpandAllIcon,
   CollapseAllIcon,
   ExportIcon,
-} from './_fsbt-toolbar-icons';
+} from './_toolbar-icons';
 
 // ============================================================================
 // Shared helpers — match FsbtCost's date formatting so every FSBT table has

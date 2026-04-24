@@ -13,7 +13,7 @@ import {
   ExpandAllIcon,
   CollapseAllIcon,
   ExportIcon,
-} from './_fsbt-toolbar-icons';
+} from './_toolbar-icons';
 
 // ---------------------------------------------------------------------------
 // Data model — mirrors Wiseway's feasibility/types/project-cost.ts
