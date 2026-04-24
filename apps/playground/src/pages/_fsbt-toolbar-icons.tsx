@@ -56,20 +56,31 @@ const svgProps = {
   strokeLinejoin: 'round' as const,
 };
 
-/** Rounded square with a `+` inside — "expand all" (tree-style plus). */
+/** Arrows radiating away from a central axis — "unfold vertical" / expand all. */
 export const ExpandAllIcon = () => (
   <svg {...svgProps} aria-hidden="true">
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <path d="M8 12h8" />
-    <path d="M12 8v8" />
+    <path d="M12 22v-6" />
+    <path d="M12 8V2" />
+    <path d="M4 12H2" />
+    <path d="M10 12H8" />
+    <path d="M16 12h-2" />
+    <path d="M22 12h-2" />
+    <path d="m15 19-3 3-3-3" />
+    <path d="m15 5-3-3-3 3" />
   </svg>
 );
 
-/** Rounded square with a `−` inside — "collapse all" (tree-style minus). */
+/** Arrows converging onto a central axis — "fold vertical" / collapse all. */
 export const CollapseAllIcon = () => (
   <svg {...svgProps} aria-hidden="true">
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <path d="M8 12h8" />
+    <path d="M12 22v-6" />
+    <path d="M12 8V2" />
+    <path d="M4 12H2" />
+    <path d="M10 12H8" />
+    <path d="M16 12h-2" />
+    <path d="M22 12h-2" />
+    <path d="m15 19-3-3-3 3" />
+    <path d="m15 5-3 3-3-3" />
   </svg>
 );
 
