@@ -75,6 +75,19 @@ export function createGrid<
   const keyBindings: KeyBinding[] = [];
   const commands = new Map<string, Command>();
 
+  // Closure-over-scope: store on a ref so option swaps don't invalidate column
+  // identity. Read at render time so handler swaps are picked up without re-init.
+  const contextRef: { current: unknown } = { current: options.context };
+  rendering.contextRef = contextRef;
+  frozenRendering.contextRef = contextRef;
+
+  function setContext(context: unknown): void {
+    contextRef.current = context;
+    // No notify — context is read every render via the ref; subscribers don't need
+    // a separate signal. (If a re-render is needed for a context-only swap, the
+    // caller can invoke grid.refresh().)
+  }
+
   let container: HTMLElement | null = null;
   let viewport: HTMLElement | null = null;
   let fakeScrollbar: HTMLElement | null = null;
@@ -509,6 +522,7 @@ export function createGrid<
   const pinnedRenderer = createPinnedRowRenderer<TData>({
     rendering,
     rowHeight: options.rowHeight,
+    contextRef,
   });
 
   function renderPinnedRows(
@@ -1497,6 +1511,8 @@ export function createGrid<
       options.onColumnResize?.(columnId, width);
       scheduleRender();
     },
+
+    setContext,
 
     getSelection: () => store.getState().selection,
 

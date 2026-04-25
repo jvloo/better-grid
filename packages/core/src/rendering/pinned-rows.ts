@@ -17,6 +17,8 @@ export interface PinnedRowRendererDeps<TData = unknown> {
   rendering: RenderingPipeline<TData>;
   /** Row height (pixels); defaults to 32 if undefined */
   rowHeight?: number | ((rowIndex: number) => number);
+  /** Live context ref — read every render so handler swaps don't require re-init. */
+  contextRef?: { current: unknown };
 }
 
 export interface PinnedRowRenderer<TData = unknown> {
@@ -136,8 +138,7 @@ export function createPinnedRowRenderer<TData = unknown>(
           isSelected: false,
           isActive: false,
           style: { top, left, width, height: rowH },
-          // T4 will wire this to the live grid context ref.
-          context: undefined as never,
+          context: deps.contextRef?.current,
         };
 
         // Render priority: column renderer > cell type > valueFormatter > default text

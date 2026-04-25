@@ -82,6 +82,8 @@ export class RenderingPipeline<TData = unknown> {
   private visibleKeys = new Set<number>();
   /** Per-row style callback — paints a full-width strip behind cells */
   getRowStyle: ((row: TData, rowIndex: number) => Record<string, string> | undefined) | undefined;
+  /** Live context ref — read every render so handler swaps don't require re-init. */
+  contextRef?: { current: unknown };
   /** Pool of row-background strip elements keyed by data row index */
   private rowBgPool = new Map<number, HTMLElement>();
   /** Recycled row-bg strips awaiting reuse */
@@ -269,8 +271,7 @@ export class RenderingPipeline<TData = unknown> {
           isSelected: selected,
           isActive: active,
           style: { top, left, width, height },
-          // T4 will wire this to the live grid context ref.
-          context: undefined as never,
+          context: this.contextRef?.current,
         };
 
         // Cleanup previous render

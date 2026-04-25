@@ -511,6 +511,8 @@ export interface GridInstance<
   setColumns(columns: ColumnDef<TData>[]): void;
   setColumnWidth(columnId: string, width: number): void;
 
+  setContext(context: unknown): void;
+
   getSelection(): Selection;
   setSelection(selection: Selection): void;
   clearSelection(): void;
