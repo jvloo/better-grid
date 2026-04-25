@@ -311,7 +311,15 @@ interface GridOptions<TData, TContext = unknown> {
   onCellChange?:      (changes: CellChange<TData>[]) => void;
   onSelectionChange?: (selection: Selection) => void;
   onColumnResize?:    (columnId: string, width: number) => void;
+
+  // Reserved for v1.1 slots feature (see "Reserved extension points")
+  slots?:     Partial<GridSlots>;
+  slotProps?: Partial<GridSlotProps>;
 }
+
+// v1: empty registries; v1.1 will populate via module augmentation.
+export interface GridSlots {}
+export interface GridSlotProps {}
 ```
 
 **Notes**:
@@ -408,12 +416,23 @@ docs/migration-from-ag-grid.md
 - **Server-side data sources** — Better Grid is client-side today; switching to server-driven row models is a separate architecture project, not part of this redesign.
 - **Headless / render-prop / RSC compatibility** — Better Grid renders to the DOM imperatively. This redesign keeps that model. RSC and headless rendering would require a parallel adapter, out of scope here.
 - **Concurrent rendering integration** (React 19 `useTransition` / Suspense around grid mutations) — the new API is compatible with React 18 and 19 hooks but does not introduce concurrent-mode-specific helpers.
-- **Slot-based UI overrides** (MUI's `slots` / `slotProps` for swapping the toolbar, footer, no-rows overlay, etc.) — kept out to bound scope. This redesign's `cellRenderer` + `context` pattern is the foundation a future slots system would build on; flagged as a natural follow-up.
+- **Slot-based UI overrides** (MUI's `slots` / `slotProps` for swapping the toolbar, footer, no-rows overlay, etc.) — kept out to bound scope. See **Reserved extension points** below for how this v1 init API leaves room for slots without a second breaking change.
 - **`pro/` and `react/`-only plugin features** that aren't part of `features:` strings (e.g. `gantt`, `merge-cells`, `row-actions`) — they continue to be consumed via the `plugins:` escape hatch unless/until they earn a string slot.
 
 ### In scope but minimum viable
 
 - **`useGrid` lifetime / state persistence on `data` swap** — must be specified well enough that users aren't surprised. Default behavior for v1: when `data` reference changes, **selection clears, scroll resets to (0,0), in-progress edits commit-or-cancel per the editing plugin's existing rules, undo history clears**. A future `resetOn: 'never' | 'data' | 'columns'` option is deferred, but the default above is locked in this spec.
+
+### Reserved extension points
+
+The v1 init API reserves two namespaces for the v1.1 slots feature so it can ship without another breaking change:
+
+- **`slots?: Partial<GridSlots>`** — for swapping built-in chrome (toolbar, footer, empty state, loading overlay, error state, etc.). v1 ships with `GridSlots = {}` (empty registry); v1.1 fills it in.
+- **`slotProps?: Partial<GridSlotProps>`** — paired with `slots`, same convention as MUI X DataGrid.
+
+Both are typed as optional and unused in v1. Resolution rules, default components, and the slot list are deferred to a focused v1.1 spec — that conversation can be purely about chrome, not API shape. Slot components will read grid state via the same ref-based `context` pattern designed in §4 of this spec, so the plumbing is already in place.
+
+The seam reservation is the only commitment v1 makes. If v1.1 chooses a different shape (e.g. compound components instead of a slots map), the unused `slots`/`slotProps` props can be dropped without a breaking change since nothing reads them.
 
 ## Success criteria
 
