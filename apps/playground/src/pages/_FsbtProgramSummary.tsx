@@ -1,8 +1,8 @@
 import { useMemo, type CSSProperties } from 'react';
-import { useGrid } from '@better-grid/react';
+import { useGrid, BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
-import { formatting, hierarchy, cellRenderers } from '@better-grid/plugins';
+import { formatting, hierarchy } from '@better-grid/plugins';
 import { gantt } from '@better-grid/pro';
 import { FSBT_PROGRAM_ROWS, formatMonYY, columnToDate, type FsbtProgramRow } from './_fsbt-program-data';
 
@@ -100,7 +100,7 @@ export function FsbtProgramSummary() {
   const plugins = useMemo(() => [
     formatting({ locale: 'en-AU', dateFormat: 'month-year' }),
     hierarchy({ toggleColumn: 'collapse', toggleStyle: 'chevron' }),
-    cellRenderers(),
+    // cellRenderers() is auto-included by useGrid (always wired)
     gantt({
       dateColumnPrefix: 'm_',
       startColumnField: 'startColumn',
@@ -116,13 +116,13 @@ export function FsbtProgramSummary() {
     }),
   ], []);
 
-  const { containerRef } = useGrid<FsbtProgramRow>({
+  const grid = useGrid<FsbtProgramRow>({
     data: FSBT_PROGRAM_ROWS,
     columns,
+    mode: null,
     plugins,
-    frozenLeftColumns: 6,
-    freezeClip: { minVisible: 2 },
-    tableStyle: 'striped' as const,
+    frozen: { left: 6, clip: { minVisible: 2 } },
+    tableStyle: 'striped',
     hierarchy: {
       getRowId: (row: FsbtProgramRow) => row.id,
       getParentId: (row: FsbtProgramRow) => row.parentId,
@@ -133,13 +133,10 @@ export function FsbtProgramSummary() {
   });
 
   return (
-    <div
-      ref={containerRef}
+    <BetterGrid<FsbtProgramRow>
+      grid={grid}
+      height={320}
       style={{
-        height: 320,
-        width: '100%',
-        position: 'relative',
-        overflow: 'hidden',
         borderRadius: 12,
         '--bg-scrollbar-inset': '12px',
         '--bg-header-bg': '#EAECF0',

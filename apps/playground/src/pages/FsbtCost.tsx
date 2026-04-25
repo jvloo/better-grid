@@ -1,8 +1,9 @@
 import { useMemo, useCallback, useRef, useState, type CSSProperties } from 'react';
-import { useGrid } from '@better-grid/react';
+import { useGrid, BetterGrid } from '@better-grid/react';
 import type { CellChange, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
-import { formatting, editing, sorting, hierarchy, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
+import { formatting, editing, sorting, hierarchy, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
+import type { ExportApi } from '@better-grid/plugins';
 import { rowActions, RowActionIcons } from '@better-grid/pro';
 import type { RowAction } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
@@ -793,7 +794,7 @@ export function FsbtCost() {
         },
         onAction: handleRowAction,
       }),
-      cellRenderers(),
+      // cellRenderers() is auto-included by useGrid (always wired)
       validation(),
       clipboard(),
       undoRedo({ maxHistory: 50 }),
@@ -804,32 +805,34 @@ export function FsbtCost() {
 
   const pinnedBottomRows = useMemo(() => [totalsRow], [totalsRow]);
 
-  const { grid, containerRef } = useGrid<CostRow>({
+  // mode: null + plugins escape hatch — pro plugins (rowActions) aren't in
+  // the features registry, so we keep the explicit plugin list.
+  const grid = useGrid<CostRow>({
     data: rows,
     columns,
+    mode: null,
     plugins,
     // Freeze 12 columns (Wiseway's 11 defaults + our trailing collapse column).
-    // Monthly columns scroll horizontally. freezeClip lets the user drag the
-    // clip handle to hide some pinned columns when the viewport is narrow;
+    // Monthly columns scroll horizontally. clip lets the user drag the clip
+    // handle to hide some pinned columns when the viewport is narrow;
     // minVisible: 2 keeps at least Menu + Code visible at all times.
-    frozenLeftColumns: 12,
-    freezeClip: { minVisible: 2 },
-    tableStyle: 'striped' as const,
+    frozen: { left: 12, clip: { minVisible: 2 } },
+    pinned: { bottom: pinnedBottomRows },
+    tableStyle: 'striped',
     hierarchy: {
       getRowId: (row: CostRow) => row.id,
       getParentId: (row: CostRow) => row.parentId,
       defaultExpanded: true,
     },
-    pinnedBottomRows,
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
-    getRowStyle: parentRowStyle,
-    onDataChange: handleCostDataChange,
+    rowStyle: parentRowStyle,
+    onCellChange: handleCostDataChange,
   });
 
-  const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
-  const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
-  const handleExport = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
+  const handleExpandAll = useCallback(() => grid.api.expandAll(), [grid]);
+  const handleCollapseAll = useCallback(() => grid.api.collapseAll(), [grid]);
+  const handleExport = useCallback(() => (grid.api.plugins as { export?: ExportApi }).export?.exportToExcel(), [grid]);
 
   const pillStyle = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', border: '1px solid #E4E7EC', borderRadius: 999, background: '#F9FAFB', fontSize: 13, color: '#101828' } as const;
 
@@ -863,13 +866,10 @@ export function FsbtCost() {
       <p style={{ margin: '0 0 12px', color: '#666', fontSize: 13, lineHeight: 1.5 }}>
         Hierarchical development cost structure with monthly cashflow distribution. CPI and non-CPI escalation options.
       </p>
-      <div
-        ref={containerRef}
+      <BetterGrid<CostRow>
+        grid={grid}
+        height={540}
         style={{
-          height: 540,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
           borderRadius: 12,
           '--bg-scrollbar-inset': '12px',
           '--bg-header-bg': '#EAECF0',

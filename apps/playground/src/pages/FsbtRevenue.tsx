@@ -1,8 +1,9 @@
 import { useMemo, useCallback, useState, type CSSProperties } from 'react';
-import { useGrid } from '@better-grid/react';
+import { useGrid, BetterGrid } from '@better-grid/react';
 import type { CellChange, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
-import { formatting, editing, sorting, hierarchy, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
+import { formatting, editing, sorting, hierarchy, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
+import type { ExportApi } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 import { FsbtProgramSummary } from './_FsbtProgramSummary';
 import { FSBT_STYLES, parentRowCellStyle, parentRowStyle } from './_fsbt-cell-styles';
@@ -496,7 +497,6 @@ export function FsbtRevenue() {
       formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
       editing({ editTrigger: 'click', inputStyle: true, precision: 0 }),
       sorting(),
-      cellRenderers(),
       validation(),
       clipboard(),
       undoRedo({ maxHistory: 50 }),
@@ -505,16 +505,19 @@ export function FsbtRevenue() {
     [],
   );
 
-  const { grid: btsGrid, containerRef: btsRef } = useGrid<BtsRow>({
+  // mode: null + plugins escape hatch — keeps the explicit plugin list while
+  // we wire up the new grouped layout options (frozen, pinned, headers).
+  const btsGrid = useGrid<BtsRow>({
     data: btsRows,
     columns: btsColumns,
+    mode: null,
     plugins: btsPlugins,
-    pinnedBottomRows: [btsTotalsRow],
+    pinned: { bottom: [btsTotalsRow] },
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
-    tableStyle: 'striped' as const,
-    getRowStyle: parentRowStyle,
-    onDataChange: handleBtsDataChange,
+    tableStyle: 'striped',
+    rowStyle: parentRowStyle,
+    onCellChange: handleBtsDataChange,
   });
   // ════════════════════════════════════════════════════════════════════════════
   // Holding Revenue Grid Setup
@@ -643,7 +646,6 @@ export function FsbtRevenue() {
       formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
       editing({ editTrigger: 'click', inputStyle: true, precision: 0 }),
       hierarchy({ toggleColumn: 'collapse', toggleStyle: 'chevron' }),
-      cellRenderers(),
       validation(),
       clipboard(),
       undoRedo({ maxHistory: 50 }),
@@ -652,15 +654,15 @@ export function FsbtRevenue() {
     [],
   );
 
-  const { grid: holdingGrid, containerRef: holdingRef } = useGrid<HoldingRow>({
+  const holdingGrid = useGrid<HoldingRow>({
     data: holdingData,
     columns: holdingColumns,
+    mode: null,
     // Freeze through the collapse column so the user can scroll monthly data
     // horizontally without losing the category/amount context.
-    frozenLeftColumns: 9,
-    freezeClip: { minVisible: 2 },
+    frozen: { left: 9, clip: { minVisible: 2 } },
     plugins: holdingPlugins,
-    tableStyle: 'striped' as const,
+    tableStyle: 'striped',
     hierarchy: {
       getRowId: (row: HoldingRow) => row.id,
       getParentId: (row: HoldingRow) => row.parentId,
@@ -668,7 +670,7 @@ export function FsbtRevenue() {
     },
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
-    getRowStyle: parentRowStyle,
+    rowStyle: parentRowStyle,
   });
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -770,7 +772,6 @@ export function FsbtRevenue() {
     () => [
       formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
       editing({ editTrigger: 'click', inputStyle: true, precision: 0 }),
-      cellRenderers(),
       clipboard(),
       undoRedo({ maxHistory: 50 }),
       exportPlugin({ filename: 'fsbt-revenue-bts-details' }),
@@ -778,16 +779,16 @@ export function FsbtRevenue() {
     [],
   );
 
-  const { grid: btsDetailsGrid, containerRef: btsDetailsRef } = useGrid<BtsDetailRow>({
+  const btsDetailsGrid = useGrid<BtsDetailRow>({
     data: btsDetailsData,
     columns: btsDetailsColumns,
+    mode: null,
     plugins: btsDetailsPlugins,
-    frozenLeftColumns: 7,
-    freezeClip: { minVisible: 2 },
-    tableStyle: 'striped' as const,
+    frozen: { left: 7, clip: { minVisible: 2 } },
+    tableStyle: 'striped',
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
-    getRowStyle: btsDetailRowStyle,
+    rowStyle: btsDetailRowStyle,
   });
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -890,7 +891,6 @@ export function FsbtRevenue() {
       formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
       editing({ editTrigger: 'click', inputStyle: true, precision: 0 }),
       sorting(),
-      cellRenderers(),
       validation(),
       clipboard(),
       undoRedo({ maxHistory: 50 }),
@@ -930,20 +930,20 @@ export function FsbtRevenue() {
     [holdingGeneralColumns],
   );
 
-  const { grid: holdingGeneralGrid, containerRef: holdingGeneralRef } = useGrid<HoldingGeneralRow>({
+  const holdingGeneralGrid = useGrid<HoldingGeneralRow>({
     data: holdingGeneralData,
     columns: holdingGeneralColumns,
+    mode: null,
     plugins: holdingGeneralPlugins,
-    pinnedBottomRows: [holdingGeneralTotalsRow],
-    headerLayout: holdingGeneralHeaderLayout,
+    pinned: { bottom: [holdingGeneralTotalsRow] },
+    headers: holdingGeneralHeaderLayout,
     // Freeze Type + Description so category context is visible while the
     // user scrolls across the 30-column rent / lease / cap-rate layout.
-    frozenLeftColumns: 2,
-    freezeClip: { minVisible: 1 },
+    frozen: { left: 2, clip: { minVisible: 1 } },
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
-    tableStyle: 'striped' as const,
-    getRowStyle: parentRowStyle,
+    tableStyle: 'striped',
+    rowStyle: parentRowStyle,
   });
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -956,7 +956,6 @@ export function FsbtRevenue() {
     () => [
       formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
       editing({ editTrigger: 'click', inputStyle: true, precision: 0 }),
-      cellRenderers(),
       clipboard(),
       undoRedo({ maxHistory: 50 }),
       exportPlugin({ filename: 'fsbt-revenue-holding-sale' }),
@@ -964,31 +963,31 @@ export function FsbtRevenue() {
     [],
   );
 
-  const { grid: holdingSaleGrid, containerRef: holdingSaleRef } = useGrid<BtsDetailRow>({
+  const holdingSaleGrid = useGrid<BtsDetailRow>({
     data: holdingSaleData,
     columns: holdingSaleColumns,
+    mode: null,
     plugins: holdingSalePlugins,
-    frozenLeftColumns: 7,
-    freezeClip: { minVisible: 2 },
-    tableStyle: 'striped' as const,
+    frozen: { left: 7, clip: { minVisible: 2 } },
+    tableStyle: 'striped',
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
-    getRowStyle: btsDetailRowStyle,
+    rowStyle: btsDetailRowStyle,
   });
 
   // ════════════════════════════════════════════════════════════════════════════
   // Action Handlers
   // ════════════════════════════════════════════════════════════════════════════
 
-  const handleBtsExport = useCallback(() => btsGrid.plugins.export?.exportToExcel(), [btsGrid]);
+  const handleBtsExport = useCallback(() => (btsGrid.api.plugins as { export?: ExportApi }).export?.exportToExcel(), [btsGrid]);
 
-  const handleHoldingExpandAll = useCallback(() => holdingGrid.expandAll(), [holdingGrid]);
-  const handleHoldingCollapseAll = useCallback(() => holdingGrid.collapseAll(), [holdingGrid]);
-  const handleHoldingExport = useCallback(() => holdingGrid.plugins.export?.exportToExcel(), [holdingGrid]);
+  const handleHoldingExpandAll = useCallback(() => holdingGrid.api.expandAll(), [holdingGrid]);
+  const handleHoldingCollapseAll = useCallback(() => holdingGrid.api.collapseAll(), [holdingGrid]);
+  const handleHoldingExport = useCallback(() => (holdingGrid.api.plugins as { export?: ExportApi }).export?.exportToExcel(), [holdingGrid]);
 
-  const handleBtsDetailsExport = useCallback(() => btsDetailsGrid.plugins.export?.exportToExcel(), [btsDetailsGrid]);
-  const handleHoldingGeneralExport = useCallback(() => holdingGeneralGrid.plugins.export?.exportToExcel(), [holdingGeneralGrid]);
-  const handleHoldingSaleExport = useCallback(() => holdingSaleGrid.plugins.export?.exportToExcel(), [holdingSaleGrid]);
+  const handleBtsDetailsExport = useCallback(() => (btsDetailsGrid.api.plugins as { export?: ExportApi }).export?.exportToExcel(), [btsDetailsGrid]);
+  const handleHoldingGeneralExport = useCallback(() => (holdingGeneralGrid.api.plugins as { export?: ExportApi }).export?.exportToExcel(), [holdingGeneralGrid]);
+  const handleHoldingSaleExport = useCallback(() => (holdingSaleGrid.api.plugins as { export?: ExportApi }).export?.exportToExcel(), [holdingSaleGrid]);
 
   const pillStyle = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', border: '1px solid #E4E7EC', borderRadius: 999, background: '#F9FAFB', fontSize: 13, color: '#101828' } as const;
 
@@ -1030,13 +1029,10 @@ export function FsbtRevenue() {
             <IconButton title="Export" onClick={handleBtsExport}><ExportIcon /></IconButton>
           </div>
         </div>
-        <div
-          ref={btsRef}
+        <BetterGrid<BtsRow>
+          grid={btsGrid}
+          height={280}
           style={{
-            height: 280,
-            width: '100%',
-            position: 'relative',
-            overflow: 'hidden',
             borderRadius: 12,
             '--bg-scrollbar-inset': '12px',
             '--bg-header-bg': '#D0D5DD',
@@ -1049,9 +1045,10 @@ export function FsbtRevenue() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, justifyContent: 'flex-end' }}>
           <IconButton title="Export" onClick={handleBtsDetailsExport}><ExportIcon /></IconButton>
         </div>
-        <div
-          ref={btsDetailsRef}
-          style={{ height: 720, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, '--bg-scrollbar-inset': '12px', '--bg-header-bg': '#D0D5DD' } as CSSProperties}
+        <BetterGrid<BtsDetailRow>
+          grid={btsDetailsGrid}
+          height={720}
+          style={{ borderRadius: 12, '--bg-scrollbar-inset': '12px', '--bg-header-bg': '#D0D5DD' } as CSSProperties}
         />
       </div>
 
@@ -1067,9 +1064,10 @@ export function FsbtRevenue() {
             <IconButton title="Export" onClick={handleHoldingGeneralExport}><ExportIcon /></IconButton>
           </div>
         </div>
-        <div
-          ref={holdingGeneralRef}
-          style={{ height: 260, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, marginBottom: 24, '--bg-scrollbar-inset': '12px', '--bg-header-bg': '#D0D5DD' } as CSSProperties}
+        <BetterGrid<HoldingGeneralRow>
+          grid={holdingGeneralGrid}
+          height={260}
+          style={{ borderRadius: 12, marginBottom: 24, '--bg-scrollbar-inset': '12px', '--bg-header-bg': '#D0D5DD' } as CSSProperties}
         />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, justifyContent: 'flex-end' }}>
@@ -1077,9 +1075,10 @@ export function FsbtRevenue() {
           <IconButton title="Collapse All" onClick={handleHoldingCollapseAll}><CollapseAllIcon /></IconButton>
           <IconButton title="Export" onClick={handleHoldingExport}><ExportIcon /></IconButton>
         </div>
-        <div
-          ref={holdingRef}
-          style={{ height: 480, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, '--bg-scrollbar-inset': '12px', '--bg-header-bg': '#D0D5DD' } as CSSProperties}
+        <BetterGrid<HoldingRow>
+          grid={holdingGrid}
+          height={480}
+          style={{ borderRadius: 12, '--bg-scrollbar-inset': '12px', '--bg-header-bg': '#D0D5DD' } as CSSProperties}
         />
       </div>
 
@@ -1095,9 +1094,10 @@ export function FsbtRevenue() {
             <IconButton title="Export" onClick={handleHoldingSaleExport}><ExportIcon /></IconButton>
           </div>
         </div>
-        <div
-          ref={holdingSaleRef}
-          style={{ height: 320, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, '--bg-scrollbar-inset': '12px', '--bg-header-bg': '#D0D5DD' } as CSSProperties}
+        <BetterGrid<BtsDetailRow>
+          grid={holdingSaleGrid}
+          height={320}
+          style={{ borderRadius: 12, '--bg-scrollbar-inset': '12px', '--bg-header-bg': '#D0D5DD' } as CSSProperties}
         />
       </div>
     </div>

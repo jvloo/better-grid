@@ -1,8 +1,9 @@
 import { useMemo, useCallback, useRef, useState, type CSSProperties } from 'react';
-import { useGrid } from '@better-grid/react';
+import { useGrid, BetterGrid } from '@better-grid/react';
 import type { CellChange, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
-import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin, validation } from '@better-grid/plugins';
+import { formatting, editing, hierarchy, clipboard, undoRedo, exportPlugin, validation } from '@better-grid/plugins';
+import type { ExportApi } from '@better-grid/plugins';
 import { gantt, rowActions, RowActionIcons } from '@better-grid/pro';
 import type { RowAction } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
@@ -431,7 +432,7 @@ export function FsbtProgram() {
         },
         onAction: handleRowAction,
       }),
-      cellRenderers(),
+      // cellRenderers() is auto-included by useGrid (always wired)
       gantt({
         dateColumnPrefix: 'm_',
         startColumnField: 'startColumn',
@@ -458,13 +459,15 @@ export function FsbtProgram() {
     [handleRowAction],
   );
 
-  const { grid, containerRef } = useGrid<ProgramRow>({
+  // mode: null + plugins escape hatch — pro plugins (gantt, rowActions) aren't
+  // in the features registry, so we keep the explicit plugin list.
+  const grid = useGrid<ProgramRow>({
     data: rows,
     columns,
+    mode: null,
     plugins,
-    frozenLeftColumns: 7,
-    freezeClip: { minVisible: 2 },
-    tableStyle: 'striped' as const,
+    frozen: { left: 7, clip: { minVisible: 2 } },
+    tableStyle: 'striped',
     headerHeight: 44,
     hierarchy: {
       getRowId: (row: ProgramRow) => row.id,
@@ -472,15 +475,15 @@ export function FsbtProgram() {
       defaultExpanded: true,
     },
     rowHeight: 44,
-    onDataChange: handleProgramDataChange,
+    onCellChange: handleProgramDataChange,
   });
 
-  const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
-  const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
+  const handleExpandAll = useCallback(() => grid.api.expandAll(), [grid]);
+  const handleCollapseAll = useCallback(() => grid.api.collapseAll(), [grid]);
   // Export to XLSX so Excel-side formatting + the gantt visualization
   // survive the round-trip. CSV strips all styling and collapses the
   // monthly cashflow grid into unlabelled columns.
-  const handleExport = useCallback(() => grid.plugins.export?.exportToExcel(), [grid]);
+  const handleExport = useCallback(() => (grid.api.plugins as { export?: ExportApi }).export?.exportToExcel(), [grid]);
 
   return (
     <div className="fsbt-program-demo">
@@ -495,13 +498,10 @@ export function FsbtProgram() {
       <p style={{ margin: '0 0 12px', color: '#666', fontSize: 13, lineHeight: 1.5 }}>
         Feasibility project program timeline with Gantt chart visualization.
       </p>
-      <div
-        ref={containerRef}
+      <BetterGrid<ProgramRow>
+        grid={grid}
+        height={700}
         style={{
-          height: 700,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
           borderRadius: 12,
           // Inset the scrollbar by the same radius so it doesn't get
           // clipped at the rounded corners.
