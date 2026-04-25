@@ -44,7 +44,7 @@ import { createHeaderRenderer, type HeaderRenderer } from './rendering/headers';
 import { createPinnedRowRenderer, getPinnedRowsHeight } from './rendering/pinned-rows';
 import { buildHierarchyState, buildInitialExpandedSet } from './hierarchy/build';
 
-import { snapToDevicePixel } from './utils';
+import { clamp, snapToDevicePixel } from './utils';
 
 // Minimal ambient `process` declaration so bundlers can statically dead-code
 // eliminate dev-mode warnings when consumers build with NODE_ENV=production.
@@ -305,7 +305,7 @@ export function createGrid<
     // When freeze clip is active, the effective frozen width is smaller,
     // so more scrollable columns are visible in the viewport.
     const effectiveFrozenLeftWidth = freezeClipWidth !== null
-      ? Math.max(0, Math.min(freezeClipWidth, zoneDims.frozenLeftWidth))
+      ? clamp(freezeClipWidth, 0, zoneDims.frozenLeftWidth)
       : zoneDims.frozenLeftWidth;
 
     const visibleRange = virtualization.computeVisibleRange(
@@ -319,7 +319,16 @@ export function createGrid<
       zoneDims.frozenRightWidth,
     );
 
-    store.update('visibleRange', () => ({ visibleRange }));
+    // Reuse same object ref when indices unchanged so store skip kicks in
+    const prevRange = state.visibleRange;
+    if (
+      prevRange.startRow !== visibleRange.startRow ||
+      prevRange.endRow !== visibleRange.endRow ||
+      prevRange.startCol !== visibleRange.startCol ||
+      prevRange.endCol !== visibleRange.endCol
+    ) {
+      store.update('visibleRange', () => ({ visibleRange }));
+    }
 
     // Render non-frozen cells into main cell container
     const frozenCols = state.frozenLeftColumns;
@@ -385,7 +394,7 @@ export function createGrid<
         frozenColOverlay.style.width = `${fullFrozenWidth}px`;
       } else {
         // Clip active — constrain overlay width, position handle at clip edge
-        const clampedWidth = Math.max(0, Math.min(freezeClipWidth, fullFrozenWidth));
+        const clampedWidth = clamp(freezeClipWidth, 0, fullFrozenWidth);
         frozenColOverlay.style.width = `${clampedWidth}px`;
         freezeClipHandle.style.left = `${clampedWidth}px`;
       }
@@ -404,7 +413,7 @@ export function createGrid<
       if (freezeClipIndicator) {
         const isClipped = freezeClipWidth !== null && freezeClipWidth < fullFrozenWidth;
         if (isClipped) {
-          const clampedWidth = Math.max(0, Math.min(freezeClipWidth!, fullFrozenWidth));
+          const clampedWidth = clamp(freezeClipWidth!, 0, fullFrozenWidth);
           freezeClipIndicator.style.display = '';
           freezeClipIndicator.style.left = `${clampedWidth}px`;
           freezeClipIndicator.style.top = '0';
@@ -547,7 +556,7 @@ export function createGrid<
     const measurements = virtualization.getMeasurements();
     const state = store.getState();
     const fullFrozenWidth = measurements.colOffsets[state.frozenLeftColumns]!;
-    return Math.max(0, fullFrozenWidth - Math.max(0, Math.min(freezeClipWidth, fullFrozenWidth)));
+    return Math.max(0, fullFrozenWidth - clamp(freezeClipWidth, 0, fullFrozenWidth));
   }
 
   function handleScroll(): void {
@@ -1499,7 +1508,7 @@ export function createGrid<
         const measurements = virtualization.getMeasurements();
         const state = store.getState();
         const fullWidth = measurements.colOffsets[state.frozenLeftColumns]!;
-        freezeClipWidth = Math.max(0, Math.min(width, fullWidth));
+        freezeClipWidth = clamp(width, 0, fullWidth);
       }
       scheduleRender();
     },

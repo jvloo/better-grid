@@ -37,6 +37,17 @@ export class StateStore<TData = unknown> {
   /** Update a state slice and notify subscribers */
   update(key: string, updater: (state: GridState<TData>) => Partial<GridState<TData>>): void {
     const patch = updater(this.state);
+    // Skip notification if every patched key is reference-equal to current state
+    const p = patch as Record<string, unknown>;
+    const s = this.state as unknown as Record<string, unknown>;
+    let changed = false;
+    for (const k in p) {
+      if (p[k] !== s[k]) {
+        changed = true;
+        break;
+      }
+    }
+    if (!changed) return;
     this.state = { ...this.state, ...patch };
 
     if (this.batchDepth > 0) {
@@ -92,6 +103,8 @@ export class StateStore<TData = unknown> {
   }
 
   setScroll(scrollTop: number, scrollLeft: number): void {
+    // Skip touchpad jitter / no-op scrolls — both axes unchanged
+    if (this.state.scrollTop === scrollTop && this.state.scrollLeft === scrollLeft) return;
     // Mutate in place — scroll is the hottest path, avoid object spread
     this.state.scrollTop = scrollTop;
     this.state.scrollLeft = scrollLeft;
