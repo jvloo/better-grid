@@ -2,7 +2,13 @@
 // Hierarchy Plugin — Row tree with expand/collapse
 // ============================================================================
 
-import type { GridPlugin, PluginContext, CellRenderContext } from '@better-grid/core';
+import type { GridPlugin, PluginContext, CellRenderContext, CellRenderer } from '@better-grid/core';
+
+// Maps a wrapped cellRenderer back to the original it wrapped, so re-init can
+// unwrap cleanly without monkey-patching properties onto the function value.
+// Entries are GC'd automatically when the wrapped renderer is dropped.
+const indentRendererOriginals = new WeakMap<CellRenderer, CellRenderer | undefined>();
+const toggleRendererOriginals = new WeakMap<CellRenderer, CellRenderer | undefined>();
 
 export interface HierarchyOptions {
   /** Which column gets depth-based indentation (padding-left per depth level). */
@@ -130,12 +136,12 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
       // ─── Wrap indent column (indent + optionally toggle) ────────────
       const indentCol = indentColId ? columns.find(c => c.id === indentColId) : undefined;
       if (indentCol) {
-        const alreadyWrapped = indentCol.cellRenderer && '__hierarchyOriginal' in (indentCol.cellRenderer as object);
-        const originalRenderer = alreadyWrapped
-          ? (indentCol.cellRenderer as unknown as { __hierarchyOriginal: typeof indentCol.cellRenderer }).__hierarchyOriginal
-          : indentCol.cellRenderer;
+        const existing = indentCol.cellRenderer;
+        const originalRenderer = existing && indentRendererOriginals.has(existing)
+          ? indentRendererOriginals.get(existing)
+          : existing;
 
-        indentCol.cellRenderer = (container: HTMLElement, context: CellRenderContext) => {
+        const wrappedRenderer: CellRenderer = (container: HTMLElement, context: CellRenderContext) => {
           const info = getHierarchyInfo(context);
 
           if (!info || container.classList.contains('bg-cell--pinned')) {
@@ -194,19 +200,20 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
           }
         };
 
-        (indentCol.cellRenderer as unknown as { __hierarchyOriginal?: typeof originalRenderer }).__hierarchyOriginal = originalRenderer;
+        indentCol.cellRenderer = wrappedRenderer;
+        indentRendererOriginals.set(wrappedRenderer, originalRenderer);
       }
 
       // ─── Wrap toggle column (toggle icon only, no indent) ───────────
       if (hasSeparateToggle) {
         const toggleCol = columns.find(c => c.id === toggleColId);
         if (toggleCol) {
-          const alreadyWrapped = toggleCol.cellRenderer && '__hierarchyToggleOriginal' in (toggleCol.cellRenderer as object);
-          const originalToggleRenderer = alreadyWrapped
-            ? (toggleCol.cellRenderer as unknown as { __hierarchyToggleOriginal: typeof toggleCol.cellRenderer }).__hierarchyToggleOriginal
-            : toggleCol.cellRenderer;
+          const existingToggle = toggleCol.cellRenderer;
+          const originalToggleRenderer = existingToggle && toggleRendererOriginals.has(existingToggle)
+            ? toggleRendererOriginals.get(existingToggle)
+            : existingToggle;
 
-          toggleCol.cellRenderer = (container: HTMLElement, context: CellRenderContext) => {
+          const wrappedToggleRenderer: CellRenderer = (container: HTMLElement, context: CellRenderContext) => {
             const info = getHierarchyInfo(context);
 
             // Always clear container first — cells are recycled and may have stale content
@@ -238,7 +245,8 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
             }
           };
 
-          (toggleCol.cellRenderer as unknown as { __hierarchyToggleOriginal?: typeof originalToggleRenderer }).__hierarchyToggleOriginal = originalToggleRenderer;
+          toggleCol.cellRenderer = wrappedToggleRenderer;
+          toggleRendererOriginals.set(wrappedToggleRenderer, originalToggleRenderer);
         }
       }
 

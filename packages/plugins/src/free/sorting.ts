@@ -102,29 +102,39 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting', Sorting
         }
 
         const columns = ctx.grid.getState().columns;
+
+        // Precompute per-sort-key accessor + comparator once, so the inner
+        // sort callback doesn't repeat columns.find() for every row pair.
+        type ResolvedSort = {
+          direction: SortDirection;
+          getValue: (row: unknown) => unknown;
+          compare: (a: unknown, b: unknown) => number;
+        };
+        const resolved: ResolvedSort[] = [];
+        for (const { columnId, direction } of sortState) {
+          const col = columns.find((c) => c.id === columnId);
+          if (!col) continue;
+
+          let getValue: (row: unknown) => unknown;
+          if (col.accessorFn) {
+            const fn = col.accessorFn;
+            getValue = (row) => fn(row, 0);
+          } else if (col.accessorKey) {
+            const key = col.accessorKey;
+            getValue = (row) => (row as Record<string, unknown>)[key];
+          } else {
+            getValue = () => undefined;
+          }
+
+          const compare = col.comparator ?? defaultCompare;
+          resolved.push({ direction, getValue, compare });
+        }
+
         const sorted = [...currentData].sort((a, b) => {
-          for (const { columnId, direction } of sortState) {
-            const col = columns.find((c) => c.id === columnId);
-            if (!col) continue;
-
-            let valA: unknown;
-            let valB: unknown;
-
-            if (col.accessorFn) {
-              valA = col.accessorFn(a, 0);
-              valB = col.accessorFn(b, 0);
-            } else if (col.accessorKey) {
-              valA = (a as Record<string, unknown>)[col.accessorKey];
-              valB = (b as Record<string, unknown>)[col.accessorKey];
-            }
-
-            let cmp: number;
-            if (col.comparator) {
-              cmp = col.comparator(valA, valB);
-            } else {
-              cmp = defaultCompare(valA, valB);
-            }
-
+          for (const { direction, getValue, compare } of resolved) {
+            const valA = getValue(a);
+            const valB = getValue(b);
+            const cmp = compare(valA, valB);
             if (cmp !== 0) {
               return direction === 'desc' ? -cmp : cmp;
             }

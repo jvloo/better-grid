@@ -63,18 +63,36 @@ export function filtering(options?: FilteringOptions): GridPlugin<'filtering', F
         const columns = ctx.grid.getState().columns;
         const sourceData = unfilteredData ?? currentData;
 
+        // Precompute each active filter's accessor + (value, operator) once.
+        // Inner row predicate then reuses these without repeating columns.find().
+        // Filters whose columnId doesn't resolve preserve the prior behavior of
+        // evaluating to `true` (i.e. they pass) — we simply omit them here.
+        type ResolvedFilter = {
+          getValue: (row: unknown) => unknown;
+          value: unknown;
+          operator: FilterOperator;
+        };
+        const resolvedFilters: ResolvedFilter[] = [];
+        for (const { columnId, value, operator } of filters) {
+          const col = columns.find((c) => c.id === columnId);
+          if (!col) continue;
+
+          let getValue: (row: unknown) => unknown;
+          if (col.accessorKey) {
+            const key = col.accessorKey;
+            getValue = (row) => (row as Record<string, unknown>)[key];
+          } else {
+            getValue = () => undefined;
+          }
+
+          resolvedFilters.push({ getValue, value, operator });
+        }
+
         const filtered = sourceData.filter((row: unknown) => {
-          return filters.every(({ columnId, value, operator }) => {
-            const col = columns.find((c) => c.id === columnId);
-            if (!col) return true;
-
-            let cellValue: unknown;
-            if (col.accessorKey) {
-              cellValue = (row as Record<string, unknown>)[col.accessorKey];
-            }
-
-            return matchesFilter(cellValue, value, operator);
-          });
+          for (const { getValue, value, operator } of resolvedFilters) {
+            if (!matchesFilter(getValue(row), value, operator)) return false;
+          }
+          return true;
         });
 
         ctx.grid.setData(filtered);
