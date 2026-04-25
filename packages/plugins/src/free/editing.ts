@@ -32,6 +32,10 @@ export interface SelectWithInputValue<TData = unknown> {
   previousValue: unknown;
 }
 
+export type InputCellBoolean<TData = unknown> =
+  | boolean
+  | ((row: TData, column: ColumnDef<TData>) => boolean | undefined);
+
 declare module '@better-grid/core' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnDef<TData = unknown> {
@@ -57,6 +61,16 @@ declare module '@better-grid/core' {
     selectInput?: SelectInputConfig<TData>;
     /** Convert selectWithInput UI state back into the stored cell value. */
     parseSelectWithInputValue?: (value: SelectWithInputValue<TData>) => unknown;
+    /**
+     * Enable display-mode ellipsis + overflow-to-floating-editor for inputStyle cells.
+     * Defaults to the editing plugin's `inputEllipsis` option.
+     */
+    inputEllipsis?: InputCellBoolean<TData>;
+    /**
+     * Show the text-edit cursor over inputStyle editable cells.
+     * Defaults to the editing plugin's `inputEditCursor` option.
+     */
+    inputEditCursor?: InputCellBoolean<TData>;
   }
 }
 
@@ -79,6 +93,15 @@ export interface EditingOptions {
    * Default: false
    */
   inputStyle?: boolean;
+  /**
+   * Display overflowing inputStyle values with ellipsis and open them in the
+   * floating editor when clipped. Default: true.
+   */
+  inputEllipsis?: boolean;
+  /**
+   * Show the text-edit cursor over inputStyle editable cells. Default: true.
+   */
+  inputEditCursor?: boolean;
 }
 
 /** Dropdown option for columns with meta.options */
@@ -124,6 +147,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
     precision: options?.precision,
     editorMode: options?.editorMode ?? 'float',
     inputStyle: options?.inputStyle ?? false,
+    inputEllipsis: options?.inputEllipsis ?? true,
+    inputEditCursor: options?.inputEditCursor ?? true,
   };
 
   return {
@@ -141,6 +166,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               display: flex !important;
               align-items: center !important;
               line-height: normal !important;
+            }
+            .bg-cell--input-edit-cursor {
               cursor: text;
             }
             .bg-cell--input-editable .bg-input-box {
@@ -155,13 +182,28 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               box-sizing: border-box;
               width: 100%;
               font-size: 12px;
-              /* Clip text that exceeds the box width with an ellipsis in
-                 display mode — matches Wiseway's MUI TextField behaviour. */
+              cursor: inherit;
+            }
+            .bg-cell--input-editable .bg-input-box,
+            .bg-cell--input-editable .bg-input-box__value,
+            .bg-cell--input-editable .bg-select-trigger,
+            .bg-cell--input-editable .bg-select-compound,
+            .bg-cell--input-editable .bg-select-compound-input-wrap,
+            .bg-cell--input-editable .bg-select-compound-input {
+              min-width: 0;
+            }
+            .bg-cell--input-editable .bg-input-box,
+            .bg-cell--input-editable .bg-input-box__value,
+            .bg-cell--input-editable .bg-select-trigger,
+            .bg-cell--input-editable .bg-select-compound-input {
+              white-space: nowrap;
+            }
+            .bg-cell--input-ellipsis .bg-input-box,
+            .bg-cell--input-ellipsis .bg-input-box__value,
+            .bg-cell--input-ellipsis .bg-select-trigger,
+            .bg-cell--input-ellipsis .bg-select-compound-input {
               overflow: hidden;
               text-overflow: ellipsis;
-              white-space: nowrap;
-              min-width: 0;
-              cursor: inherit;
             }
             .bg-cell--input-editable .bg-input-box:hover {
               background: var(--bg-input-hover-bg, #F0F0F0);
@@ -201,10 +243,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               color: inherit;
               font: inherit;
               text-align: inherit;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-              min-width: 0;
             }
             .bg-cell--input-editable .bg-select-compound {
               display: flex;
@@ -212,6 +250,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               justify-content: center;
               gap: 4px;
               width: 100%;
+            }
+            .bg-cell--input-ellipsis .bg-select-compound {
+              overflow: hidden;
+            }
+            .bg-cell--input-editable .bg-select-compound .bg-select-trigger {
+              flex: 1 1 auto;
+              width: auto !important;
             }
             .bg-cell--input-editable .bg-select-compound-input-wrap {
               display: flex;
@@ -268,9 +313,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               padding: 0 var(--bg-input-suffix-space, 0px) 0 var(--bg-input-prefix-space, 0px);
               box-sizing: border-box;
               text-align: inherit;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
             }
             .bg-cell--input-editable .bg-input-box__prefix,
             .bg-cell--input-editable .bg-input-box__suffix,
@@ -334,14 +376,22 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
           col.cellClass = (value: unknown, row: unknown) => {
             let cls = origCellClass ? origCellClass(value, row) ?? '' : '';
+            const classes = new Set(cls.split(/\s+/).filter(Boolean));
             let isEditable = true;
             if (typeof col.editable === 'function') {
               isEditable = col.editable(row as never, col as never);
             }
-            if (isEditable && !cls.split(/\s+/).includes('bg-cell--input-editable')) {
-              cls += ' bg-cell--input-editable';
+            if (isEditable) {
+              classes.add('bg-cell--input-editable');
+              if (shouldUseInputEllipsis(col, row)) {
+                classes.add('bg-cell--input-ellipsis');
+              }
+              if (shouldUseInputEditCursor(col, row)) {
+                classes.add('bg-cell--input-edit-cursor');
+              }
             }
-            return cls.trim() || undefined;
+            cls = Array.from(classes).join(' ');
+            return cls || undefined;
           };
 
           // Wrap cellRenderer to add inner input box
@@ -571,6 +621,104 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         if (prefix && next.startsWith(prefix)) next = next.slice(prefix.length).trimStart();
         if (suffix && next.endsWith(suffix)) next = next.slice(0, -suffix.length).trimEnd();
         return next;
+      }
+
+      function resolveInputCellBoolean(
+        setting: InputCellBoolean | undefined,
+        fallback: boolean,
+        row: unknown,
+        column: ColumnDef,
+      ): boolean {
+        if (typeof setting === 'function') {
+          return setting(row, column) ?? fallback;
+        }
+        if (typeof setting === 'boolean') return setting;
+        return fallback;
+      }
+
+      function shouldUseInputEllipsis(column: ColumnDef, row: unknown): boolean {
+        return resolveInputCellBoolean(column.inputEllipsis, config.inputEllipsis, row, column);
+      }
+
+      function shouldUseInputEditCursor(column: ColumnDef, row: unknown): boolean {
+        return resolveInputCellBoolean(column.inputEditCursor, config.inputEditCursor, row, column);
+      }
+
+      function isDisplayOverflowing(el: HTMLElement | null | undefined): boolean {
+        if (!el) return false;
+        return el.scrollWidth > el.clientWidth + 1;
+      }
+
+      function isInputDisplayOverflowing(inputBox: HTMLElement): boolean {
+        const targets = [
+          inputBox,
+          ...Array.from(inputBox.querySelectorAll<HTMLElement>(
+            '.bg-input-box__value, .bg-select-trigger, .bg-select-compound-input',
+          )),
+        ];
+        return targets.some(isDisplayOverflowing);
+      }
+
+      function getTextOffsetFromClientX(
+        text: string,
+        rect: DOMRect,
+        computed: CSSStyleDeclaration,
+        clientX: number,
+      ): number {
+        if (!text) return 0;
+
+        if (!caretMeasureCanvas) caretMeasureCanvas = document.createElement('canvas');
+        const ctx2d = caretMeasureCanvas.getContext('2d');
+        if (!ctx2d) return text.length;
+
+        ctx2d.font = computed.font ||
+          `${computed.fontStyle} ${computed.fontVariant} ${computed.fontWeight} ${computed.fontSize} / ${computed.lineHeight} ${computed.fontFamily}`;
+
+        const paddingLeft = parseFloat(computed.paddingLeft) || 0;
+        const paddingRight = parseFloat(computed.paddingRight) || 0;
+        const textWidth = ctx2d.measureText(text).width;
+        const contentWidth = Math.max(0, rect.width - paddingLeft - paddingRight);
+        let textStart = rect.left + paddingLeft;
+
+        if (computed.textAlign === 'center') {
+          textStart = rect.left + paddingLeft + Math.max(0, (contentWidth - textWidth) / 2);
+        } else if (computed.textAlign === 'right' || computed.textAlign === 'end') {
+          textStart = rect.right - paddingRight - textWidth;
+        }
+
+        const x = clientX - textStart;
+        if (x <= 0) return 0;
+
+        let advance = 0;
+        for (let i = 0; i < text.length; i += 1) {
+          const charWidth = ctx2d.measureText(text[i] ?? '').width;
+          if (x < advance + charWidth / 2) return i;
+          advance += charWidth;
+        }
+
+        return text.length;
+      }
+
+      function setContentEditableCaret(element: HTMLElement, offset: number): void {
+        setContentEditableSelection(element, offset, offset);
+      }
+
+      function setContentEditableSelection(element: HTMLElement, start: number, end: number): void {
+        const text = element.textContent ?? '';
+        if (!element.firstChild) {
+          element.appendChild(document.createTextNode(text));
+        }
+        const node = element.firstChild;
+        if (!node) return;
+        const clampedStart = Math.min(Math.max(start, 0), text.length);
+        const clampedEnd = Math.min(Math.max(end, 0), text.length);
+
+        const range = document.createRange();
+        range.setStart(node, clampedStart);
+        range.setEnd(node, clampedEnd);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
       }
 
       function optionValuesEqual(a: unknown, b: unknown): boolean {
@@ -882,11 +1030,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         wrapper.className = 'bg-select-compound';
 
         const trigger = createSelectTrigger(selectedOption?.label ?? String(selectedValue ?? ''), column);
-        trigger.style.flex = inputSelected ? '0 0 auto' : '1 1 auto';
-        if (inputSelected) {
-          trigger.style.minWidth = '86px';
-          trigger.style.width = 'auto';
-        }
+        trigger.style.flex = '1 1 auto';
+        trigger.style.minWidth = '0';
+        trigger.style.width = 'auto';
         const selectOption = (option: DropdownOption) => {
           const inputRaw = inputSelected
             ? getCompoundInputRawValue(column, context)
@@ -1020,6 +1166,20 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         return null;
       }
 
+      function handlePointerHandoff(
+        cleanup: () => void,
+        e: MouseEvent,
+        hitTestEl?: HTMLElement | null,
+      ): boolean {
+        const nextCell = getNextClickedCell(e, hitTestEl);
+        if (!nextCell) return false;
+        suppressNextClickEdit(nextCell);
+        cleanup();
+        if (editingCell) commitEdit();
+        startEdit(nextCell, undefined, e);
+        return true;
+      }
+
       function getFloatingSyncTargets(anchorEl: HTMLElement): Array<HTMLElement | Window> {
         const targets: Array<HTMLElement | Window> = [window];
         const seen = new Set<HTMLElement | Window>(targets);
@@ -1149,6 +1309,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // Prepare cell for editing
         // If the cell has an input box (inputStyle), use it as the editing anchor
         const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
+        const inputEllipsisEnabled = shouldUseInputEllipsis(column, rowData);
+        const displayWasOverflowing = inputEllipsisEnabled && inputBox ? isInputDisplayOverflowing(inputBox) : false;
         // If the input box is structured as value+unit, clear only the value span
         // so the unit suffix stays visible throughout editing.
         const valueSpan = inputBox?.querySelector('.bg-input-box__value') as HTMLElement | null;
@@ -1208,17 +1370,27 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
           const editValue = initialValue ?? rawStr;
           const hasAdornedInputBox = !!cellEl.querySelector('.bg-input-box--has-adornment .bg-input-box__value');
+          const shouldFloatOverflowInput = displayWasOverflowing && initialValue === undefined;
 
           if (column.cellEditor === 'masked' && column.mask) {
             activeEditor = createMaskedInput(cellEl, rawStr, column.mask, clickEvent);
           } else if (isDateEditor) {
             activeEditor = createDateInput(cellEl, rawStr);
+          } else if (shouldFloatOverflowInput) {
+            const prefix = resolveColumnPrefix(column, rowData);
+            const suffix = resolveColumnSuffix(column, rowData);
+            const displayText = stripInputAdornments(
+              getInputStyleDisplayText(column, rowData, originalValue, position.rowIndex, position.colIndex),
+              prefix,
+              suffix,
+            );
+            activeEditor = createTextInput(cellEl, displayText || rawStr, false, isNumberEditor ? column : undefined, rowData, clickEvent);
           } else if (config.editorMode === 'inline' || hasAdornedInputBox) {
-            activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined, rowData, clickEvent);
+            activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined, rowData, clickEvent, inputEllipsisEnabled);
           } else if (isNumberEditor) {
-            activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, column, rowData);
+            activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, column, rowData, clickEvent);
           } else {
-            activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined);
+            activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, undefined, undefined, clickEvent);
           }
         }
       }
@@ -1233,6 +1405,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         cursorAtEnd: boolean,
         numberColumn?: ColumnDef,
         rowData?: unknown,
+        clickEvent?: MouseEvent,
+        selectionRange?: { start: number; end: number },
       ): HTMLInputElement {
           // Use input box rect if present (inputStyle mode), otherwise cell rect
           const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
@@ -1241,20 +1415,30 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
           const gridRect = gridEl?.getBoundingClientRect();
           const anchorComputed = getComputedStyle(anchorEl);
-          const cellPadding = anchorComputed.padding;
           const cellFont = anchorComputed.font;
           const cellTextAlign = anchorComputed.textAlign;
           const cellLetterSpacing = anchorComputed.letterSpacing;
           const maxRightWidth = gridRect ? gridRect.right - cellRect.left : cellRect.width;
           const fullWidth = gridRect?.width ?? cellRect.width;
           const gridLeft = gridRect?.left ?? cellRect.left;
+          const prefixSource = inputBox?.querySelector('.bg-input-box__prefix') as HTMLElement | null;
+          const suffixSource = inputBox?.querySelector('.bg-input-box__suffix, .bg-input-box__unit') as HTMLElement | null;
+          const prefixText = prefixSource?.textContent ?? '';
+          const suffixText = suffixSource?.textContent ?? '';
+          const inputBoxStyles = inputBox ? getComputedStyle(inputBox) : null;
+          const prefixSpace = prefixText
+            ? parseFloat(inputBoxStyles?.getPropertyValue('--bg-input-prefix-space') || '') || getAdornmentSpace(prefixText)
+            : 0;
+          const suffixSpace = suffixText
+            ? parseFloat(inputBoxStyles?.getPropertyValue('--bg-input-suffix-space') || '') || getAdornmentSpace(suffixText)
+            : 0;
 
           // Measure span for auto-sizing
           const measureSpan = document.createElement('span');
-          measureSpan.style.cssText = `position:fixed;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;font:${cellFont};padding:${cellPadding};`;
           document.body.appendChild(measureSpan);
 
-          // Create float box — resolve CSS variables from grid container (not body)
+          // CSS variables are resolved from the grid container (not body)
+          // so consumer-provided themes win over default values.
           const floatBox = document.createElement('div');
           floatBox.className = 'bg-cell-editor-float';
           const gridStyles = getComputedStyle(getGridContainer());
@@ -1271,9 +1455,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             border: ${edBorderW}px solid ${edBorder};
             border-radius: ${edRadius};
             box-shadow: ${edShadow};
+            overflow: hidden;
           `;
 
-          // Use contenteditable div — naturally supports vertical centering
+          // contenteditable (vs <input>) keeps text vertically centered without
+          // needing a flex parent — important when the float spans multiple lines.
           // (via flexbox) and word-wrap without textarea quirks
           const ed = document.createElement('div');
           ed.className = 'bg-cell-editor';
@@ -1285,7 +1471,35 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const contentLineHeight = Math.round(fontSize * 1.4);
           const editorHeight = cellRect.height - edBorderW * 2;
           const vertPad = Math.max(0, Math.floor((editorHeight - contentLineHeight) / 2));
-          const hPad = parseFloat(anchorComputed.paddingLeft) || 12;
+          const basePadLeft = parseFloat(anchorComputed.paddingLeft) || 12;
+          const basePadRight = parseFloat(anchorComputed.paddingRight) || basePadLeft;
+          const valuePadLeft = Math.max(basePadLeft, prefixSpace);
+          const valuePadRight = Math.max(basePadRight, suffixSpace);
+          measureSpan.style.cssText = `position:fixed;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;font:${cellFont};padding:0 ${valuePadRight}px 0 ${valuePadLeft}px;`;
+
+          const createFloatAdornment = (
+            text: string,
+            source: HTMLElement | null,
+            side: 'left' | 'right',
+            width: number,
+          ): HTMLElement | null => {
+            if (!text) return null;
+            const sourceStyles = source ? getComputedStyle(source) : anchorComputed;
+            const adornment = document.createElement('span');
+            adornment.className = `bg-cell-editor-float__${side === 'left' ? 'prefix' : 'suffix'}`;
+            adornment.textContent = text;
+            adornment.style.cssText = `
+              position:absolute; ${side}:0; top:0; bottom:0;
+              width:${width}px; display:flex; align-items:center; justify-content:center;
+              pointer-events:none; box-sizing:border-box;
+              font-family:${sourceStyles.fontFamily || anchorComputed.fontFamily};
+              font-size:${sourceStyles.fontSize || anchorComputed.fontSize};
+              font-weight:${sourceStyles.fontWeight || anchorComputed.fontWeight};
+              color:${sourceStyles.color || anchorComputed.color};
+              line-height:${editorHeight}px;
+            `;
+            return adornment;
+          };
 
           ed.style.cssText = `
             outline:none; margin:0;
@@ -1293,14 +1507,18 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             font-weight:${anchorComputed.fontWeight}; line-height:${contentLineHeight}px;
             color:inherit; letter-spacing:${cellLetterSpacing};
             background:transparent; box-sizing:border-box;
-            padding:${vertPad}px ${hPad}px; text-align:${cellTextAlign};
+            padding:${vertPad}px ${valuePadRight}px ${vertPad}px ${valuePadLeft}px; text-align:${cellTextAlign};
             min-height:${editorHeight}px;
             max-height:${editorHeight * 4}px;
             overflow:hidden;
             white-space:nowrap;
           `;
 
+          const prefixEl = createFloatAdornment(prefixText, prefixSource, 'left', prefixSpace);
+          const suffixEl = createFloatAdornment(suffixText, suffixSource, 'right', suffixSpace);
+          if (prefixEl) floatBox.appendChild(prefixEl);
           floatBox.appendChild(ed);
+          if (suffixEl) floatBox.appendChild(suffixEl);
 
           // Number editor: add inputmode hint and restrict input to numeric characters
           if (numberColumn) {
@@ -1316,7 +1534,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                 e.preventDefault();
                 const text = ed.textContent || '';
-                const cur = parseFloat(text) || 0;
+                const cur = parseFloat(text.replace(/,/g, '')) || 0;
                 const step = numberPrecision != null ? Math.pow(10, -numberPrecision) : 1;
                 const delta = e.key === 'ArrowUp' ? step : -step;
                 let next = cur + delta;
@@ -1326,12 +1544,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                 if (numberMin != null && next < numberMin) next = numberMin;
                 if (numberMax != null && next > numberMax) next = numberMax;
                 ed.textContent = String(next);
-                // Select all text after update
-                const range = document.createRange();
-                range.selectNodeContents(ed);
-                const sel = window.getSelection();
-                sel?.removeAllRanges();
-                sel?.addRange(range);
+                setContentEditableSelection(ed, 0, (ed.textContent ?? '').length);
                 return;
               }
               // Allow navigation and control keys
@@ -1402,30 +1615,17 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               ed.style.wordBreak = 'break-word';
               ed.style.lineHeight = '1.5';
               ed.style.overflow = 'auto';
-              ed.style.padding = `${hPad}px`;
+              ed.style.padding = `${basePadLeft}px ${valuePadRight}px ${basePadLeft}px ${valuePadLeft}px`;
             } else {
               ed.style.whiteSpace = 'nowrap';
               ed.style.lineHeight = `${contentLineHeight}px`;
               ed.style.overflow = 'hidden';
-              ed.style.padding = `${vertPad}px ${hPad}px`;
+              ed.style.padding = `${vertPad}px ${valuePadRight}px ${vertPad}px ${valuePadLeft}px`;
             }
           }
 
           const editRow = cellEl.dataset.row;
           const editCol = cellEl.dataset.col;
-
-          function getAnchorRect(): DOMRect | null {
-            const currentCell = gridEl?.querySelector(`.bg-cell[data-row="${editRow}"][data-col="${editCol}"]`) as HTMLElement | null;
-            if (!currentCell) return null;
-            const box = currentCell.querySelector('.bg-input-box') as HTMLElement | null;
-            if (!box) return currentCell.getBoundingClientRect();
-            const br = box.getBoundingClientRect();
-            // Leave room for a right-side unit adornment (has-unit padding is 20px)
-            if (box.classList.contains('bg-input-box--has-unit')) {
-              return new DOMRect(br.left, br.top, Math.max(0, br.width - 20), br.height);
-            }
-            return br;
-          }
 
           function syncPosition(): void {
             // Find current cell element by row/col (may be recycled by virtualization)
@@ -1441,10 +1641,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             const box = currentCell.querySelector('.bg-input-box') as HTMLElement | null;
             let cr: DOMRect;
             if (box) {
-              const br = box.getBoundingClientRect();
-              cr = box.classList.contains('bg-input-box--has-unit')
-                ? new DOMRect(br.left, br.top, Math.max(0, br.width - 20), br.height)
-                : br;
+              cr = box.getBoundingClientRect();
             } else {
               cr = currentCell.getBoundingClientRect();
             }
@@ -1479,13 +1676,17 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           });
           ed.focus();
 
-          // Select all text
-          const range = document.createRange();
-          range.selectNodeContents(ed);
-          if (cursorAtEnd) range.collapse(false);
-          const sel = window.getSelection();
-          sel?.removeAllRanges();
-          sel?.addRange(range);
+          const edText = ed.textContent ?? '';
+          if (selectionRange) {
+            setContentEditableSelection(ed, selectionRange.start, selectionRange.end);
+          } else if (clickEvent && !cursorAtEnd) {
+            const offset = getTextOffsetFromClientX(edText, ed.getBoundingClientRect(), getComputedStyle(ed), clickEvent.clientX);
+            setContentEditableCaret(ed, offset);
+          } else if (cursorAtEnd) {
+            setContentEditableCaret(ed, edText.length);
+          } else {
+            setContentEditableSelection(ed, 0, edText.length);
+          }
 
           ed.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -1496,6 +1697,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               cleanupFloat();
             }
             handleEditorKeydown(e);
+          });
+          ed.addEventListener('dblclick', () => {
+            requestAnimationFrame(() => setContentEditableSelection(ed, 0, (ed.textContent ?? '').length));
           });
           let floatActive = true;
 
@@ -1512,26 +1716,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           // Commit on click outside the float box (not blur-based)
           function onOutsideClick(e: MouseEvent): void {
             if (!floatActive) return;
-            const nextCell = getNextClickedCell(e, floatBox);
-            if (nextCell) {
-              suppressNextClickEdit(nextCell);
-              cleanupFloat();
-              if (editingCell) commitEdit();
-              ctx.grid.refresh();
-              startEdit(nextCell);
-              return;
-            }
+            if (floatBox.contains(e.target as Node)) return;
+            if (handlePointerHandoff(cleanupFloat, e, floatBox)) return;
 
-            if (floatBox.contains(e.target as Node)) {
-              const anchorRect = getAnchorRect();
-              const insideAnchor = !!anchorRect &&
-                e.clientX >= anchorRect.left &&
-                e.clientX <= anchorRect.right &&
-                e.clientY >= anchorRect.top &&
-                e.clientY <= anchorRect.bottom;
-
-              if (insideAnchor) return;
-            }
             cleanupFloat();
             if (editingCell) commitEdit();
           }
@@ -1547,7 +1734,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             focus() { ed.focus(); },
             removeEventListener: ed.removeEventListener.bind(ed),
             addEventListener: ed.addEventListener.bind(ed),
-            setSelectionRange() {},
+            select() { setContentEditableSelection(ed, 0, (ed.textContent ?? '').length); },
+            setSelectionRange(start: number, end: number) { setContentEditableSelection(ed, start, end); },
             dispatchEvent: ed.dispatchEvent.bind(ed),
           } as unknown as HTMLInputElement;
           activeEditor = editorShim;
@@ -1565,6 +1753,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         numberColumn?: ColumnDef,
         rowData?: unknown,
         clickEventRef?: MouseEvent,
+        inputEllipsisEnabled = true,
       ): HTMLInputElement {
         // Capture computed styles BEFORE clearing cell content
         const computed = getComputedStyle(cellEl);
@@ -1604,7 +1793,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             // Keep a leading minus if present
             const negative = raw.startsWith('-');
             const body = negative ? raw.slice(1) : raw;
-            const [intPart, ...decParts] = body.split('.');
+            const [intPart = '', ...decParts] = body.split('.');
             const decPart = decParts.join('.');
             const cleanInt = intPart.replace(/\D/g, '');
             const formattedInt = cleanInt
@@ -1686,7 +1875,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         // If the cell has a structured value/adornment input-box, anchor the
         // editor inside the value span so edge adornments stay visible.
-        const valueAnchor = cellEl.querySelector('.bg-input-box__value') as HTMLElement | null;
+        const inlineInputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
+        const valueAnchor = inlineInputBox?.querySelector('.bg-input-box__value') as HTMLElement | null;
         if (valueAnchor) {
           const adornedBox = valueAnchor.closest('.bg-input-box--has-adornment') as HTMLElement | null;
           if (adornedBox) {
@@ -1703,55 +1893,42 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         } else {
           cellEl.appendChild(input);
         }
+
+        let promotedToFloat = false;
+        function maybePromoteInlineOverflow(): void {
+          if (!inputEllipsisEnabled || promotedToFloat || !inlineInputBox || !document.body.contains(input)) return;
+          if (input.scrollWidth <= input.clientWidth + 1) return;
+
+          promotedToFloat = true;
+          const selectionStart = input.selectionStart ?? input.value.length;
+          const selectionEnd = input.selectionEnd ?? selectionStart;
+          const nextValue = input.value;
+          cleanupOutsideClick();
+          input.remove();
+          activeEditor = createTextInput(
+            cellEl,
+            nextValue,
+            false,
+            numberColumn,
+            rowData,
+            undefined,
+            { start: selectionStart, end: selectionEnd },
+          );
+        }
+
         input.focus();
 
         if (cursorAtEnd) {
           input.setSelectionRange(value.length, value.length);
         } else {
-          // Place the caret at the clicked character position — matches
-          // Wiseway's always-visible-input UX where single-clicking a
-          // number lands the cursor exactly where the pointer is.
-          // `caretPositionFromPoint` doesn't resolve character offsets
-          // inside <input> elements (always returns offset=0), so we
-          // measure character widths via canvas and pick the nearest
-          // boundary. Falls back to end if no click coords supplied.
+          // `caretPositionFromPoint` doesn't resolve character offsets inside
+          // <input> elements (always returns 0), so we measure via canvas to
+          // land the caret at the clicked character.
           const clickX = clickEventRef?.clientX;
           const displayValue = input.value;
-          let offset: number | null = null;
-          if (clickX != null && displayValue.length > 0) {
-            const r = input.getBoundingClientRect();
-            const cs = window.getComputedStyle(input);
-            const canvas = caretMeasureCanvas ?? (caretMeasureCanvas = document.createElement('canvas'));
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.font = cs.font || `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-              const totalW = ctx.measureText(displayValue).width;
-              const padL = parseFloat(cs.paddingLeft || '0');
-              const padR = parseFloat(cs.paddingRight || '0');
-              let textStart: number;
-              if (cs.textAlign === 'right' || cs.textAlign === 'end') {
-                textStart = r.right - padR - totalW;
-              } else if (cs.textAlign === 'center') {
-                textStart = r.left + (r.width - totalW) / 2;
-              } else {
-                textStart = r.left + padL;
-              }
-              const relX = clickX - textStart;
-              if (relX <= 0) {
-                offset = 0;
-              } else {
-                let cum = 0;
-                offset = displayValue.length;
-                for (let i = 0; i < displayValue.length; i++) {
-                  const ch = displayValue.charAt(i);
-                  const w = ctx.measureText(ch).width;
-                  if (cum + w / 2 > relX) { offset = i; break; }
-                  cum += w;
-                }
-              }
-            }
-          }
-          if (offset == null) offset = displayValue.length;
+          const offset = clickX != null && displayValue.length > 0
+            ? getTextOffsetFromClientX(displayValue, input.getBoundingClientRect(), window.getComputedStyle(input), clickX)
+            : displayValue.length;
           input.setSelectionRange(offset, offset);
         }
 
@@ -1762,6 +1939,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         input.addEventListener('dblclick', () => {
           requestAnimationFrame(() => input.select());
         });
+        const onPromoteCheck = () => {
+          requestAnimationFrame(() => {
+            maybePromoteInlineOverflow();
+            if (promotedToFloat) input.removeEventListener('input', onPromoteCheck);
+          });
+        };
+        input.addEventListener('input', onPromoteCheck);
 
         // Commit on click outside the cell
         let outsideClickActive = true;
@@ -1775,6 +1959,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         function onOutsideClick(e: MouseEvent): void {
           if (!outsideClickActive) return;
           if (cellEl.contains(e.target as Node)) return;
+          if (handlePointerHandoff(cleanupOutsideClick, e, input)) return;
           cleanupOutsideClick();
           if (editingCell) {
             commitEdit();
@@ -2224,15 +2409,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         }
         function onMaskedOutsideClick(e: MouseEvent): void {
           if (!maskedActive) return;
-          const nextCell = getNextClickedCell(e, floatBox);
-          if (nextCell) {
-            suppressNextClickEdit(nextCell);
-            cleanupMasked();
-            if (editingCell) commitEdit();
-            ctx.grid.refresh();
-            startEdit(nextCell);
-            return;
-          }
+          if (handlePointerHandoff(cleanupMasked, e, floatBox)) return;
 
           if (floatBox.contains(e.target as Node)) {
             const anchorRect = getAnchorRect();
@@ -2364,15 +2541,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         // Click outside to commit
         function onOutsideClick(ev: MouseEvent): void {
-          const nextCell = getNextClickedCell(ev, floatBox);
-          if (nextCell) {
-            suppressNextClickEdit(nextCell);
-            cleanup();
-            if (editingCell) commitEdit();
-            ctx.grid.refresh();
-            startEdit(nextCell);
-            return;
-          }
+          if (handlePointerHandoff(cleanup, ev, floatBox)) return;
 
           if (floatBox.contains(ev.target as Node)) {
             const anchorRect = getAnchorRect();

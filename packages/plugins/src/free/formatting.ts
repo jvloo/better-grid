@@ -38,9 +38,16 @@ export interface FormattingOptions {
 }
 
 export interface FormattingApi {
-  formatValue(value: unknown, type: string, column?: { hideZero?: boolean; dateFormat?: string }): string;
+  formatValue(value: unknown, type: string, column?: FormattingColumn, row?: unknown): string;
   parseValue(displayValue: string, type: string): unknown;
 }
+
+type FormattingColumn = {
+  hideZero?: boolean;
+  dateFormat?: string;
+  precision?: number | ((row: unknown) => number | undefined);
+  valueFormatter?: (value: unknown) => string;
+};
 
 export function formatting(options?: FormattingOptions): GridPlugin<'formatting', FormattingApi> {
   const locale = options?.locale ?? (typeof navigator !== 'undefined' ? navigator.language : 'en-US');
@@ -119,7 +126,8 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
       function formatValue(
         value: unknown,
         type: string,
-        column?: { hideZero?: boolean; dateFormat?: string; precision?: number; valueFormatter?: (value: unknown) => string },
+        column?: FormattingColumn,
+        row?: unknown,
       ): string {
         if (value == null) return '';
 
@@ -133,7 +141,9 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
         // Column-level `precision` overrides the plugin-level decimalPlaces for
         // numeric types, so a currency column with precision: 0 renders as
         // "$2,700,000" instead of "$2,700,000.00".
-        const colPrecision = column?.precision;
+        const colPrecision = typeof column?.precision === 'function'
+          ? column.precision(row)
+          : column?.precision;
 
         switch (type) {
           case 'number': {
@@ -229,7 +239,7 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
       for (const type of cellTypes) {
         const renderer: CellTypeRenderer = {
           render(container: HTMLElement, context: CellRenderContext) {
-            container.textContent = formatValue(context.value, type, context.column);
+            container.textContent = formatValue(context.value, type, context.column, context.row);
             if (type === 'number' || type === 'currency' || type === 'percent' || type === 'bigint') {
               container.style.textAlign = 'right';
               const negColor = (context.column.meta?.negativeColor as string) ?? options?.negativeColor;
@@ -239,7 +249,7 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
             }
           },
           getStringValue(context: CellRenderContext) {
-            return formatValue(context.value, type, context.column);
+            return formatValue(context.value, type, context.column, context.row);
           },
           parseStringValue(value: string) {
             return parseValue(value, type);
