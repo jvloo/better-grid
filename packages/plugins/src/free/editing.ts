@@ -71,6 +71,20 @@ declare module '@better-grid/core' {
      * Defaults to the editing plugin's `inputEditCursor` option.
      */
     inputEditCursor?: InputCellBoolean<TData>;
+    /**
+     * Render an actual `<input>` element permanently inside the cell — instead
+     * of opening a floating editor on click. Designed for finance-style sheets
+     * where every visible cell should already accept keystrokes (Wiseway parity).
+     *
+     * Commits via the standard parser path on `change`/`blur`/`Enter`; reverts
+     * on `Escape`. Cannot coexist with `cellEditor: 'select' | 'selectWithInput'`
+     * — those columns continue to use the floating dropdown editor.
+     *
+     * Performance: each `alwaysInput` cell adds a real DOM `<input>` for every
+     * visible row. The plugin warns when `alwaysInput cols × visible rows`
+     * exceeds `alwaysInputThreshold` (default 1000).
+     */
+    alwaysInput?: InputCellBoolean<TData>;
   }
 }
 
@@ -102,6 +116,12 @@ export interface EditingOptions {
    * Show the text-edit cursor over inputStyle editable cells. Default: true.
    */
   inputEditCursor?: boolean;
+  /**
+   * Warning threshold for `column.alwaysInput`. When `alwaysInput cols × rows`
+   * exceeds this, the plugin emits a one-time console warning. Default: 1000.
+   * Set to 0 to disable.
+   */
+  alwaysInputThreshold?: number;
 }
 
 /** Dropdown option for columns with meta.options */
@@ -138,6 +158,22 @@ const CHEVRON_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200
 // allocating a canvas on every cell click).
 let caretMeasureCanvas: HTMLCanvasElement | null = null;
 
+// Static per-column check: is this column potentially alwaysInput? (truthy or
+// function). Function variants might return false per-row, but the column still
+// needs the input wrapper installed.
+function isAlwaysInputColumn(col: ColumnDef): boolean {
+  const ai = col.alwaysInput;
+  return ai === true || typeof ai === 'function';
+}
+
+// Resolve a per-row alwaysInput decision. Falls back to false when undefined.
+function resolveAlwaysInput(col: ColumnDef, row: unknown): boolean {
+  const ai = col.alwaysInput;
+  if (ai === true) return true;
+  if (typeof ai === 'function') return ai(row, col) ?? false;
+  return false;
+}
+
 export function editing(options?: EditingOptions): GridPlugin<'editing', EditingApi> {
   const config = {
     editTrigger: options?.editTrigger ?? 'dblclick',
@@ -149,16 +185,51 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
     inputStyle: options?.inputStyle ?? false,
     inputEllipsis: options?.inputEllipsis ?? true,
     inputEditCursor: options?.inputEditCursor ?? true,
+    alwaysInputThreshold: options?.alwaysInputThreshold ?? 1000,
   };
 
   return {
     id: 'editing',
 
     init(ctx: PluginContext) {
+      const initialColumns = ctx.store.getState().columns;
+      const hasAlwaysInput = initialColumns.some(isAlwaysInputColumn);
+
+      // ─── Always-input CSS (minimal, runs whenever any column uses it) ─
+      if (hasAlwaysInput && !document.getElementById('bg-editing-always-input-style')) {
+        const style = document.createElement('style');
+        style.id = 'bg-editing-always-input-style';
+        style.textContent = `
+          .bg-cell--always-input {
+            display: flex !important;
+            align-items: center !important;
+            padding: 0 !important;
+          }
+          .bg-cell--always-input > .bg-always-input {
+            flex: 1 1 auto;
+            min-width: 0;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            text-align: inherit;
+            padding: 0 8px;
+            margin: 0;
+          }
+          .bg-cell--always-input.bg-cell--align-right > .bg-always-input { text-align: right; }
+          .bg-cell--always-input.bg-cell--align-center > .bg-always-input { text-align: center; }
+        `;
+        document.head.appendChild(style);
+      }
+
       // ─── Input-style CSS + cellClass wrapping ────────────────────────
-      if (config.inputStyle) {
-        // Inject CSS once
-        if (!document.getElementById('bg-editing-input-style')) {
+      if (config.inputStyle || hasAlwaysInput) {
+        // Inject CSS once (inputStyle visual treatment only)
+        if (config.inputStyle && !document.getElementById('bg-editing-input-style')) {
           const style = document.createElement('style');
           style.id = 'bg-editing-input-style';
           style.textContent = `
@@ -382,12 +453,18 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               isEditable = col.editable(row as never, col as never);
             }
             if (isEditable) {
-              classes.add('bg-cell--input-editable');
-              if (shouldUseInputEllipsis(col, row)) {
-                classes.add('bg-cell--input-ellipsis');
-              }
-              if (shouldUseInputEditCursor(col, row)) {
-                classes.add('bg-cell--input-edit-cursor');
+              if (resolveAlwaysInput(col, row)) {
+                classes.add('bg-cell--always-input');
+                if (col.align === 'right') classes.add('bg-cell--align-right');
+                else if (col.align === 'center') classes.add('bg-cell--align-center');
+              } else if (config.inputStyle) {
+                classes.add('bg-cell--input-editable');
+                if (shouldUseInputEllipsis(col, row)) {
+                  classes.add('bg-cell--input-ellipsis');
+                }
+                if (shouldUseInputEditCursor(col, row)) {
+                  classes.add('bg-cell--input-edit-cursor');
+                }
               }
             }
             cls = Array.from(classes).join(' ');
@@ -404,6 +481,25 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             }
 
             if (!isEditable) {
+              if (origRenderer) return origRenderer(container, context);
+              renderFormattedDisplay(container, context, col);
+              return;
+            }
+
+            // Always-input branch: render a real <input> permanently. Skip the
+            // inputStyle styled-div path entirely. Select-style editors keep
+            // their normal dropdown editor (alwaysInput doesn't apply there).
+            if (
+              resolveAlwaysInput(col, context.row) &&
+              col.cellEditor !== 'select' &&
+              col.cellEditor !== 'selectWithInput'
+            ) {
+              renderAlwaysInputCell(container, context, col, origRenderer, placeholder);
+              return;
+            }
+
+            // No inputStyle wrapping requested → fall back to original renderer.
+            if (!config.inputStyle) {
               if (origRenderer) return origRenderer(container, context);
               renderFormattedDisplay(container, context, col);
               return;
@@ -500,6 +596,20 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         if (changed) {
           ctx.store.update('columns', () => ({ columns: [...columns] }));
         }
+
+        // Perf gate: warn (once per init) if alwaysInput coverage is heavy.
+        if (config.alwaysInputThreshold > 0 && hasAlwaysInput) {
+          const alwaysInputCols = columns.filter(isAlwaysInputColumn).length;
+          const rowCount = ctx.store.getState().data.length;
+          const liveInputs = alwaysInputCols * rowCount;
+          if (liveInputs > config.alwaysInputThreshold) {
+            console.warn(
+              `[better-grid] alwaysInput renders ${liveInputs} live <input> elements ` +
+              `(${alwaysInputCols} columns × ${rowCount} rows). Threshold: ${config.alwaysInputThreshold}. ` +
+              `Consider scoping alwaysInput per-row, paginating, or raising editing({ alwaysInputThreshold }).`,
+            );
+          }
+        }
       }
       let editingCell: CellPosition | null = null;
       let activeEditor: HTMLInputElement | null = null;
@@ -561,6 +671,112 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           return precision != null ? value.toFixed(precision) : String(value);
         }
         return value != null ? String(value) : '';
+      }
+
+      // Render an always-on <input> inside the cell. Reuses the input across
+      // re-renders of the same logical (row,col) so focus and in-progress text
+      // survive grid refreshes (scroll, sibling-cell updates).
+      function renderAlwaysInputCell(
+        container: HTMLElement,
+        context: CellRenderContext,
+        column: ColumnDef,
+        origRenderer: ColumnDef['cellRenderer'] | undefined,
+        placeholder: string | undefined,
+      ): void {
+        const key = `${context.rowIndex}:${context.colIndex}`;
+        const displayText = origRenderer
+          ? getInputStyleDisplayText(column, context.row, context.value, context.rowIndex, context.colIndex)
+          : getFormattedDisplayText(column, context.row, context.value, context.rowIndex, context.colIndex);
+        const prefix = resolveColumnPrefix(column, context.row);
+        const suffix = resolveColumnSuffix(column, context.row);
+        const inputValue = stripInputAdornments(displayText, prefix, suffix);
+
+        // Try to reuse an existing input on this cell to preserve focus/caret.
+        let input = container.querySelector<HTMLInputElement>('input.bg-always-input');
+        if (input && input.dataset.cellKey === key) {
+          // Same logical cell — only update value if the user is not editing.
+          if (document.activeElement !== input && input.value !== inputValue) {
+            input.value = inputValue;
+          }
+          return;
+        }
+
+        // Different cell (recycled) or first render — rebuild.
+        container.textContent = '';
+        input = document.createElement('input');
+        input.className = 'bg-always-input';
+        input.type = 'text';
+        input.value = inputValue;
+        input.dataset.cellKey = key;
+        if (placeholder) input.placeholder = placeholder;
+
+        const cellType = column.cellType;
+        if (cellType === 'number' || cellType === 'currency' || cellType === 'percent' || cellType === 'bigint') {
+          input.inputMode = 'decimal';
+        }
+
+        const commit = (): void => {
+          const cellEl = input!.closest('.bg-cell') as HTMLElement | null;
+          const rowAttr = cellEl?.dataset.row;
+          const colAttr = cellEl?.dataset.col;
+          if (rowAttr == null || colAttr == null) return;
+          const rowIdx = Number(rowAttr);
+          const colIdx = Number(colAttr);
+          const state = ctx.grid.getState();
+          const liveColumn = state.columns[colIdx];
+          if (!liveColumn?.accessorKey) return;
+          const hs = state.hierarchyState;
+          const dataIdx = hs ? (hs.visibleRows[rowIdx] ?? rowIdx) : rowIdx;
+          const rowData = state.data[dataIdx];
+          const currentValue = liveColumn.accessorFn
+            ? liveColumn.accessorFn(rowData as never, dataIdx)
+            : (rowData as Record<string, unknown>)[liveColumn.accessorKey];
+          const parsed = parseTextValue(input!.value, liveColumn, currentValue, rowData);
+          if (parsed !== currentValue) {
+            ctx.grid.updateCell(rowIdx, liveColumn.id, parsed);
+          }
+        };
+
+        const revert = (): void => {
+          const cellEl = input!.closest('.bg-cell') as HTMLElement | null;
+          const rowAttr = cellEl?.dataset.row;
+          const colAttr = cellEl?.dataset.col;
+          if (rowAttr == null || colAttr == null) return;
+          const rowIdx = Number(rowAttr);
+          const colIdx = Number(colAttr);
+          const state = ctx.grid.getState();
+          const liveColumn = state.columns[colIdx];
+          if (!liveColumn) return;
+          const hs = state.hierarchyState;
+          const dataIdx = hs ? (hs.visibleRows[rowIdx] ?? rowIdx) : rowIdx;
+          const rowData = state.data[dataIdx];
+          const currentValue = liveColumn.accessorFn
+            ? liveColumn.accessorFn(rowData as never, dataIdx)
+            : liveColumn.accessorKey
+              ? (rowData as Record<string, unknown>)[liveColumn.accessorKey]
+              : undefined;
+          input!.value = stripInputAdornments(
+            getInputStyleDisplayText(liveColumn, rowData, currentValue, rowIdx, colIdx),
+            resolveColumnPrefix(liveColumn, rowData),
+            resolveColumnSuffix(liveColumn, rowData),
+          );
+        };
+
+        input.addEventListener('change', commit);
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commit();
+            input!.blur();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            revert();
+            input!.blur();
+          }
+        });
+
+        container.appendChild(input);
       }
 
       function getInputStyleDisplayText(
@@ -1292,6 +1508,22 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         if (column.editable === false) return;
         if (typeof column.editable === 'function') {
           if (!rowData || !column.editable(rowData, column)) return;
+        }
+
+        // alwaysInput cells render their own permanent <input>. Forward focus
+        // to it instead of opening the floating editor. (selectWithInput
+        // already returned above; only need to exclude 'select' here.)
+        if (
+          rowData &&
+          resolveAlwaysInput(column, rowData) &&
+          column.cellEditor !== 'select'
+        ) {
+          const liveInput = cellEl.querySelector<HTMLInputElement>('input.bg-always-input');
+          if (liveInput) {
+            liveInput.focus();
+            liveInput.select();
+          }
+          return;
         }
 
         editingCell = position;

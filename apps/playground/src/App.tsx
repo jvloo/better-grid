@@ -20,6 +20,7 @@ import { InventoryTracker } from './pages/InventoryTracker';
 import { MergeCellsDemo } from './pages/MergeCellsDemo';
 import { SelectionModes } from './pages/SelectionModes';
 import { TableStyles } from './pages/TableStyles';
+import { AlwaysInputDemo } from './pages/AlwaysInputDemo';
 import { FsbtProgram } from './pages/FsbtProgram';
 import { FsbtCost } from './pages/FsbtCost';
 import { FsbtRevenue } from './pages/FsbtRevenue';
@@ -47,6 +48,8 @@ type Page =
   | 'inventory'
   | 'merge-cells'
   | 'selection-modes'
+  | 'table-styles'
+  | 'always-input'
   | 'fsbt-program'
   | 'fsbt-cost'
   | 'fsbt-revenue'
@@ -59,7 +62,7 @@ type Page =
 const VALID_PAGES = new Set<Page>([
   'finance', 'project-tracker', 'hr-directory', 'inventory', 'editors', 'cell-types', 'clipboard',
   'sort-filter', 'search-export', 'hierarchy', 'frozen-pinned', 'multi-header', 'merge-cells',
-  'core-only', 'plugin-toggle', 'performance', 'selection-modes', 'pro',
+  'core-only', 'plugin-toggle', 'performance', 'selection-modes', 'table-styles', 'always-input', 'pro',
   'fsbt-program', 'fsbt-cost', 'fsbt-revenue',
   'dm-timeline', 'dm-forecast', 'dm-actuals', 'dm-summary',
 ]);
@@ -195,6 +198,7 @@ export function App() {
             <SectionLabel>Editing</SectionLabel>
             <NavButton active={page === 'editors'} onClick={() => navigatePage('editors')} icon="✏️">Editor Types</NavButton>
             <NavButton active={page === 'clipboard'} onClick={() => navigatePage('clipboard')} icon="📎">Clipboard & Fill</NavButton>
+            <NavButton active={page === 'always-input'} onClick={() => navigatePage('always-input')} icon="⌨️">Always-Input Cells</NavButton>
 
             <SectionLabel>Display</SectionLabel>
             <NavButton active={page === 'cell-types'} onClick={() => navigatePage('cell-types')} icon="🎨">Cell Types</NavButton>
@@ -245,6 +249,7 @@ export function App() {
           {page === 'merge-cells' && <MergeCellsDemo />}
           {page === 'selection-modes' && <SelectionModes />}
           {page === 'table-styles' && <TableStyles />}
+          {page === 'always-input' && <AlwaysInputDemo />}
           {page === 'fsbt-program' && <div className="wiseway-theme"><FsbtProgram /></div>}
           {page === 'fsbt-cost' && <div className="wiseway-theme"><FsbtCost /></div>}
           {page === 'fsbt-revenue' && <div className="wiseway-theme"><FsbtRevenue /></div>}
