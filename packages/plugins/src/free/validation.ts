@@ -5,19 +5,51 @@
 import type { GridPlugin, PluginContext, CellPosition } from '@better-grid/core';
 import { getCellValue } from '@better-grid/core';
 
+/** Context passed to a validation messageRenderer. */
+export interface ValidationIssue<TData = unknown> {
+  message: string;
+  code: ValidationErrorCode;
+  position: CellPosition;
+  row: TData;
+  value: unknown;
+  column: import('@better-grid/core').ColumnDef<TData>;
+}
+
+/**
+ * Custom renderer for an error message body. Return an HTMLElement (e.g. an
+ * MUI Alert mounted into a detached div) or a plain string. The renderer
+ * replaces the tooltip's text node — the tooltip wrapper still provides
+ * positioning and z-index.
+ */
+export type ValidationMessageRenderer<TData = unknown> = (
+  issue: ValidationIssue<TData>,
+) => HTMLElement | string;
+
 /** Validation rule for a column */
-export interface ColumnValidationRule {
+export interface ColumnValidationRule<TData = unknown> {
   /** Return true if valid, or an error message string if invalid */
-  validate: (value: unknown, row: unknown) => boolean | string;
+  validate: (value: unknown, row: TData) => boolean | string;
   /** Fallback error message when validate returns false */
   message?: string;
+  /**
+   * Custom renderer for this rule's error. Wins over the column-level
+   * `validationMessageRenderer`. Use to render rich UI (icons, links, MUI
+   * Alert) inside the tooltip.
+   */
+  messageRenderer?: ValidationMessageRenderer<TData>;
 }
 
 declare module '@better-grid/core' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnDef<TData = unknown> {
     required?: boolean;
-    rules?: ColumnValidationRule[];
+    rules?: ColumnValidationRule<TData>[];
+    /**
+     * Default renderer for any validation error on this column. Overridden by
+     * a per-rule `messageRenderer`. Useful when you want the same look across
+     * all rules on a column (e.g. always render an MUI Alert).
+     */
+    validationMessageRenderer?: ValidationMessageRenderer<TData>;
   }
 }
 
@@ -65,14 +97,29 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
     $errorCodes: VALIDATION_ERROR_CODES,
 
     init(ctx: PluginContext) {
-      const errors = new Map<string, ValidationError>();
+      // Internal entry holds the public ValidationError + optional renderer
+      // context so applyErrorStyles can pick it up later.
+      type InternalEntry = ValidationError & {
+        renderer?: ValidationMessageRenderer;
+        row?: unknown;
+        value?: unknown;
+        column?: import('@better-grid/core').ColumnDef;
+      };
+      const errors = new Map<string, InternalEntry>();
       const validationTooltipEls = new Map<string, HTMLElement>();
 
       function positionKey(pos: CellPosition): string {
         return `${pos.rowIndex}:${pos.colIndex}`;
       }
 
-      type CellFailure = { message: string; code: ValidationErrorCode };
+      type CellFailure = {
+        message: string;
+        code: ValidationErrorCode;
+        renderer?: ValidationMessageRenderer;
+        row: unknown;
+        value: unknown;
+        column: import('@better-grid/core').ColumnDef;
+      };
 
       function validateCell(position: CellPosition): CellFailure | null {
         const state = ctx.grid.getState();
@@ -81,9 +128,15 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
 
         const row = state.data[position.rowIndex];
         const value = getCellValue(row, column, position.rowIndex);
+        const colRenderer = column.validationMessageRenderer;
 
         if (column.required && (value == null || value === '')) {
-          return { message: 'This field is required', code: VALIDATION_ERROR_CODES.REQUIRED_FIELD };
+          return {
+            message: 'This field is required',
+            code: VALIDATION_ERROR_CODES.REQUIRED_FIELD,
+            renderer: colRenderer,
+            row, value, column,
+          };
         }
 
         if (!column.rules || column.rules.length === 0) return null;
@@ -91,10 +144,20 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         for (const rule of column.rules) {
           const result = rule.validate(value, row);
           if (result === false) {
-            return { message: rule.message ?? 'Invalid value', code: VALIDATION_ERROR_CODES.VALIDATION_FAILED };
+            return {
+              message: rule.message ?? 'Invalid value',
+              code: VALIDATION_ERROR_CODES.VALIDATION_FAILED,
+              renderer: rule.messageRenderer ?? colRenderer,
+              row, value, column,
+            };
           }
           if (typeof result === 'string') {
-            return { message: result, code: VALIDATION_ERROR_CODES.VALIDATION_FAILED };
+            return {
+              message: result,
+              code: VALIDATION_ERROR_CODES.VALIDATION_FAILED,
+              renderer: rule.messageRenderer ?? colRenderer,
+              row, value, column,
+            };
           }
         }
 
@@ -139,7 +202,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         validationTooltipEls.clear();
       }
 
-      function showValidationTooltip(key: string, target: HTMLElement, message: string): void {
+      function showValidationTooltip(key: string, target: HTMLElement, entry: InternalEntry): void {
         const anchor = target.querySelector('.bg-input-box') as HTMLElement | null;
         const rect = (anchor ?? target).getBoundingClientRect();
         const tooltip = document.createElement('div');
@@ -147,10 +210,33 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         tooltip.style.left = `${rect.left}px`;
         tooltip.style.top = `${rect.bottom + 4}px`;
 
-        const text = document.createElement('p');
-        text.className = 'bg-validation-tooltip__text';
-        text.textContent = message;
-        tooltip.appendChild(text);
+        if (entry.renderer && entry.column) {
+          const issue: ValidationIssue = {
+            message: entry.message,
+            code: entry.code,
+            position: entry.position,
+            row: entry.row,
+            value: entry.value,
+            column: entry.column,
+          };
+          const result = entry.renderer(issue);
+          if (typeof result === 'string') {
+            const text = document.createElement('p');
+            text.className = 'bg-validation-tooltip__text';
+            text.textContent = result;
+            tooltip.appendChild(text);
+          } else {
+            // The renderer returned a node — drop the default styling and let
+            // it own its appearance entirely.
+            tooltip.classList.add('bg-validation-tooltip--custom');
+            tooltip.appendChild(result);
+          }
+        } else {
+          const text = document.createElement('p');
+          text.className = 'bg-validation-tooltip__text';
+          text.textContent = entry.message;
+          tooltip.appendChild(text);
+        }
 
         document.body.appendChild(tooltip);
         validationTooltipEls.set(key, tooltip);
@@ -180,9 +266,9 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
             const htmlCell = cell as HTMLElement;
 
             const key = `${positionKey(error.position)}:${validationTooltipEls.size}`;
-            showValidationTooltip(key, htmlCell, error.message);
+            showValidationTooltip(key, htmlCell, error);
             const onEnter = () => {
-              if (!validationTooltipEls.has(key)) showValidationTooltip(key, htmlCell, error.message);
+              if (!validationTooltipEls.has(key)) showValidationTooltip(key, htmlCell, error);
             };
             htmlCell.addEventListener('mouseenter', onEnter);
             hoverCleanups.set(htmlCell, () => {
@@ -198,15 +284,19 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         return result;
       }
 
+      function publicError(entry: InternalEntry): ValidationError {
+        return { position: entry.position, message: entry.message, code: entry.code };
+      }
+
       const api: ValidationApi = {
         validate(position) {
           if (position) {
             const failure = validateCell(position);
             const key = positionKey(position);
             if (failure) {
-              const entry: ValidationError = { position, ...failure };
+              const entry: InternalEntry = { position, ...failure };
               errors.set(key, entry);
-              return [entry];
+              return [publicError(entry)];
             }
             errors.delete(key);
             return [];
@@ -225,15 +315,15 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
               const pos = { rowIndex: row, colIndex: col };
               const failure = validateCell(pos);
               if (failure) {
-                const entry: ValidationError = { position: pos, ...failure };
+                const entry: InternalEntry = { position: pos, ...failure };
                 errors.set(positionKey(pos), entry);
-                allErrors.push(entry);
+                allErrors.push(publicError(entry));
               }
             }
           }
           return allErrors;
         },
-        getErrors: () => [...errors.values()],
+        getErrors: () => [...errors.values()].map(publicError),
         clearErrors: () => {
           errors.clear();
           applyErrorStyles();

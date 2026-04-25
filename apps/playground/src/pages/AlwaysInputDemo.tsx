@@ -30,6 +30,27 @@ const columns = [
     align: 'right',
     alwaysInput: true,
     precision: 0,
+    rules: [
+      {
+        validate: (v: unknown) => (typeof v === 'number' && v > 0) || 'Qty must be > 0',
+        // Custom-rendered error: red icon + bold message + tip.
+        messageRenderer: (issue) => {
+          const wrap = document.createElement('div');
+          wrap.style.cssText =
+            'background: #FEF3F2; border: 1px solid #F97066; border-radius: 6px; ' +
+            'padding: 6px 8px; display: flex; gap: 6px; align-items: center; ' +
+            'font-family: Inter, sans-serif; font-size: 12px; color: #B42318;';
+          const icon = document.createElement('span');
+          icon.textContent = '⚠';
+          icon.style.cssText = 'font-size: 14px; line-height: 1;';
+          const text = document.createElement('div');
+          text.innerHTML = `<strong>${issue.message}</strong><div style="color:#7A271A;font-weight:400;margin-top:2px;">Got: ${String(issue.value)}</div>`;
+          wrap.appendChild(icon);
+          wrap.appendChild(text);
+          return wrap;
+        },
+      },
+    ],
   }),
   col.currency('unitCost', {
     header: 'Unit Cost',
@@ -78,6 +99,7 @@ export function AlwaysInputDemo() {
         features={{
           format: { locale: 'en-US', currencyCode: 'USD' },
           edit: { editTrigger: 'dblclick' },
+          validation: { validateOn: 'commit' },
         }}
         selection={{ mode: 'range', fillHandle: false }}
         onCellChange={(changes) => {
