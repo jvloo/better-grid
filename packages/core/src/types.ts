@@ -319,60 +319,61 @@ export interface HierarchyState {
 // Grid Options
 // ---------------------------------------------------------------------------
 
+// NOTE: `const TPlugins` modifier was specified by the plan but TypeScript only
+// allows `const` type-parameter modifiers on functions/methods/classes — not on
+// interface declarations (TS1277). The `const` inference for plugin tuples must
+// be applied at the function call site (createGrid / useGrid signatures) where
+// it actually takes effect. See Task 3.
 export interface GridOptions<
   TData = unknown,
+  TContext = unknown,
   TPlugins extends readonly GridPlugin[] = readonly GridPlugin[],
 > {
-  columns: ColumnDef<TData>[];
+  // Required
   data: TData[];
-  rowHeight?: number | ((rowIndex: number) => number);
-  headerHeight?: number;
-  frozenTopRows?: number;
-  frozenLeftColumns?: number;
-  freezeClip?: boolean | FreezeClipOptions;
-  pinnedTopRows?: TData[];
-  pinnedBottomRows?: TData[];
-  headerLayout?: HeaderRow[];
-  footerLayout?: FooterRow[];
-  selection?: SelectionOptions;
-  virtualization?: VirtualizationOptions;
-  hierarchy?: HierarchyConfig<TData>;
+  columns: ColumnDef<TData>[];
+
+  // Mode + features (string opt-in resolved by the react package; core accepts only `plugins`)
   plugins?: TPlugins;
-  onSelectionChange?: (selection: Selection) => void;
-  onDataChange?: (changes: CellChange<TData>[]) => void;
-  onColumnResize?: (columnId: string, width: number) => void;
+
+  // Layout (grouped)
+  size?: { width?: number | string; height?: number | string };
+  frozen?: { top?: number; left?: number; clip?: boolean | FreezeClipOptions };
+  pinned?: { top?: TData[]; bottom?: TData[] };
+  headers?: HeaderRow[] | { layout: HeaderRow[]; height?: number };
+  footers?: FooterRow[] | { layout: FooterRow[]; height?: number };
+  rowHeight?: number | ((rowIndex: number) => number);
   /**
-   * Table visual style variant.
-   * - 'bordered': full cell borders (default)
-   * - 'borderless': no cell borders
-   * - 'striped': no vertical borders, horizontal borders, alternating row bg (customize with --bg-stripe-bg)
+   * Default header row height when `headers` is not provided as an object form.
+   * Retained as a sibling for the single-header simple case.
    */
+  headerHeight?: number;
   tableStyle?: 'bordered' | 'borderless' | 'striped';
-  /**
-   * Apply styles to rows based on a field value. Avoids repetitive cellStyle functions for report-style grids.
-   * Example: `{ field: 'type', styles: { title: { background: '#eee', fontWeight: '600' } } }`
-   */
-  rowStyles?: RowStylesConfig<TData>;
-  /**
-   * Compute row-level styles for the row-background layer. Unlike column
-   * cellStyle which paints per-cell, these styles apply to a single
-   * full-width strip rendered behind every cell in the row — so the row
-   * background + divider extend continuously from the first column to the
-   * rightmost edge regardless of per-cell rendering or scroll gaps.
-   *
-   * Returned keys are merged onto the strip element via inline styles;
-   * `--*` CSS custom properties are routed through `setProperty` and
-   * inherit to nested elements (cells, input boxes).
-   */
-  getRowStyle?: (row: TData, rowIndex: number) => Record<string, string> | undefined;
+
+  // Behavior
+  selection?: SelectionOptions;
+  hierarchy?: HierarchyConfig<TData>;
+  virtualization?: VirtualizationOptions;
+
+  // Styling — single function form (replaces rowStyles + getRowStyle dual)
+  rowStyle?: (row: TData, rowIndex: number) => Record<string, string> | undefined;
+
+  // Closure-over-scope (read via ref every render so handler swaps don't re-init)
+  context?: TContext;
+
+  // Events (flat, React idiom)
+  onCellChange?: (changes: CellChange<TData>[]) => void;
+  onSelectionChange?: (selection: Selection) => void;
+  onColumnResize?: (columnId: string, width: number) => void;
+
+  // Reserved for v1.1 slots feature (see spec "Reserved extension points")
+  slots?: Partial<GridSlots>;
+  slotProps?: Partial<GridSlotProps>;
 }
 
-export interface RowStylesConfig<TData = unknown> {
-  /** Field on the row whose value determines which style preset applies */
-  field: keyof TData & string;
-  /** Style presets keyed by the field's string value. Values are CSS property → value */
-  styles: Record<string, Partial<CSSStyleDeclaration>>;
-}
+// v1: empty registries; v1.1 will populate via module augmentation.
+export interface GridSlots {}
+export interface GridSlotProps {}
 
 // ---------------------------------------------------------------------------
 // Grid State

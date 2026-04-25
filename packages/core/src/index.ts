@@ -11,7 +11,6 @@ export type {
   GridInstance,
   GridState,
   GridEvents,
-  RowStylesConfig,
   // Columns
   ColumnDef,
   CellType,
