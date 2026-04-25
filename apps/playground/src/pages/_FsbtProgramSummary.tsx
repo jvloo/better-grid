@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { useGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
@@ -141,7 +141,9 @@ export function FsbtProgramSummary() {
         position: 'relative',
         overflow: 'hidden',
         borderRadius: 12,
-      }}
+        '--bg-scrollbar-inset': '12px',
+        '--bg-header-bg': '#EAECF0',
+      } as CSSProperties}
     />
   );
 }

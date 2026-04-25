@@ -111,6 +111,10 @@ const INPUT_CSS = `
 // Chevron SVG for dropdown trigger
 const CHEVRON_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E")`;
 
+// Module-level canvas reused across caret-from-x measurements (avoids
+// allocating a canvas on every cell click).
+let caretMeasureCanvas: HTMLCanvasElement | null = null;
+
 export function editing(options?: EditingOptions): GridPlugin<'editing', EditingApi> {
   const config = {
     editTrigger: options?.editTrigger ?? 'dblclick',
@@ -137,6 +141,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               display: flex !important;
               align-items: center !important;
               line-height: normal !important;
+              cursor: text;
             }
             .bg-cell--input-editable .bg-input-box {
               pointer-events: none;
@@ -156,6 +161,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               text-overflow: ellipsis;
               white-space: nowrap;
               min-width: 0;
+              cursor: inherit;
             }
             .bg-cell--input-editable .bg-input-box:hover {
               background: var(--bg-input-hover-bg, #F0F0F0);
@@ -195,6 +201,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               color: inherit;
               font: inherit;
               text-align: inherit;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              min-width: 0;
             }
             .bg-cell--input-editable .bg-select-compound {
               display: flex;
@@ -258,6 +268,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               padding: 0 var(--bg-input-suffix-space, 0px) 0 var(--bg-input-prefix-space, 0px);
               box-sizing: border-box;
               text-align: inherit;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
             }
             .bg-cell--input-editable .bg-input-box__prefix,
             .bg-cell--input-editable .bg-input-box__suffix,
@@ -283,6 +296,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             .bg-cell--editing .bg-input-box__value .bg-cell-editor {
               background: transparent !important;
               box-shadow: none !important;
+              pointer-events: auto !important;
+              cursor: text;
+            }
+            .bg-cell--editing .bg-input-box,
+            .bg-cell--editing .bg-input-box__value {
+              pointer-events: auto;
             }
             .bg-cell--editing .bg-input-box--has-adornment .bg-input-box__value {
               display: flex;
@@ -1691,35 +1710,57 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         } else {
           // Place the caret at the clicked character position — matches
           // Wiseway's always-visible-input UX where single-clicking a
-          // number lands the cursor exactly where the pointer is. A
-          // double-click (handled in the cell:dblclick listener below)
-          // selects the whole value. Falls back to end when
-          // caretPositionFromPoint / caretRangeFromPoint isn't available
-          // or the click coords don't resolve to a position inside the
-          // newly-created input.
+          // number lands the cursor exactly where the pointer is.
+          // `caretPositionFromPoint` doesn't resolve character offsets
+          // inside <input> elements (always returns offset=0), so we
+          // measure character widths via canvas and pick the nearest
+          // boundary. Falls back to end if no click coords supplied.
           const clickX = clickEventRef?.clientX;
-          const clickY = clickEventRef?.clientY;
+          const displayValue = input.value;
           let offset: number | null = null;
-          if (clickX != null && clickY != null) {
-            const docAny = document as unknown as {
-              caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
-              caretRangeFromPoint?: (x: number, y: number) => Range | null;
-            };
-            if (docAny.caretPositionFromPoint) {
-              const pos = docAny.caretPositionFromPoint(clickX, clickY);
-              if (pos && input.contains(pos.offsetNode)) offset = pos.offset;
-            } else if (docAny.caretRangeFromPoint) {
-              const range = docAny.caretRangeFromPoint(clickX, clickY);
-              if (range && input.contains(range.startContainer)) offset = range.startOffset;
+          if (clickX != null && displayValue.length > 0) {
+            const r = input.getBoundingClientRect();
+            const cs = window.getComputedStyle(input);
+            const canvas = caretMeasureCanvas ?? (caretMeasureCanvas = document.createElement('canvas'));
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.font = cs.font || `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+              const totalW = ctx.measureText(displayValue).width;
+              const padL = parseFloat(cs.paddingLeft || '0');
+              const padR = parseFloat(cs.paddingRight || '0');
+              let textStart: number;
+              if (cs.textAlign === 'right' || cs.textAlign === 'end') {
+                textStart = r.right - padR - totalW;
+              } else if (cs.textAlign === 'center') {
+                textStart = r.left + (r.width - totalW) / 2;
+              } else {
+                textStart = r.left + padL;
+              }
+              const relX = clickX - textStart;
+              if (relX <= 0) {
+                offset = 0;
+              } else {
+                let cum = 0;
+                offset = displayValue.length;
+                for (let i = 0; i < displayValue.length; i++) {
+                  const ch = displayValue.charAt(i);
+                  const w = ctx.measureText(ch).width;
+                  if (cum + w / 2 > relX) { offset = i; break; }
+                  cum += w;
+                }
+              }
             }
           }
-          if (offset == null) offset = value.length;
+          if (offset == null) offset = displayValue.length;
           input.setSelectionRange(offset, offset);
         }
 
         // Keyboard handling
         input.addEventListener('keydown', (e) => {
           handleEditorKeydown(e);
+        });
+        input.addEventListener('dblclick', () => {
+          requestAnimationFrame(() => input.select());
         });
 
         // Commit on click outside the cell
@@ -3149,6 +3190,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           if (clickEditFrame !== null) cancelAnimationFrame(clickEditFrame);
           clickEditFrame = requestAnimationFrame(() => {
             clickEditFrame = null;
+            // If already editing this exact cell, leave the editor alone —
+            // re-running startEdit would commit + re-open and wipe any
+            // selection set by a sibling cell:dblclick handler. The user
+            // clicked inside the input; the input's native click handling
+            // will move the caret on its own.
+            if (editingCell && isSameCell(editingCell, cell)) return;
             startEdit(cell, undefined, event);
           });
         });
@@ -3159,6 +3206,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // click opens the editor, then the second click (which makes it a
         // dblclick) selects all.
         ctx.on('cell:dblclick', (cell) => {
+          // Cancel any pending cell:click rAF for the same cell so it
+          // doesn't fire startEdit *after* the dblclick and undo our select.
+          if (clickEditFrame !== null) {
+            cancelAnimationFrame(clickEditFrame);
+            clickEditFrame = null;
+          }
           if (editingCell && isSameCell(editingCell, cell)) {
             const ae = activeEditor;
             if (ae && typeof (ae as HTMLInputElement).select === 'function') {

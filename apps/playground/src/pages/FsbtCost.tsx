@@ -872,6 +872,7 @@ export function FsbtCost() {
           overflow: 'hidden',
           borderRadius: 12,
           '--bg-scrollbar-inset': '12px',
+          '--bg-header-bg': '#EAECF0',
         } as CSSProperties}
       />
     </div>

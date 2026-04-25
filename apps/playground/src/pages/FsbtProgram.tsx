@@ -506,6 +506,8 @@ export function FsbtProgram() {
           // Inset the scrollbar by the same radius so it doesn't get
           // clipped at the rounded corners.
           '--bg-scrollbar-inset': '12px',
+          // Match Wiseway's Program table header grey.
+          '--bg-header-bg': '#EAECF0',
         } as CSSProperties}
       />
     </div>

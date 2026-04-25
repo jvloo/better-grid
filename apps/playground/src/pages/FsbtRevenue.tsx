@@ -1039,6 +1039,7 @@ export function FsbtRevenue() {
             overflow: 'hidden',
             borderRadius: 12,
             '--bg-scrollbar-inset': '12px',
+            '--bg-header-bg': '#D0D5DD',
           } as CSSProperties}
         />
       </div>
@@ -1050,7 +1051,7 @@ export function FsbtRevenue() {
         </div>
         <div
           ref={btsDetailsRef}
-          style={{ height: 720, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, '--bg-scrollbar-inset': '12px' } as CSSProperties}
+          style={{ height: 720, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, '--bg-scrollbar-inset': '12px', '--bg-header-bg': '#D0D5DD' } as CSSProperties}
         />
       </div>
 
@@ -1068,7 +1069,7 @@ export function FsbtRevenue() {
         </div>
         <div
           ref={holdingGeneralRef}
-          style={{ height: 260, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, marginBottom: 24, '--bg-scrollbar-inset': '12px' } as CSSProperties}
+          style={{ height: 260, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, marginBottom: 24, '--bg-scrollbar-inset': '12px', '--bg-header-bg': '#D0D5DD' } as CSSProperties}
         />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, justifyContent: 'flex-end' }}>
@@ -1078,7 +1079,7 @@ export function FsbtRevenue() {
         </div>
         <div
           ref={holdingRef}
-          style={{ height: 480, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, '--bg-scrollbar-inset': '12px' } as CSSProperties}
+          style={{ height: 480, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, '--bg-scrollbar-inset': '12px', '--bg-header-bg': '#D0D5DD' } as CSSProperties}
         />
       </div>
 
@@ -1096,7 +1097,7 @@ export function FsbtRevenue() {
         </div>
         <div
           ref={holdingSaleRef}
-          style={{ height: 320, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, '--bg-scrollbar-inset': '12px' } as CSSProperties}
+          style={{ height: 320, width: '100%', position: 'relative', overflow: 'hidden', borderRadius: 12, '--bg-scrollbar-inset': '12px', '--bg-header-bg': '#D0D5DD' } as CSSProperties}
         />
       </div>
     </div>

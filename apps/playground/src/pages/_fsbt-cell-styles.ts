@@ -23,6 +23,10 @@ export const FSBT_STYLES = {
   rowHeight: 44,
   /** Header height used by every FSBT grid */
   headerHeight: 44,
+  /** Header background for Program + Cost tables (Wiseway's lighter tone) */
+  headerBg: '#EAECF0',
+  /** Header background for Revenue tables (Wiseway's darker tone) */
+  revenueHeaderBg: '#D0D5DD',
 } as const;
 
 /**
