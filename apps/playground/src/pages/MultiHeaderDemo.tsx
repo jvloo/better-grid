@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
-import { BetterGrid } from '@better-grid/react';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
-import { formatting, sorting } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface CompanyRow {
@@ -32,89 +30,71 @@ const data: CompanyRow[] = [
   { id: 10, name: 'Weyland-Yutani', sector: 'Aerospace', region: 'Europe', revQ1: 9200000, revQ2: 9800000, revQ3: 10500000, expQ1: 6500000, expQ2: 6900000, expQ3: 7200000, net: 8900000, margin: 0.30 },
 ];
 
+const headerRows: HeaderRow[] = [
+  {
+    id: 'groups',
+    height: 32,
+    cells: [
+      { id: 'g-info', content: 'Company Info', colSpan: 3 },
+      { id: 'g-rev', content: 'Revenue', colSpan: 3 },
+      { id: 'g-exp', content: 'Expenses', colSpan: 3 },
+      { id: 'g-summary', content: 'Summary', colSpan: 2 },
+    ],
+  },
+  {
+    id: 'columns',
+    height: 32,
+    cells: [
+      { id: 'h-name', content: 'Name', columnId: 'name' },
+      { id: 'h-sector', content: 'Sector', columnId: 'sector' },
+      { id: 'h-region', content: 'Region', columnId: 'region' },
+      { id: 'h-revq1', content: 'Q1', columnId: 'revQ1' },
+      { id: 'h-revq2', content: 'Q2', columnId: 'revQ2' },
+      { id: 'h-revq3', content: 'Q3', columnId: 'revQ3' },
+      { id: 'h-expq1', content: 'Q1', columnId: 'expQ1' },
+      { id: 'h-expq2', content: 'Q2', columnId: 'expQ2' },
+      { id: 'h-expq3', content: 'Q3', columnId: 'expQ3' },
+      { id: 'h-net', content: 'Net', columnId: 'net' },
+      { id: 'h-margin', content: 'Margin', columnId: 'margin' },
+    ],
+  },
+];
+
+const columns = [
+  col.text('name', { header: 'Name', width: 160, sortable: true }),
+  col.text('sector', { header: 'Sector', width: 120, sortable: true }),
+  col.text('region', { header: 'Region', width: 130, sortable: true }),
+  col.currency('revQ1', { header: 'Q1', width: 110, sortable: true }),
+  col.currency('revQ2', { header: 'Q2', width: 110, sortable: true }),
+  col.currency('revQ3', { header: 'Q3', width: 110, sortable: true }),
+  col.currency('expQ1', { header: 'Q1', width: 110, sortable: true }),
+  col.currency('expQ2', { header: 'Q2', width: 110, sortable: true }),
+  col.currency('expQ3', { header: 'Q3', width: 110, sortable: true }),
+  col.currency('net', {
+    header: 'Net',
+    width: 120,
+    sortable: true,
+    cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
+      const val = ctx.value as number;
+      el.textContent = `$${(val / 1_000_000).toFixed(1)}M`;
+      el.style.fontWeight = '600';
+      el.style.color = val >= 5_000_000 ? '#2e7d32' : '#333';
+    },
+  }),
+  col.percent('margin', {
+    header: 'Margin',
+    width: 90,
+    sortable: true,
+    cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
+      const val = ctx.value as number;
+      el.textContent = `${(val * 100).toFixed(0)}%`;
+      el.style.fontWeight = '500';
+      el.style.color = val >= 0.33 ? '#2e7d32' : val >= 0.30 ? '#f57f17' : '#c62828';
+    },
+  }),
+] as ColumnDef<CompanyRow>[];
+
 export function MultiHeaderDemo() {
-  const headerRows = useMemo<HeaderRow[]>(
-    () => [
-      {
-        id: 'groups',
-        height: 32,
-        cells: [
-          { id: 'g-info', content: 'Company Info', colSpan: 3 },
-          { id: 'g-rev', content: 'Revenue', colSpan: 3 },
-          { id: 'g-exp', content: 'Expenses', colSpan: 3 },
-          { id: 'g-summary', content: 'Summary', colSpan: 2 },
-        ],
-      },
-      {
-        id: 'columns',
-        height: 32,
-        cells: [
-          { id: 'h-name', content: 'Name', columnId: 'name' },
-          { id: 'h-sector', content: 'Sector', columnId: 'sector' },
-          { id: 'h-region', content: 'Region', columnId: 'region' },
-          { id: 'h-revq1', content: 'Q1', columnId: 'revQ1' },
-          { id: 'h-revq2', content: 'Q2', columnId: 'revQ2' },
-          { id: 'h-revq3', content: 'Q3', columnId: 'revQ3' },
-          { id: 'h-expq1', content: 'Q1', columnId: 'expQ1' },
-          { id: 'h-expq2', content: 'Q2', columnId: 'expQ2' },
-          { id: 'h-expq3', content: 'Q3', columnId: 'expQ3' },
-          { id: 'h-net', content: 'Net', columnId: 'net' },
-          { id: 'h-margin', content: 'Margin', columnId: 'margin' },
-        ],
-      },
-    ],
-    [],
-  );
-
-  const columns = useMemo<ColumnDef<CompanyRow>[]>(
-    () => [
-      { id: 'name', header: 'Name', width: 160, sortable: true },
-      { id: 'sector', header: 'Sector', width: 120, sortable: true },
-      { id: 'region', header: 'Region', width: 130, sortable: true },
-      { id: 'revQ1', header: 'Q1', width: 110, cellType: 'currency', sortable: true },
-      { id: 'revQ2', header: 'Q2', width: 110, cellType: 'currency', sortable: true },
-      { id: 'revQ3', header: 'Q3', width: 110, cellType: 'currency', sortable: true },
-      { id: 'expQ1', header: 'Q1', width: 110, cellType: 'currency', sortable: true },
-      { id: 'expQ2', header: 'Q2', width: 110, cellType: 'currency', sortable: true },
-      { id: 'expQ3', header: 'Q3', width: 110, cellType: 'currency', sortable: true },
-      {
-        id: 'net',
-        header: 'Net',
-        width: 120,
-        cellType: 'currency',
-        sortable: true,
-        cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
-          const val = ctx.value as number;
-          el.textContent = `$${(val / 1_000_000).toFixed(1)}M`;
-          el.style.fontWeight = '600';
-          el.style.color = val >= 5_000_000 ? '#2e7d32' : '#333';
-        },
-      },
-      {
-        id: 'margin',
-        header: 'Margin',
-        width: 90,
-        cellType: 'percent',
-        sortable: true,
-        cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
-          const val = ctx.value as number;
-          el.textContent = `${(val * 100).toFixed(0)}%`;
-          el.style.fontWeight = '500';
-          el.style.color = val >= 0.33 ? '#2e7d32' : val >= 0.30 ? '#f57f17' : '#c62828';
-        },
-      },
-    ],
-    [],
-  );
-
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD' }),
-      sorting(),
-    ],
-    [],
-  );
-
   return (
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Multi-Level Column Headers</h1>
@@ -134,10 +114,11 @@ export function MultiHeaderDemo() {
       <BetterGrid<CompanyRow>
         columns={columns}
         data={data}
-        headerLayout={headerRows}
-        frozenLeftColumns={1}
+        mode="view"
+        features={{ format: { locale: 'en-US', currencyCode: 'USD' } }}
+        headers={headerRows}
+        frozen={{ left: 1 }}
         selection={{ mode: 'range' }}
-        plugins={plugins}
         height={400}
       />
 

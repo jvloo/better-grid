@@ -1,7 +1,7 @@
-import { useMemo, useCallback } from 'react';
-import { useGrid } from '@better-grid/react';
-import type { ColumnDef, HeaderRow } from '@better-grid/core';
-import { formatting, editing, sorting, filtering, hierarchy, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
+import { useCallback } from 'react';
+import { BetterGrid, useGrid, defineColumn as col } from '@better-grid/react';
+import type { BadgeOption, ColumnDef, HeaderRow } from '@better-grid/core';
+import type { ExportApi } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 import { IconButton, ExpandAllIcon, CollapseAllIcon, ExportIcon } from './_toolbar-icons';
 
@@ -52,135 +52,94 @@ const data: BudgetRow[] = [
   { id: 18, parentId: 14, department: 'IT', category: 'Technology', q1Actual: 430000, q1Budget: 440000, q2Actual: 430000, q2Budget: 440000, q3Actual: 430000, q3Budget: 440000, q4Actual: 430000, q4Budget: 440000, ytdActual: 1720000, ytdBudget: 1760000, variance: -40000, status: 'Under Budget' },
 ];
 
+// Quarter periods drive both column defs and multi-header rows.
+const periods = [
+  { key: 'q1', label: 'Q1', width: 100 }, { key: 'q2', label: 'Q2', width: 100 },
+  { key: 'q3', label: 'Q3', width: 100 }, { key: 'q4', label: 'Q4', width: 100 },
+  { key: 'ytd', label: 'YTD', width: 110 },
+];
+
+// Each quarter expands to (Actual, Budget) currency columns, precision 0.
+const columns = [
+  col.text('department', { header: 'Department', width: 200 }),
+  col.text('category', { header: 'Category', width: 120 }),
+  col.badge('status', {
+    header: 'Status',
+    width: 120,
+    options: [
+      { label: 'On Track', value: 'On Track', color: '#2e7d32', bg: '#e8f5e9' },
+      { label: 'Over Budget', value: 'Over Budget', color: '#c62828', bg: '#ffebee' },
+      { label: 'Under Budget', value: 'Under Budget', color: '#1565c0', bg: '#e3f2fd' },
+    ] as BadgeOption[],
+  }),
+  ...periods.flatMap((p) => [
+    col.currency(`${p.key}Actual`, { header: 'Actual', width: p.width, precision: 0 }),
+    col.currency(`${p.key}Budget`, { header: 'Budget', width: p.width, precision: 0 }),
+  ]),
+  col.change('variance', { header: 'Variance', width: 120 }),
+] as ColumnDef<BudgetRow>[];
+
+// Multi-header generated from the same `periods` array used for columns.
+// Status & Variance use rowSpan so they have no row-2 cell.
+const multiHeaders: HeaderRow[] = [
+  {
+    id: 'groups', height: 32,
+    cells: [
+      { id: 'g-dept', content: 'Department', colSpan: 2 },
+      { id: 'g-status', content: 'Status', rowSpan: 2 },
+      ...periods.map((p) => ({ id: `g-${p.key}`, content: p.label, colSpan: 2 })),
+      { id: 'g-var', content: 'Var', rowSpan: 2 },
+    ],
+  },
+  {
+    id: 'columns', height: 32,
+    cells: [
+      { id: 'h-dept', content: 'Department', columnId: 'department' },
+      { id: 'h-cat', content: 'Category', columnId: 'category' },
+      ...periods.flatMap((p) => [
+        { id: `h-${p.key}a`, content: 'Actual', columnId: `${p.key}Actual` },
+        { id: `h-${p.key}b`, content: 'Budget', columnId: `${p.key}Budget` },
+      ]),
+    ],
+  },
+];
+
+// Totals row computed once at module scope — depends only on static data.
+const rootRows = data.filter((r) => r.parentId === null);
+const numericKeys = ['q1Actual', 'q1Budget', 'q2Actual', 'q2Budget', 'q3Actual', 'q3Budget', 'q4Actual', 'q4Budget', 'ytdActual', 'ytdBudget', 'variance'] as const;
+const totalsRow: BudgetRow = {
+  id: -1, parentId: null, department: 'Total', category: '', status: '',
+  ...Object.fromEntries(numericKeys.map((k) => [k, rootRows.reduce((s, r) => s + r[k], 0)])),
+} as BudgetRow;
+
 export function FinanceDashboard() {
-  const columns = useMemo<ColumnDef<BudgetRow>[]>(
-    () => [
-      { id: 'department', accessorKey: 'department', header: 'Department', width: 200 },
-      { id: 'category', accessorKey: 'category', header: 'Category', width: 120 },
-      {
-        id: 'status',
-        accessorKey: 'status',
-        header: 'Status',
-        width: 120,
-        cellType: 'badge',
-        options: [
-          { label: 'On Track', value: 'On Track', color: '#2e7d32', bg: '#e8f5e9' },
-          { label: 'Over Budget', value: 'Over Budget', color: '#c62828', bg: '#ffebee' },
-          { label: 'Under Budget', value: 'Under Budget', color: '#1565c0', bg: '#e3f2fd' },
-        ],
-      },
-      { id: 'q1Actual', accessorKey: 'q1Actual', header: 'Actual', width: 100, cellType: 'currency', precision: 0, align: 'right' },
-      { id: 'q1Budget', accessorKey: 'q1Budget', header: 'Budget', width: 100, cellType: 'currency', precision: 0, align: 'right' },
-      { id: 'q2Actual', accessorKey: 'q2Actual', header: 'Actual', width: 100, cellType: 'currency', precision: 0, align: 'right' },
-      { id: 'q2Budget', accessorKey: 'q2Budget', header: 'Budget', width: 100, cellType: 'currency', precision: 0, align: 'right' },
-      { id: 'q3Actual', accessorKey: 'q3Actual', header: 'Actual', width: 100, cellType: 'currency', precision: 0, align: 'right' },
-      { id: 'q3Budget', accessorKey: 'q3Budget', header: 'Budget', width: 100, cellType: 'currency', precision: 0, align: 'right' },
-      { id: 'q4Actual', accessorKey: 'q4Actual', header: 'Actual', width: 100, cellType: 'currency', precision: 0, align: 'right' },
-      { id: 'q4Budget', accessorKey: 'q4Budget', header: 'Budget', width: 100, cellType: 'currency', precision: 0, align: 'right' },
-      { id: 'ytdActual', accessorKey: 'ytdActual', header: 'Actual', width: 110, cellType: 'currency', precision: 0, align: 'right' },
-      { id: 'ytdBudget', accessorKey: 'ytdBudget', header: 'Budget', width: 110, cellType: 'currency', precision: 0, align: 'right' },
-      { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 120, cellType: 'change' },
-    ],
-    [],
-  );
-
-  const multiHeaders = useMemo<HeaderRow[]>(
-    () => [
-      {
-        id: 'groups',
-        height: 32,
-        cells: [
-          { id: 'g-dept', content: 'Department', colSpan: 2 },
-          { id: 'g-status', content: 'Status', rowSpan: 2 },
-          { id: 'g-q1', content: 'Q1', colSpan: 2 },
-          { id: 'g-q2', content: 'Q2', colSpan: 2 },
-          { id: 'g-q3', content: 'Q3', colSpan: 2 },
-          { id: 'g-q4', content: 'Q4', colSpan: 2 },
-          { id: 'g-ytd', content: 'YTD', colSpan: 2 },
-          { id: 'g-var', content: 'Var', rowSpan: 2 },
-        ],
-      },
-      {
-        id: 'columns',
-        height: 32,
-        cells: [
-          { id: 'h-dept', content: 'Department', columnId: 'department' },
-          { id: 'h-cat', content: 'Category', columnId: 'category' },
-          // Status skipped — occupied by rowSpan from group row
-          { id: 'h-q1a', content: 'Actual', columnId: 'q1Actual' },
-          { id: 'h-q1b', content: 'Budget', columnId: 'q1Budget' },
-          { id: 'h-q2a', content: 'Actual', columnId: 'q2Actual' },
-          { id: 'h-q2b', content: 'Budget', columnId: 'q2Budget' },
-          { id: 'h-q3a', content: 'Actual', columnId: 'q3Actual' },
-          { id: 'h-q3b', content: 'Budget', columnId: 'q3Budget' },
-          { id: 'h-q4a', content: 'Actual', columnId: 'q4Actual' },
-          { id: 'h-q4b', content: 'Budget', columnId: 'q4Budget' },
-          { id: 'h-ytda', content: 'Actual', columnId: 'ytdActual' },
-          { id: 'h-ytdb', content: 'Budget', columnId: 'ytdBudget' },
-          // Variance skipped — occupied by rowSpan from group row
-        ],
-      },
-    ],
-    [],
-  );
-
-  const totalsRow = useMemo<BudgetRow>(() => {
-    const roots = data.filter((r) => r.parentId === null);
-    return {
-      id: -1,
-      parentId: null,
-      department: 'Total',
-      category: '',
-      q1Actual: roots.reduce((sum, r) => sum + r.q1Actual, 0),
-      q1Budget: roots.reduce((sum, r) => sum + r.q1Budget, 0),
-      q2Actual: roots.reduce((sum, r) => sum + r.q2Actual, 0),
-      q2Budget: roots.reduce((sum, r) => sum + r.q2Budget, 0),
-      q3Actual: roots.reduce((sum, r) => sum + r.q3Actual, 0),
-      q3Budget: roots.reduce((sum, r) => sum + r.q3Budget, 0),
-      q4Actual: roots.reduce((sum, r) => sum + r.q4Actual, 0),
-      q4Budget: roots.reduce((sum, r) => sum + r.q4Budget, 0),
-      ytdActual: roots.reduce((sum, r) => sum + r.ytdActual, 0),
-      ytdBudget: roots.reduce((sum, r) => sum + r.ytdBudget, 0),
-      variance: roots.reduce((sum, r) => sum + r.variance, 0),
-      status: '',
-    };
-  }, []);
-
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD', accountingFormat: true }),
-      editing({ editTrigger: 'dblclick', precision: 0 }),
-      sorting(),
-      filtering(),
-      hierarchy({ indentColumn: 'department', indentSize: 22 }),
-      cellRenderers(),
-      validation(),
-      clipboard(),
-      undoRedo({ maxHistory: 50 }),
-      exportPlugin({ filename: 'budget-report' }),
-    ],
-    [],
-  );
-
-  const { grid, containerRef } = useGrid<BudgetRow>({
+  // useGrid form: needed because the toolbar buttons call grid.api.expandAll/collapseAll
+  // and the export plugin imperatively. <BetterGrid grid={grid}> renders the same handle.
+  const grid = useGrid<BudgetRow>({
     data,
     columns,
-    headerLayout: multiHeaders,
-    plugins,
-    pinnedBottomRows: [totalsRow],
-    frozenLeftColumns: 2,
+    mode: 'spreadsheet',
+    features: {
+      format: { locale: 'en-US', currencyCode: 'USD', accountingFormat: true },
+      edit: { editTrigger: 'dblclick', precision: 0 },
+      validation: true,
+      export: { filename: 'budget-report' },
+    },
+    headers: multiHeaders,
+    pinned: { bottom: [totalsRow] },
+    frozen: { left: 2 },
     hierarchy: {
-      getRowId: (row: BudgetRow) => row.id,
-      getParentId: (row: BudgetRow) => row.parentId,
+      getRowId: (row) => row.id,
+      getParentId: (row) => row.parentId,
       defaultExpanded: true,
     },
     selection: { mode: 'range', fillHandle: true },
     rowHeight: 36,
   });
 
-  const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
-  const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
-  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExpandAll = useCallback(() => grid.api.expandAll(), [grid]);
+  const handleCollapseAll = useCallback(() => grid.api.collapseAll(), [grid]);
+  const handleExport = useCallback(() => (grid.api.plugins as { export?: ExportApi }).export?.exportToCsv(), [grid]);
 
   return (
     <div>
@@ -196,20 +155,11 @@ export function FinanceDashboard() {
         Real-time budget tracking across departments. Hierarchical rows, frozen columns, quarterly breakdowns, and YTD variance analysis.
       </p>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
-        <strong>Plugins:</strong> formatting, editing, sorting, filtering, hierarchy, cellRenderers, validation, clipboard, undoRedo, export &bull;
-        <strong> Core:</strong> frozenLeftColumns, headerRows, pinnedBottomRows, fillHandle, hierarchy
+        <strong>Mode:</strong> spreadsheet (sort/filter/resize/select/reorder/edit/clipboard/undo) &bull;
+        <strong> Features:</strong> format, validation, export, hierarchy &bull;
+        <strong> Layout:</strong> frozen left, multi-headers, pinned totals row, fillHandle
       </div>
-      <div
-        ref={containerRef}
-        style={{
-          height: 560,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
-          border: '1px solid #e0e0e0',
-          borderRadius: 8,
-        }}
-      />
+      <BetterGrid grid={grid} height={560} style={{ border: '1px solid #e0e0e0', borderRadius: 8 }} />
     </div>
   );
 }

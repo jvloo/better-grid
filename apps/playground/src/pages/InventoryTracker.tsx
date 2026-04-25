@@ -1,7 +1,7 @@
-import { useMemo, useState, useCallback } from 'react';
-import { useGrid } from '@better-grid/react';
-import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, sorting, filtering, cellRenderers, validation, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
+import { useState, useCallback } from 'react';
+import { BetterGrid, useGrid, defineColumn as col } from '@better-grid/react';
+import type { BadgeOption, ColumnDef } from '@better-grid/core';
+import type { ExportApi } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 import { IconButton, ExportIcon } from './_toolbar-icons';
 
@@ -72,68 +72,69 @@ const initialData: StockRow[] = items.map((name, i) => {
   };
 });
 
+const columns = [
+  col.text('sku', { header: 'SKU', width: 90, sortable: true }),
+  col.text('name', { header: 'Item Name', width: 170, sortable: true, required: true }),
+  col.badge('category', {
+    header: 'Category',
+    width: 110,
+    sortable: true,
+    options: categories.map((c) => ({ label: c, value: c, color: '#333', bg: '#f0f0f0' })) as BadgeOption[],
+  }),
+  col.text('supplier', {
+    header: 'Supplier',
+    width: 110,
+    sortable: true,
+    cellEditor: 'dropdown',
+    options: suppliers,
+  }),
+  col.text('warehouse', {
+    header: 'Warehouse',
+    width: 110,
+    sortable: true,
+    cellEditor: 'dropdown',
+    options: warehouses,
+  }),
+  col.text('unit', { header: 'Unit', width: 70, align: 'center' }),
+  col.currency('unitCost', { header: 'Unit Cost', width: 90, precision: 2, sortable: true }),
+  col.number('quantity', {
+    header: 'Qty',
+    width: 70,
+    sortable: true,
+    rules: [{ validate: (v: unknown) => (v as number) >= 0 || 'Cannot be negative' }],
+    cellStyle: (value: unknown): Record<string, string> | undefined => {
+      const v = value as number;
+      if (v === 0) return { color: '#c62828', fontWeight: '600' };
+      if (v <= 30) return { color: '#e65100' };
+      return undefined;
+    },
+  }),
+  col.number('reorderLevel', { header: 'Reorder At', width: 85, sortable: true }),
+  col.progress('stockLevel', { header: 'Stock Level', width: 120, sortable: true }),
+  col.tooltip('status', { header: 'Status', width: 110 }),
+  col.number('leadDays', { header: 'Lead (d)', width: 75, sortable: true }),
+  col.date('lastRestock', { header: 'Last Restock', width: 110, sortable: true }),
+  col.date('nextRestock', { header: 'Next Restock', width: 110, sortable: true }),
+] as ColumnDef<StockRow>[];
+
 export function InventoryTracker() {
   const [data, setData] = useState(initialData);
 
-  const columns = useMemo<ColumnDef<StockRow>[]>(
-    () => [
-      { id: 'sku', header: 'SKU', width: 90, sortable: true },
-      { id: 'name', header: 'Item Name', width: 170, sortable: true, required: true },
-      { id: 'category', header: 'Category', width: 110, sortable: true,
-        cellType: 'badge',
-        options: categories.map(c => ({ label: c, value: c, color: '#333', bg: '#f0f0f0' })),
-      },
-      { id: 'supplier', header: 'Supplier', width: 110, sortable: true,
-        cellEditor: 'dropdown', options: suppliers,
-      },
-      { id: 'warehouse', header: 'Warehouse', width: 110, sortable: true,
-        cellEditor: 'dropdown', options: warehouses,
-      },
-      { id: 'unit', header: 'Unit', width: 70, align: 'center' },
-      { id: 'unitCost', header: 'Unit Cost', width: 90, cellType: 'currency', precision: 2, sortable: true },
-      { id: 'quantity', header: 'Qty', width: 70, align: 'right', sortable: true,
-        rules: [{ validate: (v) => (v as number) >= 0 || 'Cannot be negative' }],
-        cellStyle: (value) => {
-          const v = value as number;
-          if (v === 0) return { color: '#c62828', fontWeight: '600' };
-          if (v <= 30) return { color: '#e65100' };
-          return undefined;
-        },
-      },
-      { id: 'reorderLevel', header: 'Reorder At', width: 85, align: 'right', sortable: true },
-      { id: 'stockLevel', header: 'Stock Level', width: 120, cellType: 'progress', sortable: true },
-      { id: 'status', header: 'Status', width: 110, cellType: 'tooltip' },
-      { id: 'leadDays', header: 'Lead (d)', width: 75, align: 'right', sortable: true },
-      { id: 'lastRestock', header: 'Last Restock', width: 110, cellType: 'date', sortable: true },
-      { id: 'nextRestock', header: 'Next Restock', width: 110, cellType: 'date', sortable: true },
-    ],
-    [],
-  );
-
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD' }),
-      editing({ editTrigger: 'dblclick' }),
-      sorting(),
-      filtering(),
-      validation({ validateOn: 'commit' }),
-      cellRenderers(),
-      clipboard(),
-      undoRedo({ maxHistory: 50 }),
-      exportPlugin({ filename: 'inventory-report' }),
-    ],
-    [],
-  );
-
-  const { grid, containerRef } = useGrid<StockRow>({
+  // useGrid form: needed for the imperative export trigger from the toolbar.
+  const grid = useGrid<StockRow>({
     data,
     columns,
-    plugins,
-    frozenLeftColumns: 5,
-    freezeClip: { minVisible: 2 },
+    mode: 'spreadsheet',
+    features: {
+      format: { locale: 'en-US', currencyCode: 'USD' },
+      edit: { editTrigger: 'dblclick' },
+      validation: { validateOn: 'commit' },
+      export: { filename: 'inventory-report' },
+    },
+    frozen: { left: 5, clip: { minVisible: 2 } },
     selection: { mode: 'range', fillHandle: true },
-    onDataChange: (changes) => {
-      setData(prev => {
+    onCellChange: (changes) => {
+      setData((prev) => {
         const next = [...prev];
         for (const c of changes) next[c.rowIndex] = c.row as StockRow;
         return next;
@@ -141,7 +142,7 @@ export function InventoryTracker() {
     },
   });
 
-  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExport = useCallback(() => (grid.api.plugins as { export?: ExportApi }).export?.exportToCsv(), [grid]);
 
   return (
     <div>
@@ -156,21 +157,12 @@ export function InventoryTracker() {
         Drag the freeze clip handle to adjust frozen columns.
       </p>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
-        <strong>Plugins:</strong> formatting, editing, sorting, filtering, validation, cellRenderers, clipboard, undoRedo, export &bull;
-        <strong> Core:</strong> frozenLeftColumns, freezeClip, fillHandle, cellStyle (conditional)
+        <strong>Mode:</strong> spreadsheet (sort/filter/resize/select/reorder/edit/clipboard/undo) &bull;
+        <strong> Features:</strong> format, validation, export &bull;
+        <strong> Layout:</strong> frozen left + clip, fillHandle, conditional cellStyle
       </div>
 
-      <div
-        ref={containerRef}
-        style={{
-          height: 560,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
-          border: '1px solid #e0e0e0',
-          borderRadius: 8,
-        }}
-      />
+      <BetterGrid grid={grid} height={560} style={{ border: '1px solid #e0e0e0', borderRadius: 8 }} />
     </div>
   );
 }

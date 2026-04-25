@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
-import { BetterGrid } from '@better-grid/react';
-import type { ColumnDef } from '@better-grid/core';
-import { formatting, sorting, filtering, cellRenderers, autoDetect, search, exportPlugin, pagination, editing } from '@better-grid/plugins';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
+import type { BadgeOption, ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
 
 interface Employee {
@@ -50,55 +48,50 @@ const data: Employee[] = Array.from({ length: 60 }, (_, i) => {
   };
 });
 
-const columns: ColumnDef<Employee>[] = [
-  { id: 'id', header: '#', width: 50, align: 'center' },
-  { id: 'name', header: 'Name', width: 160, sortable: true },
-  { id: 'email', header: 'Email', width: 220, sortable: true },
-  {
-    id: 'department', header: 'Department', width: 120, sortable: true,
-    cellType: 'badge',
-    options: departments.map(d => ({ label: d, value: d, color: '#1a1a1a', bg: '#f0f0f0' })),
-  },
-  { id: 'role', header: 'Role', width: 150, sortable: true },
-  { id: 'location', header: 'Location', width: 120, sortable: true },
-  { id: 'startDate', header: 'Start Date', width: 110, cellType: 'date', sortable: true },
-  { id: 'salary', header: 'Salary', width: 110, cellType: 'currency', sortable: true, precision: 0 },
-  { id: 'active', header: 'Active', width: 70, cellType: 'boolean' },
-  { id: 'rating', header: 'Rating', width: 110, cellType: 'rating' },
-];
+const columns = [
+  col.text('id', { header: '#', width: 50, align: 'center' }),
+  col.text('name', { header: 'Name', width: 160, sortable: true }),
+  col.text('email', { header: 'Email', width: 220, sortable: true }),
+  col.badge('department', {
+    header: 'Department',
+    width: 120,
+    sortable: true,
+    options: departments.map((d) => ({ label: d, value: d, color: '#1a1a1a', bg: '#f0f0f0' })) as BadgeOption[],
+  }),
+  col.text('role', { header: 'Role', width: 150, sortable: true }),
+  col.text('location', { header: 'Location', width: 120, sortable: true }),
+  col.date('startDate', { header: 'Start Date', width: 110, sortable: true }),
+  col.currency('salary', { header: 'Salary', width: 110, sortable: true, precision: 0 }),
+  col.boolean('active', { header: 'Active', width: 70 }),
+  col.rating('rating', { header: 'Rating', width: 110 }),
+] as ColumnDef<Employee>[];
 
 export function HRDirectory() {
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD' }),
-      autoDetect({ sampleSize: 10, autoAlign: true }),
-      sorting(),
-      filtering(),
-      cellRenderers(),
-      editing({ editTrigger: 'dblclick' }),
-      search({ caseSensitive: false }),
-      exportPlugin({ filename: 'employee-directory' }),
-      pagination({ pageSize: 15 }),
-    ],
-    [],
-  );
-
   return (
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>HR Directory</h1>
       <p style={{ marginBottom: 8, color: '#666', lineHeight: 1.5 }}>
-        Employee directory with 60 records. Ctrl+F to search, paginated at 15 rows per page. Auto-detected column types.
+        Employee directory with 60 records. Ctrl+F to search, paginated at 15 rows per page.
+        Column types declared via <code>col.&lt;type&gt;()</code> builders.
       </p>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
-        <strong>Plugins:</strong> formatting, autoDetect, sorting, filtering, cellRenderers, editing, search, export, pagination &bull;
-        <strong> Core:</strong> selection (range)
+        <strong>Mode:</strong> view (sort/filter/resize/select) &bull;
+        <strong> Features:</strong> format, edit, search, export, pagination &bull;
+        <strong> Selection:</strong> range
       </div>
 
       <BetterGrid<Employee>
         columns={columns}
         data={data}
+        mode="view"
+        features={{
+          format: { locale: 'en-US', currencyCode: 'USD' },
+          edit: { editTrigger: 'dblclick' },
+          search: { caseSensitive: false },
+          export: { filename: 'employee-directory' },
+          pagination: { pageSize: 15 },
+        }}
         selection={{ mode: 'range' }}
-        plugins={plugins}
         height={560}
       />
     </div>

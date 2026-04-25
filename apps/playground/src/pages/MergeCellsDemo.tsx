@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
-import { useGrid } from '@better-grid/react';
+import { BetterGrid, useGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, exportPlugin } from '@better-grid/plugins';
+import type { ExportApi } from '@better-grid/plugins';
 import { mergeCells } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
 import { IconButton, ExportIcon } from './_toolbar-icons';
@@ -42,64 +42,60 @@ const scheduleData: ScheduleRow[] = [
   { day: 'Thursday', time: '14:00', room: 'C303', subject: 'English', instructor: 'Ms. Taylor', type: 'Seminar' },
 ];
 
-const columns: ColumnDef<ScheduleRow>[] = [
-  { id: 'day', header: 'Day', width: 110 },
-  { id: 'time', header: 'Time', width: 70, align: 'center' },
-  { id: 'room', header: 'Room', width: 70, align: 'center' },
-  { id: 'subject', header: 'Subject', width: 160 },
-  { id: 'instructor', header: 'Instructor', width: 140 },
-  { id: 'type', header: 'Type', width: 100 },
-];
+const columns = [
+  col.text('day', { header: 'Day', width: 110 }),
+  col.text('time', { header: 'Time', width: 70, align: 'center' }),
+  col.text('room', { header: 'Room', width: 70, align: 'center' }),
+  col.text('subject', { header: 'Subject', width: 160 }),
+  col.text('instructor', { header: 'Instructor', width: 140 }),
+  col.text('type', { header: 'Type', width: 100 }),
+] as ColumnDef<ScheduleRow>[];
+
+// Static merge config — derived once from data shape.
+const mergeConfig: Array<{ row: number; col: number; rowSpan?: number; colSpan?: number }> = (() => {
+  const cells: Array<{ row: number; col: number; rowSpan?: number; colSpan?: number }> = [];
+  // Merge "Day" column for consecutive same-day rows
+  let i = 0;
+  while (i < scheduleData.length) {
+    let j = i + 1;
+    while (j < scheduleData.length && scheduleData[j]!.day === scheduleData[i]!.day) j++;
+    if (j - i > 1) cells.push({ row: i, col: 0, rowSpan: j - i });
+    i = j;
+  }
+  // Merge subject blocks (subject + instructor + type) for consecutive identical sessions
+  i = 0;
+  while (i < scheduleData.length) {
+    let j = i + 1;
+    while (j < scheduleData.length &&
+      scheduleData[j]!.subject === scheduleData[i]!.subject &&
+      scheduleData[j]!.instructor === scheduleData[i]!.instructor &&
+      scheduleData[j]!.day === scheduleData[i]!.day) j++;
+    if (j - i > 1) {
+      cells.push({ row: i, col: 3, rowSpan: j - i });
+      cells.push({ row: i, col: 4, rowSpan: j - i });
+      cells.push({ row: i, col: 5, rowSpan: j - i });
+    }
+    i = j;
+  }
+  return cells;
+})();
 
 export function MergeCellsDemo() {
-  const mergeConfig = useMemo(() => {
-    const cells: Array<{ row: number; col: number; rowSpan?: number; colSpan?: number }> = [];
+  // mergeCells lives in @better-grid/pro and is not in the features registry —
+  // pass it via the `plugins` escape hatch (additive on top of mode/features).
+  const proPlugins = useMemo(() => [mergeCells({ cells: mergeConfig })], []);
 
-    // Merge "Day" column for consecutive same-day rows
-    let i = 0;
-    while (i < scheduleData.length) {
-      let j = i + 1;
-      while (j < scheduleData.length && scheduleData[j]!.day === scheduleData[i]!.day) j++;
-      if (j - i > 1) cells.push({ row: i, col: 0, rowSpan: j - i });
-      i = j;
-    }
-
-    // Merge subject blocks (subject + instructor + type) for consecutive identical sessions
-    i = 0;
-    while (i < scheduleData.length) {
-      let j = i + 1;
-      while (j < scheduleData.length &&
-        scheduleData[j]!.subject === scheduleData[i]!.subject &&
-        scheduleData[j]!.instructor === scheduleData[i]!.instructor &&
-        scheduleData[j]!.day === scheduleData[i]!.day) j++;
-      if (j - i > 1) {
-        cells.push({ row: i, col: 3, rowSpan: j - i });
-        cells.push({ row: i, col: 4, rowSpan: j - i });
-        cells.push({ row: i, col: 5, rowSpan: j - i });
-      }
-      i = j;
-    }
-
-    return cells;
-  }, []);
-
-  const plugins = useMemo(
-    () => [
-      formatting(),
-      mergeCells({ cells: mergeConfig }),
-      exportPlugin({ filename: 'schedule' }),
-    ],
-    [mergeConfig],
-  );
-
-  const { grid, containerRef } = useGrid<ScheduleRow>({
+  // useGrid form: needed for the imperative export trigger.
+  const grid = useGrid<ScheduleRow>({
     data: scheduleData,
     columns,
-    plugins,
+    mode: 'view',
+    features: { format: true, export: { filename: 'schedule' } },
+    plugins: proPlugins,
     selection: { mode: 'range' },
   });
 
-  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExport = useCallback(() => (grid.api.plugins as { export?: ExportApi }).export?.exportToCsv(), [grid]);
 
   return (
     <div>
@@ -114,22 +110,12 @@ export function MergeCellsDemo() {
         Day column spans all timeslots, subject/instructor/type blocks span their duration.
       </p>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
-        <strong>Plugin:</strong> mergeCells (Pro), export &bull;
-        <strong> Config:</strong> Static array of {'{'} row, col, rowSpan, colSpan {'}'} &bull;
+        <strong>Mode:</strong> view &bull; <strong>Features:</strong> format, export &bull;
+        <strong> Plugins:</strong> mergeCells (Pro, via escape hatch) &bull;
         <strong> API:</strong> addMerge, removeMerge, clearMerges, getMergeAt
       </div>
 
-      <div
-        ref={containerRef}
-        style={{
-          height: 520,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
-          border: '1px solid #e0e0e0',
-          borderRadius: 8,
-        }}
-      />
+      <BetterGrid grid={grid} height={520} style={{ border: '1px solid #e0e0e0', borderRadius: 8 }} />
     </div>
   );
 }
