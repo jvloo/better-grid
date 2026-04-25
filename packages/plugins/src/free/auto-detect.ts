@@ -3,6 +3,7 @@
 // ============================================================================
 
 import type { GridPlugin, PluginContext, ColumnDef } from '@better-grid/core';
+import { getCellValue } from '@better-grid/core';
 
 export interface AutoDetectOptions {
   /** Number of rows to sample for detection. Default: 50 */
@@ -38,11 +39,7 @@ export function autoDetect(options?: AutoDetectOptions): GridPlugin<'auto-detect
 
         // Collect non-null values from the sample
         const values = sample
-          .map((row) => {
-            if (col.accessorFn) return col.accessorFn(row as never, 0);
-            if (col.accessorKey) return (row as Record<string, unknown>)[col.accessorKey];
-            return undefined;
-          })
+          .map((row) => getCellValue(row, col))
           .filter((v) => v != null);
 
         if (values.length === 0) continue;

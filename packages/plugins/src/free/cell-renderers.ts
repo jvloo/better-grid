@@ -3,6 +3,7 @@
 // ============================================================================
 
 import type { GridPlugin, PluginContext, CellTypeRenderer, CellRenderContext, BadgeOption } from '@better-grid/core';
+import { clamp, parseNumericString } from '@better-grid/core';
 
 // ---------------------------------------------------------------------------
 // Badge
@@ -55,7 +56,7 @@ const progressRenderer: CellTypeRenderer = {
     let pct = typeof context.value === 'number' ? context.value : 0;
     // Normalize 0-1 range to 0-100
     if (pct > 0 && pct <= 1) pct = pct * 100;
-    pct = Math.max(0, Math.min(100, pct));
+    pct = clamp(pct, 0, 100);
 
     const thresholds = (context.column.meta?.thresholds as { high?: number; low?: number } | undefined);
     const highThreshold = thresholds?.high ?? 66;
@@ -175,8 +176,7 @@ const changeRenderer: CellTypeRenderer = {
     return String(val);
   },
   parseStringValue(value: string): unknown {
-    const num = parseFloat(value.replace(/[^0-9.\-]/g, ''));
-    return isNaN(num) ? undefined : num;
+    return parseNumericString(value);
   },
 };
 
@@ -304,8 +304,7 @@ const changeIndicatorRenderer: CellTypeRenderer = {
     return String(val);
   },
   parseStringValue(value: string): unknown {
-    const num = parseFloat(value.replace(/[^0-9.\-]/g, ''));
-    return isNaN(num) ? undefined : num;
+    return parseNumericString(value);
   },
 };
 

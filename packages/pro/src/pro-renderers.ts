@@ -3,6 +3,7 @@
 // ============================================================================
 
 import type { GridPlugin, PluginContext, CellTypeRenderer, CellRenderContext } from '@better-grid/core';
+import { clamp, parseNumericString } from '@better-grid/core';
 
 // ---------------------------------------------------------------------------
 // Sparkline — Mini line/bar/area chart in cell
@@ -117,7 +118,7 @@ const heatmapRenderer: CellTypeRenderer = {
     const colorScale = (meta?.colorScale as string[]) ?? ['#dbeafe', '#3b82f6', '#1e3a8a'];
 
     const range = max - min || 1;
-    const t = Math.max(0, Math.min(1, (val - min) / range));
+    const t = clamp((val - min) / range, 0, 1);
 
     // Interpolate through color scale
     const segmentCount = colorScale.length - 1;
@@ -147,8 +148,7 @@ const heatmapRenderer: CellTypeRenderer = {
     return context.value != null ? String(context.value) : '';
   },
   parseStringValue(value: string): unknown {
-    const num = parseFloat(value);
-    return isNaN(num) ? undefined : num;
+    return parseNumericString(value);
   },
 };
 
@@ -179,7 +179,7 @@ const circularProgressRenderer: CellTypeRenderer = {
     const strokeWidth = (meta?.strokeWidth as number) ?? 3;
     const color = (meta?.color as string) ?? '#3b82f6';
 
-    const pct = Math.max(0, Math.min(1, val / (max || 1)));
+    const pct = clamp(val / (max || 1), 0, 1);
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference * (1 - pct);
@@ -242,8 +242,7 @@ const circularProgressRenderer: CellTypeRenderer = {
     return `${Math.round((val / (max || 1)) * 100)}%`;
   },
   parseStringValue(value: string): unknown {
-    const num = parseFloat(value.replace('%', ''));
-    return isNaN(num) ? undefined : num;
+    return parseNumericString(value);
   },
 };
 
@@ -550,8 +549,7 @@ function createSliderRenderer(ctx: PluginContext): CellTypeRenderer {
       return context.value != null ? String(context.value) : '0';
     },
     parseStringValue(value: string): unknown {
-      const num = parseFloat(value);
-      return isNaN(num) ? undefined : num;
+      return parseNumericString(value);
     },
   };
 }

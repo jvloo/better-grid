@@ -3,6 +3,7 @@
 // ============================================================================
 
 import type { GridPlugin, PluginContext } from '@better-grid/core';
+import { getCellValue } from '@better-grid/core';
 
 export interface SearchOptions {
   /** Case-sensitive search. Default: false */
@@ -59,12 +60,7 @@ export function search(options?: SearchOptions): GridPlugin<'search', SearchApi>
           const row = data[rowIndex];
           for (let colIndex = 0; colIndex < columns.length; colIndex++) {
             const col = columns[colIndex]!;
-            let value: unknown;
-            if (col?.accessorFn) {
-              value = col.accessorFn(row as never, rowIndex);
-            } else if (col?.accessorKey) {
-              value = (row as Record<string, unknown>)[col.accessorKey];
-            }
+            const value = getCellValue(row, col, rowIndex);
 
             if (value == null) continue;
 

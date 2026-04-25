@@ -3,6 +3,7 @@
 // ============================================================================
 
 import type { GridPlugin, PluginContext, ColumnDef, CellRange } from '@better-grid/core';
+import { escapeXml, getCellValue } from '@better-grid/core';
 
 export interface ClipboardOptions {
   /** Include column headers when copying. Default: false */
@@ -277,16 +278,6 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
       // Helpers
       // -------------------------------------------------------------------
 
-      function getCellValue(row: unknown, column: ColumnDef): unknown {
-        if (column.accessorFn) {
-          return column.accessorFn(row as never, 0);
-        }
-        if (column.accessorKey) {
-          return (row as Record<string, unknown>)[column.accessorKey];
-        }
-        return undefined;
-      }
-
       /** Parse a pasted string value into the column's expected data type */
       function parsePasteValue(raw: string, column: ColumnDef, oldValue: unknown): unknown {
         // Custom valueParser takes priority
@@ -342,14 +333,6 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
         }
 
         return raw;
-      }
-
-      function escapeHtml(str: string): string {
-        return str
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
       }
 
       /** Escape a cell value for TSV: if it contains tab, newline, or quote, wrap in quotes */
@@ -468,7 +451,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
             return typeof h === 'function' ? '' : String(h ?? '');
           });
           tsvLines.push(headerValues.map(escapeTsv).join(config.separator));
-          htmlLines.push('<tr>' + headerValues.map((v) => `<th>${escapeHtml(v)}</th>`).join('') + '</tr>');
+          htmlLines.push('<tr>' + headerValues.map((v) => `<th>${escapeXml(v)}</th>`).join('') + '</tr>');
         }
 
         // Data rows
@@ -479,7 +462,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
             return String(v);
           });
           tsvLines.push(values.map(escapeTsv).join(config.separator));
-          htmlLines.push('<tr>' + values.map((v) => `<td>${escapeHtml(v)}</td>`).join('') + '</tr>');
+          htmlLines.push('<tr>' + values.map((v) => `<td>${escapeXml(v)}</td>`).join('') + '</tr>');
         }
 
         const tsv = tsvLines.join('\n');

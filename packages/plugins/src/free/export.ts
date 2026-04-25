@@ -7,6 +7,7 @@
 // ============================================================================
 
 import type { GridPlugin, PluginContext, ColumnDef } from '@better-grid/core';
+import { escapeXml, getCellValue } from '@better-grid/core';
 
 export interface ExportOptions {
   /** Default filename (without extension). Default: 'export' */
@@ -91,12 +92,6 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
   return {
     id: 'export',
     init(ctx: PluginContext) {
-
-      function getCellValue(row: unknown, column: ColumnDef): unknown {
-        if (column.accessorFn) return column.accessorFn(row as never, 0);
-        if (column.accessorKey) return (row as Record<string, unknown>)[column.accessorKey];
-        return undefined;
-      }
 
       function resolveType(column: ColumnDef, value: unknown): ExportCell['type'] {
         const ct = column.cellType;
@@ -542,10 +537,6 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
         // Excel epoch: 1900-01-01 = 1 (with the intentional 1900 leap year bug)
         const epoch = new Date(1899, 11, 30);
         return Math.round((d.getTime() - epoch.getTime()) / 86400000);
-      }
-
-      function escapeXml(s: string): string {
-        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       }
 
       // ─── OOXML boilerplate ────────────────────────────────────────────

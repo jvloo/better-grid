@@ -3,6 +3,7 @@
 // ============================================================================
 
 import type { GridPlugin, PluginContext } from '@better-grid/core';
+import { clamp } from '@better-grid/core';
 
 export interface PaginationOptions {
   /** Rows per page. Default: 20 */
@@ -65,7 +66,7 @@ export function pagination(options?: PaginationOptions): GridPlugin<'pagination'
 
       function setPage(page: number): void {
         const maxPage = getPageCount() - 1;
-        currentPage = Math.max(0, Math.min(page, maxPage));
+        currentPage = clamp(page, 0, maxPage);
         applyPage();
       }
 

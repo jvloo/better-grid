@@ -3,6 +3,7 @@
 // ============================================================================
 
 import type { GridPlugin, PluginContext, CellPosition } from '@better-grid/core';
+import { getCellValue } from '@better-grid/core';
 
 /** Validation rule for a column */
 export interface ColumnValidationRule {
@@ -79,9 +80,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         if (!column) return null;
 
         const row = state.data[position.rowIndex];
-        const value = column.accessorKey
-          ? (row as Record<string, unknown>)?.[column.accessorKey]
-          : undefined;
+        const value = getCellValue(row, column, position.rowIndex);
 
         if (column.required && (value == null || value === '')) {
           return { message: 'This field is required', code: VALIDATION_ERROR_CODES.REQUIRED_FIELD };

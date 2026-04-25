@@ -76,3 +76,12 @@ export { EventEmitter } from './events/emitter';
 export { StateStore } from './state/store';
 export { VirtualizationEngine } from './virtualization/engine';
 export { ColumnManager } from './columns/manager';
+
+// Shared utilities
+export {
+  snapToDevicePixel,
+  getCellValue,
+  clamp,
+  parseNumericString,
+  escapeXml,
+} from './utils';
