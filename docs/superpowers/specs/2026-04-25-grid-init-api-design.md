@@ -281,6 +281,8 @@ interface GridOptions<TData, TContext = unknown> {
 
   // Mode + features
   mode?: 'view' | 'interactive' | 'spreadsheet' | 'dashboard' | (string & {}) | null;
+  // (`string & {}` admits user-registered mode names from registerMode while
+  //  still showing the built-in literals in autocomplete)
   features?: FeatureName[] | Partial<Record<FeatureName, boolean | object>>;
   plugins?: GridPlugin[];        // escape hatch — additive
 
@@ -289,7 +291,7 @@ interface GridOptions<TData, TContext = unknown> {
   frozen?:  { top?: number; left?: number; clip?: boolean | FreezeClipOptions };
   pinned?:  { top?: TData[]; bottom?: TData[] };
   headers?: HeaderRow[] | { layout: HeaderRow[]; height?: number };
-  footers?: FooterRow[];
+  footers?: FooterRow[] | { layout: FooterRow[]; height?: number };
   rowHeight?: number | ((rowIndex: number) => number);
   tableStyle?: 'bordered' | 'borderless' | 'striped';
 
@@ -421,5 +423,4 @@ docs/migration-from-ag-grid.md
 
 - Exact shape of `GridApi` exposed by `grid.api.*` (existing `GridInstance` is close — confirm no gaps).
 - Whether `headers` shorthand should accept a single `HeaderRow` (one row, no array wrapper) or always the array.
-- Naming: `defineColumn` vs `column` vs `col` for the export. (Spec uses `defineColumn` exported, aliased to `col` at consumer site.)
-- Whether `features: false` is a valid shorthand for "disable mode defaults entirely".
+- Whether `features: false` is a valid shorthand for "disable mode defaults entirely" (vs requiring `mode={null}`).
