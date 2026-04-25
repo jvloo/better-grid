@@ -75,7 +75,7 @@ export interface CellStyle {
   height: number;
 }
 
-export interface CellRenderContext<TData = unknown> {
+export interface CellRenderContext<TData = unknown, TContext = unknown> {
   rowIndex: number;
   colIndex: number;
   row: TData;
@@ -84,17 +84,18 @@ export interface CellRenderContext<TData = unknown> {
   isSelected: boolean;
   isActive: boolean;
   style: CellStyle;
+  context: TContext;
 }
 
-export type CellRenderer<TData = unknown> = (
+export type CellRenderer<TData = unknown, TContext = unknown> = (
   container: HTMLElement,
-  context: CellRenderContext<TData>,
+  context: CellRenderContext<TData, TContext>,
 ) => void | (() => void);
 
-export interface CellTypeRenderer {
-  render(container: HTMLElement, context: CellRenderContext): void | (() => void);
-  getStringValue?(context: CellRenderContext): string;
-  parseStringValue?(value: string, context: CellRenderContext): unknown;
+export interface CellTypeRenderer<TData = unknown, TContext = unknown> {
+  render(container: HTMLElement, context: CellRenderContext<TData, TContext>): void | (() => void);
+  getStringValue?(context: CellRenderContext<TData, TContext>): string;
+  parseStringValue?(value: string, context: CellRenderContext<TData, TContext>): unknown;
 }
 
 // ---------------------------------------------------------------------------
