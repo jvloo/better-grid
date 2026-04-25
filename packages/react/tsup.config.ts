@@ -1,11 +1,11 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: ['src/index.ts', 'src/rhf.ts'],
   format: ['esm', 'cjs'],
   dts: true,
   sourcemap: true,
   clean: true,
   outDir: 'dist',
-  external: ['react', 'react-dom', '@better-grid/core'],
+  external: ['react', 'react-dom', 'react-hook-form', '@better-grid/core'],
 });

@@ -17,6 +17,16 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./rhf": {
+      "import": {
+        "types": "./dist/rhf.d.ts",
+        "default": "./dist/rhf.js"
+      },
+      "require": {
+        "types": "./dist/rhf.d.cts",
+        "default": "./dist/rhf.cjs"
+      }
     }
   },
   "files": ["dist"],
@@ -34,7 +44,11 @@
   },
   "peerDependencies": {
     "react": ">=18.0.0",
-    "react-dom": ">=18.0.0"
+    "react-dom": ">=18.0.0",
+    "react-hook-form": ">=7.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react-hook-form": { "optional": true }
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
@@ -42,6 +56,7 @@
     "happy-dom": "^20.9.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hook-form": "^7.0.0",
     "tsup": "^8.3.0",
     "vitest": "^2.1.0"
   },
