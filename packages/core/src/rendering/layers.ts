@@ -26,6 +26,12 @@ export class SelectionLayer {
   private fillHandleOffsetX = 0;
   private fillHandleOffsetY = 0;
   private fillHandleOffsetValid = false;
+  /**
+   * Hash of the inputs to the previous render() call. When unchanged we skip
+   * the rebuild — render() previously tore down and recreated every range
+   * border + the fill handle on each frame, even when nothing changed.
+   */
+  private lastRenderHash: string | null = null;
 
   constructor(container: HTMLElement, gridRoot?: HTMLElement) {
     this.container = container;
@@ -41,6 +47,7 @@ export class SelectionLayer {
 
   setFillHandleEnabled(enabled: boolean): void {
     this.fillHandleEnabled = enabled;
+    this.lastRenderHash = null;
   }
 
   setEditing(editing: boolean): void {
@@ -48,6 +55,9 @@ export class SelectionLayer {
     if (this.fillHandle) {
       this.fillHandle.style.display = editing ? 'none' : 'block';
     }
+    // editing toggles fill-handle visibility; invalidate the dedupe hash so the
+    // next render() doesn't short-circuit while the handle is in the wrong state
+    this.lastRenderHash = null;
   }
 
   setFillDragHandler(handler: (result: FillDragResult) => void): void {
@@ -57,9 +67,36 @@ export class SelectionLayer {
   /** Invalidate the cached fill-handle offset — call when the container moves/resizes. */
   invalidateLayout(): void {
     this.fillHandleOffsetValid = false;
+    this.lastRenderHash = null;
   }
 
   render(selection: Selection, measurements: LayoutMeasurements, readonlyColumns?: Set<number>): void {
+    // Change-detection: hash everything that affects output. If unchanged, skip.
+    // Render previously tore down + recreated all range borders + the fill
+    // handle on every frame, even when nothing changed (e.g. scroll-driven
+    // re-renders that don't touch selection).
+    let hash = '';
+    if (selection.active) hash += `${selection.active.rowIndex}:${selection.active.colIndex}`;
+    hash += '|';
+    for (const r of selection.ranges) {
+      hash += `${r.startRow},${r.endRow},${r.startCol},${r.endCol};`;
+    }
+    // Last range's end-row/col offsets drive fill-handle position; row/col offset
+    // arrays are typically retained-by-identity by the layout engine, so length
+    // + last value is a cheap proxy for "did the layout change?".
+    const ro = measurements.rowOffsets;
+    const co = measurements.colOffsets;
+    hash += `|${ro.length}:${ro[ro.length - 1] ?? 0}|${co.length}:${co[co.length - 1] ?? 0}`;
+    hash += `|fh=${this.fillHandleEnabled ? 1 : 0}|ed=${this.isEditing ? 1 : 0}`;
+    if (readonlyColumns && readonlyColumns.size > 0) {
+      // Order-independent: cheap sum over a typically-small set.
+      let ros = 0;
+      for (const c of readonlyColumns) ros += c;
+      hash += `|ro=${readonlyColumns.size}:${ros}`;
+    }
+    if (hash === this.lastRenderHash) return;
+    this.lastRenderHash = hash;
+
     // Clear previous range borders + fill handle
     for (const el of this.rangeBorders) {
       el.remove();

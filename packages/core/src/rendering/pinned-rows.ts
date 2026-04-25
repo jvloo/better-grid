@@ -10,7 +10,7 @@
 import type { CellRenderContext, ColumnDef, RowStylesConfig } from '../types';
 import type { LayoutMeasurements } from '../virtualization/engine';
 import type { RenderingPipeline } from './pipeline';
-import { snapToDevicePixel } from '../utils';
+import { getCellValue, snapToDevicePixel } from '../utils';
 
 export interface PinnedRowRendererDeps<TData = unknown> {
   /** Shared cell-type registry (for custom cellRenderer lookup) */
@@ -54,6 +54,18 @@ export function getPinnedRowsHeight(
 export function createPinnedRowRenderer<TData = unknown>(
   deps: PinnedRowRendererDeps<TData>,
 ): PinnedRowRenderer<TData> {
+  // Change-detection cache: skip the full innerHTML='' + rebuild when none of
+  // the inputs that affect output have changed. With ~3 pinned rows × 60 cols,
+  // each call previously created ~180 fresh DOM nodes — re-rendering on every
+  // scroll tick is wasteful when only the main pipeline actually moved.
+  let lastContainer: HTMLElement | null = null;
+  let lastRows: readonly TData[] | null = null;
+  let lastColumns: readonly ColumnDef<TData>[] | null = null;
+  let lastMeasurements: LayoutMeasurements | null = null;
+  let lastTotalWidth = -1;
+  let lastColStart = -1;
+  let lastColEnd = -1;
+
   function render(
     pinnedContainer: HTMLElement,
     rows: readonly TData[],
@@ -62,9 +74,34 @@ export function createPinnedRowRenderer<TData = unknown>(
     startCol?: number,
     endCol?: number,
   ): void {
-    pinnedContainer.innerHTML = '';
     const colStart = startCol ?? 0;
     const colEnd = endCol ?? columns.length;
+
+    // Identity-compare upstream inputs (the grid retains these across frames
+    // and only swaps the references when they actually change). totalWidth +
+    // colOffsets length cover the column-resize case where the array identity
+    // is reused but cell widths shift.
+    const totalWidth = measurements.colOffsets[measurements.colOffsets.length - 1] ?? 0;
+    if (
+      lastContainer === pinnedContainer &&
+      lastRows === rows &&
+      lastColumns === columns &&
+      lastMeasurements === measurements &&
+      lastTotalWidth === totalWidth &&
+      lastColStart === colStart &&
+      lastColEnd === colEnd
+    ) {
+      return;
+    }
+    lastContainer = pinnedContainer;
+    lastRows = rows;
+    lastColumns = columns;
+    lastMeasurements = measurements;
+    lastTotalWidth = totalWidth;
+    lastColStart = colStart;
+    lastColEnd = colEnd;
+
+    pinnedContainer.innerHTML = '';
     if (rows.length === 0) return;
 
     const rowH = typeof deps.rowHeight === 'number' ? deps.rowHeight : DEFAULT_ROW_HEIGHT;
@@ -90,11 +127,7 @@ export function createPinnedRowRenderer<TData = unknown>(
         cell.style.textAlign = column.align ?? '';
         cell.style.verticalAlign = column.verticalAlign ?? '';
 
-        const value = column.accessorFn
-          ? column.accessorFn(rowData, rowIdx)
-          : column.accessorKey
-            ? (rowData as Record<string, unknown>)[column.accessorKey]
-            : undefined;
+        const value = getCellValue(rowData, column, rowIdx);
 
         const context: CellRenderContext<TData> = {
           rowIndex: rowIdx,

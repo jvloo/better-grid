@@ -10,7 +10,7 @@ import type { CellRenderContext, CellRenderer, CellTypeRenderer, ColumnDef, RowS
 type AnyCellRenderContext = CellRenderContext<any>;
 import type { LayoutMeasurements } from '../virtualization/engine';
 import { isCellActive, isCellInSelection } from '../selection/model';
-import { snapToDevicePixel } from '../utils';
+import { getCellValue, snapToDevicePixel } from '../utils';
 
 // Encode row:col into a single number to avoid string allocation per cell
 const MAX_COLS = 16384; // 2^14 — supports up to 16K columns
@@ -29,6 +29,19 @@ function cellKey(row: number, col: number): number {
 interface StyledElement extends HTMLElement {
   __bgAppliedStyleKeys?: string[];
 }
+// CSSStyleDeclaration.setProperty expects kebab-case for spec-defined properties.
+// Callers pass camelCase ({fontWeight: '600'}), so convert before forwarding.
+// Custom properties (`--foo`) and already-kebab keys pass through untouched.
+function toKebab(key: string): string {
+  if (key.charCodeAt(0) === 45 /* '-' */) return key; // --custom or already kebab
+  let out = '';
+  for (let i = 0; i < key.length; i++) {
+    const c = key.charCodeAt(i);
+    if (c >= 65 && c <= 90 /* A-Z */) out += '-' + key[i]!.toLowerCase();
+    else out += key[i];
+  }
+  return out;
+}
 function applyCellStyles(el: HTMLElement, styles: Record<string, string>): void {
   const styled = el as StyledElement;
   // Clear any keys the previous application set that this one doesn't include
@@ -36,11 +49,7 @@ function applyCellStyles(el: HTMLElement, styles: Record<string, string>): void 
   if (prev && prev.length > 0) {
     for (const prevKey of prev) {
       if (prevKey in styles && styles[prevKey] != null) continue;
-      if (prevKey.charCodeAt(0) === 45 && prevKey.charCodeAt(1) === 45) {
-        el.style.removeProperty(prevKey);
-      } else {
-        (el.style as unknown as Record<string, string>)[prevKey] = '';
-      }
+      el.style.removeProperty(toKebab(prevKey));
     }
   }
   const appliedKeys: string[] = [];
@@ -48,11 +57,7 @@ function applyCellStyles(el: HTMLElement, styles: Record<string, string>): void 
     const value = styles[key];
     if (value == null) continue;
     appliedKeys.push(key);
-    if (key.charCodeAt(0) === 45 /* '-' */ && key.charCodeAt(1) === 45) {
-      el.style.setProperty(key, value);
-    } else {
-      (el.style as unknown as Record<string, string>)[key] = value;
-    }
+    el.style.setProperty(toKebab(key), value);
   }
   styled.__bgAppliedStyleKeys = appliedKeys;
 }
@@ -255,11 +260,7 @@ export class RenderingPipeline<TData = unknown> {
         // Build context
         const column = columns[col]!;
         const rowData = data[row]!;
-        const value = column.accessorFn
-          ? column.accessorFn(rowData, row)
-          : column.accessorKey
-            ? (rowData as Record<string, unknown>)[column.accessorKey]
-            : undefined;
+        const value = getCellValue(rowData, column, row);
 
         const context: CellRenderContext<TData> = {
           rowIndex: row,
@@ -326,11 +327,17 @@ export class RenderingPipeline<TData = unknown> {
       }
     }
 
-    // Phase 4: Remove excess recycled elements from DOM (only if pool is oversized)
-    while (this.recyclePool.length > 0) {
+    // Phase 4: Remove excess recycled elements from DOM (only if pool is oversized).
+    // Keep up to 1.5x the visible footprint as a buffer so the next scroll/resize
+    // tick can reuse pooled DOM instead of allocating fresh — the previous code
+    // drained both pools every frame, defeating the entire pooling design.
+    const cellCap = Math.ceil(visibleKeys.size * 1.5);
+    while (this.recyclePool.length > cellCap) {
       this.recyclePool.pop()!.remove();
     }
-    while (this.rowBgRecyclePool.length > 0) {
+    const visibleRows = Math.max(0, endRow - startRow);
+    const rowBgCap = Math.ceil(visibleRows * 1.5);
+    while (this.rowBgRecyclePool.length > rowBgCap) {
       this.rowBgRecyclePool.pop()!.remove();
     }
   }
