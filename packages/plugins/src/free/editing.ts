@@ -551,6 +551,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               isSelected: false,
               isActive: false,
               style: { top: 0, left: 0, width: 0, height: 0 },
+              context: undefined,
             });
           }
         }
@@ -581,6 +582,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             isSelected: false,
             isActive: false,
             style: { top: 0, left: 0, width: 0, height: 0 },
+            context: undefined,
           });
           if (typeof cleanup === 'function') cleanup();
           return temp.textContent?.trim() ?? '';
