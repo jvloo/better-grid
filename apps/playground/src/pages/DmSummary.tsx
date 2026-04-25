@@ -1,8 +1,9 @@
-import { useMemo, useCallback } from 'react';
-import { useGrid } from '@better-grid/react';
+import { useCallback } from 'react';
+import { useGrid, BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
-import { formatting, sorting, cellRenderers, clipboard, exportPlugin } from '@better-grid/plugins';
+import { clipboard } from '@better-grid/plugins';
+import type { ExportApi } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 import { IconButton, ExportIcon } from './_toolbar-icons';
 
@@ -69,91 +70,49 @@ const rowStyleFn = (v: unknown, row: unknown) => {
 };
 
 // Description column has its own style (no negative-value coloring on text)
-const descriptionStyleFn = (v: unknown, row: unknown) => {
+const descriptionStyleFn = (_v: unknown, row: unknown): Record<string, string> | undefined => {
   const r = row as SummaryRow;
   if (r.type === 'title') return { fontWeight: '700', color: '#101828', background: '#D0D5DD' };
   if (r.type === 'accumulation') return { fontWeight: '700', background: '#f0f0f0' };
   return undefined;
 };
 
+// Module-scope columns. ts.columns is also module-scope so this is safe.
+const columns = [
+  col.text('description', { header: 'Description', width: 500, cellStyle: descriptionStyleFn }),
+  col.currency('actualAmount', { header: 'Actual to Date', width: 150, precision: 0, align: 'center', cellStyle: rowStyleFn, hideZero: true }),
+  col.currency('forecastAmount', { header: 'Forecast to Go', width: 150, precision: 0, align: 'center', cellStyle: rowStyleFn, hideZero: true }),
+  col.currency('totalAmount', { header: 'Total Amount', width: 150, precision: 0, align: 'center', cellStyle: rowStyleFn, hideZero: true }),
+  ...ts.columns.map(c => ({
+    ...c,
+    cellType: 'currency' as const,
+    precision: 0,
+    hideZero: true,
+    cellStyle: rowStyleFn,
+  })),
+] as ColumnDef<SummaryRow>[];
+
 export function DmSummary() {
-  const columns = useMemo<ColumnDef<SummaryRow>[]>(
-    () => [
-      {
-        id: 'description',
-        accessorKey: 'description',
-        header: 'Description',
-        width: 500,
-        cellStyle: descriptionStyleFn,
-      },
-      {
-        id: 'actualAmount',
-        accessorKey: 'actualAmount',
-        header: 'Actual to Date',
-        width: 150,
-        cellType: 'currency' as const,
-        precision: 0,
-        align: 'center' as const,
-        cellStyle: rowStyleFn,
-        hideZero: true,
-      },
-      {
-        id: 'forecastAmount',
-        accessorKey: 'forecastAmount',
-        header: 'Forecast to Go',
-        width: 150,
-        cellType: 'currency' as const,
-        precision: 0,
-        align: 'center' as const,
-        cellStyle: rowStyleFn,
-        hideZero: true,
-      },
-      {
-        id: 'totalAmount',
-        accessorKey: 'totalAmount',
-        header: 'Total Amount',
-        width: 150,
-        cellType: 'currency' as const,
-        precision: 0,
-        align: 'center' as const,
-        cellStyle: rowStyleFn,
-        hideZero: true,
-      },
-      ...ts.columns.map(c => ({
-        ...c,
-        cellType: 'currency' as const,
-        precision: 0,
-        hideZero: true,
-        cellStyle: rowStyleFn,
-      })),
-    ],
-    [],
-  );
-
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
-      sorting(),
-      cellRenderers(),
-      clipboard(),
-      exportPlugin({ filename: 'dm-summary-cashflow' }),
-    ],
-    [],
-  );
-
-  const { grid, containerRef } = useGrid<SummaryRow>({
+  // Read-only summary: mode="dashboard" gives sort+filter+resize+select+export.
+  // Add `format` for AUD accounting + `clipboard` for copy-out.
+  const grid = useGrid<SummaryRow>({
     data,
     columns,
-    plugins,
-    frozenLeftColumns: 4,
-    freezeClip: { minVisible: 2 },
-    tableStyle: 'striped' as const,
-    selection: { mode: 'range' as const },
+    mode: 'dashboard',
+    features: {
+      format: { locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true },
+      export: { filename: 'dm-summary-cashflow' },
+    },
+    // clipboard via escape hatch — read-only cells, no editing dep needed.
+    plugins: [clipboard()],
+    frozen: { left: 4, clip: { minVisible: 2 } },
+    tableStyle: 'striped',
+    selection: { mode: 'range' },
     headerHeight: 44,
     rowHeight: 44,
   });
 
-  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExport = useCallback(() => (grid.api.plugins as { export?: ExportApi }).export?.exportToCsv(), [grid]);
 
   return (
     <div>
@@ -167,19 +126,14 @@ export function DmSummary() {
         Read-only cashflow summary with project margin, funding, and equity sections. Section headers and subtotals are visually grouped.
       </p>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
-        <strong>Plugins:</strong> formatting, sorting, cellRenderers, clipboard, export &bull;
-        <strong> Core:</strong> frozenLeftColumns
+        <strong>Mode:</strong> dashboard (sort/filter/resize/select/export) &bull;
+        <strong> Features:</strong> format, clipboard &bull;
+        <strong> Layout:</strong> frozen.left=4 (clip)
       </div>
-      <div
-        ref={containerRef}
-        style={{
-          height: 640,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
-          
-          borderRadius: 12,
-        }}
+      <BetterGrid<SummaryRow>
+        grid={grid}
+        height={640}
+        style={{ borderRadius: 12 }}
       />
     </div>
   );

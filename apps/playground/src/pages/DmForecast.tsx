@@ -1,8 +1,8 @@
-import { useMemo, useCallback, useRef } from 'react';
-import { useGrid } from '@better-grid/react';
+import { useCallback, useMemo, useRef } from 'react';
+import { useGrid, BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef, GridInstance } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
-import { formatting, editing, sorting, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
+import type { ExportApi } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 import { buildStyledSelect, prepareDropdownContainer } from './_fsbt-dropdown';
 import { IconButton, ExpandAllIcon, CollapseAllIcon, ExportIcon } from './_toolbar-icons';
@@ -123,6 +123,7 @@ function buildNetTotalRow(): ForecastRow {
 }
 
 const netTotalRow = buildNetTotalRow();
+const pinnedBottomRows = [netTotalRow];
 
 // Dropdown option constants for the styled <select> cells below. Values
 // match the raw strings already stored on ForecastRow so no data migration
@@ -145,125 +146,136 @@ const FREQUENCY_OPTIONS = [
 type EscalationValue = typeof ESCALATION_OPTIONS[number]['value'];
 type FrequencyValue = typeof FREQUENCY_OPTIONS[number]['value'];
 
+// Closure-over-scope handler shape passed via useGrid({ context }).
+// The Escalation/Frequency cellRenderers reach updateCell through this,
+// so we don't need a useRef + post-init assignment.
+interface ForecastContext {
+  updateCell: (rowIndex: number, columnId: string, value: unknown) => void;
+}
+
+// Module-scope columns. Custom <select> cellRenderers read `ctx.context.updateCell`.
+const columns = [
+  col.text('toggle', { header: '', width: 30 }),
+  col.text('accountCode', { header: 'ID', width: 70, align: 'center' }),
+  col.text('accountName', { header: 'Description', width: 210 }),
+  // Escalation — styled <select> matching FsbtCost / FsbtRevenue dropdowns.
+  // editable: false disables the editing plugin's dropdown wrap; parent
+  // rows skip rendering so only child rows show the dropdown.
+  col.custom('escalationRate', {
+    header: 'Escalation',
+    width: 130,
+    align: 'center',
+    editable: false,
+    cellRenderer: (container, ctx) => {
+      const row = ctx.row as ForecastRow;
+      if (row.type === 'parent' || !row.escalationRate) {
+        container.innerHTML = '';
+        return;
+      }
+      prepareDropdownContainer(container);
+      const select = buildStyledSelect<EscalationValue>(
+        ESCALATION_OPTIONS,
+        row.escalationRate,
+        (next) => {
+          const idx = data.findIndex(r => r.id === row.id);
+          if (idx >= 0) (ctx.context as ForecastContext).updateCell(idx, 'escalationRate', next);
+        },
+      );
+      container.appendChild(select);
+    },
+  }),
+  // Frequency — same pattern, different options. 130px width accommodates
+  // the longer "Quarterly" / "Annually" labels with the chevron.
+  col.custom('frequency', {
+    header: 'Frequency',
+    width: 130,
+    align: 'center',
+    editable: false,
+    cellRenderer: (container, ctx) => {
+      const row = ctx.row as ForecastRow;
+      if (row.type === 'parent' || !row.frequency) {
+        container.innerHTML = '';
+        return;
+      }
+      prepareDropdownContainer(container);
+      const select = buildStyledSelect<FrequencyValue>(
+        FREQUENCY_OPTIONS,
+        row.frequency,
+        (next) => {
+          const idx = data.findIndex(r => r.id === row.id);
+          if (idx >= 0) (ctx.context as ForecastContext).updateCell(idx, 'frequency', next);
+        },
+      );
+      container.appendChild(select);
+    },
+  }),
+  col.date('startDate', { header: 'Start', width: 80, dateFormat: 'month-year' }),
+  col.date('endDate', { header: 'End', width: 80, dateFormat: 'month-year' }),
+  col.currency('remainingValue', { header: 'Remaining Value', width: 100, precision: 0, editable: true, hideZero: true }),
+  col.currency('amountPerFreq', { header: 'Amount per Freq.', width: 100, precision: 0, editable: true, hideZero: true }),
+  col.currency('totalAmount', {
+    header: 'Total Amount',
+    width: 110,
+    precision: 0,
+    cellStyle: (v: unknown) => {
+      const style: Record<string, string> = { fontWeight: '600', background: '#f5f5f5', borderRight: '2px solid #EAECF0' };
+      if (typeof v === 'number' && v < 0) style.color = '#16a34a';
+      return style;
+    },
+  }),
+  ...ts.columns.map(c => ({
+    ...c,
+    editable: true,
+    cellStyle: (v: unknown) => {
+      if (typeof v === 'number' && v < 0) return { color: '#16a34a' };
+      return undefined;
+    },
+  })),
+] as ColumnDef<ForecastRow>[];
+
 export function DmForecast() {
-  // Grid ref for the styled Escalation / Frequency <select> cells. Set after
-  // useGrid() resolves; the cellRenderers close over the ref so updateCell()
-  // reaches the right instance.
-  const gridRef = useRef<GridInstance<ForecastRow> | null>(null);
-
-  const columns = useMemo<ColumnDef<ForecastRow>[]>(
-    () => [
-      { id: 'toggle', header: '', width: 30 },
-      { id: 'accountCode', accessorKey: 'accountCode', header: 'ID', width: 70, align: 'center' as const },
-      { id: 'accountName', accessorKey: 'accountName', header: 'Description', width: 210 },
-      // Escalation — styled <select> matching FsbtCost / FsbtRevenue dropdowns.
-      //    editable: false disables the editing plugin's dropdown wrap; parent
-      //    rows skip rendering so only child rows show the dropdown.
-      {
-        id: 'escalationRate', accessorKey: 'escalationRate', header: 'Escalation', width: 130, align: 'center' as const, editable: false,
-        cellRenderer: (container, ctx) => {
-          const row = ctx.row as ForecastRow;
-          if (row.type === 'parent' || !row.escalationRate) {
-            container.innerHTML = '';
-            return;
-          }
-          prepareDropdownContainer(container);
-          const select = buildStyledSelect<EscalationValue>(
-            ESCALATION_OPTIONS,
-            row.escalationRate,
-            (next) => {
-              const idx = data.findIndex(r => r.id === row.id);
-              if (idx >= 0) gridRef.current?.updateCell(idx, 'escalationRate', next);
-            },
-          );
-          container.appendChild(select);
-        },
-      },
-      // Frequency — same pattern, different options. 130px width accommodates
-      //    the longer "Quarterly" / "Annually" labels with the chevron.
-      {
-        id: 'frequency', accessorKey: 'frequency', header: 'Frequency', width: 130, align: 'center' as const, editable: false,
-        cellRenderer: (container, ctx) => {
-          const row = ctx.row as ForecastRow;
-          if (row.type === 'parent' || !row.frequency) {
-            container.innerHTML = '';
-            return;
-          }
-          prepareDropdownContainer(container);
-          const select = buildStyledSelect<FrequencyValue>(
-            FREQUENCY_OPTIONS,
-            row.frequency,
-            (next) => {
-              const idx = data.findIndex(r => r.id === row.id);
-              if (idx >= 0) gridRef.current?.updateCell(idx, 'frequency', next);
-            },
-          );
-          container.appendChild(select);
-        },
-      },
-      { id: 'startDate', accessorKey: 'startDate', header: 'Start', width: 80, cellType: 'date' as const, dateFormat: 'month-year' as const },
-      { id: 'endDate', accessorKey: 'endDate', header: 'End', width: 80, cellType: 'date' as const, dateFormat: 'month-year' as const },
-      { id: 'remainingValue', accessorKey: 'remainingValue', header: 'Remaining Value', width: 100, cellType: 'currency' as const, precision: 0, align: 'right' as const, editable: true, hideZero: true },
-      { id: 'amountPerFreq', accessorKey: 'amountPerFreq', header: 'Amount per Freq.', width: 100, cellType: 'currency' as const, precision: 0, align: 'right' as const, editable: true, hideZero: true },
-      {
-        id: 'totalAmount', accessorKey: 'totalAmount', header: 'Total Amount', width: 110, cellType: 'currency' as const, precision: 0, align: 'right' as const,
-        cellStyle: (v: unknown) => {
-          const style: Record<string, string> = { fontWeight: '600', background: '#f5f5f5', borderRight: '2px solid #EAECF0' };
-          if (typeof v === 'number' && v < 0) style.color = '#16a34a';
-          return style;
-        },
-      },
-      ...ts.columns.map(c => ({
-        ...c,
-        editable: true,
-        cellStyle: (v: unknown) => {
-          if (typeof v === 'number' && v < 0) return { color: '#16a34a' };
-          return undefined;
-        },
-      })),
-    ],
+  // The Escalation/Frequency cellRenderers need updateCell, but we can't
+  // close over `grid.api` during the same render that creates it. Stash
+  // the api in a ref and route updateCell through it via context.
+  const apiRef = useRef<GridInstance<ForecastRow> | null>(null);
+  const context = useMemo<ForecastContext>(
+    () => ({
+      updateCell: (i, c, v) => apiRef.current?.updateCell(i, c, v),
+    }),
     [],
   );
 
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
-      editing({ editTrigger: 'dblclick', precision: 0 }),
-      sorting(),
-      hierarchy({ indentColumn: 'accountName', indentSize: 22 }),
-      cellRenderers(),
-      clipboard(),
-      undoRedo({ maxHistory: 50 }),
-      exportPlugin({ filename: 'dm-forecast' }),
-    ],
-    [],
-  );
-
-  const pinnedBottomRows = useMemo(() => [netTotalRow], []);
-
-  const { grid, containerRef } = useGrid<ForecastRow>({
+  // mode="spreadsheet" gives sort/filter/edit/clipboard/undo. Add hierarchy
+  // (its config stays as a top-level option) and export.
+  const grid = useGrid<ForecastRow, ForecastContext>({
     data,
     columns,
-    plugins,
-    frozenLeftColumns: 10,
-    freezeClip: { minVisible: 2 },
-    tableStyle: 'striped' as const,
+    mode: 'spreadsheet',
+    features: {
+      format: { locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true },
+      edit: { editTrigger: 'dblclick', precision: 0 },
+      hierarchy: true,
+      undo: { maxHistory: 50 },
+      export: { filename: 'dm-forecast' },
+    },
+    frozen: { left: 10, clip: { minVisible: 2 } },
+    pinned: { bottom: pinnedBottomRows },
+    tableStyle: 'striped',
     hierarchy: {
       getRowId: (row: ForecastRow) => row.id,
       getParentId: (row: ForecastRow) => row.parentId,
       defaultExpanded: true,
     },
-    pinnedBottomRows,
-    selection: { mode: 'range' as const, fillHandle: true },
+    selection: { mode: 'range', fillHandle: true },
     headerHeight: 44,
     rowHeight: 44,
+    context,
   });
-  // Expose the grid instance to the Escalation / Frequency cellRenderers.
-  gridRef.current = grid as unknown as GridInstance<ForecastRow>;
+  apiRef.current = grid.api;
 
-  const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
-  const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
-  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExpandAll = useCallback(() => grid.api.expandAll(), [grid]);
+  const handleCollapseAll = useCallback(() => grid.api.collapseAll(), [grid]);
+  const handleExport = useCallback(() => (grid.api.plugins as { export?: ExportApi }).export?.exportToCsv(), [grid]);
 
   return (
     <div>
@@ -279,19 +291,14 @@ export function DmForecast() {
         Development cost forecast with hierarchical accounts, escalation rates, and frequency-based monthly distribution.
       </p>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
-        <strong>Plugins:</strong> formatting, editing, sorting, hierarchy, cellRenderers, clipboard, undoRedo, export &bull;
-        <strong> Core:</strong> frozenLeftColumns, hierarchy, pinnedBottomRows
+        <strong>Mode:</strong> spreadsheet &bull;
+        <strong> Features:</strong> format, hierarchy, export &bull;
+        <strong> Layout:</strong> frozen.left=10 (clip), pinned.bottom, hierarchy
       </div>
-      <div
-        ref={containerRef}
-        style={{
-          height: 560,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
-          
-          borderRadius: 12,
-        }}
+      <BetterGrid<ForecastRow, ForecastContext>
+        grid={grid}
+        height={560}
+        style={{ borderRadius: 12 }}
       />
     </div>
   );

@@ -1,8 +1,8 @@
-import { useMemo, useCallback } from 'react';
-import { useGrid } from '@better-grid/react';
-import type { ColumnDef } from '@better-grid/core';
+import { useCallback } from 'react';
+import { useGrid, BetterGrid, defineColumn as col } from '@better-grid/react';
+import type { BadgeOption, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
-import { formatting, editing, hierarchy, cellRenderers, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
+import type { ExportApi } from '@better-grid/plugins';
 import { gantt } from '@better-grid/pro';
 import '@better-grid/core/styles.css';
 import { IconButton, ExpandAllIcon, CollapseAllIcon, ExportIcon } from './_toolbar-icons';
@@ -72,76 +72,74 @@ const ts = timeSeries({
   },
 });
 
+// Module-scope columns. Drag handle is purely visual, no closure-over-scope.
+const columns = [
+  col.custom('actions', {
+    header: '',
+    width: 80,
+    cellRenderer: (container) => {
+      container.textContent = '';
+      container.style.display = 'flex';
+      container.style.alignItems = 'center';
+      container.style.justifyContent = 'center';
+      container.style.cursor = 'grab';
+      container.style.color = '#999';
+      container.style.fontSize = '14px';
+      container.style.letterSpacing = '2px';
+      container.style.userSelect = 'none';
+      container.innerHTML = '<span style="pointer-events:none;line-height:1">&#x22EE;&#x22EE;</span>';
+    },
+  }),
+  col.text('phase', { header: 'Phase', width: 300 }),
+  col.text('duration', { header: 'Duration (months)', width: 90, align: 'center' }),
+  col.date('start', { header: 'Start', width: 100, align: 'center', dateFormat: 'month-year' }),
+  col.date('end', { header: 'End', width: 100, align: 'center', dateFormat: 'month-year' }),
+  col.badge('status', {
+    header: 'Variance',
+    width: 120,
+    options: [
+      { value: 'Done', label: 'Done', color: '#166534', bg: '#dcfce7', fontWeight: '500' },
+      { value: 'On Time', label: 'On Time', color: '#0c4a6e', bg: '#e0f2fe', border: '1px solid #7dd3fc', fontWeight: '500' },
+      { value: 'Delayed', label: 'Delayed', color: '#991b1b', bg: '#fee2e2', fontWeight: '500' },
+    ] as BadgeOption[],
+  }),
+  ...ts.columns,
+] as ColumnDef<TimelineRow>[];
+
 export function DmTimeline() {
-  const columns = useMemo<ColumnDef<TimelineRow>[]>(
-    () => [
-      {
-        id: 'actions', header: '', width: 80,
-        cellRenderer: (container) => {
-          container.textContent = '';
-          container.style.display = 'flex';
-          container.style.alignItems = 'center';
-          container.style.justifyContent = 'center';
-          container.style.cursor = 'grab';
-          container.style.color = '#999';
-          container.style.fontSize = '14px';
-          container.style.letterSpacing = '2px';
-          container.style.userSelect = 'none';
-          container.innerHTML = '<span style="pointer-events:none;line-height:1">&#x22EE;&#x22EE;</span>';
-        },
-      },
-      { id: 'phase', accessorKey: 'phase', header: 'Phase', width: 300 },
-      { id: 'duration', accessorKey: 'duration', header: 'Duration (months)', width: 90, align: 'center' as const },
-      { id: 'start', accessorKey: 'start', header: 'Start', width: 100, align: 'center' as const, cellType: 'date' as const, dateFormat: 'month-year' as const },
-      { id: 'end', accessorKey: 'end', header: 'End', width: 100, align: 'center' as const, cellType: 'date' as const, dateFormat: 'month-year' as const },
-      {
-        id: 'status', accessorKey: 'status', header: 'Variance', width: 120,
-        cellType: 'badge' as const,
-        options: [
-          { value: 'Done', label: 'Done', color: '#166534', bg: '#dcfce7', fontWeight: '500' },
-          { value: 'On Time', label: 'On Time', color: '#0c4a6e', bg: '#e0f2fe', border: '1px solid #7dd3fc', fontWeight: '500' },
-          { value: 'Delayed', label: 'Delayed', color: '#991b1b', bg: '#fee2e2', fontWeight: '500' },
-        ],
-      },
-      ...ts.columns,
-    ],
-    [],
-  );
-
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-AU', dateFormat: 'month-year' }),
-      editing({ editTrigger: 'dblclick' }),
-      hierarchy({ indentColumn: 'phase', indentSize: 22 }),
-      cellRenderers(),
-      gantt({ dateColumnPrefix: 'm_', startColumnField: 'startColumn', endColumnField: 'endColumn', varianceField: 'variance' }),
-      clipboard(),
-      undoRedo({ maxHistory: 50 }),
-      exportPlugin({ filename: 'dm-timeline' }),
-    ],
-    [],
-  );
-
-  const { grid, containerRef } = useGrid<TimelineRow>({
+  // mode="spreadsheet" gives sort/filter/edit/clipboard/undo. Add hierarchy
+  // (config stays top-level). gantt is a pro plugin not in the features
+  // registry — bring it in via the `plugins` escape hatch.
+  const grid = useGrid<TimelineRow>({
     data,
     columns,
-    plugins,
-    frozenLeftColumns: 6,
-    freezeClip: { minVisible: 2 },
-    tableStyle: 'striped' as const,
+    mode: 'spreadsheet',
+    features: {
+      format: { locale: 'en-AU', dateFormat: 'month-year' },
+      edit: { editTrigger: 'dblclick' },
+      hierarchy: true,
+      undo: { maxHistory: 50 },
+      export: { filename: 'dm-timeline' },
+      // sort/filter come from spreadsheet mode but not used here; harmless.
+    },
+    plugins: [
+      gantt({ dateColumnPrefix: 'm_', startColumnField: 'startColumn', endColumnField: 'endColumn', varianceField: 'variance' }),
+    ],
+    frozen: { left: 6, clip: { minVisible: 2 } },
+    tableStyle: 'striped',
     hierarchy: {
       getRowId: (row: TimelineRow) => row.id,
       getParentId: (row: TimelineRow) => row.parentId,
       defaultExpanded: true,
     },
-    selection: { mode: 'range' as const },
+    selection: { mode: 'range' },
     headerHeight: 44,
     rowHeight: 44,
   });
 
-  const handleExpandAll = useCallback(() => grid.expandAll(), [grid]);
-  const handleCollapseAll = useCallback(() => grid.collapseAll(), [grid]);
-  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExpandAll = useCallback(() => grid.api.expandAll(), [grid]);
+  const handleCollapseAll = useCallback(() => grid.api.collapseAll(), [grid]);
+  const handleExport = useCallback(() => (grid.api.plugins as { export?: ExportApi }).export?.exportToCsv(), [grid]);
 
   return (
     <div>
@@ -157,19 +155,14 @@ export function DmTimeline() {
         Development management project timeline with 60-month Gantt visualization. Drag bars to move phases, resize edges to adjust duration.
       </p>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
-        <strong>Plugins:</strong> formatting, editing, hierarchy, cellRenderers, gantt, clipboard, undoRedo, export &bull;
-        <strong> Core:</strong> frozenLeftColumns, hierarchy
+        <strong>Mode:</strong> spreadsheet &bull;
+        <strong> Features:</strong> format, hierarchy, export &bull;
+        <strong> Plugins:</strong> gantt (pro)
       </div>
-      <div
-        ref={containerRef}
-        style={{
-          height: 560,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
-          
-          borderRadius: 12,
-        }}
+      <BetterGrid<TimelineRow>
+        grid={grid}
+        height={560}
+        style={{ borderRadius: 12 }}
       />
     </div>
   );

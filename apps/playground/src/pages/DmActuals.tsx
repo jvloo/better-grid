@@ -1,8 +1,8 @@
-import { useMemo, useCallback } from 'react';
-import { useGrid } from '@better-grid/react';
+import { useCallback } from 'react';
+import { useGrid, BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
-import { formatting, editing, sorting, filtering, cellRenderers, clipboard, undoRedo, exportPlugin } from '@better-grid/plugins';
+import type { ExportApi } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 import { IconButton, ExportIcon } from './_toolbar-icons';
 
@@ -78,139 +78,79 @@ function buildTotalsRow(): ActualRow {
 }
 
 const totalsRow = buildTotalsRow();
+const pinnedBottomRows = [totalsRow];
+
+// Columns hoisted at module scope — no closure-over-component-state.
+const columns = [
+  col.text('actions', { header: '', width: 50 }),
+  col.text('child2Code', { header: 'ID', width: 85, align: 'center' }),
+  col.text('child2Name', { header: 'Description', width: 200, editable: true }),
+  col.text('child1Code', { header: 'ID', width: 85, align: 'center' }),
+  col.text('child1Name', { header: 'Description', width: 200 }),
+  col.text('parentCode', { header: 'ID', width: 85, align: 'center' }),
+  col.text('parentName', { header: 'Description', width: 200 }),
+  col.currency('total', { header: 'Total', width: 72, precision: 0 }),
+  ...ts.columns,
+] as ColumnDef<ActualRow>[];
+
+const fyGroupCells = ts.headerLayout[0]?.cells ?? [];
+const multiHeaders: HeaderRow[] = [
+  {
+    id: 'groups',
+    height: 32,
+    cells: [
+      { id: 'g-actions', content: '', columnId: 'actions' },
+      { id: 'g-child2', content: 'Child2', colSpan: 2 },
+      { id: 'g-child1', content: 'Child1', colSpan: 2 },
+      { id: 'g-parent', content: 'Parent', colSpan: 2 },
+      { id: 'g-total', content: 'Total', rowSpan: 2 },
+      ...fyGroupCells,
+    ],
+  },
+  {
+    id: 'columns',
+    height: 32,
+    cells: [
+      { id: 'h-actions', content: '', columnId: 'actions' },
+      { id: 'h-child2Code', content: 'ID', columnId: 'child2Code' },
+      { id: 'h-child2Name', content: 'Description', columnId: 'child2Name' },
+      { id: 'h-child1Code', content: 'ID', columnId: 'child1Code' },
+      { id: 'h-child1Name', content: 'Description', columnId: 'child1Name' },
+      { id: 'h-parentCode', content: 'ID', columnId: 'parentCode' },
+      { id: 'h-parentName', content: 'Description', columnId: 'parentName' },
+      ...ts.columns.map(c => ({
+        id: `h-${c.id}`,
+        content: c.header as string,
+        columnId: c.id,
+      })),
+    ],
+  },
+];
 
 export function DmActuals() {
-  const columns = useMemo<ColumnDef<ActualRow>[]>(
-    () => [
-      {
-        id: 'actions',
-        header: '',
-        width: 50,
-      },
-      {
-        id: 'child2Code',
-        accessorKey: 'child2Code',
-        header: 'ID',
-        width: 85,
-        align: 'center' as const,
-      },
-      {
-        id: 'child2Name',
-        accessorKey: 'child2Name',
-        header: 'Description',
-        width: 200,
-        editable: true,
-      },
-      {
-        id: 'child1Code',
-        accessorKey: 'child1Code',
-        header: 'ID',
-        width: 85,
-        align: 'center' as const,
-      },
-      {
-        id: 'child1Name',
-        accessorKey: 'child1Name',
-        header: 'Description',
-        width: 200,
-      },
-      {
-        id: 'parentCode',
-        accessorKey: 'parentCode',
-        header: 'ID',
-        width: 85,
-        align: 'center' as const,
-      },
-      {
-        id: 'parentName',
-        accessorKey: 'parentName',
-        header: 'Description',
-        width: 200,
-      },
-      {
-        id: 'total',
-        accessorKey: 'total',
-        header: 'Total',
-        width: 72,
-        cellType: 'currency' as const,
-        precision: 0,
-        align: 'right' as const,
-      },
-      ...ts.columns,
-    ],
-    [],
-  );
-
-  const multiHeaders = useMemo<HeaderRow[]>(() => {
-    const fyGroupCells = ts.headerLayout[0]?.cells ?? [];
-
-    return [
-      {
-        id: 'groups',
-        height: 32,
-        cells: [
-          { id: 'g-actions', content: '', columnId: 'actions' },
-          { id: 'g-child2', content: 'Child2', colSpan: 2 },
-          { id: 'g-child1', content: 'Child1', colSpan: 2 },
-          { id: 'g-parent', content: 'Parent', colSpan: 2 },
-          { id: 'g-total', content: 'Total', rowSpan: 2 },
-          ...fyGroupCells,
-        ],
-      },
-      {
-        id: 'columns',
-        height: 32,
-        cells: [
-          { id: 'h-actions', content: '', columnId: 'actions' },
-          { id: 'h-child2Code', content: 'ID', columnId: 'child2Code' },
-          { id: 'h-child2Name', content: 'Description', columnId: 'child2Name' },
-          { id: 'h-child1Code', content: 'ID', columnId: 'child1Code' },
-          { id: 'h-child1Name', content: 'Description', columnId: 'child1Name' },
-          { id: 'h-parentCode', content: 'ID', columnId: 'parentCode' },
-          { id: 'h-parentName', content: 'Description', columnId: 'parentName' },
-          ...ts.columns.map(c => ({
-            id: `h-${c.id}`,
-            content: c.header as string,
-            columnId: c.id,
-          })),
-        ],
-      },
-    ];
-  }, []);
-
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
-      editing({ editTrigger: 'dblclick', precision: 0 }),
-      sorting(),
-      filtering(),
-      cellRenderers(),
-      clipboard(),
-      undoRedo({ maxHistory: 50 }),
-      exportPlugin({ filename: 'dm-input-actuals' }),
-    ],
-    [],
-  );
-
-  const pinnedBottomRows = useMemo(() => [totalsRow], []);
-
-  const { grid, containerRef } = useGrid<ActualRow>({
+  // Use the advanced shape so we can drive the toolbar's Export button via the
+  // imperative API. mode="spreadsheet" gives edit + clipboard + undo + sort/filter.
+  // `format` overrides locale to en-AU + accounting brackets for negatives.
+  const grid = useGrid<ActualRow>({
     data,
     columns,
-    headerLayout: multiHeaders,
-    plugins,
-    frozenLeftColumns: 8,
-    freezeClip: { minVisible: 2 },
-    tableStyle: 'striped' as const,
-    pinnedBottomRows,
-    selection: { mode: 'range' as const, fillHandle: true },
+    mode: 'spreadsheet',
+    features: {
+      format: { locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true },
+      edit: { editTrigger: 'dblclick', precision: 0 },
+      undo: { maxHistory: 50 },
+      export: { filename: 'dm-input-actuals' },
+    },
+    headers: multiHeaders,
+    frozen: { left: 8, clip: { minVisible: 2 } },
+    pinned: { bottom: pinnedBottomRows },
+    tableStyle: 'striped',
+    selection: { mode: 'range', fillHandle: true },
     headerHeight: 44,
     rowHeight: 44,
   });
 
-  const handleExport = useCallback(() => {
-    grid.plugins.export?.exportToCsv();
-  }, [grid]);
+  const handleExport = useCallback(() => (grid.api.plugins as { export?: ExportApi }).export?.exportToCsv(), [grid]);
 
   return (
     <div>
@@ -224,19 +164,14 @@ export function DmActuals() {
         Actual cost entries with parent/child account structure and monthly breakdown. Each row represents a child-2 level account item.
       </p>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
-        <strong>Plugins:</strong> formatting, editing, sorting, filtering, cellRenderers, clipboard, undoRedo, export &bull;
-        <strong> Core:</strong> frozenLeftColumns, headerRows, pinnedBottomRows
+        <strong>Mode:</strong> spreadsheet (sort/filter/resize/select/edit/clipboard/undo) &bull;
+        <strong> Features:</strong> format, export &bull;
+        <strong> Layout:</strong> frozen.left=8 (clip), pinned.bottom, headers
       </div>
-      <div
-        ref={containerRef}
-        style={{
-          height: 540,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
-          
-          borderRadius: 12,
-        }}
+      <BetterGrid<ActualRow>
+        grid={grid}
+        height={540}
+        style={{ borderRadius: 12 }}
       />
     </div>
   );

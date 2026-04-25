@@ -1,7 +1,6 @@
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { BetterGrid } from '@better-grid/react';
-import type { ColumnDef, GridPlugin } from '@better-grid/core';
-import { formatting, sorting, filtering } from '@better-grid/plugins';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
+import type { ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
 
 interface PerfRow {
@@ -48,6 +47,45 @@ const PRESETS = [
   { label: 'Generate 1M rows', rows: 1_000_000 },
 ];
 
+// Hoisted at module scope (stable identity across all renders + grid resets).
+// Module scope is strictly more stable than useMemo([]) since it survives
+// HMR/StrictMode double-mounts too.
+const columns = [
+  col.text('id', { header: '#', width: 70, sortable: true }),
+  col.text('name', { header: 'Name', width: 160, sortable: true }),
+  col.text('category', { header: 'Category', width: 120, sortable: true }),
+  col.currency('value', { header: 'Value', width: 120, sortable: true }),
+  col.custom('score', {
+    header: 'Score',
+    width: 80,
+    sortable: true,
+    align: 'right',
+    cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
+      const v = ctx.value as number;
+      el.textContent = v.toFixed(1);
+      el.style.color = v >= 7 ? '#2e7d32' : v >= 4 ? '#f57f17' : '#c62828';
+    },
+  }),
+  col.date('date', { header: 'Date', width: 110, sortable: true }),
+  col.custom('status', {
+    header: 'Status',
+    width: 100,
+    sortable: true,
+    cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
+      const v = ctx.value as string;
+      const colors: Record<string, { bg: string; fg: string }> = {
+        Active: { bg: '#e8f5e9', fg: '#2e7d32' },
+        Pending: { bg: '#fff3e0', fg: '#e65100' },
+        'On Hold': { bg: '#ffebee', fg: '#c62828' },
+        Done: { bg: '#e3f2fd', fg: '#1565c0' },
+      };
+      const clr = colors[v] ?? { bg: '#f5f5f5', fg: '#666' };
+      el.innerHTML = `<span style="pointer-events:none;padding:2px 6px;border-radius:10px;font-size:11px;background:${clr.bg};color:${clr.fg}">${v}</span>`;
+    },
+  }),
+  col.boolean('active', { header: 'Active', width: 70, sortable: true }),
+] as ColumnDef<PerfRow>[];
+
 export function PerformanceDemo() {
   const [rowCount, setRowCount] = useState(100_000);
   const [generating, setGenerating] = useState(false);
@@ -61,51 +99,6 @@ export function PerformanceDemo() {
 
   const colCount = 8;
   const totalCells = rowCount * colCount;
-
-  const columns = useMemo<ColumnDef<PerfRow>[]>(
-    () => [
-      { id: 'id', header: '#', width: 70, sortable: true },
-      { id: 'name', header: 'Name', width: 160, sortable: true },
-      { id: 'category', header: 'Category', width: 120, sortable: true },
-      { id: 'value', header: 'Value', width: 120, cellType: 'currency', sortable: true },
-      {
-        id: 'score', header: 'Score', width: 80, sortable: true, align: 'right',
-        cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
-          const v = ctx.value as number;
-          el.textContent = v.toFixed(1);
-          el.style.color = v >= 7 ? '#2e7d32' : v >= 4 ? '#f57f17' : '#c62828';
-        },
-      },
-      { id: 'date', header: 'Date', width: 110, cellType: 'date', sortable: true },
-      {
-        id: 'status', header: 'Status', width: 100, sortable: true,
-        cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
-          const v = ctx.value as string;
-          const colors: Record<string, { bg: string; fg: string }> = {
-            Active: { bg: '#e8f5e9', fg: '#2e7d32' },
-            Pending: { bg: '#fff3e0', fg: '#e65100' },
-            'On Hold': { bg: '#ffebee', fg: '#c62828' },
-            Done: { bg: '#e3f2fd', fg: '#1565c0' },
-          };
-          const clr = colors[v] ?? { bg: '#f5f5f5', fg: '#666' };
-          el.innerHTML = `<span style="pointer-events:none;padding:2px 6px;border-radius:10px;font-size:11px;background:${clr.bg};color:${clr.fg}">${v}</span>`;
-        },
-      },
-      {
-        id: 'active', header: 'Active', width: 70, sortable: true, cellType: 'boolean',
-      },
-    ],
-    [],
-  );
-
-  const plugins = useMemo<GridPlugin[]>(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD' }),
-      sorting(),
-      filtering(),
-    ],
-    [],
-  );
 
   const applyPreset = useCallback((rows: number) => {
     setGenerating(true);
@@ -219,14 +212,15 @@ export function PerformanceDemo() {
         <Stat label="Total Cells" value={formatNumber(totalCells)} />
       </div>
 
-      {/* Grid */}
+      {/* Grid — view mode = sort + filter + resize + select */}
       <BetterGrid<PerfRow>
         key={gridKey}
         columns={columns}
         data={data}
-        frozenLeftColumns={1}
+        mode="view"
+        features={{ format: { locale: 'en-US', currencyCode: 'USD' } }}
+        frozen={{ left: 1 }}
         selection={{ mode: 'range' }}
-        plugins={plugins}
         height={520}
       />
 

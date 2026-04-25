@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
-import { useGrid } from '@better-grid/react';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, clipboard, cellRenderers, validation } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface DataRow {
@@ -36,37 +34,17 @@ const data: DataRow[] = [
   { id: 20, month: 'August Y2', revenue: 275000, cost: 132000, profit: 143000, growth: 0.04 },
 ];
 
+// All columns hoisted at module scope — no closure-over-component-state.
+// `mode="spreadsheet"` brings sort + edit + clipboard + undo (incl. fill handle).
+const columns = [
+  col.text('month', { header: 'Month', width: 120, editable: true, sortable: true }),
+  col.currency('revenue', { header: 'Revenue', width: 130, editable: true }),
+  col.currency('cost', { header: 'Cost', width: 130, editable: true }),
+  col.currency('profit', { header: 'Profit', width: 130, editable: true }),
+  col.percent('growth', { header: 'Growth', width: 110, editable: true }),
+] as ColumnDef<DataRow>[];
+
 export function ClipboardFill() {
-  const columns = useMemo<ColumnDef<DataRow>[]>(
-    () => [
-      { id: 'month', header: 'Month', width: 120, editable: true, sortable: true },
-      { id: 'revenue', header: 'Revenue', width: 130, cellType: 'currency', editable: true },
-      { id: 'cost', header: 'Cost', width: 130, cellType: 'currency', editable: true },
-      { id: 'profit', header: 'Profit', width: 130, cellType: 'currency', editable: true },
-      { id: 'growth', header: 'Growth', width: 110, cellType: 'percent', editable: true },
-    ],
-    [],
-  );
-
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD' }),
-      cellRenderers(),
-      editing({ editTrigger: 'dblclick', editorMode: 'inline' }),
-      validation({ validateOn: 'commit' }),
-      clipboard(),
-    ],
-    [],
-  );
-
-  const { containerRef } = useGrid<DataRow>({
-    data,
-    columns,
-    plugins,
-    rowHeight: 36,
-    selection: { mode: 'range', fillHandle: true },
-  });
-
   return (
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Clipboard & Fill Handle</h1>
@@ -88,16 +66,19 @@ export function ClipboardFill() {
         <span style={{ color: '#999' }}>Fill Down (Ctrl+D), Fill Series (Ctrl+Shift+D) &rarr; Pro</span>
       </div>
 
-      <div
-        ref={containerRef}
-        style={{
-          height: 420,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
-          border: '1px solid #e0e0e0',
-          borderRadius: 8,
+      <BetterGrid<DataRow>
+        columns={columns}
+        data={data}
+        mode="spreadsheet"
+        features={{
+          format: { locale: 'en-US', currencyCode: 'USD' },
+          edit: { editTrigger: 'dblclick', editorMode: 'inline' },
+          validation: { validateOn: 'commit' },
         }}
+        rowHeight={36}
+        selection={{ mode: 'range', fillHandle: true }}
+        height={420}
+        style={{ border: '1px solid #e0e0e0', borderRadius: 8 }}
       />
     </div>
   );
