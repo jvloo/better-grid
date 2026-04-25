@@ -405,19 +405,24 @@ docs/migration-from-ag-grid.md
 
 ## Out of scope
 
-- Server-side data sources (existing grid handles client-side only).
-- React-19-specific concurrent features.
-- Headless rendering / RSC compatibility.
-- Slot-based UI overrides (MUI's `slots` / `slotProps` pattern).
-- A formal `useGrid` lifetime / `resetOn` semantics (deferred to a follow-up spec).
+- **Server-side data sources** — Better Grid is client-side today; switching to server-driven row models is a separate architecture project, not part of this redesign.
+- **Headless / render-prop / RSC compatibility** — Better Grid renders to the DOM imperatively. This redesign keeps that model. RSC and headless rendering would require a parallel adapter, out of scope here.
+- **Concurrent rendering integration** (React 19 `useTransition` / Suspense around grid mutations) — the new API is compatible with React 18 and 19 hooks but does not introduce concurrent-mode-specific helpers.
+- **Slot-based UI overrides** (MUI's `slots` / `slotProps` for swapping the toolbar, footer, no-rows overlay, etc.) — kept out to bound scope. This redesign's `cellRenderer` + `context` pattern is the foundation a future slots system would build on; flagged as a natural follow-up.
+- **`pro/` and `react/`-only plugin features** that aren't part of `features:` strings (e.g. `gantt`, `merge-cells`, `row-actions`) — they continue to be consumed via the `plugins:` escape hatch unless/until they earn a string slot.
+
+### In scope but minimum viable
+
+- **`useGrid` lifetime / state persistence on `data` swap** — must be specified well enough that users aren't surprised. Default behavior for v1: when `data` reference changes, **selection clears, scroll resets to (0,0), in-progress edits commit-or-cancel per the editing plugin's existing rules, undo history clears**. A future `resetOn: 'never' | 'data' | 'columns'` option is deferred, but the default above is locked in this spec.
 
 ## Success criteria
 
-- `FinanceDashboard.tsx` (currently the worst-case page) shrinks by ≥30% LOC after migration with zero behavior change.
+- `FinanceDashboard.tsx` (worst-case synthetic page) shrinks by ≥30% LOC after migration with zero behavior change.
+- **`FsbtCost.tsx` (real-world Wiseway Costs table) migrates with zero behavior change** — this is the production-shaped page that proves the redesign holds up beyond demos. Required parity points: pinned-footer "Total Development Cost" layout, click-to-edit cell behavior, currency formatting per column, and the existing freeze/clip configuration. If `FsbtCost.tsx` doesn't migrate cleanly, the design needs another revision before merge.
 - New users can spin up a working grid with sort/filter/select in ≤10 lines (matches MUI's quick-start length).
 - All ~25 playground pages migrated and visually identical.
 - Typecheck + build green across `core`, `plugins`, `pro`, `react`.
-- Migration doc updated.
+- Migration doc updated (`docs/migration-from-ag-grid.md` plus a new `docs/migration-v0-to-v1.md` for existing Better Grid consumers).
 
 ## Open questions deferred to implementation plan
 
