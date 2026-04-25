@@ -55,8 +55,9 @@ const DEFAULT_HEADER_HEIGHT = 40;
 
 export function createGrid<
   TData = unknown,
+  TContext = unknown,
   const TPlugins extends readonly GridPlugin[] = readonly GridPlugin[],
->(options: GridOptions<TData, TPlugins>): GridInstance<TData, TPlugins> {
+>(options: GridOptions<TData, TContext, TPlugins>): GridInstance<TData, TPlugins> {
   // ---------------------------------------------------------------------------
   // Internal state
   // ---------------------------------------------------------------------------
@@ -68,10 +69,8 @@ export function createGrid<
   );
   const rendering = new RenderingPipeline<TData>();
   const frozenRendering = new RenderingPipeline<TData>();
-  rendering.rowStyles = options.rowStyles;
-  frozenRendering.rowStyles = options.rowStyles;
-  rendering.getRowStyle = options.getRowStyle;
-  frozenRendering.getRowStyle = options.getRowStyle;
+  rendering.getRowStyle = options.rowStyle;
+  frozenRendering.getRowStyle = options.rowStyle;
   const pluginRegistry = new PluginRegistry();
   const keyBindings: KeyBinding[] = [];
   const commands = new Map<string, Command>();
@@ -97,8 +96,11 @@ export function createGrid<
   let resizeObserver: ResizeObserver | null = null;
   let mounted = false;
 
-  const singleHeaderRowHeight = options.headerHeight ?? DEFAULT_HEADER_HEIGHT;
-  const headerRows = options.headerLayout;
+  const singleHeaderRowHeight =
+    (Array.isArray(options.headers) ? undefined : options.headers?.height) ??
+    options.headerHeight ??
+    DEFAULT_HEADER_HEIGHT;
+  const headerRows = Array.isArray(options.headers) ? options.headers : options.headers?.layout;
   const headerHeight = headerRows
     ? headerRows.reduce((sum, row) => sum + (row.height ?? singleHeaderRowHeight), 0)
     : singleHeaderRowHeight;
@@ -133,10 +135,10 @@ export function createGrid<
     scrollLeft: 0,
     visibleRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
     selection: createEmptySelection(),
-    frozenTopRows: options.frozenTopRows ?? 0,
-    frozenLeftColumns: options.frozenLeftColumns ?? 0,
-    pinnedTopRows: options.pinnedTopRows ?? [],
-    pinnedBottomRows: options.pinnedBottomRows ?? [],
+    frozenTopRows: options.frozen?.top ?? 0,
+    frozenLeftColumns: options.frozen?.left ?? 0,
+    pinnedTopRows: options.pinned?.top ?? [],
+    pinnedBottomRows: options.pinned?.bottom ?? [],
     hierarchyState: null,
     pluginState: {} as GridState<TData>['pluginState'],
   };
@@ -168,7 +170,7 @@ export function createGrid<
 
   // Resolve freeze clip config
   const freezeClipConfig = (() => {
-    const opt = options.freezeClip;
+    const opt = options.frozen?.clip;
     if (opt === false || opt === undefined) return { enabled: false, minVisible: 1 };
     if (opt === true) return { enabled: true, minVisible: 1 };
     return { enabled: true, minVisible: opt.minVisible ?? 1 };
@@ -507,7 +509,6 @@ export function createGrid<
   const pinnedRenderer = createPinnedRowRenderer<TData>({
     rendering,
     rowHeight: options.rowHeight,
-    rowStyles: options.rowStyles,
   });
 
   function renderPinnedRows(
@@ -1092,7 +1093,7 @@ export function createGrid<
       // doesn't participate in horizontal scroll. Syncs vertical scroll
       // via transform in the scroll handler (no lag since it never
       // moves horizontally with the scrollbar).
-      const frozenLeftCols = options.frozenLeftColumns ?? 0;
+      const frozenLeftCols = options.frozen?.left ?? 0;
       if (frozenLeftCols > 0) {
         frozenColOverlay = document.createElement('div');
         frozenColOverlay.className = 'bg-grid__frozen-overlay';
@@ -1395,6 +1396,18 @@ export function createGrid<
       rebuildHierarchy();
       recomputeMeasurements();
       updateAriaCounts();
+      // Spec: state-on-data-swap defaults — selection clears, scroll resets to (0,0).
+      // Editing plugin handles its own commit-or-cancel via existing rules.
+      // Undo plugin clears its own history if subscribed to data:set.
+      // TODO(perf): add a `resetOn: 'never' | 'data' | 'columns'` option to opt out.
+      const clearedSelection = createEmptySelection();
+      store.setSelection(clearedSelection);
+      emitter.emit('selection:change', clearedSelection);
+      store.setScroll(0, 0);
+      if (fakeScrollbar) {
+        fakeScrollbar.scrollTop = 0;
+        fakeScrollbar.scrollLeft = 0;
+      }
       emitter.emit('data:set', data);
       scheduleRender();
     },
@@ -1417,7 +1430,7 @@ export function createGrid<
         emitter.emit('data:change', [
           { rowIndex, columnId, oldValue, newValue: value, row: newRow },
         ]);
-        options.onDataChange?.([
+        options.onCellChange?.([
           { rowIndex, columnId, oldValue, newValue: value, row: newRow },
         ]);
       }

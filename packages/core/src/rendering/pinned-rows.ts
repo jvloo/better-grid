@@ -7,7 +7,7 @@
 // renderers (badge, progress, currency, etc.) work in pinned rows too.
 // ============================================================================
 
-import type { CellRenderContext, ColumnDef, RowStylesConfig } from '../types';
+import type { CellRenderContext, ColumnDef } from '../types';
 import type { LayoutMeasurements } from '../virtualization/engine';
 import type { RenderingPipeline } from './pipeline';
 import { getCellValue, snapToDevicePixel } from '../utils';
@@ -17,8 +17,6 @@ export interface PinnedRowRendererDeps<TData = unknown> {
   rendering: RenderingPipeline<TData>;
   /** Row height (pixels); defaults to 32 if undefined */
   rowHeight?: number | ((rowIndex: number) => number);
-  /** Optional row-level style presets (from GridOptions.rowStyles) */
-  rowStyles?: RowStylesConfig<TData>;
 }
 
 export interface PinnedRowRenderer<TData = unknown> {
@@ -138,6 +136,8 @@ export function createPinnedRowRenderer<TData = unknown>(
           isSelected: false,
           isActive: false,
           style: { top, left, width, height: rowH },
+          // T4 will wire this to the live grid context ref.
+          context: undefined as never,
         };
 
         // Render priority: column renderer > cell type > valueFormatter > default text
@@ -152,13 +152,6 @@ export function createPinnedRowRenderer<TData = unknown>(
           cell.textContent = column.valueFormatter(value);
         } else {
           cell.textContent = value != null ? String(value) : '';
-        }
-
-        // Apply row-level style presets
-        if (deps.rowStyles) {
-          const fieldVal = String((rowData as Record<string, unknown>)[deps.rowStyles.field] ?? '');
-          const rs = deps.rowStyles.styles[fieldVal];
-          if (rs) Object.assign(cell.style, rs);
         }
 
         // Apply conditional cellStyle / cellClass

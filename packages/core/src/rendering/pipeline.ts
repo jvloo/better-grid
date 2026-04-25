@@ -5,7 +5,7 @@
 // element to mark with role="row". aria-rowindex on each gridcell is the
 // documented substitute when row grouping is omitted.
 
-import type { CellRenderContext, CellRenderer, CellTypeRenderer, ColumnDef, RowStylesConfig, Selection } from '../types';
+import type { CellRenderContext, CellRenderer, CellTypeRenderer, ColumnDef, Selection } from '../types';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCellRenderContext = CellRenderContext<any>;
 import type { LayoutMeasurements } from '../virtualization/engine';
@@ -23,7 +23,7 @@ function cellKey(row: number, col: number): number {
 // only recognizes spec-defined slots).
 //
 // Tracks previously-applied keys on the element so repeat applications clear
-// anything the previous cellStyle/rowStyles set but the new one doesn't.
+// anything the previous cellStyle/rowStyle set but the new one doesn't.
 // Prevents stale styles leaking across pool reuse when a cell gets reassigned
 // to a different data row (e.g. after hierarchy collapse/expand shifts rows).
 interface StyledElement extends HTMLElement {
@@ -80,8 +80,6 @@ export class RenderingPipeline<TData = unknown> {
   private recyclePool: HTMLElement[] = [];
   /** Reused per renderCells() to avoid per-frame Set allocation */
   private visibleKeys = new Set<number>();
-  /** Row style presets from GridOptions.rowStyles */
-  rowStyles: RowStylesConfig<TData> | undefined;
   /** Per-row style callback — paints a full-width strip behind cells */
   getRowStyle: ((row: TData, rowIndex: number) => Record<string, string> | undefined) | undefined;
   /** Pool of row-background strip elements keyed by data row index */
@@ -271,6 +269,8 @@ export class RenderingPipeline<TData = unknown> {
           isSelected: selected,
           isActive: active,
           style: { top, left, width, height },
+          // T4 will wire this to the live grid context ref.
+          context: undefined as never,
         };
 
         // Cleanup previous render
@@ -302,21 +302,12 @@ export class RenderingPipeline<TData = unknown> {
           this.cleanupFns.set(key, cleanup);
         }
 
-        // Merge row-level presets (rowStyles) and column-level styles (cellStyle)
-        // into a single object, then apply once so the applyCellStyles' clear-
-        // old-keys logic runs with the full new keyset. A single call per cell
-        // guarantees stale styles from a previous data row (after hierarchy
-        // collapse/expand or scroll reuse) are wiped before new ones land.
-        let combinedStyles: Record<string, string> | null = null;
-        if (this.rowStyles) {
-          const fieldVal = String((rowData as Record<string, unknown>)[this.rowStyles.field] ?? '');
-          const rs = this.rowStyles.styles[fieldVal];
-          if (rs) combinedStyles = { ...(rs as Record<string, string>) };
-        }
-        if (column.cellStyle) {
-          const styles = column.cellStyle(value, rowData);
-          if (styles) combinedStyles = { ...(combinedStyles ?? {}), ...styles };
-        }
+        // Apply column-level styles (cellStyle). Row-level styles are handled
+        // by the row-bg strip (Phase 1.5) — applyCellStyles' clear-old-keys
+        // logic still runs so stale styles from a previous data row (after
+        // hierarchy collapse/expand or scroll reuse) get wiped before new
+        // ones land.
+        const combinedStyles = column.cellStyle?.(value, rowData) ?? null;
         applyCellStyles(cell, combinedStyles ?? {});
 
         if (column.cellClass) {
