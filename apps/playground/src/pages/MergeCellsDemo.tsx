@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useCallback } from 'react';
 import { BetterGrid, useGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import type { ExportApi } from '@better-grid/plugins';
@@ -80,11 +80,11 @@ const mergeConfig: Array<{ row: number; col: number; rowSpan?: number; colSpan?:
   return cells;
 })();
 
-export function MergeCellsDemo() {
-  // mergeCells lives in @better-grid/pro and is not in the features registry —
-  // pass it via the `plugins` escape hatch (additive on top of mode/features).
-  const proPlugins = useMemo(() => [mergeCells({ cells: mergeConfig })], []);
+// mergeCells lives in @better-grid/pro and is not in the features registry —
+// pass it via the `plugins` escape hatch (additive on top of mode/features).
+const proPlugins = [mergeCells({ cells: mergeConfig })];
 
+export function MergeCellsDemo() {
   // useGrid form: needed for the imperative export trigger.
   const grid = useGrid<ScheduleRow>({
     data: scheduleData,
