@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
-import { useGrid } from '@better-grid/react';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, sorting, cellRenderers } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface SampleRow {
@@ -21,67 +19,58 @@ const data: SampleRow[] = [
   { id: 6, name: 'Frank Johnson', department: 'Design', amount: 92000, status: 'Inactive' },
 ];
 
-const columns: ColumnDef<SampleRow>[] = [
-  { id: 'name', accessorKey: 'name', header: 'Name', width: 160 },
-  { id: 'department', accessorKey: 'department', header: 'Department', width: 130 },
-  { id: 'amount', accessorKey: 'amount', header: 'Salary', width: 120, cellType: 'currency', align: 'right' },
-  { id: 'status', accessorKey: 'status', header: 'Status', width: 100 },
-];
-
-const plugins = [
-  formatting({ locale: 'en-AU', currencyCode: 'AUD' }),
-  editing({ editTrigger: 'dblclick' }),
-  sorting(),
-  cellRenderers(),
-];
+const columns = [
+  col.text('name', { header: 'Name', width: 160 }),
+  col.text('department', { header: 'Department', width: 130 }),
+  col.currency('amount', { header: 'Salary', width: 120 }),
+  col.text('status', { header: 'Status', width: 100 }),
+] as ColumnDef<SampleRow>[];
 
 type TableStyle = 'bordered' | 'borderless' | 'striped';
 
-function StyleGrid({ style, label }: { style?: TableStyle; label: string }) {
-  const { containerRef } = useGrid<SampleRow>({
-    data,
-    columns,
-    plugins,
-    frozenLeftColumns: 1,
-    rowHeight: 36,
-    tableStyle: style,
-    selection: { mode: 'cell' as const },
-  });
+const SHARED_FEATURES = {
+  format: { locale: 'en-AU', currencyCode: 'AUD' },
+  edit: { editTrigger: 'dblclick' as const },
+};
 
+function StyleGrid({ style, label }: { style?: TableStyle; label: string }) {
   return (
     <div>
       <h3 style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 600 }}>{label}</h3>
-      <div
-        ref={containerRef}
-        style={{ height: 280, width: '100%', borderRadius: 8, overflow: 'hidden' }}
+      <BetterGrid<SampleRow>
+        columns={columns}
+        data={data}
+        mode="view"
+        features={SHARED_FEATURES}
+        frozen={{ left: 1 }}
+        rowHeight={36}
+        tableStyle={style}
+        selection={{ mode: 'cell' }}
+        height={280}
+        style={{ borderRadius: 8 }}
       />
     </div>
   );
 }
 
 function StripedNoBg() {
-  const { containerRef } = useGrid<SampleRow>({
-    data,
-    columns,
-    plugins,
-    frozenLeftColumns: 1,
-    rowHeight: 36,
-    tableStyle: 'striped',
-    selection: { mode: 'cell' as const },
-  });
-
   return (
     <div>
       <h3 style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 600 }}>
         Striped (no bg) <code style={{ fontSize: 11, color: '#888' }}>--bg-stripe-bg: #fff</code>
       </h3>
-      <div
-        ref={containerRef}
+      <BetterGrid<SampleRow>
+        columns={columns}
+        data={data}
+        mode="view"
+        features={SHARED_FEATURES}
+        frozen={{ left: 1 }}
+        rowHeight={36}
+        tableStyle="striped"
+        selection={{ mode: 'cell' }}
+        height={280}
         style={{
-          height: 280,
-          width: '100%',
           borderRadius: 8,
-          overflow: 'hidden',
           // @ts-expect-error CSS custom property
           '--bg-stripe-bg': '#fff',
         }}

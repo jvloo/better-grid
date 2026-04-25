@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
-import { useGrid } from '@better-grid/react';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, cellRenderers } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface Row {
@@ -24,18 +22,15 @@ const data: Row[] = [
   { id: 8, product: 'Desk Lamp LED', category: 'Accessories', price: 24.99, stock: 300, rating: 3 },
 ];
 
-const columns: ColumnDef<Row>[] = [
-  { id: 'product', header: 'Product', width: 180 },
-  { id: 'category', header: 'Category', width: 120 },
-  { id: 'price', header: 'Price', width: 90, cellType: 'currency', precision: 2, align: 'right' },
-  { id: 'stock', header: 'Stock', width: 80, align: 'right' },
-  { id: 'rating', header: 'Rating', width: 90, cellType: 'rating' },
-];
+const columns = [
+  col.text('product', { header: 'Product', width: 180 }),
+  col.text('category', { header: 'Category', width: 120 }),
+  col.currency('price', { header: 'Price', width: 90, precision: 2 }),
+  col.number('stock', { header: 'Stock', width: 80 }),
+  col.rating('rating', { header: 'Rating', width: 90 }),
+] as ColumnDef<Row>[];
 
-const plugins = [
-  formatting({ locale: 'en-US', currencyCode: 'USD' }),
-  cellRenderers(),
-];
+const FORMAT_FEATURE = { format: { locale: 'en-US', currencyCode: 'USD' } };
 
 function GridCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
@@ -44,94 +39,6 @@ function GridCard({ title, description, children }: { title: string; description
       <p style={{ margin: '0 0 10px', color: '#666', fontSize: 13, lineHeight: 1.5 }}>{description}</p>
       {children}
     </div>
-  );
-}
-
-// ─── Grid 1: No selection (default) ──────────────────────────────────────────
-
-function NoSelectionGrid() {
-  const cols = useMemo(() => [...columns], []);
-  const pl = useMemo(() => [...plugins], []);
-
-  const { containerRef } = useGrid<Row>({
-    data,
-    columns: cols,
-    plugins: pl,
-    rowHeight: 36,
-    // No selection prop — selection is disabled
-  });
-
-  return (
-    <div
-      ref={containerRef}
-      style={{ height: 320, width: '100%', position: 'relative', overflow: 'hidden', border: '1px solid #e0e0e0', borderRadius: 8 }}
-    />
-  );
-}
-
-// ─── Grid 2: Cell mode ───────────────────────────────────────────────────────
-
-function CellModeGrid() {
-  const cols = useMemo(() => [...columns], []);
-  const pl = useMemo(() => [...plugins], []);
-
-  const { containerRef } = useGrid<Row>({
-    data,
-    columns: cols,
-    plugins: pl,
-    selection: { mode: 'cell' },
-    rowHeight: 36,
-  });
-
-  return (
-    <div
-      ref={containerRef}
-      style={{ height: 320, width: '100%', position: 'relative', overflow: 'hidden', border: '1px solid #e0e0e0', borderRadius: 8 }}
-    />
-  );
-}
-
-// ─── Grid 3: Range mode ──────────────────────────────────────────────────────
-
-function RangeModeGrid() {
-  const cols = useMemo(() => [...columns], []);
-  const pl = useMemo(() => [...plugins], []);
-
-  const { containerRef } = useGrid<Row>({
-    data,
-    columns: cols,
-    plugins: pl,
-    selection: { mode: 'range' },
-    rowHeight: 36,
-  });
-
-  return (
-    <div
-      ref={containerRef}
-      style={{ height: 320, width: '100%', position: 'relative', overflow: 'hidden', border: '1px solid #e0e0e0', borderRadius: 8 }}
-    />
-  );
-}
-
-// ─── Grid 4: Range + fill handle ─────────────────────────────────────────────
-
-function RangeFillGrid() {
-  const cols = useMemo(() => [...columns], []);
-  const pl = useMemo(() => [...plugins], []);
-
-  const { containerRef } = useGrid<Row>({
-    data,
-    columns: cols,
-    plugins: pl,
-    selection: { mode: 'range', fillHandle: true },
-    rowHeight: 36,
-  });
-
-  return (
-    <div
-      ref={containerRef}
-      style={{ height: 320, width: '100%', position: 'relative', overflow: 'hidden', border: '1px solid #e0e0e0', borderRadius: 8 }}
-    />
   );
 }
 
@@ -150,28 +57,63 @@ export function SelectionModes() {
           title="No selection (default)"
           description="No selection prop passed. Clicking cells does nothing. Arrow keys don't navigate. Pure read-only display."
         >
-          <NoSelectionGrid />
+          <BetterGrid<Row>
+            columns={columns}
+            data={data}
+            mode={null}
+            features={FORMAT_FEATURE}
+            rowHeight={36}
+            height={320}
+            style={{ borderRadius: 8 }}
+          />
         </GridCard>
 
         <GridCard
           title='selection: { mode: "cell" }'
           description="Click selects a single cell. Arrow keys move between cells. Shift+click and Ctrl+click have no effect — no range extension, no multi-select."
         >
-          <CellModeGrid />
+          <BetterGrid<Row>
+            columns={columns}
+            data={data}
+            mode={null}
+            features={FORMAT_FEATURE}
+            selection={{ mode: 'cell' }}
+            rowHeight={36}
+            height={320}
+            style={{ borderRadius: 8 }}
+          />
         </GridCard>
 
         <GridCard
           title='selection: { mode: "range" }'
           description="Click selects a cell. Shift+click extends to a range. Ctrl+click adds additional ranges. Shift+Arrow extends range via keyboard."
         >
-          <RangeModeGrid />
+          <BetterGrid<Row>
+            columns={columns}
+            data={data}
+            mode={null}
+            features={FORMAT_FEATURE}
+            selection={{ mode: 'range' }}
+            rowHeight={36}
+            height={320}
+            style={{ borderRadius: 8 }}
+          />
         </GridCard>
 
         <GridCard
           title='selection: { mode: "range", fillHandle: true }'
           description="Same as range mode, plus a small square handle at the bottom-right corner of the selection. Drag it to fill cells with values from the selected range."
         >
-          <RangeFillGrid />
+          <BetterGrid<Row>
+            columns={columns}
+            data={data}
+            mode={null}
+            features={FORMAT_FEATURE}
+            selection={{ mode: 'range', fillHandle: true }}
+            rowHeight={36}
+            height={320}
+            style={{ borderRadius: 8 }}
+          />
         </GridCard>
       </div>
     </div>

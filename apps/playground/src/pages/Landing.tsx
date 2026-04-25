@@ -1,7 +1,5 @@
-import { BetterGrid } from '@better-grid/react';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
-import { formatting, editing, sorting } from '@better-grid/plugins';
-import { useMemo } from 'react';
 import '@better-grid/core/styles.css';
 
 // Mini financial grid for hero section
@@ -26,53 +24,47 @@ const heroData: HeroRow[] = [
   { id: 5, project: 'Gamma Heights', category: 'Revenue', total: 2100000, jan: 170000, feb: 175000, mar: 180000, apr: 172000, may: 178000, jun: 185000 },
 ];
 
-export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
-  const heroHeaders = useMemo<HeaderRow[]>(() => [
-    { id: 'g', height: 28, cells: [
-      { id: 'gi', content: 'Project', colSpan: 3 },
-      { id: 'gs', content: 'Summary', colSpan: 1 },
-      { id: 'gq1', content: 'Q1', colSpan: 3 },
-      { id: 'gq2', content: 'Q2', colSpan: 3 },
-    ]},
-    { id: 'c', height: 28, cells: [
-      { id: 'hi', content: '#', columnId: 'id' },
-      { id: 'hp', content: 'Project', columnId: 'project' },
-      { id: 'hc', content: 'Type', columnId: 'category' },
-      { id: 'ht', content: 'Total', columnId: 'total' },
-      { id: 'h1', content: 'Jan', columnId: 'jan' },
-      { id: 'h2', content: 'Feb', columnId: 'feb' },
-      { id: 'h3', content: 'Mar', columnId: 'mar' },
-      { id: 'h4', content: 'Apr', columnId: 'apr' },
-      { id: 'h5', content: 'May', columnId: 'may' },
-      { id: 'h6', content: 'Jun', columnId: 'jun' },
-    ]},
-  ], []);
+const heroHeaders: HeaderRow[] = [
+  { id: 'g', height: 28, cells: [
+    { id: 'gi', content: 'Project', colSpan: 3 },
+    { id: 'gs', content: 'Summary', colSpan: 1 },
+    { id: 'gq1', content: 'Q1', colSpan: 3 },
+    { id: 'gq2', content: 'Q2', colSpan: 3 },
+  ]},
+  { id: 'c', height: 28, cells: [
+    { id: 'hi', content: '#', columnId: 'id' },
+    { id: 'hp', content: 'Project', columnId: 'project' },
+    { id: 'hc', content: 'Type', columnId: 'category' },
+    { id: 'ht', content: 'Total', columnId: 'total' },
+    { id: 'h1', content: 'Jan', columnId: 'jan' },
+    { id: 'h2', content: 'Feb', columnId: 'feb' },
+    { id: 'h3', content: 'Mar', columnId: 'mar' },
+    { id: 'h4', content: 'Apr', columnId: 'apr' },
+    { id: 'h5', content: 'May', columnId: 'may' },
+    { id: 'h6', content: 'Jun', columnId: 'jun' },
+  ]},
+];
 
-  const heroCols = useMemo<ColumnDef<HeroRow>[]>(() => [
-    { id: 'id', header: '#', width: 40, editable: false },
-    { id: 'project', header: 'Project', width: 120 },
-    { id: 'category', header: 'Type', width: 80 },
-    { id: 'total', header: 'Total', width: 110, cellType: 'currency', sortable: true },
-    ...(['jan','feb','mar','apr','may','jun'] as const).map(m => ({
-      id: m,
+const heroCols = [
+  col.text('id', { header: '#', width: 40, editable: false }),
+  col.text('project', { header: 'Project', width: 120 }),
+  col.text('category', { header: 'Type', width: 80 }),
+  col.currency('total', { header: 'Total', width: 110, sortable: true }),
+  ...(['jan', 'feb', 'mar', 'apr', 'may', 'jun'] as const).map((m) =>
+    col.currency(m, {
       header: m.charAt(0).toUpperCase() + m.slice(1),
       width: 90,
-      cellType: 'currency' as const,
       cellRenderer: (container: HTMLElement, ctx: { value: unknown }) => {
         const val = ctx.value as number;
         container.textContent = val < 0 ? `(${Math.abs(val).toLocaleString()})` : val.toLocaleString();
         container.style.textAlign = 'right';
         container.style.color = val < 0 ? '#ff6b6b' : '';
       },
-    })),
-  ], []);
+    }),
+  ),
+] as ColumnDef<HeroRow>[];
 
-  const heroPlugins = useMemo(() => [
-    formatting({ locale: 'en-US', currencyCode: 'USD', accountingFormat: true }),
-    editing({ editTrigger: 'dblclick' }),
-    sorting(),
-  ], []);
-
+export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff' }}>
 
@@ -111,10 +103,14 @@ export function Landing({ onExploreDemos }: { onExploreDemos: () => void }) {
           <BetterGrid<HeroRow>
             columns={heroCols}
             data={heroData}
-            headerLayout={heroHeaders}
-            frozenLeftColumns={3}
+            mode="view"
+            features={{
+              format: { locale: 'en-US', currencyCode: 'USD', accountingFormat: true },
+              edit: { editTrigger: 'dblclick' },
+            }}
+            headers={heroHeaders}
+            frozen={{ left: 3 }}
             selection={{ mode: 'range' }}
-            plugins={heroPlugins}
             height={280}
           />
         </div>

@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
-import { BetterGrid } from '@better-grid/react';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, sorting, filtering } from '@better-grid/plugins';
 import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
 
@@ -39,47 +37,34 @@ const data: EmployeeRow[] = [
   { id: 20, name: 'Tina Robinson', department: 'Design', role: 'Staff', salary: 140000, experience: 10, rating: 4.9, location: 'Remote' },
 ];
 
+const columns = [
+  col.text('id', { header: '#', width: 40, editable: false, sortable: true }),
+  col.text('name', { header: 'Name', width: 140, sortable: true }),
+  col.text('department', { header: 'Dept', width: 110, sortable: true }),
+  col.text('role', { header: 'Role', width: 90, sortable: true }),
+  col.currency('salary', { header: 'Salary', width: 110, sortable: true }),
+  col.number('experience', { header: 'Exp (yrs)', width: 90, sortable: true }),
+  col.number('rating', {
+    header: 'Rating',
+    width: 80,
+    sortable: true,
+    cellRenderer: (container, ctx) => {
+      const val = ctx.value as number;
+      container.textContent = val.toFixed(1);
+      container.style.textAlign = 'center';
+      container.style.color = val >= 4.5 ? '#2e7d32' : val >= 4.0 ? '#f57f17' : '#c62828';
+      container.style.fontWeight = '500';
+    },
+  }),
+  col.text('location', { header: 'Location', width: 120, sortable: true }),
+] as ColumnDef<EmployeeRow>[];
+
 export function SortFilter() {
-  const columns = useMemo<ColumnDef<EmployeeRow>[]>(
-    () => [
-      { id: 'id', header: '#', width: 40, editable: false, sortable: true },
-      { id: 'name', header: 'Name', width: 140, sortable: true },
-      { id: 'department', header: 'Dept', width: 110, sortable: true },
-      { id: 'role', header: 'Role', width: 90, sortable: true },
-      { id: 'salary', header: 'Salary', width: 110, cellType: 'currency', sortable: true },
-      { id: 'experience', header: 'Exp (yrs)', width: 90, align: 'right', sortable: true },
-      {
-        id: 'rating',
-        header: 'Rating',
-        width: 80,
-        sortable: true,
-        cellRenderer: (container, ctx) => {
-          const val = ctx.value as number;
-          container.textContent = val.toFixed(1);
-          container.style.textAlign = 'center';
-          container.style.color = val >= 4.5 ? '#2e7d32' : val >= 4.0 ? '#f57f17' : '#c62828';
-          container.style.fontWeight = '500';
-        },
-      },
-      { id: 'location', header: 'Location', width: 120, sortable: true },
-    ],
-    [],
-  );
-
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD' }),
-      sorting(),
-      filtering(),
-    ],
-    [],
-  );
-
   return (
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Sorting & Filtering</h1>
       <p style={{ marginBottom: 8, color: '#666', lineHeight: 1.5 }}>
-        <code>sorting()</code> + <code>filtering()</code> plugins. 20 employees — explore the data.
+        <code>mode="view"</code> includes sort + filter + resize + select. 20 employees — explore the data.
       </p>
       <div style={{ marginBottom: 16, fontSize: 13, color: '#888', lineHeight: 1.6 }}>
         <strong>Sort:</strong> Click any header to sort (asc → desc → none)
@@ -92,44 +77,41 @@ export function SortFilter() {
       <BetterGrid<EmployeeRow>
         columns={columns}
         data={data}
-        frozenLeftColumns={2}
+        mode="view"
+        features={{ format: { locale: 'en-US', currencyCode: 'USD' } }}
+        frozen={{ left: 2 }}
         selection={{ mode: 'range' }}
-        plugins={plugins}
         height={500}
       />
 
-      <CodeBlock title="Sort & Filter" code={`import { formatting, sorting, filtering } from '@better-grid/plugins';
+      <CodeBlock title="Sort & Filter" code={`import { BetterGrid, defineColumn as col } from '@better-grid/react';
 
 // Click header to sort (asc → desc → none)
 // Right-click header → Filter... / Clear Filter
 
 const columns = [
-  { id: 'id', header: '#', width: 40, editable: false, sortable: true },
-  { id: 'name', header: 'Name', width: 140, sortable: true },
-  { id: 'department', header: 'Dept', width: 110, sortable: true },
-  { id: 'role', header: 'Role', width: 90, sortable: true },
-  { id: 'salary', header: 'Salary', width: 110,
-    cellType: 'currency', sortable: true },
-  { id: 'experience', header: 'Exp (yrs)', width: 90, sortable: true },
-  { id: 'rating', header: 'Rating', width: 80, sortable: true,
+  col.text('id', { header: '#', width: 40, editable: false, sortable: true }),
+  col.text('name', { header: 'Name', width: 140, sortable: true }),
+  col.text('department', { header: 'Dept', width: 110, sortable: true }),
+  col.text('role', { header: 'Role', width: 90, sortable: true }),
+  col.currency('salary', { header: 'Salary', width: 110, sortable: true }),
+  col.number('experience', { header: 'Exp (yrs)', width: 90, sortable: true }),
+  col.number('rating', { header: 'Rating', width: 80, sortable: true,
     cellRenderer: (el, ctx) => {
       el.textContent = ctx.value.toFixed(1);
       el.style.color = ctx.value >= 4.5 ? '#2e7d32'
                       : ctx.value >= 4.0 ? '#f57f17' : '#c62828';
     },
-  },
-  { id: 'location', header: 'Location', width: 120, sortable: true },
+  }),
+  col.text('location', { header: 'Location', width: 120, sortable: true }),
 ];
 
 <BetterGrid
   columns={columns}
   data={employees}
-  frozenLeftColumns={2}
-  plugins={[
-    formatting({ locale: 'en-US', currencyCode: 'USD' }),
-    sorting(),
-    filtering(),
-  ]}
+  mode="view"   // sort + filter + resize + select
+  features={{ format: { locale: 'en-US', currencyCode: 'USD' } }}
+  frozen={{ left: 2 }}
 />`} />
     </div>
   );

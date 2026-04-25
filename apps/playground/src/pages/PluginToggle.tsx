@@ -1,7 +1,6 @@
-import { useMemo, useState, useCallback } from 'react';
-import { BetterGrid } from '@better-grid/react';
-import type { ColumnDef, GridPlugin } from '@better-grid/core';
-import { formatting, editing, sorting, filtering, validation } from '@better-grid/plugins';
+import { useState } from 'react';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
+import type { BadgeOption, ColumnDef } from '@better-grid/core';
 import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
 
@@ -38,88 +37,73 @@ const data: DemoRow[] = [
   { id: 20, name: 'Upsilon', category: 'Expense', amount: -27500, rate: 0.02, date: '2026-11-05', active: true },
 ];
 
+const categoryOptions = [
+  { label: 'Revenue', value: 'Revenue', color: '#2e7d32', bg: '#e8f5e9' },
+  { label: 'Cost', value: 'Cost', color: '#c62828', bg: '#ffebee' },
+  { label: 'Expense', value: 'Expense', color: '#e65100', bg: '#fff3e0' },
+] as BadgeOption[];
+
+const baseColumns = [
+  col.text('id', { header: '#', width: 40, editable: false, sortable: true }),
+  col.text('name', { header: 'Name', width: 100, required: true, sortable: true }),
+  col.badge('category', { header: 'Category', width: 100, options: categoryOptions, sortable: true }),
+  col.currency('amount', {
+    header: 'Amount',
+    width: 120,
+    sortable: true,
+    rules: [{ validate: (v: unknown) => typeof v === 'number' || 'Must be number' }],
+  }),
+  col.percent('rate', { header: 'Rate', width: 75, sortable: true }),
+  col.date('date', { header: 'Date', width: 120, sortable: true }),
+  col.boolean('active', { header: 'Active', width: 80 }),
+] as ColumnDef<DemoRow>[];
+
 export function PluginToggle() {
-  const [enableFormatting, setEnableFormatting] = useState(true);
-  const [enableEditing, setEnableEditing] = useState(true);
-  const [enableSorting, setEnableSorting] = useState(true);
-  const [enableFiltering, setEnableFiltering] = useState(false);
+  const [enableFormat, setEnableFormat] = useState(true);
+  const [enableEdit, setEnableEdit] = useState(true);
+  const [enableSort, setEnableSort] = useState(true);
+  const [enableFilter, setEnableFilter] = useState(false);
   const [enableValidation, setEnableValidation] = useState(false);
 
-  // Rebuild key when plugins change to force grid re-creation
-  const pluginKey = `${enableFormatting}-${enableEditing}-${enableSorting}-${enableFiltering}-${enableValidation}`;
+  // Re-create the grid when features change.
+  const featureKey = `${enableFormat}-${enableEdit}-${enableSort}-${enableFilter}-${enableValidation}`;
 
-  const columns = useMemo<ColumnDef<DemoRow>[]>(
-    () => [
-      { id: 'id', header: '#', width: 40, editable: false, sortable: true },
-      { id: 'name', header: 'Name', width: 100, required: true, sortable: true },
-      {
-        id: 'category',
-        header: 'Category',
-        width: 100,
-        options: ['Revenue', 'Cost', 'Expense'],
-        sortable: true,
-      },
-      {
-        id: 'amount',
-        header: 'Amount',
-        width: 120,
-        cellType: 'currency',
-        sortable: true,
-        rules: [{ validate: (v) => typeof v === 'number' || 'Must be number' }],
-      },
-      { id: 'rate', header: 'Rate', width: 75, cellType: 'percent', sortable: true },
-      { id: 'date', header: 'Date', width: 120, cellType: 'date', sortable: true },
-      {
-        id: 'active',
-        header: 'Active',
-        width: 80,
-        cellRenderer: enableFormatting
-          ? (container, ctx) => {
-              container.textContent = ctx.value ? 'Yes' : 'No';
-              container.style.color = ctx.value ? '#2e7d32' : '#c62828';
-              container.style.textAlign = 'center';
-            }
-          : undefined,
-      },
-    ],
-    [enableFormatting],
-  );
+  // Build the features object dynamically. mode={null} drops mode defaults so
+  // each toggle independently controls a feature.
+  const features: Partial<Record<string, boolean | object>> = {};
+  if (enableFormat) features.format = { locale: 'en-US', currencyCode: 'USD', accountingFormat: true };
+  if (enableEdit) features.edit = { editTrigger: 'dblclick' };
+  if (enableSort) features.sort = true;
+  if (enableFilter) features.filter = true;
+  if (enableValidation) features.validation = { validateOn: 'all' };
 
-  const plugins = useMemo(() => {
-    const p: GridPlugin[] = [];
-    if (enableFormatting) p.push(formatting({ locale: 'en-US', currencyCode: 'USD', accountingFormat: true }));
-    if (enableEditing) p.push(editing({ editTrigger: 'dblclick' }));
-    if (enableSorting) p.push(sorting());
-    if (enableFiltering) p.push(filtering());
-    if (enableValidation) p.push(validation({ validateOn: 'all' }));
-    return p;
-  }, [enableFormatting, enableEditing, enableSorting, enableFiltering, enableValidation]);
-
-  const activePlugins = [
-    enableFormatting && 'formatting()',
-    enableEditing && 'editing()',
-    enableSorting && 'sorting()',
-    enableFiltering && 'filtering()',
-    enableValidation && 'validation()',
-  ].filter(Boolean);
+  const activeFeatures = [
+    enableFormat && 'format',
+    enableEdit && 'edit',
+    enableSort && 'sort',
+    enableFilter && 'filter',
+    enableValidation && 'validation',
+  ].filter(Boolean) as string[];
 
   const codeSnippet = `import { BetterGrid } from '@better-grid/react';
-${activePlugins.length > 0 ? `import { ${activePlugins.join(', ').replace(/\(\)/g, '')} } from '@better-grid/plugins';` : '// No plugins imported'}
 
 <BetterGrid
   columns={columns}
   data={data}
-  frozenLeftColumns={2}
-  selection={{ mode: 'range' }}${activePlugins.length > 0 ? `
-  plugins={[${activePlugins.join(', ')}]}` : ''}
+  mode={null}
+  features={{${activeFeatures.length > 0 ? `
+    ${activeFeatures.map((f) => `${f}: true`).join(',\n    ')},` : ''}
+  }}
+  frozen={{ left: 2 }}
+  selection={{ mode: 'range' }}
 />`;
 
   return (
     <div>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Plugin Toggle — Live</h1>
+      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Feature Toggle — Live</h1>
       <p style={{ marginBottom: 16, color: '#666', lineHeight: 1.5 }}>
-        Toggle plugins on/off to see how each one changes the grid.
-        The grid re-creates with only the selected plugins.
+        Toggle features on/off via the new <code>features</code> prop.
+        With <code>mode={'{null}'}</code>, no defaults apply — each checkbox flips one feature on or off.
       </p>
 
       {/* Toggle panel */}
@@ -134,26 +118,27 @@ ${activePlugins.length > 0 ? `import { ${activePlugins.join(', ').replace(/\(\)/
           flexWrap: 'wrap',
         }}
       >
-        <PluginCheckbox label="formatting()" checked={enableFormatting} onChange={setEnableFormatting} color="#1a73e8" description="Currency, percent, dates" />
-        <PluginCheckbox label="editing()" checked={enableEditing} onChange={setEnableEditing} color="#2e7d32" description="Double-click to edit" />
-        <PluginCheckbox label="sorting()" checked={enableSorting} onChange={setEnableSorting} color="#f57f17" description="Click header to sort" />
-        <PluginCheckbox label="filtering()" checked={enableFiltering} onChange={setEnableFiltering} color="#c62828" description="Right-click → Filter" />
-        <PluginCheckbox label="validation()" checked={enableValidation} onChange={setEnableValidation} color="#7b1fa2" description="Red border on errors" />
+        <FeatureCheckbox label="format" checked={enableFormat} onChange={setEnableFormat} color="#1a73e8" description="Currency, percent, dates" />
+        <FeatureCheckbox label="edit" checked={enableEdit} onChange={setEnableEdit} color="#2e7d32" description="Double-click to edit" />
+        <FeatureCheckbox label="sort" checked={enableSort} onChange={setEnableSort} color="#f57f17" description="Click header to sort" />
+        <FeatureCheckbox label="filter" checked={enableFilter} onChange={setEnableFilter} color="#c62828" description="Right-click → Filter" />
+        <FeatureCheckbox label="validation" checked={enableValidation} onChange={setEnableValidation} color="#7b1fa2" description="Red border on errors" />
       </div>
 
       <div style={{ marginBottom: 8, fontSize: 13, color: '#888' }}>
-        {activePlugins.length === 0
-          ? 'No plugins active — core only. Raw values, no interactivity.'
-          : `Active: ${activePlugins.join(' + ')}`}
+        {activeFeatures.length === 0
+          ? 'No features active — core only. Raw values, no interactivity.'
+          : `Active: ${activeFeatures.join(' + ')}`}
       </div>
 
       <BetterGrid<DemoRow>
-        key={pluginKey}
-        columns={columns}
+        key={featureKey}
+        columns={baseColumns}
         data={data}
-        frozenLeftColumns={2}
+        mode={null}
+        features={features}
+        frozen={{ left: 2 }}
         selection={{ mode: 'range' }}
-        plugins={plugins}
         height={320}
       />
 
@@ -162,7 +147,7 @@ ${activePlugins.length > 0 ? `import { ${activePlugins.join(', ').replace(/\(\)/
   );
 }
 
-function PluginCheckbox({
+function FeatureCheckbox({
   label,
   checked,
   onChange,

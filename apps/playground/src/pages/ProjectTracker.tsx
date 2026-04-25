@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
-import { useGrid } from '@better-grid/react';
-import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, sorting, filtering, validation, cellRenderers, undoRedo, clipboard, search, exportPlugin } from '@better-grid/plugins';
+import { BetterGrid, useGrid, defineColumn as col } from '@better-grid/react';
+import type { BadgeOption, ColumnDef } from '@better-grid/core';
+import type { ExportApi } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 import { IconButton, ExportIcon } from './_toolbar-icons';
 
@@ -55,98 +55,85 @@ function makeSummary(rows: TaskRow[]): TaskRow {
   };
 }
 
+const priorityOptions = [
+  { label: 'High', value: 'High', color: '#c62828', bg: '#ffebee' },
+  { label: 'Medium', value: 'Medium', color: '#e65100', bg: '#fff3e0' },
+  { label: 'Low', value: 'Low', color: '#666', bg: '#f5f5f5' },
+] as BadgeOption[];
+
+const statusOptions = [
+  { label: 'Todo', value: 'Todo', color: '#666', bg: '#f5f5f5' },
+  { label: 'In Progress', value: 'In Progress', color: '#1565c0', bg: '#e3f2fd' },
+  { label: 'In Review', value: 'In Review', color: '#e65100', bg: '#fff3e0' },
+  { label: 'Done', value: 'Done', color: '#2e7d32', bg: '#e8f5e9' },
+] as BadgeOption[];
+
+const columns = [
+  col.text('task', { header: 'Task', width: 200, required: true, sortable: true }),
+  col.text('assignee', {
+    header: 'Assignee',
+    width: 120,
+    cellEditor: 'autocomplete',
+    options: ['Alice', 'Bob', 'Carol', 'David', 'Emma'],
+    meta: { allowCreate: true },
+    sortable: true,
+  }),
+  col.badge('priority', {
+    header: 'Priority',
+    width: 90,
+    cellEditor: 'dropdown',
+    sortable: true,
+    options: priorityOptions,
+  }),
+  col.badge('status', {
+    header: 'Status',
+    width: 120,
+    cellEditor: 'dropdown',
+    sortable: true,
+    options: statusOptions,
+  }),
+  col.date('dueDate', { header: 'Due Date', width: 110, sortable: true }),
+  col.number('estimate', {
+    header: 'Est',
+    width: 80,
+    align: 'right',
+    precision: 0,
+    sortable: true,
+    rules: [{ validate: (v: unknown) => (v as number) >= 0 || 'Must be >= 0' }],
+    cellRenderer: (container, ctx) => {
+      const val = ctx.value as number;
+      container.textContent = val != null ? `${val}h` : '';
+    },
+  }),
+  col.progress('progress', { header: 'Progress', width: 120, sortable: true }),
+  col.rating('rating', { header: 'Rating', width: 110, sortable: true }),
+  col.boolean('active', { header: 'Active', width: 70 }),
+  col.text('tags', { header: 'Tags', width: 100, sortable: true }),
+] as ColumnDef<TaskRow>[];
+
 export function ProjectTracker() {
   const [data, setData] = useState(initialData);
   const summaryRow = useMemo(() => makeSummary(data), [data]);
+  const pinnedBottom = useMemo(() => [summaryRow], [summaryRow]);
 
-  const columns = useMemo<ColumnDef<TaskRow>[]>(
-    () => [
-      {
-        id: 'task', header: 'Task', width: 200,
-        required: true, sortable: true,
-      },
-      {
-        id: 'assignee', header: 'Assignee', width: 120,
-        cellEditor: 'autocomplete', options: ['Alice', 'Bob', 'Carol', 'David', 'Emma'],
-        meta: { allowCreate: true }, sortable: true,
-      },
-      {
-        id: 'priority', header: 'Priority', width: 90,
-        cellType: 'badge', cellEditor: 'dropdown', sortable: true,
-        options: [
-          { label: 'High', value: 'High', color: '#c62828', bg: '#ffebee' },
-          { label: 'Medium', value: 'Medium', color: '#e65100', bg: '#fff3e0' },
-          { label: 'Low', value: 'Low', color: '#666', bg: '#f5f5f5' },
-        ],
-      },
-      {
-        id: 'status', header: 'Status', width: 120,
-        cellType: 'badge', cellEditor: 'dropdown', sortable: true,
-        options: [
-          { label: 'Todo', value: 'Todo', color: '#666', bg: '#f5f5f5' },
-          { label: 'In Progress', value: 'In Progress', color: '#1565c0', bg: '#e3f2fd' },
-          { label: 'In Review', value: 'In Review', color: '#e65100', bg: '#fff3e0' },
-          { label: 'Done', value: 'Done', color: '#2e7d32', bg: '#e8f5e9' },
-        ],
-      },
-      {
-        id: 'dueDate', header: 'Due Date', width: 110,
-        cellType: 'date', sortable: true,
-      },
-      {
-        id: 'estimate', header: 'Est', width: 80,
-        align: 'right', precision: 0, sortable: true,
-        rules: [{ validate: (v) => (v as number) >= 0 || 'Must be >= 0' }],
-        cellRenderer: (container, ctx) => {
-          const val = ctx.value as number;
-          container.textContent = val != null ? `${val}h` : '';
-        },
-      },
-      {
-        id: 'progress', header: 'Progress', width: 120,
-        cellType: 'progress', sortable: true,
-      },
-      {
-        id: 'rating', header: 'Rating', width: 110,
-        cellType: 'rating', sortable: true,
-      },
-      {
-        id: 'active', header: 'Active', width: 70,
-        cellType: 'boolean',
-      },
-      {
-        id: 'tags', header: 'Tags', width: 100,
-        sortable: true,
-      },
-    ],
-    [],
-  );
-
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', dateFormat: 'medium' }),
-      editing({ editTrigger: 'dblclick' }),
-      sorting(),
-      filtering(),
-      validation({ validateOn: 'commit' }),
-      cellRenderers(),
-      undoRedo({ maxHistory: 50 }),
-      clipboard(),
-      search({ caseSensitive: false }),
-      exportPlugin({ filename: 'project-tasks' }),
-    ],
-    [],
-  );
-
-  const { grid, containerRef } = useGrid<TaskRow>({
+  // useGrid form: needed so the toolbar Export button can call the export
+  // plugin imperatively.
+  const grid = useGrid<TaskRow>({
     data,
     columns,
-    plugins,
-    frozenLeftColumns: 2,
-    pinnedBottomRows: [summaryRow],
+    mode: 'spreadsheet',
+    features: {
+      format: { locale: 'en-US', dateFormat: 'medium' },
+      edit: { editTrigger: 'dblclick' },
+      validation: { validateOn: 'commit' },
+      search: { caseSensitive: false },
+      export: { filename: 'project-tasks' },
+    },
+    frozen: { left: 2 },
+    pinned: { bottom: pinnedBottom },
     selection: { mode: 'range', fillHandle: true },
-    onDataChange: (changes) => {
-      setData(prev => {
+    onCellChange: (changes) => {
+      setData((prev) => {
         const next = [...prev];
         for (const c of changes) next[c.rowIndex] = c.row as TaskRow;
         return next;
@@ -154,7 +141,10 @@ export function ProjectTracker() {
     },
   });
 
-  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExport = useCallback(
+    () => (grid.api.plugins as { export?: ExportApi }).export?.exportToCsv(),
+    [grid],
+  );
 
   return (
     <div>
@@ -168,21 +158,12 @@ export function ProjectTracker() {
         Sprint board with badges, progress bars, star ratings, and inline editing. Ctrl+F to search, Ctrl+Z/Y to undo/redo.
       </p>
       <div style={{ marginBottom: 12, fontSize: 12, color: '#999', lineHeight: 1.5 }}>
-        <strong>Plugins:</strong> formatting, editing, sorting, filtering, validation, cellRenderers, undoRedo, clipboard, search, export &bull;
-        <strong> Core:</strong> frozenLeftColumns, pinnedBottomRows, fillHandle
+        <strong>Mode:</strong> spreadsheet (sort/filter/resize/select/reorder/edit/clipboard/undo) &bull;
+        <strong> Features:</strong> format, validation, search, export &bull;
+        <strong> Layout:</strong> frozen left, pinned summary, fillHandle
       </div>
 
-      <div
-        ref={containerRef}
-        style={{
-          height: 540,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
-          border: '1px solid #e0e0e0',
-          borderRadius: 8,
-        }}
-      />
+      <BetterGrid grid={grid} height={540} style={{ border: '1px solid #e0e0e0', borderRadius: 8 }} />
     </div>
   );
 }

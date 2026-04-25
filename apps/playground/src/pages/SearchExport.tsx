@@ -1,10 +1,7 @@
-import { useMemo, useCallback } from 'react';
-import { useGrid } from '@better-grid/react';
+import { useCallback } from 'react';
+import { BetterGrid, useGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import {
-  formatting, cellRenderers,
-  search, exportPlugin, pagination,
-} from '@better-grid/plugins';
+import type { ExportApi } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 import { IconButton, ExportIcon } from './_toolbar-icons';
 
@@ -52,53 +49,49 @@ const data: EmployeeRow[] = [
   { id: 30, name: 'Diana Evans', department: 'Engineering', role: 'Staff', salary: 170000, startDate: '2018-03-22', location: 'London', active: true },
 ];
 
+const columns = [
+  col.text('id', { header: '#', width: 50, sortable: true }),
+  col.text('name', { header: 'Name', width: 150, sortable: true }),
+  col.text('department', { header: 'Department', width: 120, sortable: true }),
+  col.text('role', { header: 'Role', width: 100, sortable: true }),
+  col.currency('salary', { header: 'Salary', width: 120, sortable: true }),
+  col.date('startDate', { header: 'Start Date', width: 120, sortable: true }),
+  col.text('location', { header: 'Location', width: 120, sortable: true }),
+  col.boolean('active', { header: 'Active', width: 80, sortable: true }),
+] as ColumnDef<EmployeeRow>[];
+
 export function SearchExport() {
-  const columns = useMemo<ColumnDef<EmployeeRow>[]>(
-    () => [
-      { id: 'id', header: '#', width: 50, sortable: true },
-      { id: 'name', header: 'Name', width: 150, sortable: true },
-      { id: 'department', header: 'Department', width: 120, sortable: true },
-      { id: 'role', header: 'Role', width: 100, sortable: true },
-      { id: 'salary', header: 'Salary', width: 120, cellType: 'currency', sortable: true },
-      { id: 'startDate', header: 'Start Date', width: 120, cellType: 'date', sortable: true },
-      { id: 'location', header: 'Location', width: 120, sortable: true },
-      { id: 'active', header: 'Active', width: 80, cellType: 'boolean', sortable: true },
-    ],
-    [],
-  );
-
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD' }),
-      cellRenderers(),
-      search(),
-      exportPlugin({ filename: 'employees' }),
-      pagination({ pageSize: 10 }),
-    ],
-    [],
-  );
-
-  const { grid, containerRef } = useGrid<EmployeeRow>({
+  // useGrid form: needed so the toolbar buttons can call the export plugin
+  // imperatively and dispatch a Ctrl+F keydown to trigger search.
+  const grid = useGrid<EmployeeRow>({
     data,
     columns,
-    plugins,
+    mode: 'view',
+    features: {
+      format: { locale: 'en-US', currencyCode: 'USD' },
+      search: { caseSensitive: false },
+      export: { filename: 'employees' },
+      pagination: { pageSize: 10 },
+    },
     rowHeight: 36,
     selection: { mode: 'range' },
   });
 
-  const handleExport = useCallback(() => grid.plugins.export?.exportToCsv(), [grid]);
+  const handleExport = useCallback(
+    () => (grid.api.plugins as { export?: ExportApi }).export?.exportToCsv(),
+    [grid],
+  );
 
   const handleSearch = useCallback(() => {
     // Ctrl+F is handled by the search plugin; this button triggers it programmatically
-    const container = (containerRef as unknown as { current: HTMLElement | null }).current
-      ?? document.querySelector('[data-grid]');
+    const container = grid.api.getContainer() ?? document.querySelector('[data-grid]');
     if (container) {
       const event = new KeyboardEvent('keydown', {
         key: 'f', ctrlKey: true, bubbles: true,
       });
       container.dispatchEvent(event);
     }
-  }, [containerRef]);
+  }, [grid]);
 
   return (
     <div>
@@ -121,17 +114,7 @@ export function SearchExport() {
         </button>
       </div>
 
-      <div
-        ref={containerRef}
-        style={{
-          height: 500,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
-          border: '1px solid #e0e0e0',
-          borderRadius: '8px 8px 0 0',
-        }}
-      />
+      <BetterGrid grid={grid} height={500} style={{ border: '1px solid #e0e0e0', borderRadius: '8px 8px 0 0' }} />
     </div>
   );
 }
