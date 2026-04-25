@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
-import { BetterGrid } from '@better-grid/react';
-import type { ColumnDef } from '@better-grid/core';
-import { formatting, cellRenderers } from '@better-grid/plugins';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
+import type { BadgeOption, ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
 
 interface CellTypeRow {
@@ -52,115 +50,50 @@ const data: CellTypeRow[] = [
   { id: 20, name: 'Fiber Module', status: 'pending', progress: 40, active: false, rating: 3, change: -0.8, changeInd: -0.2, amount: 22500, pct: 0.31, date: '2026-07-08', timeline: { start: '2026-07-01', end: '2026-09-30' }, info: tooltipTexts[4]!, loading: null },
 ];
 
-const columns: ColumnDef<CellTypeRow>[] = [
-  {
-    id: 'name',
-    header: 'Name (text)',
-    width: 140,
-  },
-  {
-    id: 'status',
+const columns = [
+  col.text('name', { header: 'Name (text)', width: 140 }),
+  col.badge('status', {
     header: 'Status (badge)',
     width: 110,
-    cellType: 'badge',
     options: [
       { label: 'Active', value: 'active', color: '#166534', bg: '#dcfce7' },
       { label: 'Pending', value: 'pending', color: '#92400e', bg: '#fef3c7' },
       { label: 'Inactive', value: 'inactive', color: '#991b1b', bg: '#fee2e2' },
-    ],
-  },
-  {
-    id: 'progress',
-    header: 'Progress',
-    width: 130,
-    cellType: 'progress',
-  },
-  {
-    id: 'active',
-    header: 'Active',
-    width: 70,
-    cellType: 'boolean',
-    editable: false,
-  },
-  {
-    id: 'rating',
-    header: 'Rating',
-    width: 110,
-    cellType: 'rating',
-  },
-  {
-    id: 'change',
-    header: 'Change',
-    width: 100,
-    cellType: 'change',
-  },
-  {
-    id: 'changeInd',
-    header: 'Indicator',
-    width: 110,
-    cellType: 'changeIndicator',
-  },
-  {
-    id: 'amount',
-    header: 'Amount',
-    width: 110,
-    cellType: 'currency',
-  },
-  {
-    id: 'pct',
-    header: 'Percent',
-    width: 80,
-    cellType: 'percent',
-  },
-  {
-    id: 'date',
-    header: 'Date',
-    width: 120,
-    cellType: 'date',
-  },
-  {
-    id: 'timeline',
+    ] as BadgeOption[],
+  }),
+  col.progress('progress', { header: 'Progress', width: 130 }),
+  col.boolean('active', { header: 'Active', width: 70, editable: false }),
+  col.rating('rating', { header: 'Rating', width: 110 }),
+  col.change('change', { header: 'Change', width: 100 }),
+  col.changeIndicator('changeInd', { header: 'Indicator', width: 110 }),
+  col.currency('amount', { header: 'Amount', width: 110 }),
+  col.percent('pct', { header: 'Percent', width: 80 }),
+  col.date('date', { header: 'Date', width: 120 }),
+  col.timeline('timeline', {
     header: 'Timeline',
     width: 160,
-    cellType: 'timeline',
     meta: { timelineStart: '2026-01-01', timelineEnd: '2026-12-31' },
-  },
-  {
-    id: 'info',
-    header: 'Info (tooltip)',
-    width: 120,
-    cellType: 'tooltip',
-  },
-  {
-    id: 'loading',
-    header: 'Loading',
-    width: 100,
-    cellType: 'loading',
-  },
-];
+  }),
+  col.tooltip('info', { header: 'Info (tooltip)', width: 120 }),
+  col.loading('loading', { header: 'Loading', width: 100 }),
+] as ColumnDef<CellTypeRow>[];
 
 export function CellTypes() {
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD' }),
-      cellRenderers(),
-    ],
-    [],
-  );
-
   return (
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Cell Types</h1>
       <p style={{ marginBottom: 16, color: '#666', lineHeight: 1.5 }}>
-        All registered cellTypes from the <code>cellRenderers()</code> plugin.
-        Each column demonstrates a different visual renderer.
+        All built-in column types via the <code>col.&lt;type&gt;()</code> builders. Each column
+        demonstrates a different visual renderer. Built-in cell renderers are auto-included by
+        <code> useGrid</code>; the <code>format</code> feature handles locale + currency.
       </p>
 
       <BetterGrid<CellTypeRow>
         columns={columns}
         data={data}
+        mode="view"
+        features={{ format: { locale: 'en-US', currencyCode: 'USD' } }}
         selection={{ mode: 'range' }}
-        plugins={plugins}
         height={480}
       />
 

@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
-import { BetterGrid } from '@better-grid/react';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
-import { formatting, sorting } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface SalesRow {
@@ -75,6 +73,67 @@ const totalsRow: SalesRow = {
   total: sampleData.reduce((sum, r) => sum + r.total, 0),
 };
 
+const headerRows: HeaderRow[] = [
+  {
+    id: 'groups',
+    height: 30,
+    cells: [
+      { id: 'g-info', content: 'Info', colSpan: 3 },
+      { id: 'g-q1', content: 'Q1', colSpan: 3 },
+      { id: 'g-q2', content: 'Q2', colSpan: 3 },
+      { id: 'g-q3', content: 'Q3', colSpan: 3 },
+      { id: 'g-q4', content: 'Q4', colSpan: 3 },
+      { id: 'g-total', content: 'Annual', rowSpan: 2 },
+    ],
+  },
+  {
+    id: 'columns',
+    height: 30,
+    cells: [
+      { id: 'h-id', content: '#', columnId: 'id' },
+      { id: 'h-region', content: 'Region', columnId: 'region' },
+      { id: 'h-product', content: 'Product', columnId: 'product' },
+      { id: 'h-jan', content: 'Jan', columnId: 'jan' },
+      { id: 'h-feb', content: 'Feb', columnId: 'feb' },
+      { id: 'h-mar', content: 'Mar', columnId: 'mar' },
+      { id: 'h-apr', content: 'Apr', columnId: 'apr' },
+      { id: 'h-may', content: 'May', columnId: 'may' },
+      { id: 'h-jun', content: 'Jun', columnId: 'jun' },
+      { id: 'h-jul', content: 'Jul', columnId: 'jul' },
+      { id: 'h-aug', content: 'Aug', columnId: 'aug' },
+      { id: 'h-sep', content: 'Sep', columnId: 'sep' },
+      { id: 'h-oct', content: 'Oct', columnId: 'oct' },
+      { id: 'h-nov', content: 'Nov', columnId: 'nov' },
+      { id: 'h-dec', content: 'Dec', columnId: 'dec' },
+    ],
+  },
+];
+
+const salesColumns = [
+  col.text('id', { header: '#', width: 40, sortable: true, hideZero: true }),
+  col.text('region', { header: 'Region', width: 130, sortable: true }),
+  col.text('product', { header: 'Product', width: 130, sortable: true }),
+  ...monthKeys.map((m) =>
+    col.currency(m, {
+      header: m.charAt(0).toUpperCase() + m.slice(1),
+      width: 100,
+      precision: 0,
+      sortable: true,
+    }),
+  ),
+  col.currency('total', {
+    header: 'Total',
+    width: 120,
+    precision: 0,
+    sortable: true,
+    cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
+      const val = ctx.value as number;
+      el.textContent = `$${val.toLocaleString()}`;
+      el.style.fontWeight = '600';
+    },
+  }),
+] as ColumnDef<SalesRow>[];
+
 // ---------------------------------------------------------------------------
 // Freeze Clip — Budget line items (inspired by development management tables)
 // ---------------------------------------------------------------------------
@@ -144,102 +203,24 @@ const budgetTotals: BudgetRow = {
   ),
 };
 
-const budgetColumns: ColumnDef<BudgetRow>[] = [
-  { id: 'code', header: 'Code', width: 80 },
-  { id: 'description', header: 'Description', width: 200 },
-  { id: 'category', header: 'Category', width: 100 },
-  { id: 'type', header: 'Type', width: 80 },
-  { id: 'rate', header: 'Esc. Rate', width: 80, cellType: 'percent' as const },
-  { id: 'startDate', header: 'Start', width: 100, cellType: 'date' as const },
-  { id: 'endDate', header: 'End', width: 100, cellType: 'date' as const },
-  ...budgetMonths.map((m, i) => ({
-    id: m,
-    accessorKey: m,
-    header: budgetMonthLabels[i]!,
-    width: 90,
-    cellType: 'currency' as const,
-    precision: 0,
-  })),
-];
+const budgetColumns = [
+  col.text('code', { header: 'Code', width: 80 }),
+  col.text('description', { header: 'Description', width: 200 }),
+  col.text('category', { header: 'Category', width: 100 }),
+  col.text('type', { header: 'Type', width: 80 }),
+  col.percent('rate', { header: 'Esc. Rate', width: 80 }),
+  col.date('startDate', { header: 'Start', width: 100 }),
+  col.date('endDate', { header: 'End', width: 100 }),
+  ...budgetMonths.map((m, i) =>
+    col.currency(m, {
+      header: budgetMonthLabels[i]!,
+      width: 90,
+      precision: 0,
+    }),
+  ),
+] as ColumnDef<BudgetRow>[];
 
 export function FrozenPinned() {
-  const headerRows = useMemo<HeaderRow[]>(
-    () => [
-      {
-        id: 'groups',
-        height: 30,
-        cells: [
-          { id: 'g-info', content: 'Info', colSpan: 3 },
-          { id: 'g-q1', content: 'Q1', colSpan: 3 },
-          { id: 'g-q2', content: 'Q2', colSpan: 3 },
-          { id: 'g-q3', content: 'Q3', colSpan: 3 },
-          { id: 'g-q4', content: 'Q4', colSpan: 3 },
-          { id: 'g-total', content: 'Annual', rowSpan: 2 },
-        ],
-      },
-      {
-        id: 'columns',
-        height: 30,
-        cells: [
-          { id: 'h-id', content: '#', columnId: 'id' },
-          { id: 'h-region', content: 'Region', columnId: 'region' },
-          { id: 'h-product', content: 'Product', columnId: 'product' },
-          { id: 'h-jan', content: 'Jan', columnId: 'jan' },
-          { id: 'h-feb', content: 'Feb', columnId: 'feb' },
-          { id: 'h-mar', content: 'Mar', columnId: 'mar' },
-          { id: 'h-apr', content: 'Apr', columnId: 'apr' },
-          { id: 'h-may', content: 'May', columnId: 'may' },
-          { id: 'h-jun', content: 'Jun', columnId: 'jun' },
-          { id: 'h-jul', content: 'Jul', columnId: 'jul' },
-          { id: 'h-aug', content: 'Aug', columnId: 'aug' },
-          { id: 'h-sep', content: 'Sep', columnId: 'sep' },
-          { id: 'h-oct', content: 'Oct', columnId: 'oct' },
-          { id: 'h-nov', content: 'Nov', columnId: 'nov' },
-          { id: 'h-dec', content: 'Dec', columnId: 'dec' },
-        ],
-      },
-    ],
-    [],
-  );
-
-  const columns = useMemo<ColumnDef<SalesRow>[]>(
-    () => [
-      { id: 'id', header: '#', width: 40, sortable: true, hideZero: true },
-      { id: 'region', header: 'Region', width: 130, sortable: true },
-      { id: 'product', header: 'Product', width: 130, sortable: true },
-      ...monthKeys.map((m) => ({
-        id: m,
-        header: m.charAt(0).toUpperCase() + m.slice(1),
-        width: 100,
-        cellType: 'currency' as const,
-        precision: 0,
-        sortable: true,
-      })),
-      {
-        id: 'total',
-        header: 'Total',
-        width: 120,
-        cellType: 'currency' as const,
-        precision: 0,
-        sortable: true,
-        cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
-          const val = ctx.value as number;
-          el.textContent = `$${val.toLocaleString()}`;
-          el.style.fontWeight = '600';
-        },
-      },
-    ],
-    [],
-  );
-
-  const plugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD' }),
-      sorting(),
-    ],
-    [],
-  );
-
   return (
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Frozen Columns + Pinned Rows</h1>
@@ -251,17 +232,18 @@ export function FrozenPinned() {
         <strong>Frozen:</strong> #, Region, Product (3 columns) stay locked on the left &bull;
         <strong> Pinned:</strong> TOTAL row pinned to bottom &bull;
         <strong> Headers:</strong> Months grouped into Q1-Q4 spans &bull;
-        <strong> Plugins:</strong> Formatting (USD), Sorting
+        <strong> Mode:</strong> view (sort/filter/resize/select) + format feature
       </div>
 
       <BetterGrid<SalesRow>
-        columns={columns}
+        columns={salesColumns}
         data={sampleData}
-        headerLayout={headerRows}
-        frozenLeftColumns={3}
-        pinnedBottomRows={[totalsRow]}
+        mode="view"
+        features={{ format: { locale: 'en-US', currencyCode: 'USD' } }}
+        headers={headerRows}
+        frozen={{ left: 3 }}
+        pinned={{ bottom: [totalsRow] }}
         selection={{ mode: 'range' }}
-        plugins={plugins}
         height={400}
       />
 
@@ -275,11 +257,11 @@ export function FrozenPinned() {
       <BetterGrid<BudgetRow>
         columns={budgetColumns}
         data={budgetData}
-        frozenLeftColumns={7}
-        freezeClip={{ minVisible: 2 }}
-        pinnedBottomRows={[budgetTotals]}
+        mode="view"
+        features={{ format: { locale: 'en-US', currencyCode: 'USD' } }}
+        frozen={{ left: 7, clip: { minVisible: 2 } }}
+        pinned={{ bottom: [budgetTotals] }}
         selection={{ mode: 'range' }}
-        plugins={plugins}
         height={380}
       />
 

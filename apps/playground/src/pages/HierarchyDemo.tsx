@@ -1,7 +1,6 @@
 import { useMemo, useCallback } from 'react';
-import { useGrid } from '@better-grid/react';
+import { useGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, hierarchy } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface DeptRow {
@@ -36,56 +35,45 @@ const deptData: DeptRow[] = [
   { id: 20, parentId: 18, name: 'People Ops', budget: 40000, headcount: 3, status: 'Active' },
 ];
 
+// Status column uses a custom renderer with no scope-dependent state, so it's
+// safe to hoist alongside the other columns at module scope.
+const columns = [
+  col.text('name', { header: 'Department', width: 250 }),
+  col.currency('budget', { header: 'Budget', width: 130 }),
+  col.number('headcount', { header: 'Headcount', width: 100 }),
+  col.custom('status', {
+    header: 'Status',
+    width: 100,
+    cellRenderer: (container, ctx) => {
+      const val = ctx.value as string;
+      container.textContent = val;
+      container.style.fontWeight = '500';
+      if (val === 'Active') container.style.color = '#2e7d32';
+      else if (val === 'Hiring') container.style.color = '#1565c0';
+      else container.style.color = '#9e9e9e';
+    },
+  }),
+] as ColumnDef<DeptRow>[];
+
+// Compute totals once at module scope — depends only on static data.
+const rootDepts = deptData.filter((r) => r.parentId === null);
+const totalsRow: DeptRow = {
+  id: -1,
+  parentId: null,
+  name: 'Total',
+  budget: rootDepts.reduce((sum, r) => sum + r.budget, 0),
+  headcount: rootDepts.reduce((sum, r) => sum + r.headcount, 0),
+  status: '',
+};
+
 export function HierarchyDemo() {
-  const columns = useMemo<ColumnDef<DeptRow>[]>(
-    () => [
-      { id: 'name', accessorKey: 'name', header: 'Department', width: 250 },
-      { id: 'budget', accessorKey: 'budget', header: 'Budget', width: 130, cellType: 'currency', align: 'right' },
-      { id: 'headcount', accessorKey: 'headcount', header: 'Headcount', width: 100, cellType: 'number', align: 'right' },
-      {
-        id: 'status',
-        accessorKey: 'status',
-        header: 'Status',
-        width: 100,
-        cellRenderer: (container, ctx) => {
-          const val = ctx.value as string;
-          container.textContent = val;
-          container.style.fontWeight = '500';
-          if (val === 'Active') container.style.color = '#2e7d32';
-          else if (val === 'Hiring') container.style.color = '#1565c0';
-          else container.style.color = '#9e9e9e';
-        },
-      },
-    ],
-    [],
-  );
-
-  const plugins = useMemo(
-    () => [
-      formatting(),
-      hierarchy({ indentColumn: 'name', indentSize: 22 }),
-    ],
-    [],
-  );
-
-  // Compute totals from root-level departments for the pinned footer row
-  const totalsRow = useMemo<DeptRow>(() => {
-    const roots = deptData.filter((r) => r.parentId === null);
-    return {
-      id: -1,
-      parentId: null,
-      name: 'Total',
-      budget: roots.reduce((sum, r) => sum + r.budget, 0),
-      headcount: roots.reduce((sum, r) => sum + r.headcount, 0),
-      status: '',
-    };
-  }, []);
-
-  const { grid, containerRef } = useGrid<DeptRow>({
+  // hierarchy stays as a top-level option on useGrid — its config shape is unchanged.
+  const grid = useGrid<DeptRow>({
     data: deptData,
     columns,
-    plugins,
-    pinnedBottomRows: [totalsRow],
+    mode: 'view',
+    features: ['format', 'hierarchy'],
+    pinned: { bottom: [totalsRow] },
     hierarchy: {
       getRowId: (row: DeptRow) => row.id,
       getParentId: (row: DeptRow) => row.parentId,
@@ -96,43 +84,36 @@ export function HierarchyDemo() {
   });
 
   const handleExpandAll = useCallback(() => {
-    grid.expandAll();
+    grid.api.expandAll();
   }, [grid]);
 
   const handleCollapseAll = useCallback(() => {
-    grid.collapseAll();
+    grid.api.collapseAll();
   }, [grid]);
+
+  // Memoize style objects to keep referential stability across renders.
+  const buttonStyle = useMemo<React.CSSProperties>(() => ({
+    padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6,
+    background: '#fff', cursor: 'pointer', fontSize: 12,
+  }), []);
 
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Row Hierarchy</h2>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={handleExpandAll}
-            style={{
-              padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6,
-              background: '#fff', cursor: 'pointer', fontSize: 12,
-            }}
-          >
-            Expand All
-          </button>
-          <button
-            onClick={handleCollapseAll}
-            style={{
-              padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6,
-              background: '#fff', cursor: 'pointer', fontSize: 12,
-            }}
-          >
-            Collapse All
-          </button>
+          <button onClick={handleExpandAll} style={buttonStyle}>Expand All</button>
+          <button onClick={handleCollapseAll} style={buttonStyle}>Collapse All</button>
         </div>
       </div>
       <p style={{ margin: '0 0 12px', color: '#666', fontSize: 13 }}>
         Click the triangle icons to expand/collapse rows. Use Arrow Right/Left keys on parent rows.
+        The <code>hierarchy</code> feature is opted-in via <code>features</code>; its config
+        (<code>getRowId</code>, <code>getParentId</code>, etc.) stays as a top-level
+        <code> useGrid</code> option.
       </p>
       <div
-        ref={containerRef}
+        ref={grid.containerRef}
         style={{
           height: 500,
           width: '100%',

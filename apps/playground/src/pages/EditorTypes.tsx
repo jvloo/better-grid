@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
-import { BetterGrid } from '@better-grid/react';
+import { useState } from 'react';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
-import { formatting, editing, validation, cellRenderers } from '@better-grid/plugins';
 import '@better-grid/core/styles.css';
 
 interface EditorRow {
@@ -41,107 +40,49 @@ const initialData: EditorRow[] = [
   { id: 20, name: 'Debugger T', price: 27500, quantity: 15, rate: 0.08, startDate: '2027-04-22', category: 'Software', assignee: 'Eve', weight: 0.0, active: true, notes: 'Pro license' },
 ];
 
-function makeColumns(): ColumnDef<EditorRow>[] {
-  return [
-    {
-      id: 'name',
-      header: 'Name (text)',
-      width: 150,
-      required: true,
+const columns = [
+  col.text('name', { header: 'Name (text)', width: 150, required: true }),
+  col.currency('price', { header: 'Price (number)', width: 130, precision: 2 }),
+  col.number('quantity', {
+    header: 'Qty (number)',
+    width: 100,
+    cellEditor: 'number',
+    precision: 0,
+    rules: [{ validate: (v: unknown) => (v as number) > 0 || 'Must be > 0' }],
+  }),
+  col.percent('rate', { header: 'Rate (%)', width: 100 }),
+  col.date('startDate', { header: 'Start Date', width: 130 }),
+  col.text('category', {
+    header: 'Category',
+    width: 120,
+    options: ['Electronics', 'Hardware', 'Software', 'Services'],
+  }),
+  col.text('assignee', {
+    header: 'Assignee',
+    width: 130,
+    cellEditor: 'autocomplete',
+    options: ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'],
+    meta: { allowCreate: true },
+  }),
+  col.text('weight', {
+    header: 'Weight',
+    width: 120,
+    align: 'right',
+    valueFormatter: (v: unknown) => typeof v === 'number' ? `${v.toFixed(2)} kg` : String(v ?? ''),
+    valueParser: (s: string) => {
+      const cleaned = s.replace(/[^0-9.\-]/g, '');
+      if (cleaned === '' || cleaned === '-') return undefined;
+      const num = Number(cleaned);
+      return isNaN(num) ? undefined : Math.round(num * 100) / 100;
     },
-    {
-      id: 'price',
-      header: 'Price (number)',
-      width: 130,
-      cellType: 'currency',
-      precision: 2,
-    },
-    {
-      id: 'quantity',
-      header: 'Qty (number)',
-      width: 100,
-      cellEditor: 'number',
-      precision: 0,
-      rules: [{ validate: (v) => (v as number) > 0 || 'Must be > 0' }],
-    },
-    {
-      id: 'rate',
-      header: 'Rate (%)',
-      width: 100,
-      cellType: 'percent',
-    },
-    {
-      id: 'startDate',
-      header: 'Start Date',
-      width: 130,
-      cellType: 'date',
-    },
-    {
-      id: 'category',
-      header: 'Category',
-      width: 120,
-      options: ['Electronics', 'Hardware', 'Software', 'Services'],
-    },
-    {
-      id: 'assignee',
-      header: 'Assignee',
-      width: 130,
-      cellEditor: 'autocomplete' as const,
-      options: ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'],
-      meta: { allowCreate: true },
-    },
-    {
-      id: 'weight',
-      header: 'Weight',
-      width: 120,
-      align: 'right',
-      valueFormatter: (v: unknown) => typeof v === 'number' ? `${v.toFixed(2)} kg` : String(v ?? ''),
-      valueParser: (s: string) => {
-        const cleaned = s.replace(/[^0-9.\-]/g, '');
-        if (cleaned === '' || cleaned === '-') return undefined;
-        const num = Number(cleaned);
-        return isNaN(num) ? undefined : Math.round(num * 100) / 100;
-      },
-    },
-    {
-      id: 'active',
-      header: 'Active',
-      width: 70,
-      cellType: 'boolean',
-    },
-    {
-      id: 'notes',
-      header: 'Notes',
-      width: 150,
-    },
-  ];
-}
+  }),
+  col.boolean('active', { header: 'Active', width: 70 }),
+  col.text('notes', { header: 'Notes', width: 150 }),
+] as ColumnDef<EditorRow>[];
 
 export function EditorTypes() {
   const [floatData, setFloatData] = useState(initialData);
   const [inlineData, setInlineData] = useState(initialData);
-
-  const columns = useMemo(() => makeColumns(), []);
-
-  const floatPlugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD' }),
-      editing({ editTrigger: 'dblclick', editorMode: 'float' }),
-      validation({ validateOn: 'commit' }),
-      cellRenderers(),
-    ],
-    [],
-  );
-
-  const inlinePlugins = useMemo(
-    () => [
-      formatting({ locale: 'en-US', currencyCode: 'USD' }),
-      editing({ editTrigger: 'dblclick', editorMode: 'inline' }),
-      validation({ validateOn: 'commit' }),
-      cellRenderers(),
-    ],
-    [],
-  );
 
   return (
     <div>
@@ -165,9 +106,14 @@ export function EditorTypes() {
       <BetterGrid<EditorRow>
         columns={columns}
         data={floatData}
+        mode="view"
+        features={{
+          format: { locale: 'en-US', currencyCode: 'USD' },
+          edit: { editTrigger: 'dblclick', editorMode: 'float' },
+          validation: { validateOn: 'commit' },
+        }}
         selection={{ mode: 'range', fillHandle: false }}
-        plugins={floatPlugins}
-        onDataChange={(changes) => {
+        onCellChange={(changes) => {
           setFloatData((prev) => {
             const next = [...prev];
             for (const change of changes) {
@@ -186,9 +132,14 @@ export function EditorTypes() {
       <BetterGrid<EditorRow>
         columns={columns}
         data={inlineData}
+        mode="view"
+        features={{
+          format: { locale: 'en-US', currencyCode: 'USD' },
+          edit: { editTrigger: 'dblclick', editorMode: 'inline' },
+          validation: { validateOn: 'commit' },
+        }}
         selection={{ mode: 'range', fillHandle: false }}
-        plugins={inlinePlugins}
-        onDataChange={(changes) => {
+        onCellChange={(changes) => {
           setInlineData((prev) => {
             const next = [...prev];
             for (const change of changes) {

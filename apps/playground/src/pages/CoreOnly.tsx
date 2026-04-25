@@ -1,5 +1,5 @@
-import { useMemo, useState, useCallback } from 'react';
-import { BetterGrid } from '@better-grid/react';
+import { useState, useCallback } from 'react';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef, Selection } from '@better-grid/core';
 import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
@@ -36,20 +36,17 @@ const sampleData: SampleRow[] = [
   { id: 20, name: 'Tina Hoffman', department: 'Finance', salary: 105000, startDate: '2022-03-28', active: true },
 ];
 
+const columns = [
+  col.text('id', { header: '#', width: 40 }),
+  col.text('name', { header: 'Name', width: 140 }),
+  col.text('department', { header: 'Department', width: 110 }),
+  col.text('salary', { header: 'Salary', width: 100, align: 'right' }),
+  col.text('startDate', { header: 'Start Date', width: 110 }),
+  col.text('active', { header: 'Active', width: 80, align: 'center' }),
+] as ColumnDef<SampleRow>[];
+
 export function CoreOnly() {
   const [selectionInfo, setSelectionInfo] = useState('Click a cell to select');
-
-  const columns = useMemo<ColumnDef<SampleRow>[]>(
-    () => [
-      { id: 'id', header: '#', width: 40 },
-      { id: 'name', header: 'Name', width: 140 },
-      { id: 'department', header: 'Department', width: 110 },
-      { id: 'salary', header: 'Salary', width: 100, align: 'right' },
-      { id: 'startDate', header: 'Start Date', width: 110 },
-      { id: 'active', header: 'Active', width: 80, align: 'center' },
-    ],
-    [],
-  );
 
   const handleSelectionChange = useCallback((selection: Selection) => {
     if (!selection.active) {
@@ -71,8 +68,9 @@ export function CoreOnly() {
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Core Only — Zero Plugins</h1>
       <p style={{ marginBottom: 16, color: '#666', lineHeight: 1.5 }}>
-        No plugins loaded. Raw values, no formatting, no editing, no sorting.
-        This is what the core engine provides out of the box.
+        <code>mode={'{null}'}</code> = no defaults loaded. Raw values, no formatting, no editing,
+        no sorting, no built-in selection. Range select is enabled explicitly via the
+        <code> selection</code> prop. This is what the core engine provides at its barest.
       </p>
 
       <div style={{ marginBottom: 16, padding: 12, background: '#f8f9fa', borderRadius: 8, fontSize: 13 }}>
@@ -94,32 +92,36 @@ export function CoreOnly() {
       <BetterGrid<SampleRow>
         columns={columns}
         data={sampleData}
-        frozenLeftColumns={2}
+        mode={null}
+        frozen={{ left: 2 }}
         selection={{ mode: 'range' }}
         onSelectionChange={handleSelectionChange}
         height={440}
       />
 
       <div style={{ marginTop: 12, fontSize: 12, color: '#aaa' }}>
-        Notice: salary shows "125000" not "$125,000.00" · dates show "2024-03-15" not "Mar 15, 2024" · active shows "true" not "Yes" — plugins add formatting.
+        Notice: salary shows "125000" not "$125,000.00" · dates show "2024-03-15" not "Mar 15, 2024" · active shows "true" not "Yes" — features add formatting.
       </div>
 
-      <CodeBlock title="Core Only" code={`import { BetterGrid } from '@better-grid/react';
+      <CodeBlock title="Core Only" code={`import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import '@better-grid/core/styles.css';
 
-// No plugins — just the core engine
-// Raw values: 125000 (not $125,000), "2024-03-15" (not Mar 15, 2024)
+// mode={null} disables every feature preset (no sort, filter, resize).
+// Raw values: 125000 (not $125,000), "2024-03-15" (not Mar 15, 2024).
+const columns = [
+  col.text('id', { header: '#', width: 40 }),
+  col.text('name', { header: 'Name', width: 160 }),
+  col.text('department', { header: 'Department', width: 120 }),
+  col.text('salary', { header: 'Salary', width: 120 }),
+  col.text('startDate', { header: 'Start Date', width: 120 }),
+  col.text('active', { header: 'Active', width: 80 }),
+];
+
 <BetterGrid
-  columns={[
-    { id: 'id', header: '#', width: 40 },
-    { id: 'name', header: 'Name', width: 160 },
-    { id: 'department', header: 'Department', width: 120 },
-    { id: 'salary', header: 'Salary', width: 120 },
-    { id: 'startDate', header: 'Start Date', width: 120 },
-    { id: 'active', header: 'Active', width: 80 },
-  ]}
+  columns={columns}
   data={employees}
-  frozenLeftColumns={2}
+  mode={null}
+  frozen={{ left: 2 }}
   selection={{ mode: 'range' }}
   onSelectionChange={handleSelectionChange}
   height={440}
