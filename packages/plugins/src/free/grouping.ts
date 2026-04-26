@@ -328,6 +328,15 @@ export function grouping<TData = unknown>(options?: GroupingOptions<TData>): Gri
         }
 
         grid.setData(flatData as TData[]);
+
+        // If a hierarchy config is active the core's setData() just rebuilt
+        // hierarchyState from the synthetic grouped rows (which have no real
+        // id/parentId), producing a broken tree.  Clear it so the grid renders
+        // state.data directly — the grouping rows are already in the correct
+        // display order inside flatData.
+        if (store.getState().hierarchyState) {
+          store.update('hierarchy', () => ({ hierarchyState: null }));
+        }
       }
 
       // ── Auto group column ──
@@ -413,9 +422,19 @@ export function grouping<TData = unknown>(options?: GroupingOptions<TData>): Gri
         container.appendChild(toggle);
 
         // Group label: "value (count)"
+        // If the grouped column has options (e.g. badge/select), resolve the
+        // human-readable label instead of showing the raw value.
         const label = document.createElement('span');
         label.className = 'bg-grouping-label';
-        const displayValue = info.groupValue != null ? String(info.groupValue) : '(empty)';
+        let displayValue: string;
+        if (info.groupValue == null) {
+          displayValue = '(empty)';
+        } else {
+          const groupCol = store.getState().columns.find(c => c.id === info.groupColumnId);
+          const colOptions = groupCol?.options as Array<{ label: string; value: unknown }> | undefined;
+          const match = colOptions?.find(opt => opt.value === info.groupValue);
+          displayValue = match ? match.label : String(info.groupValue);
+        }
         label.textContent = `${displayValue} (${info.leafCount})`;
         container.appendChild(label);
       }
