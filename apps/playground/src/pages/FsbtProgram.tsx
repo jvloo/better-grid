@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useState, type CSSProperties } from 'react';
+﻿import { useMemo, useCallback, useRef, useState, type CSSProperties } from 'react';
 import { useGrid, BetterGrid } from '@better-grid/react';
 import type { CellChange, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
@@ -275,7 +275,7 @@ export function FsbtProgram() {
     },
     // ── Col 1: Code (right-aligned with left gap) ───────────────────────
     {
-      id: 'code', accessorKey: 'code', header: 'Code', width: 45, align: 'right' as const, editable: false,
+      id: 'code', field: 'code', header: 'Code', width: 45, align: 'right' as const, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
@@ -290,7 +290,7 @@ export function FsbtProgram() {
     },
     // ── Col 2: Phase (indented name) ────────────────────────────────────
     {
-      id: 'name', accessorKey: 'name', header: (() => { const el = document.createElement('span'); el.textContent = 'Phase'; el.style.paddingLeft = '8px'; return el; }) as any, width: 236,
+      id: 'name', field: 'name', header: (() => { const el = document.createElement('span'); el.textContent = 'Phase'; el.style.paddingLeft = '8px'; return el; }) as any, width: 236,
       editable: ((row: ProgramRow) => row.parentId !== null && row.custom) as any,
       rules: [{ validate: (v: unknown) => !v || String(v).trim().length >= 3 || 'Name is too short. Please re-enter.', message: 'Min 3 characters' }],
       cellRenderer: (container, ctx) => {
@@ -306,7 +306,7 @@ export function FsbtProgram() {
     },
     // ── Col 3: Duration (center-aligned, wrapping header) ─────────────
     {
-      id: 'duration', accessorKey: 'duration', cellType: 'number' as const, min: 1, max: 999,
+      id: 'duration', field: 'duration', cellType: 'number' as const, min: 1, max: 999,
       header: (() => {
         const el = document.createElement('span');
         el.textContent = 'Duration (months)';
@@ -331,7 +331,7 @@ export function FsbtProgram() {
     },
     // ── Col 4: Start (left-aligned) ─────────────────────────────────────
     {
-      id: 'start', accessorKey: 'start', header: (() => { const el = document.createElement('span'); el.textContent = 'Start'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, placeholder: 'MM/YY',
+      id: 'start', field: 'start', header: (() => { const el = document.createElement('span'); el.textContent = 'Start'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, placeholder: 'MM/YY',
       cellEditor: 'masked' as const, mask: 'MM/YY',
       rules: [
         { validate: (v: unknown) => { if (!v || v === '') return true; const s = String(v); return /^\d{4}-\d{2}-\d{2}$/.test(s) || 'Invalid date'; } },
@@ -381,7 +381,7 @@ export function FsbtProgram() {
     },
     // ── Col 5: End (left-aligned, always read-only) ───────────────────
     {
-      id: 'end', accessorKey: 'end', header: (() => { const el = document.createElement('span'); el.textContent = 'End'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, editable: false,
+      id: 'end', field: 'end', header: (() => { const el = document.createElement('span'); el.textContent = 'End'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;

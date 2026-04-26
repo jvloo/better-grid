@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // timeSeries — Column Builder Utility
 //
 // Pure function that generates column definitions + FY header rows + date↔index
@@ -145,7 +145,7 @@ export function timeSeries(options: TimeSeriesOptions): TimeSeriesResult {
     const key = buildColumnKey(d, prefix, interval);
     return {
       id: key,
-      accessorKey: key,
+      field: key,
       header: fmt(d),
       width: columnWidth,
       ...columnDefaults,

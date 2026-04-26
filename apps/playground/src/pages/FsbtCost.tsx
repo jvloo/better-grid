@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useState, type CSSProperties } from 'react';
+﻿import { useMemo, useCallback, useRef, useState, type CSSProperties } from 'react';
 import { useGrid, BetterGrid } from '@better-grid/react';
 import type { CellChange, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
@@ -608,7 +608,7 @@ export function FsbtCost() {
       // ── Col 1: Code — right-aligned, read-only. Explicit cellRenderer
       //    keeps inputStyle: true from painting an empty input here. ──
       {
-        id: 'code', accessorKey: 'code', header: 'Code', width: 40, align: 'right' as const, editable: false,
+        id: 'code', field: 'code', header: 'Code', width: 40, align: 'right' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.textContent = row.code;
@@ -619,14 +619,14 @@ export function FsbtCost() {
       // ── Col 2: Phase — 8px parent / 28px child padding, bold on parent.
       //    Editable only for custom children (the production reference convention — only custom rows are named by the user).
       {
-        id: 'name', accessorKey: 'name', header: 'Phase', width: 236, cellStyle: phaseCellStyle,
+        id: 'name', field: 'name', header: 'Phase', width: 236, cellStyle: phaseCellStyle,
         editable: ((row: CostRow) => row.parentId !== null && row.custom) as unknown as boolean,
         rules: [{ validate: (v: unknown) => !v || String(v).trim().length >= 3 || 'Name is too short. Please re-enter.' }],
       },
       // ── Col 3: Input — percent rows show number + "%" suffix; parent rows except Land Cost render empty.
       //    Editable unless the row is inputType='none' (parent rollups). Land Cost (parent with code='1') is still editable.
       {
-        id: 'input', accessorKey: 'input', header: 'Input', width: 110, align: 'center' as const,
+        id: 'input', field: 'input', header: 'Input', width: 110, align: 'center' as const,
         editable: ((row: CostRow) => row.inputType !== 'none') as unknown as boolean,
         cellType: 'number' as const,
         min: 0,
@@ -668,7 +668,7 @@ export function FsbtCost() {
       },
       // ── Col 5: Escalation — native Better Grid select (CPI / Non-CPI).
       {
-        id: 'escalation', accessorKey: 'escalation', header: 'Escalation', width: 110, align: 'center' as const,
+        id: 'escalation', field: 'escalation', header: 'Escalation', width: 110, align: 'center' as const,
         editable: ((row: CostRow) => row.parentId !== null && row.escalation !== 'none') as unknown as boolean,
         cellEditor: 'select' as const,
         options: [...ESCALATION_OPTIONS],
@@ -677,7 +677,7 @@ export function FsbtCost() {
       },
       // ── Col 6: Amount — plain number (the production reference uses formatNumber, not currency), read-only ──
       {
-        id: 'amount', accessorKey: 'amount', header: 'Amount', width: 110, align: 'center' as const, editable: false,
+        id: 'amount', field: 'amount', header: 'Amount', width: 110, align: 'center' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           if (typeof row.amount !== 'number') { container.textContent = ''; return; }
@@ -694,7 +694,7 @@ export function FsbtCost() {
       },
       // ── Col 7: Start — masked MM/YY input, matches FsbtProgram's Start column styling ──
       {
-        id: 'start', accessorKey: 'start', header: 'Start', width: 85, placeholder: 'MM/YY',
+        id: 'start', field: 'start', header: 'Start', width: 85, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
         rules: [{ validate: validateStartDate }],
@@ -713,7 +713,7 @@ export function FsbtCost() {
       },
       // ── Col 8: End — masked MM/YY input, matches Program styling ──
       {
-        id: 'end', accessorKey: 'end', header: 'End', width: 85, placeholder: 'MM/YY',
+        id: 'end', field: 'end', header: 'End', width: 85, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
         rules: [{ validate: validateEndDate }],
@@ -732,7 +732,7 @@ export function FsbtCost() {
       },
       // ── Col 9: Variance (read-only, computed) ──
       {
-        id: 'variance', accessorKey: 'variance', header: 'Variance', width: 85, align: 'center' as const, editable: false,
+        id: 'variance', field: 'variance', header: 'Variance', width: 85, align: 'center' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.textContent = typeof row.variance === 'number' ? formatAU(Math.round(row.variance)) : '';

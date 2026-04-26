@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // Editing Plugin — Cell editing with text input & dropdown support
 // ============================================================================
 
@@ -438,7 +438,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         let changed = false;
         for (const col of columns) {
           if (col.editable === false) continue;
-          if (!col.accessorKey && !col.accessorFn) continue;
+          if (!col.field && !col.accessorFn) continue;
           if ((col as { __inputStyleWrapped?: boolean }).__inputStyleWrapped) continue;
           (col as { __inputStyleWrapped?: boolean }).__inputStyleWrapped = true;
 
@@ -724,13 +724,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const colIdx = Number(colAttr);
           const state = ctx.grid.getState();
           const liveColumn = state.columns[colIdx];
-          if (!liveColumn?.accessorKey) return;
+          if (!liveColumn?.field) return;
           const hs = state.hierarchyState;
           const dataIdx = hs ? (hs.visibleRows[rowIdx] ?? rowIdx) : rowIdx;
           const rowData = state.data[dataIdx];
           const currentValue = liveColumn.accessorFn
             ? liveColumn.accessorFn(rowData as never, dataIdx)
-            : (rowData as Record<string, unknown>)[liveColumn.accessorKey];
+            : (rowData as Record<string, unknown>)[liveColumn.field];
           const parsed = parseTextValue(input!.value, liveColumn, currentValue, rowData);
           if (parsed !== currentValue) {
             ctx.grid.updateCell(rowIdx, liveColumn.id, parsed);
@@ -752,8 +752,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const rowData = state.data[dataIdx];
           const currentValue = liveColumn.accessorFn
             ? liveColumn.accessorFn(rowData as never, dataIdx)
-            : liveColumn.accessorKey
-              ? (rowData as Record<string, unknown>)[liveColumn.accessorKey]
+            : liveColumn.field
+              ? (rowData as Record<string, unknown>)[liveColumn.field]
               : undefined;
           input!.value = stripInputAdornments(
             getInputStyleDisplayText(liveColumn, rowData, currentValue, rowIdx, colIdx),
@@ -1061,7 +1061,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         context: CellRenderContext,
         value: unknown,
       ): void {
-        if (!context.column.accessorKey) return;
+        if (!context.column.field) return;
         if (value === context.value) return;
         ctx.grid.updateCell(context.rowIndex, context.column.id, value);
       }
@@ -1530,8 +1530,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         // Get current raw value
         const data = rowData;
-        if (column.accessorKey && data) {
-          originalValue = (data as Record<string, unknown>)[column.accessorKey];
+        if (column.field && data) {
+          originalValue = (data as Record<string, unknown>)[column.field];
         } else {
           originalValue = cellEl.textContent;
         }
@@ -2989,7 +2989,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         const state = ctx.grid.getState();
         const column = state.columns[position.colIndex];
 
-        if (column?.accessorKey && opt.value !== prevValue) {
+        if (column?.field && opt.value !== prevValue) {
           ctx.grid.updateCell(position.rowIndex, column.id, opt.value);
         }
 
@@ -3168,7 +3168,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const state = ctx.grid.getState();
           const col = state.columns[position.colIndex];
 
-          if (col?.accessorKey && value !== prevValue) {
+          if (col?.field && value !== prevValue) {
             ctx.grid.updateCell(position.rowIndex, col.id, value);
           }
 
@@ -3351,7 +3351,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         const parsedValue = parseTextValue(newValue, column, prevValue, rowData);
 
         // Update grid data BEFORE cleanup
-        if (column?.accessorKey && parsedValue !== prevValue) {
+        if (column?.field && parsedValue !== prevValue) {
           ctx.grid.updateCell(position.rowIndex, column.id, parsedValue);
         }
 
@@ -3460,8 +3460,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               if (column && rowData) {
                 const value = column.accessorFn
                   ? column.accessorFn(rowData, dataIndex)
-                  : column.accessorKey
-                    ? (rowData as Record<string, unknown>)[column.accessorKey]
+                  : column.field
+                    ? (rowData as Record<string, unknown>)[column.field]
                     : originalValue;
                 valueAnchor.textContent = stripInputAdornments(
                   getInputStyleDisplayText(column, rowData, value, position.rowIndex, position.colIndex),

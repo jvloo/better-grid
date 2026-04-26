@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 import { timeSeries } from '../src/builders/time-series';
 
 describe('timeSeries', () => {
@@ -9,7 +9,7 @@ describe('timeSeries', () => {
       expect(ts.columns.map((c) => c.id)).toEqual(['m_2025_01', 'm_2025_02', 'm_2025_03']);
     });
 
-    it('applies columnDefaults to every column without overriding id/accessorKey/header', () => {
+    it('applies columnDefaults to every column without overriding id/field/header', () => {
       const ts = timeSeries({
         start: '2025-01-01',
         end: '2025-02-01',

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from 'vitest';
+﻿import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from 'vitest';
 import { createGrid } from '../src/grid';
 import type { ColumnDef, GridPlugin, PluginContext } from '../src/types';
 
@@ -50,8 +50,8 @@ function filtering(): GridPlugin<'filtering', FilteringApi> {
 }
 
 const columns: ColumnDef<Row>[] = [
-  { id: 'id', accessorKey: 'id', header: 'ID' } as ColumnDef<Row>,
-  { id: 'name', accessorKey: 'name', header: 'Name' } as ColumnDef<Row>,
+  { id: 'id', field: 'id', header: 'ID' } as ColumnDef<Row>,
+  { id: 'name', field: 'name', header: 'Name' } as ColumnDef<Row>,
 ];
 
 beforeEach(() => { document.body.innerHTML = ''; });

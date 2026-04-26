@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGrid } from '../src/grid';
 import type { ColumnDef, GridPlugin, PluginContext } from '../src/types';
 
@@ -40,8 +40,8 @@ describe('dev-mode warnings', () => {
   describe('duplicate column id', () => {
     it('throws when two columns share the same id', () => {
       const columns: ColumnDef<Row>[] = [
-        { id: 'name', accessorKey: 'name', header: 'Name' },
-        { id: 'name', accessorKey: 'salary', header: 'Salary' },
+        { id: 'name', field: 'name', header: 'Name' },
+        { id: 'name', field: 'salary', header: 'Salary' },
       ];
       expect(() => createGrid<Row>({ columns, data: seedData() })).toThrow(
         /\[better-grid\] Duplicate column id: "name"/,
@@ -50,26 +50,26 @@ describe('dev-mode warnings', () => {
 
     it('does not throw when all column ids are unique', () => {
       const columns: ColumnDef<Row>[] = [
-        { id: 'name', accessorKey: 'name', header: 'Name' },
-        { id: 'salary', accessorKey: 'salary', header: 'Salary' },
+        { id: 'name', field: 'name', header: 'Name' },
+        { id: 'salary', field: 'salary', header: 'Salary' },
       ];
       expect(() => createGrid<Row>({ columns, data: seedData() })).not.toThrow();
     });
   });
 
-  describe('accessorKey not present on first data row', () => {
-    it('warns when explicit accessorKey is missing from the sample row', () => {
+  describe('field not present on first data row', () => {
+    it('warns when explicit field is missing from the sample row', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const columns: ColumnDef<Row>[] = [
-        { id: 'salary', accessorKey: 'sallary' as keyof Row & string, header: 'Salary' },
+        { id: 'salary', field: 'sallary' as keyof Row & string, header: 'Salary' },
       ];
       createGrid<Row>({ columns, data: seedData() });
       expect(warn).toHaveBeenCalledWith(
-        expect.stringMatching(/Column "salary": accessorKey "sallary" not found/),
+        expect.stringMatching(/Column "salary": field "sallary" not found/),
       );
     });
 
-    it('is silent when column uses accessorFn instead of accessorKey', () => {
+    it('is silent when column uses accessorFn instead of field', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const columns: ColumnDef<Row>[] = [
         {
@@ -80,42 +80,42 @@ describe('dev-mode warnings', () => {
       ];
       createGrid<Row>({ columns, data: seedData() });
       expect(warn).not.toHaveBeenCalledWith(
-        expect.stringMatching(/accessorKey .* not found/),
+        expect.stringMatching(/field .* not found/),
       );
     });
 
-    it('is silent when accessorKey equals id (auto-fill fallthrough)', () => {
+    it('is silent when field equals id (auto-fill fallthrough)', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      // User provides accessorKey === id explicitly; we still skip (can't tell apart
+      // User provides field === id explicitly; we still skip (can't tell apart
       // from auto-fill, and users rarely pick a typo that matches the id).
       const columns: ColumnDef<Row>[] = [
-        { id: 'missing', accessorKey: 'missing' as keyof Row & string, header: 'Missing' },
+        { id: 'missing', field: 'missing' as keyof Row & string, header: 'Missing' },
       ];
       createGrid<Row>({ columns, data: seedData() });
       expect(warn).not.toHaveBeenCalledWith(
-        expect.stringMatching(/accessorKey .* not found/),
+        expect.stringMatching(/field .* not found/),
       );
     });
 
     it('is silent when data is empty', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const columns: ColumnDef<Row>[] = [
-        { id: 'salary', accessorKey: 'sallary' as keyof Row & string, header: 'Salary' },
+        { id: 'salary', field: 'sallary' as keyof Row & string, header: 'Salary' },
       ];
       createGrid<Row>({ columns, data: [] });
       expect(warn).not.toHaveBeenCalledWith(
-        expect.stringMatching(/accessorKey .* not found/),
+        expect.stringMatching(/field .* not found/),
       );
     });
 
-    it('is silent when accessorKey exists on the sample row', () => {
+    it('is silent when field exists on the sample row', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const columns: ColumnDef<Row>[] = [
-        { id: 'displayName', accessorKey: 'name', header: 'Name' },
+        { id: 'displayName', field: 'name', header: 'Name' },
       ];
       createGrid<Row>({ columns, data: seedData() });
       expect(warn).not.toHaveBeenCalledWith(
-        expect.stringMatching(/accessorKey .* not found/),
+        expect.stringMatching(/field .* not found/),
       );
     });
   });
@@ -124,7 +124,7 @@ describe('dev-mode warnings', () => {
     it('warns on mount when cellType is not built-in and no plugin handles it', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const columns: ColumnDef<Row>[] = [
-        { id: 'priority', accessorKey: 'priority', header: 'Priority', cellType: 'priotity' },
+        { id: 'priority', field: 'priority', header: 'Priority', cellType: 'priotity' },
       ];
       const grid = createGrid<Row>({ columns, data: seedData() });
       // Should not have warned yet — mount hasn't happened
@@ -140,7 +140,7 @@ describe('dev-mode warnings', () => {
     it('is silent for built-in cellTypes (currency)', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const columns: ColumnDef<Row>[] = [
-        { id: 'salary', accessorKey: 'salary', header: 'Salary', cellType: 'currency' },
+        { id: 'salary', field: 'salary', header: 'Salary', cellType: 'currency' },
       ];
       const grid = createGrid<Row>({ columns, data: seedData() });
       grid.mount(container);
@@ -162,7 +162,7 @@ describe('dev-mode warnings', () => {
         },
       };
       const columns: ColumnDef<Row>[] = [
-        { id: 'priority', accessorKey: 'priority', header: 'Priority', cellType: 'star' },
+        { id: 'priority', field: 'priority', header: 'Priority', cellType: 'star' },
       ];
       const grid = createGrid<Row>({
         columns,

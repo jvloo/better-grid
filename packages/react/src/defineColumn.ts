@@ -1,4 +1,4 @@
-import type { ColumnDef, CellType } from '@better-grid/core';
+﻿import type { ColumnDef, CellType } from '@better-grid/core';
 
 type ColumnOpts<TData = unknown> = Partial<Omit<ColumnDef<TData>, 'id'>> & Record<string, unknown>;
 
@@ -52,7 +52,7 @@ const DEFAULTS_BY_TYPE: Record<BuiltInType, Partial<ColumnDef> & Record<string, 
 };
 
 /**
- * Make a builder function for a given type. Field becomes id+accessorKey
+ * Make a builder function for a given type. Field becomes id+field
  * (override accessor via opts.accessorFn for non-trivial paths).
  */
 function makeBuilder<TData = unknown>(type: BuiltInType | string) {
@@ -60,7 +60,7 @@ function makeBuilder<TData = unknown>(type: BuiltInType | string) {
     const defaults = (DEFAULTS_BY_TYPE as Record<string, ColumnOpts>)[type] ?? customRegistry.get(type) ?? {};
     return {
       id: field,
-      accessorKey: opts.accessorFn ? undefined : (field as keyof TData & string),
+      field: opts.accessorFn ? undefined : (field as keyof TData & string),
       header: opts.header ?? field,
       ...defaults,
       ...opts,

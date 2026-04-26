@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // Gantt Plugin — Pro tier: Gantt bar renderer with drag-to-move/resize
 // ============================================================================
 
@@ -289,8 +289,8 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
             // Update cells that have corresponding columns (for display refresh)
             const cols = ctx.grid.getColumns();
             for (const col of cols) {
-              if (col.accessorKey && col.accessorKey in rowData) {
-                const val = rowData[col.accessorKey];
+              if (col.field && col.field in rowData) {
+                const val = rowData[col.field];
                 if (val !== undefined) {
                   ctx.grid.updateCell(rowIndex, col.id, val);
                 }

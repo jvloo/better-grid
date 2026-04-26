@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+﻿import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createGrid } from '../src/grid';
 import type { ColumnDef, GridPlugin, PluginContext } from '../src/types';
 
@@ -9,9 +9,9 @@ interface Row {
 }
 
 const columns: ColumnDef<Row>[] = [
-  { id: 'id', accessorKey: 'id', header: 'ID' } as ColumnDef<Row>,
-  { id: 'name', accessorKey: 'name', header: 'Name' } as ColumnDef<Row>,
-  { id: 'value', accessorKey: 'value', header: 'Value' } as ColumnDef<Row>,
+  { id: 'id', field: 'id', header: 'ID' } as ColumnDef<Row>,
+  { id: 'name', field: 'name', header: 'Name' } as ColumnDef<Row>,
+  { id: 'value', field: 'value', header: 'Value' } as ColumnDef<Row>,
 ];
 
 const seedData = (): Row[] => [
@@ -37,8 +37,8 @@ function miniSorting(): GridPlugin<'sorting'> {
         const current = ctx.grid.getData() as Row[];
         if (!originalOrder) originalOrder = [...current];
         const col = ctx.grid.getState().columns.find((c) => c.id === columnId);
-        if (!col?.accessorKey) return;
-        const key = col.accessorKey as keyof Row;
+        if (!col?.field) return;
+        const key = col.field as keyof Row;
         const sorted = [...current].sort((a, b) => {
           const av = a[key] as unknown;
           const bv = b[key] as unknown;

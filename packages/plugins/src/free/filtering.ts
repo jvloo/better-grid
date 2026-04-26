@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // Filtering Plugin — Column filtering with local data support
 // ============================================================================
 
@@ -78,8 +78,8 @@ export function filtering(options?: FilteringOptions): GridPlugin<'filtering', F
           if (!col) continue;
 
           let getValue: (row: unknown) => unknown;
-          if (col.accessorKey) {
-            const key = col.accessorKey;
+          if (col.field) {
+            const key = col.field;
             getValue = (row) => (row as Record<string, unknown>)[key];
           } else {
             getValue = () => undefined;

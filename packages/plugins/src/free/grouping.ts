@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // Grouping Plugin — Row grouping with aggregation
 // ============================================================================
 
@@ -87,7 +87,7 @@ function getColumnValue(row: unknown, columnId: string, columns: ColumnDef[]): u
   const col = columns.find(c => c.id === columnId);
   if (!col) return undefined;
   if (col.accessorFn) return col.accessorFn(row, 0);
-  if (col.accessorKey) return (row as Record<string, unknown>)[col.accessorKey];
+  if (col.field) return (row as Record<string, unknown>)[col.field];
   return (row as Record<string, unknown>)[columnId];
 }
 
@@ -213,8 +213,8 @@ function flattenGroupTree(
 
     // Also set the group column's value to the groupValue for display
     const groupCol = columns.find(c => c.id === node.groupColumnId);
-    if (groupCol?.accessorKey) {
-      groupRow[groupCol.accessorKey] = node.groupValue;
+    if (groupCol?.field) {
+      groupRow[groupCol.field] = node.groupValue;
     }
     groupRow[node.groupColumnId] = node.groupValue;
 

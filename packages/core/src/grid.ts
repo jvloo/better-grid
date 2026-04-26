@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // createGrid() — Main factory function
 // ============================================================================
 
@@ -127,7 +127,7 @@ export function createGrid<
   // Initialize columns
   columnManager.setColumns(options.columns);
 
-  // Dev-mode: warn when a column's accessorKey isn't a property on the first data row.
+  // Dev-mode: warn when a column's field isn't a property on the first data row.
   // Deferred to after setColumns so we can compare against the user-provided (non-normalized)
   // columns and skip the auto-fill fallthrough case.
   if (process.env.NODE_ENV !== 'production') {
@@ -1250,10 +1250,10 @@ export function createGrid<
 
           function getSourceValues(colIdx: number): unknown[] {
             const col = columns[colIdx];
-            if (!col?.accessorKey) return [];
+            if (!col?.field) return [];
             const vals: unknown[] = [];
             for (let r = sourceRange.startRow; r <= sourceRange.endRow; r++) {
-              vals.push((state.data[r] as Record<string, unknown>)?.[col.accessorKey]);
+              vals.push((state.data[r] as Record<string, unknown>)?.[col.field]);
             }
             return vals;
           }
@@ -1280,9 +1280,9 @@ export function createGrid<
 
                 const srcColIdx = sourceRange.startCol + ((col - targetRange.startCol) % sourceColCount);
                 const srcCol = columns[srcColIdx];
-                if (!srcCol?.accessorKey) continue;
+                if (!srcCol?.field) continue;
 
-                const value = (state.data[row] as Record<string, unknown>)?.[srcCol.accessorKey];
+                const value = (state.data[row] as Record<string, unknown>)?.[srcCol.field];
                 if (value !== undefined) {
                   instance.updateCell(row, column.id, value);
                 }

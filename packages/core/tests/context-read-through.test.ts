@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
+﻿import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { createGrid } from '../src/grid';
 import type { ColumnDef } from '../src/types';
 
@@ -30,7 +30,7 @@ describe('createGrid context ref', () => {
     const columns: ColumnDef[] = [{
       id: 'name',
       header: 'Name',
-      accessorKey: 'name' as never,
+      field: 'name' as never,
       cellRenderer: (container, ctx) => {
         seen.push(ctx.context);
         container.textContent = String(ctx.value ?? '');
@@ -58,7 +58,7 @@ describe('createGrid context ref', () => {
     const columns: ColumnDef[] = [{
       id: 'name',
       header: 'Name',
-      accessorKey: 'name' as never,
+      field: 'name' as never,
       cellRenderer: (container, ctx) => {
         seen.push(ctx.context);
         container.textContent = String(ctx.value ?? '');

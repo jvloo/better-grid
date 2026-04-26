@@ -1,13 +1,13 @@
-import { describe, test, expect, beforeEach } from 'vitest';
+﻿import { describe, test, expect, beforeEach } from 'vitest';
 import { defineColumn as col, registerColumn, _resetColumnRegistry } from '../src/defineColumn';
 
 describe('defineColumn (col.*)', () => {
   beforeEach(() => _resetColumnRegistry());
 
-  test('col.text returns a ColumnDef with id + accessorKey from field', () => {
+  test('col.text returns a ColumnDef with id + field from field', () => {
     const c = col.text('name', { header: 'Name', width: 100 });
     expect(c.id).toBe('name');
-    expect(c.accessorKey).toBe('name');
+    expect(c.field).toBe('name');
     expect(c.header).toBe('Name');
     expect(c.width).toBe(100);
   });

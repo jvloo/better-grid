@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // Reactive State Store with Batching
 // ============================================================================
 
@@ -86,8 +86,8 @@ export class StateStore<TData = unknown> {
     if (colIndex === -1) return;
 
     const column = this.state.columns[colIndex];
-    if (column?.accessorKey) {
-      newData[rowIndex] = { ...newData[rowIndex], [column.accessorKey]: value } as TData;
+    if (column?.field) {
+      newData[rowIndex] = { ...newData[rowIndex], [column.field]: value } as TData;
     }
     this.update('data', () => ({ data: newData }));
   }

@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // Sorting Plugin — Column sorting with multi-sort support
 // ============================================================================
 
@@ -119,8 +119,8 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting', Sorting
           if (col.accessorFn) {
             const fn = col.accessorFn;
             getValue = (row) => fn(row, 0);
-          } else if (col.accessorKey) {
-            const key = col.accessorKey;
+          } else if (col.field) {
+            const key = col.field;
             getValue = (row) => (row as Record<string, unknown>)[key];
           } else {
             getValue = () => undefined;

@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // Column Manager — Column definitions, widths, and value access
 // ============================================================================
 
@@ -29,10 +29,10 @@ export class ColumnManager<TData = unknown> {
       }
     }
 
-    // Normalize columns: default accessorKey, validate widths
+    // Normalize columns: default field, validate widths
     this.columns = columns.map((col) => {
-      const normalized = !col.accessorKey && !col.accessorFn
-        ? { ...col, accessorKey: col.id as keyof TData & string }
+      const normalized = !col.field && !col.accessorFn
+        ? { ...col, field: col.id as keyof TData & string }
         : col;
 
       // Validate width constraints
@@ -50,11 +50,11 @@ export class ColumnManager<TData = unknown> {
   }
 
   /**
-   * Dev-mode validation: warn when a column's `accessorKey` doesn't exist on a sample row.
-   * Skips columns that use `accessorFn` (explicit opt-out) and columns where accessorKey
+   * Dev-mode validation: warn when a column's `field` doesn't exist on a sample row.
+   * Skips columns that use `accessorFn` (explicit opt-out) and columns where field
    * matches the column id (auto-fill in setColumns — user didn't pick it explicitly).
    *
-   * Pass the user's original column defs so we can tell which accessorKeys were user-provided
+   * Pass the user's original column defs so we can tell which fields were user-provided
    * vs auto-filled. The sample row is typically `options.data[0]`.
    */
   validateAgainstSample(
@@ -67,12 +67,12 @@ export class ColumnManager<TData = unknown> {
     const rowKeys = new Set(Object.keys(sampleRow as Record<string, unknown>));
     for (const col of originalColumns) {
       if (col.accessorFn) continue; // Opting out of key-based access
-      if (!col.accessorKey) continue; // No key provided, will auto-fill from id
-      // Auto-fill fallthrough: skip when accessorKey === id (user didn't pick it explicitly)
-      if (col.accessorKey === col.id) continue;
-      if (!rowKeys.has(col.accessorKey)) {
+      if (!col.field) continue; // No key provided, will auto-fill from id
+      // Auto-fill fallthrough: skip when field === id (user didn't pick it explicitly)
+      if (col.field === col.id) continue;
+      if (!rowKeys.has(col.field)) {
         console.warn(
-          `[better-grid] Column "${col.id}": accessorKey "${col.accessorKey}" not found on the first data row.`,
+          `[better-grid] Column "${col.id}": field "${col.field}" not found on the first data row.`,
         );
       }
     }
@@ -126,8 +126,8 @@ export class ColumnManager<TData = unknown> {
     if (col.accessorFn) {
       return col.accessorFn(row, colIndex);
     }
-    if (col.accessorKey) {
-      return (row as Record<string, unknown>)[col.accessorKey];
+    if (col.field) {
+      return (row as Record<string, unknown>)[col.field];
     }
     return undefined;
   }

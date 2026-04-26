@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties } from 'react';
+﻿import { useMemo, type CSSProperties } from 'react';
 import { useGrid, BetterGrid } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
@@ -26,7 +26,7 @@ export function FsbtProgramSummary() {
 
   const columns = useMemo<ColumnDef<FsbtProgramRow>[]>(() => [
     {
-      id: 'code', accessorKey: 'code', header: 'Code', width: 45, align: 'right' as const, editable: false,
+      id: 'code', field: 'code', header: 'Code', width: 45, align: 'right' as const, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
         const isParent = row.parentId === null;
@@ -40,7 +40,7 @@ export function FsbtProgramSummary() {
       },
     },
     {
-      id: 'name', accessorKey: 'name', header: 'Phase', width: 240, editable: false,
+      id: 'name', field: 'name', header: 'Phase', width: 240, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
         const isParent = row.parentId === null;
@@ -53,7 +53,7 @@ export function FsbtProgramSummary() {
       },
     },
     {
-      id: 'duration', accessorKey: 'duration', header: 'Duration (months)', width: 110, align: 'center' as const, editable: false,
+      id: 'duration', field: 'duration', header: 'Duration (months)', width: 110, align: 'center' as const, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
         const isParent = row.parentId === null;
@@ -64,7 +64,7 @@ export function FsbtProgramSummary() {
       },
     },
     {
-      id: 'start', accessorKey: 'start', header: 'Start', width: 90, editable: false,
+      id: 'start', field: 'start', header: 'Start', width: 90, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
         const isParent = row.parentId === null;
@@ -76,7 +76,7 @@ export function FsbtProgramSummary() {
       },
     },
     {
-      id: 'end', accessorKey: 'end', header: 'End', width: 90, editable: false,
+      id: 'end', field: 'end', header: 'End', width: 90, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
         const isParent = row.parentId === null;

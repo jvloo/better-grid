@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGrid } from '../src/grid';
 import type { ColumnDef } from '../src/types';
 
@@ -36,8 +36,8 @@ function makeGrid(overrides: {
       { id: 2, name: 'Bob', age: 25 },
     ],
     columns: overrides.columns ?? [
-      { id: 'name', accessorKey: 'name', header: 'Name' },
-      { id: 'age', accessorKey: 'age', header: 'Age' },
+      { id: 'name', field: 'name', header: 'Name' },
+      { id: 'age', field: 'age', header: 'Age' },
     ],
   });
   grid.mount(container);
@@ -90,7 +90,7 @@ describe('ARIA', () => {
     const grid = createGrid<Row>({
       data: [{ id: 1, name: 'a', age: 1 }],
       columns: [
-        { id: 'name', accessorKey: 'name', header: 'Name', sortable: true },
+        { id: 'name', field: 'name', header: 'Name', sortable: true },
       ],
       plugins: [sorting()],
     });
