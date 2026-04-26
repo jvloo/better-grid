@@ -354,14 +354,20 @@ describe('createHeaderRenderer', () => {
     expect(groupLabel).toBe('Group');
   });
 
-  it('renders a group header that crosses the freeze boundary as a single cell with the full colspan (Bug A)', () => {
+  it('keeps a group label visible when the group spans across the freeze boundary (Bug A regression)', () => {
     // Repro: /demo/multi-header has frozen.left = 1 with a group header
     // ("Company Info", colSpan: 3) that starts in the frozen section and
-    // continues into the scrollable section. The previous renderer split the
-    // cell into a frozen 1-col stub holding the label and an empty 2-col
-    // continuation, so the visible label only spanned 1 column instead of 3.
-    // Fix: non-leaf group cells that cross the boundary are rendered as a
-    // single scrollable cell with the full colSpan.
+    // continues into the scrollable section.
+    //
+    // History:
+    //  - Pre-41524c1: split into frozen stub (label) + empty scrollable
+    //    continuation. Label visible but only over the frozen portion.
+    //  - 41524c1 attempted to render as a single scrollable cell so the label
+    //    sat over the full span, but the frozen overlay (z-index 12, opaque
+    //    background) hid the cell entirely — Company Info DISAPPEARED.
+    //  - Current fix: revert to splitting, label in the frozen stub. Label is
+    //    visible (centered over the frozen part); the scrollable continuation
+    //    is empty so the group still visually extends across the full span.
     const headerRows: HeaderRow[] = [
       {
         id: 'groups',
@@ -396,7 +402,6 @@ describe('createHeaderRenderer', () => {
       1, // frozen.left = 1 — group "Company Info" crosses the freeze boundary
     );
 
-    // Find the cell whose label is "Company Info"
     const allCells = [
       ...Array.from(headerContainer.querySelectorAll<HTMLElement>('.bg-header-cell')),
       ...Array.from(frozenHeaderOverlay.querySelectorAll<HTMLElement>('.bg-header-cell')),
@@ -405,19 +410,17 @@ describe('createHeaderRenderer', () => {
       (cell) => cell.querySelector('.bg-header-cell__text')?.textContent === 'Company Info',
     );
 
-    // Exactly one DOM cell holds the "Company Info" label — no longer split.
+    // The label must exist exactly once in the DOM.
     expect(companyInfoCells).toHaveLength(1);
 
     const labelCell = companyInfoCells[0]!;
-    // It carries aria-colspan="3" so screen readers + tests see the full span.
-    expect(labelCell.getAttribute('aria-colspan')).toBe('3');
-    // It still gets the centered-span styling (group label centered over span).
+    // Crucial: the label cell lives in the FROZEN overlay so it renders above
+    // the overlay's opaque background. Putting it in the scrollable container
+    // (where the overlay would cover it) is the regression we're guarding.
+    expect(frozenHeaderOverlay.contains(labelCell)).toBe(true);
+    // The frozen stub still carries the span/group styling so it visually
+    // pairs with its scrollable empty continuation.
     expect(labelCell.classList.contains('bg-header-cell--span')).toBe(true);
     expect(labelCell.classList.contains('bg-header-cell--group')).toBe(true);
-    // It lives in the scrollable header container (not the frozen overlay) so
-    // the single cell can extend past the freeze boundary into the scrollable
-    // area without being clipped.
-    expect(headerContainer.contains(labelCell)).toBe(true);
-    expect(frozenHeaderOverlay.contains(labelCell)).toBe(false);
   });
 });

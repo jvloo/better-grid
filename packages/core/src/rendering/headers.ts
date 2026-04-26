@@ -232,13 +232,18 @@ export function createHeaderRenderer<TData = unknown>(
 
         const startsInFrozen = colIndex < frozenCols;
         const endsInScrollable = endCol > frozenCols;
-        // A non-leaf group header that crosses the freeze boundary is rendered as
-        // a single scrollable cell spanning all of its columns, so its label sits
-        // centered over the full span (Bug A). Leaf-row headers that cross the
-        // boundary still split, since each leaf cell binds 1:1 to a column for
-        // sort/filter/resize wiring on the frozen side.
+        // Any cell (leaf or group) that crosses the freeze boundary must be
+        // split into a frozen stub + scrollable continuation. The frozen
+        // overlay has z-index 12 and an opaque background, so a single cell
+        // rendered in the scrollable container (z-index 10) would have its
+        // label hidden behind the frozen overlay if the label fell within the
+        // frozen-column region. The label lives in the frozen stub so it stays
+        // visible (centered over the frozen portion of the span — matches the
+        // pre-41524c1 behavior). Leaf-row headers also need the split so each
+        // leaf binds 1:1 to a column for sort/filter/resize wiring on the
+        // frozen side.
         const crossesBoundary = startsInFrozen && endsInScrollable && span > 1;
-        const splitAtBoundary = crossesBoundary && reachesLastRow;
+        const splitAtBoundary = crossesBoundary;
 
         // Only headers reaching the last row get sort/context menu
         const targetColumnId = reachesLastRow
@@ -252,7 +257,8 @@ export function createHeaderRenderer<TData = unknown>(
         const canResize = reachesLastRow && lastColResizable;
 
         if (splitAtBoundary) {
-          // Split: frozen portion (cols colIndex..frozenCols-1)
+          // Split: frozen portion (cols colIndex..frozenCols-1) holds the
+          // label so it stays visible above the opaque frozen overlay.
           const frozenWidth = measurements.colOffsets[frozenCols]! - left;
           const frozenLastCol = frozenCols - 1;
           const frozenCanResize = reachesLastRow && state.columns[frozenLastCol]?.resizable !== false;
@@ -275,7 +281,7 @@ export function createHeaderRenderer<TData = unknown>(
           if (!reachesLastRow) frozenEl.classList.add('bg-header-cell--group');
           appendHeaderCell(frozenEl, true);
 
-          // Split: scrollable continuation (no text — visually extends frozen header)
+          // Split: scrollable continuation (empty — visually extends frozen header)
           const scrollLeft = measurements.colOffsets[frozenCols]!;
           const scrollWidth = measurements.colOffsets[endCol]! - scrollLeft;
           const scrollEl = createHeaderCell({
@@ -298,11 +304,10 @@ export function createHeaderRenderer<TData = unknown>(
           if (!reachesLastRow) scrollEl.classList.add('bg-header-cell--group');
           appendHeaderCell(scrollEl, false);
         } else {
-          // A non-leaf group that crosses the freeze boundary must be rendered
-          // in the scrollable header container (not the frozen overlay) so the
-          // single cell can extend past frozenCols and span all of its columns.
-          const isFrozen = startsInFrozen && !crossesBoundary;
-          const isLastFrozenCol = !crossesBoundary && endCol - 1 === frozenCols - 1;
+          // Non-cross-boundary cell: render as a single cell. Frozen if it
+          // sits entirely in the frozen-cols region; scrollable otherwise.
+          const isFrozen = startsInFrozen;
+          const isLastFrozenCol = endCol - 1 === frozenCols - 1;
           const width = measurements.colOffsets[endCol]! - left;
 
           // For leaf-column headers (reachesLastRow), use the column's headerAlign or align
