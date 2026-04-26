@@ -9,6 +9,9 @@
 import type { GridPlugin, PluginContext, ColumnDef } from '@better-grid/core';
 import { escapeXml, getCellValue } from '@better-grid/core';
 
+// Narrowed column type with `id` guaranteed to be a string
+type NormalizedColumnDef<TData = unknown> = ColumnDef<TData> & { id: string };
+
 export interface ExportOptions {
   /** Default filename (without extension). Default: 'export' */
   filename?: string;
@@ -106,7 +109,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
         return 'text';
       }
 
-      function formatCell(value: unknown, column: ColumnDef): string {
+      function formatCell(value: unknown, column: NormalizedColumnDef<unknown>): string {
         // Use formatting plugin if available
         const fmtApi = ctx.getPluginApi<{ formatValue: (v: unknown, t: string, c: ColumnDef) => string }>('formatting');
         if (fmtApi && column.cellType) {
@@ -118,7 +121,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
         return value != null ? String(value) : '';
       }
 
-      function resolveOptionLabel(value: unknown, column: ColumnDef): string | null {
+      function resolveOptionLabel(value: unknown, column: Readonly<NormalizedColumnDef<unknown>>): string | null {
         if (!column.options) return null;
         for (const opt of column.options) {
           if (typeof opt === 'object' && opt !== null && 'value' in opt) {
@@ -128,7 +131,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
         return null;
       }
 
-      function buildExportCell(row: unknown, column: ColumnDef, colIdx: number, isPinned: boolean): ExportCell {
+      function buildExportCell(row: unknown, column: Readonly<NormalizedColumnDef<unknown>>, colIdx: number, isPinned: boolean): ExportCell {
         const value = getCellValue(row, column);
         const state = ctx.grid.getState();
         const frozenCols = state.frozenLeftColumns;

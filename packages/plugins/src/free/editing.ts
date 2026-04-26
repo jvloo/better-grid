@@ -482,7 +482,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
             if (!isEditable) {
               if (origRenderer) return origRenderer(container, context);
-              renderFormattedDisplay(container, context, col);
+              renderFormattedDisplay(container, context);
               return;
             }
 
@@ -501,7 +501,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             // No inputStyle wrapping requested → fall back to original renderer.
             if (!config.inputStyle) {
               if (origRenderer) return origRenderer(container, context);
-              renderFormattedDisplay(container, context, col);
+              renderFormattedDisplay(container, context);
               return;
             }
 
@@ -521,11 +521,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             if (origRenderer) {
               origRenderer(container, context);
             } else if (col.valueFormatter) {
-              renderFormattedDisplay(container, context, col);
+              renderFormattedDisplay(container, context);
             } else if (col.cellType) {
-              renderFormattedDisplay(container, context, col);
+              renderFormattedDisplay(container, context);
             } else {
-              renderFormattedDisplay(container, context, col);
+              renderFormattedDisplay(container, context);
             }
 
             // Capture text set by original renderer, then replace with input box
@@ -636,13 +636,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       function renderFormattedDisplay(
         container: HTMLElement,
         context: CellRenderContext,
-        column: ColumnDef,
       ): void {
-        container.textContent = getFormattedDisplayText(column, context.row, context.value, context.rowIndex, context.colIndex);
+        container.textContent = getFormattedDisplayText(context.column, context.row, context.value, context.rowIndex, context.colIndex);
       }
 
       function getFormattedDisplayText(
-        column: ColumnDef,
+        column: ColumnDef & { id: string },
         row: unknown,
         value: unknown,
         rowIndex: number,
@@ -685,10 +684,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       ): void {
         const key = `${context.rowIndex}:${context.colIndex}`;
         const displayText = origRenderer
-          ? getInputStyleDisplayText(column, context.row, context.value, context.rowIndex, context.colIndex)
-          : getFormattedDisplayText(column, context.row, context.value, context.rowIndex, context.colIndex);
-        const prefix = resolveColumnPrefix(column, context.row);
-        const suffix = resolveColumnSuffix(column, context.row);
+          ? getInputStyleDisplayText(context.column, context.row, context.value, context.rowIndex, context.colIndex)
+          : getFormattedDisplayText(context.column, context.row, context.value, context.rowIndex, context.colIndex);
+        const prefix = resolveColumnPrefix(context.column, context.row);
+        const suffix = resolveColumnSuffix(context.column, context.row);
         const inputValue = stripInputAdornments(displayText, prefix, suffix);
 
         // Try to reuse an existing input on this cell to preserve focus/caret.
@@ -780,7 +779,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       }
 
       function getInputStyleDisplayText(
-        column: ColumnDef,
+        column: ColumnDef & { id: string },
         row: unknown,
         value: unknown,
         rowIndex: number,

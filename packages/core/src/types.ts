@@ -2,6 +2,8 @@
 // Core Types — @better-grid/core
 // ============================================================================
 
+import type { NormalizedColumnDef } from './columns/manager';
+
 // ---------------------------------------------------------------------------
 // Utility Types
 // ---------------------------------------------------------------------------
@@ -79,7 +81,7 @@ export interface CellRenderContext<TData = unknown, TContext = unknown> {
   rowIndex: number;
   colIndex: number;
   row: TData;
-  column: ColumnDef<TData>;
+  column: NormalizedColumnDef<TData>;
   value: unknown;
   isSelected: boolean;
   isActive: boolean;
@@ -390,7 +392,7 @@ export interface GridSlotProps {}
 
 export interface GridState<TData = unknown> {
   data: TData[];
-  columns: ColumnDef<TData>[];
+  columns: NormalizedColumnDef<TData>[];
   columnWidths: number[];
   rowHeights: number[];
   scrollTop: number;
@@ -515,7 +517,7 @@ export interface GridInstance<
   getPinnedBottomRows(): TData[];
   setPinnedBottomRows(rows: TData[]): void;
 
-  getColumns(): ColumnDef<TData>[];
+  getColumns(): NormalizedColumnDef<TData>[];
   setColumns(columns: ColumnDef<TData>[]): void;
   setColumnWidth(columnId: string, width: number): void;
 
@@ -592,7 +594,7 @@ export interface PluginGridApi<TData = unknown> {
   updateCell(rowIndex: number, columnId: string, value: unknown): void;
 
   // Columns
-  getColumns(): ColumnDef<TData>[];
+  getColumns(): NormalizedColumnDef<TData>[];
 
   // State
   getState(): GridState<TData>;

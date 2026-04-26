@@ -13,10 +13,16 @@ const DEFAULT_WIDTH = 100;
 const DEFAULT_MIN_WIDTH = 50;
 
 /**
+ * Narrowed column type with `id` guaranteed to be a string.
+ * All columns stored internally must satisfy this type.
+ */
+export type NormalizedColumnDef<TData> = ColumnDef<TData> & { id: string };
+
+/**
  * Resolve a column's stable id from `id` → `field` fallback.
  * Throws at normalization time when neither is provided.
  */
-function normalizeColumn<TData>(col: ColumnDef<TData>): ColumnDef<TData> & { id: string } {
+function normalizeColumn<TData>(col: ColumnDef<TData>): NormalizedColumnDef<TData> {
   const id = col.id ?? col.field;
   if (!id) {
     throw new Error('[better-grid] Column must have either id or field.');
@@ -25,7 +31,7 @@ function normalizeColumn<TData>(col: ColumnDef<TData>): ColumnDef<TData> & { id:
 }
 
 export class ColumnManager<TData = unknown> {
-  private columns: ColumnDef<TData>[] = [];
+  private columns: NormalizedColumnDef<TData>[] = [];
   private widths: number[] = [];
   private readonlyCols = new Set<number>();
 
@@ -97,15 +103,15 @@ export class ColumnManager<TData = unknown> {
     return this.readonlyCols;
   }
 
-  getColumns(): ColumnDef<TData>[] {
+  getColumns(): NormalizedColumnDef<TData>[] {
     return this.columns;
   }
 
-  getColumn(index: number): ColumnDef<TData> | undefined {
+  getColumn(index: number): NormalizedColumnDef<TData> | undefined {
     return this.columns[index];
   }
 
-  getColumnById(id: string): ColumnDef<TData> | undefined {
+  getColumnById(id: string): NormalizedColumnDef<TData> | undefined {
     return this.columns.find((c) => c.id === id);
   }
 

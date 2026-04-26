@@ -55,6 +55,11 @@ export type {
   InferPluginErrorCodes,
 } from './types';
 
+// Internal types (for plugin development)
+export type {
+  NormalizedColumnDef,
+} from './columns/manager';
+
 // Selection utilities
 export {
   createEmptySelection,

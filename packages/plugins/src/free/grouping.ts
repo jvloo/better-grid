@@ -4,6 +4,9 @@
 
 import type { GridPlugin, PluginContext, ColumnDef, CellRenderContext } from '@better-grid/core';
 
+// Narrowed column type with `id` guaranteed to be a string
+type NormalizedColumnDef<TData = unknown> = ColumnDef<TData> & { id: string };
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -345,7 +348,7 @@ export function grouping<TData = unknown>(options?: GroupingOptions<TData>): Gri
 
         // Insert at position 0
         store.update('columns', () => ({
-          columns: [autoGroupColDef!, ...columns] as ColumnDef[],
+          columns: [autoGroupColDef as NormalizedColumnDef<unknown>, ...columns],
           columnWidths: [autoGroupColDef!.width ?? 200, ...store.getState().columnWidths],
         }));
         autoGroupColInjected = true;
@@ -363,7 +366,7 @@ export function grouping<TData = unknown>(options?: GroupingOptions<TData>): Gri
           newCols.splice(idx, 1);
           newWidths.splice(idx, 1);
           store.update('columns', () => ({
-            columns: newCols as ColumnDef[],
+            columns: newCols as NormalizedColumnDef<unknown>[],
             columnWidths: newWidths,
           }));
         }
