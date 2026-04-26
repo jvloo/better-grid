@@ -277,8 +277,8 @@ export interface GridEvents<TData = unknown> {
   // Column
   'column:resize': (columnId: string, width: number) => void;
 
-  // Freeze clip
-  'freezeClip:change': (clipWidth: number, fullFrozenWidth: number) => void;
+  // Frozen
+  'frozen:clip': (clipWidth: number, fullFrozenWidth: number) => void;
 
   // Keyboard
   'key:down': (event: KeyboardEvent, cell: CellPosition | null) => void;

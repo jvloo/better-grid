@@ -837,7 +837,7 @@ export function createGrid<
         scheduleRender();
       },
       onComplete: (finalWidth, fullFrozenWidth) => {
-        emitter.emit('freezeClip:change', finalWidth, fullFrozenWidth);
+        emitter.emit('frozen:clip', finalWidth, fullFrozenWidth);
       },
     });
   }
@@ -849,7 +849,7 @@ export function createGrid<
       const measurements = virtualization.getMeasurements();
       const state = store.getState();
       const fullFrozenWidth = measurements.colOffsets[state.frozen.left]!;
-      emitter.emit('freezeClip:change', fullFrozenWidth, fullFrozenWidth);
+      emitter.emit('frozen:clip', fullFrozenWidth, fullFrozenWidth);
     }
   }
 
