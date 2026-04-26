@@ -148,6 +148,24 @@ describe('createHeaderRenderer', () => {
     expect(onFilterButtonClick.mock.calls[0][1]).toBe('a');
   });
 
+  it('filter button is position:absolute so it does not reflow right-aligned header text', () => {
+    // Regression: filter button was display:none → display:inline-flex on hover,
+    // causing it to enter flex flow and push the text span leftward on right-aligned
+    // columns (the "right-aligned header reflow bug").
+    // Fix: button is now position:absolute, meaning it is always out of flow.
+    const { headerContainer } = setup(
+      [{ id: 'price', headerName: 'Price', align: 'right' } as ColumnDef],
+      { hasFilterPlugin: () => true },
+    );
+    const cell = headerContainer.querySelector('.bg-header-cell') as HTMLElement;
+    const filterBtn = cell.querySelector('.bg-header-cell__filter-btn') as HTMLElement;
+
+    // The filter button must be position:absolute — it never participates in
+    // the cell's flex layout, so neither text alignment nor text position can
+    // change when the button transitions from hidden to visible.
+    expect(filterBtn.style.position).toBe('absolute');
+  });
+
   it('renders a resize handle and calls onColumnResize on pointerdown', () => {
     const onColumnResize = vi.fn();
     const { headerContainer } = setup(

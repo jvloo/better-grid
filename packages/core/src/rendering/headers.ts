@@ -402,6 +402,12 @@ export function createHeaderRenderer<TData = unknown>(
       if (deps.hasFilterPlugin()) {
         const filterBtn = document.createElement('span');
         filterBtn.className = 'bg-header-cell__filter-btn';
+        // position:absolute keeps the button out of flex flow so it never
+        // pushes the header text sideways when it becomes visible on hover
+        // (the right-aligned header reflow bug). The CSS class owns right/top/
+        // transform for positioning; we set position inline so tests can assert
+        // it without needing a full stylesheet parse.
+        filterBtn.style.position = 'absolute';
         filterBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 1.5h8M2.5 4h5M4 6.5h2M5 6.5V9"/></svg>';
         filterBtn.title = 'Filter';
         filterBtn.setAttribute('role', 'button');

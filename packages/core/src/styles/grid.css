@@ -88,16 +88,21 @@
   z-index: 11;
 }
 
-/* Filter icon button in header — visible on hover or when filter active */
+/* Filter icon button in header — absolutely positioned so it never
+   participates in flex layout. This prevents the button appearing on hover
+   from pushing the header text sideways (the right-aligned header reflow bug).
+   Sits at the right edge, inset by the resize-handle width (6 px). */
 .bg-header-cell__filter-btn {
-  display: none;
-  margin-left: auto;
+  position: absolute;
+  right: 6px; /* leave room for the 6 px resize handle */
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
   padding: 0 2px;
   opacity: 0.4;
   cursor: pointer;
-  flex-shrink: 0;
-  vertical-align: middle;
-  align-items: center;
+  visibility: hidden;
 }
 
 .bg-header-cell__filter-btn:hover {
@@ -105,12 +110,12 @@
 }
 
 .bg-header-cell:hover .bg-header-cell__filter-btn {
-  display: inline-flex;
+  visibility: visible;
 }
 
 /* Keep filter icon visible and highlighted when column has active filter */
 .bg-header-cell--filtered .bg-header-cell__filter-btn {
-  display: inline-flex;
+  visibility: visible;
   opacity: 0.8;
   color: var(--bg-active-border, #1a73e8);
 }
