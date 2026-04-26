@@ -923,7 +923,7 @@ export function FsbtRevenue() {
         cells: holdingGeneralColumns.map((col) => ({
           id: `hg-col-${col.id}`,
           columnId: col.id,
-          content: typeof col.header === 'string' ? col.header : '',
+          content: col.headerName,
         })),
       },
     ],

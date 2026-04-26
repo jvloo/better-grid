@@ -131,13 +131,6 @@ export function createHeaderRenderer<TData = unknown>(
     rendered = false;
   }
 
-  /** Resolve a HeaderCell content value (string or legacy function) to a string. */
-  function resolveContent(content: string | (() => HTMLElement | string)): string {
-    if (typeof content !== 'function') return content;
-    const result = content();
-    return typeof result === 'string' ? result : (result.textContent ?? '');
-  }
-
   function renderSingleHeaders(state: GridState<TData>, measurements: LayoutMeasurements): void {
     for (let col = 0; col < state.columns.length; col++) {
       const column = state.columns[col]! as ColumnDef<TData>;
@@ -161,8 +154,11 @@ export function createHeaderRenderer<TData = unknown>(
       });
 
       if (column.headerRenderer) {
-        cell.replaceChildren();
-        column.headerRenderer(cell, { column, columnIndex: col });
+        const textSpan = cell.querySelector<HTMLElement>('.bg-header-cell__text');
+        if (textSpan) {
+          textSpan.replaceChildren();
+          column.headerRenderer(textSpan, { column, columnIndex: col });
+        }
       }
 
       appendHeaderCell(cell, isFrozen);
@@ -259,7 +255,7 @@ export function createHeaderRenderer<TData = unknown>(
             top: topOffset,
             width: frozenWidth,
             height,
-            content: resolveContent(cell.content),
+            content: cell.content,
             colIndex,
             isFrozen: true,
             isLastFrozenCol: true,
@@ -305,7 +301,7 @@ export function createHeaderRenderer<TData = unknown>(
             top: topOffset,
             width,
             height,
-            content: resolveContent(cell.content),
+            content: cell.content,
             colIndex,
             isFrozen,
             isLastFrozenCol,

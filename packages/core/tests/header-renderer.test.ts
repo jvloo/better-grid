@@ -76,6 +76,37 @@ describe('column.headerRenderer', () => {
     grid.unmount();
   });
 
+  test('preserves cell chrome (filter button + resize handle survive headerRenderer)', () => {
+    const host = makeHost();
+
+    const grid = createGrid<{ x: string }>({
+      columns: [
+        {
+          id: 'x',
+          field: 'x',
+          headerName: 'X',
+          resizable: true,
+          headerRenderer: (container) => {
+            container.replaceChildren(document.createTextNode('CUSTOM'));
+          },
+        },
+      ],
+      data: [],
+    });
+    grid.mount(host);
+    grid.refresh();
+
+    // Custom label landed
+    const textSpan = host.querySelector<HTMLElement>('.bg-header-cell__text');
+    expect(textSpan?.textContent).toBe('CUSTOM');
+
+    // Resize handle still attached at the cell level (NOT inside the text span)
+    expect(host.querySelector('.bg-header-cell .bg-resize-handle')).not.toBeNull();
+    expect(textSpan?.querySelector('.bg-resize-handle')).toBeNull();
+
+    grid.unmount();
+  });
+
   test('headerRenderer receives the correct ctx (column + columnIndex)', () => {
     const host = makeHost();
 

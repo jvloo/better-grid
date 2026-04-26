@@ -140,6 +140,12 @@ export interface ColumnDef<TData = unknown> {
   field?: keyof TData & string;
   valueGetter?: (row: TData, rowIndex: number) => unknown;
   headerName: string;
+  /**
+   * DOM mutator for custom header content. Receives the *label area* of the
+   * header cell — not the outer cell. Filter button, resize handle, and
+   * cell-level ARIA wiring are preserved. Use `container.replaceChildren(...)`
+   * to swap the label freely.
+   */
   headerRenderer?: (container: HTMLElement, ctx: { column: ColumnDef<TData>; columnIndex: number }) => void;
 
   // Layout
@@ -188,7 +194,7 @@ export interface ColumnDef<TData = unknown> {
 export interface HeaderCell {
   id: string;
   columnId?: string;
-  content: string | (() => HTMLElement | string);
+  content: string;
   colSpan?: number;
   rowSpan?: number;
 }
@@ -202,7 +208,7 @@ export interface HeaderRow {
 export interface FooterCell {
   id: string;
   columnId?: string;
-  content: string | (() => HTMLElement | string);
+  content: string;
   colSpan?: number;
 }
 

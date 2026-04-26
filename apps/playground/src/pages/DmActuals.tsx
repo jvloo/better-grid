@@ -120,7 +120,7 @@ const multiHeaders: HeaderRow[] = [
       { id: 'h-parentName', content: 'Description', columnId: 'parentName' },
       ...ts.columns.map(c => ({
         id: `h-${c.id}`,
-        content: c.header as string,
+        content: c.headerName,
         columnId: c.id,
       })),
     ],

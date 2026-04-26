@@ -18,7 +18,7 @@ A cheat-sheet for translating Adazzle's `react-data-grid` to Better Grid. Both r
 | `frozen: true`                                 | **Global**: `frozen={{ left: N }}` on grid options (no per-column flag — frozen columns are the first N entries of `columns`)            |
 | `cellClass: (row) => string`                   | `cellClass: (value, row) => string`                                                                                                      |
 | `headerCellClass: 'right-align'`               | Header-cell styling isn't a per-column field today. Use a CSS rule scoped to a `cellClass`-tagged sibling, or open a feature request.    |
-| `headerRenderer: () => <Header />`             | `header: () => HTMLElement \| string` — DOM, not JSX                                                                                     |
+| `headerRenderer: () => <Header />`             | `headerRenderer: (container, ctx) => void  // mutate container directly`                                                                  |
 | `colSpan: ({ type }) => 2`                     | Use the `mergeCells` plugin (Pro) — global merge config, not per-cell-callback                                                           |
 | `summaryFormatter`                             | Use `pinned: { bottom: [summaryRow] }` and render the bottom row with a normal `cellRenderer`                                            |
 
