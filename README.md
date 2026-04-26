@@ -73,16 +73,18 @@ The vanilla path takes plugin instances directly — no `mode`/`features` regist
 
 ## Why Better Grid?
 
-The data grid market has a gap — no library combines a rich free tier, type-safe plugin composition, and framework-agnostic design:
+The data grid market has a gap — no library combines a rich free tier, type-safe plugin composition, and framework-agnostic design. As of April 2026:
 
-| Library         | Free renderers | Type-safe plugin DX | Framework-agnostic? | Free badge/progress/rating? |
-| --------------- | -------------- | ------------------- | ------------------- | --------------------------: |
-| AG Grid         | 2              | No (modules)        | Yes                 |        No (Enterprise $999) |
-| MUI X           | 6              | No (slots)          | No (React only)     |                          No |
-| Handsontable    | 11             | No (monolithic)     | Yes                 |                          No |
-| RevoGrid        | 4              | No (BasePlugin)     | Yes                 |               No (Pro only) |
-| TanStack Table  | 0 (headless)   | Partial (features)  | Yes                 |                         N/A |
-| **Better Grid** | **6+ (MIT)**   | **Yes (InferRow)**  | **Yes**             |                     **Yes** |
+| Library         | Free renderers | Type-safe plugin DX | Framework-agnostic? | Free badge/progress/rating?                 |
+| --------------- | -------------- | ------------------- | ------------------- | ------------------------------------------: |
+| AG Grid         | 3              | No (modules)        | Yes                 |   No (not in any tier — Enterprise $999+/dev) |
+| MUI X Data Grid | 8              | No (slots)          | No (React only)     |                                          No |
+| Handsontable    | ~11            | No (monolithic)     | Yes                 |     No (commercial-only; Hobby = non-commercial) |
+| RevoGrid        | ~4             | No (BasePlugin)     | Yes                 |               No (Pro $199–$499/dev/yr)     |
+| TanStack Table  | 0 (headless)   | Partial (features)  | Yes                 |                                         N/A |
+| **Better Grid** | **10+ (MIT)**  | **Yes (InferRow)**  | **Yes**             |                                       **Yes** |
+
+Renderer counts are based on each project's official docs (April 2026). AG Grid's badge/progress/rating cells aren't shipped in Community **or** Enterprise — those need a custom `cellRenderer`. RevoGrid Pro Lite is $199/dev/yr; Pro Advanced is $499/dev/yr.
 
 ## Features
 

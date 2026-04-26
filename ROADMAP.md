@@ -47,25 +47,29 @@ The detailed sections below are kept verbatim as historical planning context. Wh
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Competitive Position
+## Competitive Position (April 2026)
 
 ```
-                         AG Grid    Handsontable   RevoGrid     MUI X       Better Grid
-Free editing               ✓          ✓*             ✓ (MIT)      ✓           ✓
-Free cell renderers        2          11             4            6           6+ (MIT)
-Free badge/progress/rating ✗          ✗              ✗ (Pro)      ✗           ✓  ← unique free
-Free sparkline             ✗ ($$$)    ✗              ✗ (Pro)      ✗           ✗ (Pro)
-Free validation            ✓          ✓              ✗ (Pro)      ✓           ✓
-Free hierarchy / collapse  ✗ ($$$)    ✗              ✗ (Pro)      ✗ (Pro)     ✓  ← unique free
-Free clipboard (copy/paste)✗ ($$$)    ✓              ✗ (Pro)      ✗ (Pro)     ✓  ← unique free
-Free pinned rows (footer)  ✓          ✓              ✗            ✓           ✓
-Plugin system              Modules    Plugins        BasePlugin   Slots       Composable plugins
-Type-safe plugin DX        ✗          ✗              ✗            ✗           ✓  ← unique
-Framework-agnostic         ✓          ✓              ✓            ✗ (React)   ✓
-MCP server (dev)           ✓ (free)   ✗              ✗            ✓ (free)    Planned
-AI toolkit (runtime)       ✓ ($$$)    ✗              ✗            ✓ ($$$)     Planned (free tier)
+                         AG Grid    Handsontable*   RevoGrid     MUI X       Better Grid
+Free editing               ✓          ✓ (Hobby)       ✓ (MIT)      ✓           ✓
+Free cell renderers        3          ~11             ~4           8           10+ (MIT)
+Free badge/progress/rating ✗ (none)   ✗               ✗ (Pro)      ✗           ✓  ← unique free
+Free sparkline             ✗ ($$$)    ✗               ✗ (Pro)      ✗           ✗ (Pro)
+Free validation            ✓          ✓               ✗ (Pro)      ✓           ✓
+Free hierarchy / collapse  ✗ ($$$)    ✗               ✗ (Pro)      ✗ (Pro)     ✓  ← unique free
+Free clipboard (copy/paste)✗ ($$$)    ✓               ✗ (Pro)      ✗ (Pro)     ✓  ← unique free
+Free pinned rows (footer)  ✓          ✓               ✗            ✓           ✓
+Plugin system              Modules    Plugins         BasePlugin   Slots       Composable plugins
+Type-safe plugin DX        ✗          ✗               ✗            ✗           ✓  ← unique
+Framework-agnostic         ✓          ✓               ✓            ✗ (React)   ✓
+MCP server (dev)           ✓ (free)   ✗               ✗            ✓ (free)    Planned
+AI toolkit (runtime)       ✓ ($$$)    ✗               ✗            ✓ ($$$)     Planned (free tier)
 
-* Handsontable: free for non-commercial only ($899/dev/yr commercial)
+* Handsontable: Hobby license is free for non-commercial only.
+  Commercial Standard ~$999/dev/yr; Priority ~$1,299/dev/yr.
+* AG Grid Enterprise: $999 perpetual or ~$1,295/dev/yr subscription.
+  Bundle ~$1,598. Badge/progress/rating cell renderers don't ship in any tier.
+* RevoGrid Pro: Pro Lite $199/dev/yr; Pro Advanced $499/dev/yr.
 ```
 
 ---
