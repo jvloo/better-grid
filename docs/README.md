@@ -31,5 +31,6 @@ Not required reading for users of the library. Kept in-repo so contributors and 
 
 - [`/README.md`](../README.md) — install, quick start, features.
 - [`/AGENTS.md`](../AGENTS.md) — full architecture + plugin contract.
+- [`/ROADMAP.md`](../ROADMAP.md) — what's planned, what's shipped.
 - [`/CHANGELOG.md`](../CHANGELOG.md) — release history.
 - [`/CONTRIBUTING.md`](../CONTRIBUTING.md), [`/CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md), [`/SECURITY.md`](../SECURITY.md), [`/SUPPORT.md`](../SUPPORT.md) — community-health files.

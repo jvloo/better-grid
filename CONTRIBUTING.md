@@ -15,7 +15,7 @@ By participating you agree to abide by [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md
 
 ## Project layout
 
-Monorepo with pnpm workspaces + Turborepo. See [`AGENTS.md`](AGENTS.md) for the full architecture overview.
+Monorepo with pnpm workspaces + Turborepo. See [`AGENTS.md`](AGENTS.md) for the full architecture overview and [`ROADMAP.md`](ROADMAP.md) for what's planned.
 
 ```
 packages/core      Framework-agnostic engine (MIT)

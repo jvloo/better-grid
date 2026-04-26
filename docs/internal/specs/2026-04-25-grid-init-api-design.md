@@ -243,7 +243,7 @@ function Page() {
   }
   ```
 
-**Why `context` over `meta`** (the TanStack/Mantine name): AG Grid's enterprise install base recognizes `context`. The migration story (`docs/migration-from-ag-grid.md`) becomes one-to-one. We **fix AG Grid's known wart** (their `context` updates don't auto-trigger refresh) by reading via ref every render.
+**Why `context` over `meta`** (the TanStack/Mantine name): AG Grid's enterprise install base recognizes `context`. The migration story (`docs/migrations/from-ag-grid.md`) becomes one-to-one. We **fix AG Grid's known wart** (their `context` updates don't auto-trigger refresh) by reading via ref every render.
 
 ### 5. Feature dependency auto-include
 
@@ -397,7 +397,7 @@ packages/react/src/index.ts
 apps/playground/src/pages/*.tsx (~25 files)
   - rewrite each to new API as part of the cutover PR
 
-docs/migration-from-ag-grid.md
+docs/migrations/from-ag-grid.md
   - update with ag-grid `context` → better-grid `context` mapping
 ```
 
@@ -441,7 +441,7 @@ The seam reservation is the only commitment v1 makes. If v1.1 chooses a differen
 - New users can spin up a working grid with sort/filter/select in ≤10 lines (matches MUI's quick-start length).
 - All ~25 playground pages migrated and visually identical.
 - Typecheck + build green across `core`, `plugins`, `pro`, `react`.
-- Migration doc updated (`docs/migration-from-ag-grid.md` plus a new `docs/migration-v0-to-v1.md` for existing Better Grid consumers).
+- Migration doc updated (`docs/migrations/from-ag-grid.md` plus a new `docs/internal/v1-init-api-history.md` for existing Better Grid consumers).
 
 ## Open questions deferred to implementation plan
 

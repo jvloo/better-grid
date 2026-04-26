@@ -168,6 +168,10 @@ Better Grid targets evergreen browsers and assumes native support for `ResizeObs
 
 Older browsers are not supported. If you need to serve them, polyfill `ResizeObserver` and `PointerEvent` yourself — we do not ship polyfills.
 
+## Roadmap
+
+See [`ROADMAP.md`](ROADMAP.md) for shipped/in-progress/planned work and the architecture's three-layer model.
+
 ## License
 
 | Package | License | File |

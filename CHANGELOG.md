@@ -40,7 +40,7 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 
 ### Changed (breaking)
 
-- v1.0.0 is the **first public release**. There is no v0 published; the items below describe the shape that landed in v1, captured for contributors who tracked the pre-release iterations. New consumers can ignore this section. Full design history: [`docs/v1-init-api-history.md`](docs/v1-init-api-history.md).
+- v1.0.0 is the **first public release**. There is no v0 published; the items below describe the shape that landed in v1, captured for contributors who tracked the pre-release iterations. New consumers can ignore this section. Full design history: [`docs/internal/v1-init-api-history.md`](docs/internal/v1-init-api-history.md).
 - Grouped layout props: `frozenLeftColumns` / `frozenTopRows` / `freezeClip` → `frozen: { left, top, clip }`. `pinnedTopRows` / `pinnedBottomRows` → `pinned: { top, bottom }`. `headerLayout` → `headers`. `footerLayout` → `footers`. `width` / `height` (on options) → `size: { width, height }` (top-level `height` on `<BetterGrid>` still works as sugar).
 - `onDataChange` → `onCellChange`.
 - `getRowStyle` → `rowStyle`. The dual `rowStyles={{ field, styles }}` shape is dropped — use `rowStyle: (row, idx) => ({...})`.
@@ -54,8 +54,8 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 ### Documentation
 
 - `README.md`, `AGENTS.md`, the migration cheat sheets in `docs/migrations/`, and `docs/internal/v1-init-api-history.md` describe the v1 surface.
-- `docs/pr-summaries/grid-init-api-v1.md` — historical PR summary for the v1 redesign.
-- `docs/pr-summaries/phase-a-foundation.md` — PR summary for the four Phase A commits.
+- `docs/internal/pr-summaries/grid-init-api-v1.md` — historical PR summary for the v1 redesign.
+- `docs/internal/pr-summaries/phase-a-foundation.md` — PR summary for the four Phase A commits.
 
 [Unreleased]: https://github.com/jvloo/better-grid/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/jvloo/better-grid/releases/tag/v1.0.0

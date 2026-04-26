@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Land the breaking init-API redesign described in `docs/superpowers/specs/2026-04-25-grid-init-api-design.md` — column builders, features-string + mode presets, `useGrid` hook + `<BetterGrid grid={...} />` shape, hoisted-column `context` plumbing — and migrate all ~25 playground pages including `FsbtCost.tsx` (Wiseway success-criterion target).
+**Goal:** Land the breaking init-API redesign described in `docs/internal/specs/2026-04-25-grid-init-api-design.md` — column builders, features-string + mode presets, `useGrid` hook + `<BetterGrid grid={...} />` shape, hoisted-column `context` plumbing — and migrate all ~25 playground pages including `FsbtCost.tsx` (Wiseway success-criterion target).
 
 **Architecture:** Mode/feature string resolution lives in the **react package** (`packages/react/src/presets/`); core stays string-agnostic and accepts only resolved `plugins: GridPlugin[]`. `useGrid` is the resolver entry point — it takes the new `GridOptions` shape, expands `mode → features → plugins`, then calls `createGrid`. Closure-over-scope is solved via a `context` ref that the rendering pipeline reads through every render so handler swaps don't invalidate column identity.
 
@@ -29,7 +29,7 @@ packages/react/tests/
   modes.test.ts
   configureBetterGrid.test.ts
 
-docs/migration-v0-to-v1.md  # consumer migration guide
+docs/internal/v1-init-api-history.md  # consumer migration guide
 ```
 
 **Modified files:**
@@ -72,7 +72,7 @@ packages/react/src/hooks/useGrid.ts        # superseded by packages/react/src/us
 **Files:**
 - Modify: `packages/core/src/types.ts` (lines ~322–367, the existing `GridOptions` interface)
 
-**Spec section**: §6 "Prop organization" of `docs/superpowers/specs/2026-04-25-grid-init-api-design.md`.
+**Spec section**: §6 "Prop organization" of `docs/internal/specs/2026-04-25-grid-init-api-design.md`.
 
 - [ ] **Step 1: Read current `GridOptions` definition**
 
@@ -1276,11 +1276,11 @@ git commit -m "react: <BetterGrid> accepts grid={handle} or inline ReactGridOpti
 ### Task 11: Write the migration doc
 
 **Files:**
-- Create: `docs/migration-v0-to-v1.md`
+- Create: `docs/internal/v1-init-api-history.md`
 
 - [ ] **Step 1: Write the doc**
 
-Create `docs/migration-v0-to-v1.md`:
+Create `docs/internal/v1-init-api-history.md`:
 
 ```markdown
 # Migrating from v0 to v1
@@ -1434,7 +1434,7 @@ A future `resetOn: 'never' | 'data' | 'columns'` option may be added.
 - [ ] **Step 2: Commit**
 
 ```bash
-git add docs/migration-v0-to-v1.md
+git add docs/internal/v1-init-api-history.md
 git commit -m "docs: add v0→v1 migration guide"
 ```
 
@@ -1681,8 +1681,8 @@ git diff main --stat | tail -3
 PR title: `Grid Init API redesign (v1) — column builders, mode/features presets, useGrid hook, hoisted-column context`
 
 PR body should include:
-- Link to spec at `docs/superpowers/specs/2026-04-25-grid-init-api-design.md`.
-- Link to migration doc at `docs/migration-v0-to-v1.md`.
+- Link to spec at `docs/internal/specs/2026-04-25-grid-init-api-design.md`.
+- Link to migration doc at `docs/internal/v1-init-api-history.md`.
 - LOC stat (FinanceDashboard before/after, FsbtCost before/after).
 - List of breaking changes (mirror the migration doc's TL;DR).
 - Confirmation that Wiseway FsbtCost page renders with zero behavior change (success criterion).

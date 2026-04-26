@@ -2,7 +2,7 @@
 
 Better Grid was rebuilt before its first public release. This document captures the shape of the pre-release API and the reasoning behind the changes that landed in v1.0.0. It's preserved as a contributor reference — there is no public "v0" to migrate from.
 
-If you're a new consumer, you don't need this. Read the [README](../README.md) quick-start and [`AGENTS.md`](../AGENTS.md) instead.
+If you're a new consumer, you don't need this. Read the [README](../../README.md) quick-start and [`AGENTS.md`](../../AGENTS.md) instead.
 
 ## TL;DR of what shipped
 

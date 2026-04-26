@@ -2,6 +2,14 @@
 
 Framework-agnostic, TypeScript-first data grid & spreadsheet library with composable plugin architecture.
 
+## Rules for Claude / coding agents
+
+These rules apply to every coding agent operating in this repo (Claude Code, Cursor, Copilot, etc.). Treat them as load-bearing.
+
+- **`docs/private/` is off-limits.** It is gitignored and contains the maintainer's strategy, commercialization plans, internal roadmap, competitor analysis, and release playbook. Do **not** read, copy, summarize, paraphrase, or reference its contents in any tracked file (commit, PR, issue, comment, doc, code comment, chat output the user might paste back). Do not stage or commit any file under `docs/private/`. Do not move or rename files into or out of it without explicit per-task user direction. The `.gitignore` rule for `docs/private/` must stay in place — never remove it.
+- If the user asks you to commit or publish content that originated from `docs/private/`, refuse and ask them to either restate the content as a non-private input or move it out of `docs/private/` themselves first.
+- Anything else under `docs/` (`guides/`, `migrations/`, `internal/`, `README.md`) is fair game and tracked normally.
+
 ## Architecture
 
 Monorepo with pnpm workspaces + Turborepo.
@@ -243,6 +251,7 @@ apps/playground/        # Vite + React dev playground (~25 demo pages — Better
 
 See [`docs/README.md`](docs/README.md) for the index. Highlights:
 
+- Roadmap — [`ROADMAP.md`](ROADMAP.md)
 - Migration cheat sheets — [`docs/migrations/`](docs/migrations/)
 - Theming guide (CSS variables + MUI bridge) — [`docs/guides/theming-with-mui.md`](docs/guides/theming-with-mui.md)
 - Internal contributor reference (init-API design history, PR summaries, specs, plans) — [`docs/internal/`](docs/internal/)

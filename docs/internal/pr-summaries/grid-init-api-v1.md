@@ -1,10 +1,10 @@
 # Grid Init API v1 redesign
 
-> Historical PR summary for the v1 init-API merge (commit `27feca6`). Kept for the migration trail; current authoritative docs are README.md, AGENTS.md, and `docs/migration-v0-to-v1.md`.
+> Historical PR summary for the v1 init-API merge (commit `27feca6`). Kept for the migration trail; current authoritative docs are README.md, AGENTS.md, and `docs/internal/v1-init-api-history.md`.
 
-Implements the spec at `docs/superpowers/specs/2026-04-25-grid-init-api-design.md`.
-Plan: `docs/superpowers/plans/2026-04-25-grid-init-api-redesign.md`.
-Migration guide: `docs/migration-v0-to-v1.md`.
+Implements the spec at `docs/internal/specs/2026-04-25-grid-init-api-design.md`.
+Plan: `docs/internal/plans/2026-04-25-grid-init-api-redesign.md`.
+Migration guide: `docs/internal/v1-init-api-history.md`.
 
 ## Summary
 
@@ -48,7 +48,7 @@ d333487 docs(plan): grid init API redesign implementation plan + self-review fix
 
 ## Migration
 
-TL;DR (full doc: `docs/migration-v0-to-v1.md`):
+TL;DR (full doc: `docs/internal/v1-init-api-history.md`):
 
 - `useMemo` around columns: usually no longer needed (hoist columns at module scope).
 - `cellType: 'currency'` etc.: replace with `col.currency('field', { precision: 0 })`.
