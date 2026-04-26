@@ -18,17 +18,17 @@ export function snapToDevicePixel(value: number): number {
 }
 
 /**
- * Read a cell's value from a row using a column's `accessorFn` or `field`.
+ * Read a cell's value from a row using a column's `valueGetter` or `field`.
  *
  * Returns `undefined` if neither accessor is defined. Mirrors the inline
  * pattern used across the rendering pipeline, plugins, and exporters.
  */
 export function getCellValue(
   row: unknown,
-  column: { field?: string; accessorFn?: (row: any, index: number) => unknown },
+  column: { field?: string; valueGetter?: (row: any, index: number) => unknown },
   index = 0,
 ): unknown {
-  if (column.accessorFn) return column.accessorFn(row, index);
+  if (column.valueGetter) return column.valueGetter(row, index);
   if (column.field && row && typeof row === 'object') {
     return (row as Record<string, unknown>)[column.field];
   }

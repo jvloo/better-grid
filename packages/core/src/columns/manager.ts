@@ -31,7 +31,7 @@ export class ColumnManager<TData = unknown> {
 
     // Normalize columns: default field, validate widths
     this.columns = columns.map((col) => {
-      const normalized = !col.field && !col.accessorFn
+      const normalized = !col.field && !col.valueGetter
         ? { ...col, field: col.id as keyof TData & string }
         : col;
 
@@ -51,7 +51,7 @@ export class ColumnManager<TData = unknown> {
 
   /**
    * Dev-mode validation: warn when a column's `field` doesn't exist on a sample row.
-   * Skips columns that use `accessorFn` (explicit opt-out) and columns where field
+   * Skips columns that use `valueGetter` (explicit opt-out) and columns where field
    * matches the column id (auto-fill in setColumns — user didn't pick it explicitly).
    *
    * Pass the user's original column defs so we can tell which fields were user-provided
@@ -66,7 +66,7 @@ export class ColumnManager<TData = unknown> {
 
     const rowKeys = new Set(Object.keys(sampleRow as Record<string, unknown>));
     for (const col of originalColumns) {
-      if (col.accessorFn) continue; // Opting out of key-based access
+      if (col.valueGetter) continue; // Opting out of key-based access
       if (!col.field) continue; // No key provided, will auto-fill from id
       // Auto-fill fallthrough: skip when field === id (user didn't pick it explicitly)
       if (col.field === col.id) continue;
@@ -123,8 +123,8 @@ export class ColumnManager<TData = unknown> {
     const col = this.columns[colIndex];
     if (!col) return undefined;
 
-    if (col.accessorFn) {
-      return col.accessorFn(row, colIndex);
+    if (col.valueGetter) {
+      return col.valueGetter(row, colIndex);
     }
     if (col.field) {
       return (row as Record<string, unknown>)[col.field];

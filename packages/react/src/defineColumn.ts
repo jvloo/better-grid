@@ -53,14 +53,14 @@ const DEFAULTS_BY_TYPE: Record<BuiltInType, Partial<ColumnDef> & Record<string, 
 
 /**
  * Make a builder function for a given type. Field becomes id+field
- * (override accessor via opts.accessorFn for non-trivial paths).
+ * (override accessor via opts.valueGetter for non-trivial paths).
  */
 function makeBuilder<TData = unknown>(type: BuiltInType | string) {
   return (field: string, opts: ColumnOpts<TData> = {}): ColumnDef<TData> => {
     const defaults = (DEFAULTS_BY_TYPE as Record<string, ColumnOpts>)[type] ?? customRegistry.get(type) ?? {};
     return {
       id: field,
-      field: opts.accessorFn ? undefined : (field as keyof TData & string),
+      field: opts.valueGetter ? undefined : (field as keyof TData & string),
       header: opts.header ?? field,
       ...defaults,
       ...opts,

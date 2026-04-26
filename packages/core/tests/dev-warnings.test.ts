@@ -69,12 +69,12 @@ describe('dev-mode warnings', () => {
       );
     });
 
-    it('is silent when column uses accessorFn instead of field', () => {
+    it('is silent when column uses valueGetter instead of field', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const columns: ColumnDef<Row>[] = [
         {
           id: 'fullName',
-          accessorFn: (row) => row.name,
+          valueGetter: (row) => row.name,
           header: 'Full name',
         },
       ];

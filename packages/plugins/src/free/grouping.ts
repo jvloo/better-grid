@@ -86,7 +86,7 @@ function isGroupRow(row: unknown): row is Record<string, unknown> & { [GROUP_ROW
 function getColumnValue(row: unknown, columnId: string, columns: ColumnDef[]): unknown {
   const col = columns.find(c => c.id === columnId);
   if (!col) return undefined;
-  if (col.accessorFn) return col.accessorFn(row, 0);
+  if (col.valueGetter) return col.valueGetter(row, 0);
   if (col.field) return (row as Record<string, unknown>)[col.field];
   return (row as Record<string, unknown>)[columnId];
 }

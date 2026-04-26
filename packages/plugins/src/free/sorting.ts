@@ -116,8 +116,8 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting', Sorting
           if (!col) continue;
 
           let getValue: (row: unknown) => unknown;
-          if (col.accessorFn) {
-            const fn = col.accessorFn;
+          if (col.valueGetter) {
+            const fn = col.valueGetter;
             getValue = (row) => fn(row, 0);
           } else if (col.field) {
             const key = col.field;

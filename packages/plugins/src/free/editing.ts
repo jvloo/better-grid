@@ -438,7 +438,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         let changed = false;
         for (const col of columns) {
           if (col.editable === false) continue;
-          if (!col.field && !col.accessorFn) continue;
+          if (!col.field && !col.valueGetter) continue;
           if ((col as { __inputStyleWrapped?: boolean }).__inputStyleWrapped) continue;
           (col as { __inputStyleWrapped?: boolean }).__inputStyleWrapped = true;
 
@@ -728,8 +728,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const hs = state.hierarchyState;
           const dataIdx = hs ? (hs.visibleRows[rowIdx] ?? rowIdx) : rowIdx;
           const rowData = state.data[dataIdx];
-          const currentValue = liveColumn.accessorFn
-            ? liveColumn.accessorFn(rowData as never, dataIdx)
+          const currentValue = liveColumn.valueGetter
+            ? liveColumn.valueGetter(rowData as never, dataIdx)
             : (rowData as Record<string, unknown>)[liveColumn.field];
           const parsed = parseTextValue(input!.value, liveColumn, currentValue, rowData);
           if (parsed !== currentValue) {
@@ -750,8 +750,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const hs = state.hierarchyState;
           const dataIdx = hs ? (hs.visibleRows[rowIdx] ?? rowIdx) : rowIdx;
           const rowData = state.data[dataIdx];
-          const currentValue = liveColumn.accessorFn
-            ? liveColumn.accessorFn(rowData as never, dataIdx)
+          const currentValue = liveColumn.valueGetter
+            ? liveColumn.valueGetter(rowData as never, dataIdx)
             : liveColumn.field
               ? (rowData as Record<string, unknown>)[liveColumn.field]
               : undefined;
@@ -3458,8 +3458,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               const dataIndex = hs ? (hs.visibleRows[position.rowIndex] ?? position.rowIndex) : position.rowIndex;
               const rowData = state.data[dataIndex];
               if (column && rowData) {
-                const value = column.accessorFn
-                  ? column.accessorFn(rowData, dataIndex)
+                const value = column.valueGetter
+                  ? column.valueGetter(rowData, dataIndex)
                   : column.field
                     ? (rowData as Record<string, unknown>)[column.field]
                     : originalValue;

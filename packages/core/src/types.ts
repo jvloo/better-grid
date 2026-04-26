@@ -137,7 +137,7 @@ export interface BadgeOption extends ColumnOption {
 export interface ColumnDef<TData = unknown> {
   id: string;
   field?: keyof TData & string;
-  accessorFn?: (row: TData, rowIndex: number) => unknown;
+  valueGetter?: (row: TData, rowIndex: number) => unknown;
   header: string | (() => HTMLElement | string);
 
   // Layout
