@@ -248,8 +248,13 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
       function applyErrorStyles(): void {
         dismissValidationTooltips();
 
+        // Scope all cell queries to THIS grid's container so two grids on the
+        // same page don't clobber each other's error styles (Pattern A fix).
+        const gridEl = ctx.grid.getContainer();
+        if (!gridEl) return;
+
         // Remove existing error styles and hover listeners
-        document.querySelectorAll('.bg-cell--error').forEach((el) => {
+        gridEl.querySelectorAll('.bg-cell--error').forEach((el) => {
           el.classList.remove('bg-cell--error');
           const cleanup = hoverCleanups.get(el as HTMLElement);
           if (cleanup) { cleanup(); hoverCleanups.delete(el as HTMLElement); }
@@ -258,7 +263,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         // Apply error styles and tooltip hover to cells with errors
         for (const error of errors.values()) {
           const { rowIndex, colIndex } = error.position;
-          const cells = document.querySelectorAll(
+          const cells = gridEl.querySelectorAll(
             `.bg-cell[data-row="${rowIndex}"][data-col="${colIndex}"]`,
           );
           for (const cell of cells) {
@@ -348,15 +353,26 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         }
       });
 
-      // Validate all on init if configured
+      // Validate all on init if configured. Fire on the first render event so
+      // that cell elements exist in the DOM before applyErrorStyles() queries them.
+      // The previous setTimeout(0) caused a StrictMode double-mount race where
+      // both deferred callbacks fired after the first cleanup ran, resulting in
+      // double validation with stale cell refs (Pattern B fix).
+      let unsubFirstRender: (() => void) | null = null;
       if (config.validateOn === 'all') {
-        // Delay to after first render
-        setTimeout(() => validateAndRender(), 0);
+        unsubFirstRender = ctx.on('render', () => {
+          // Self-unsubscribe after first fire so subsequent renders don't re-run
+          // the full validate() scan (the unsubRender handler above covers re-renders).
+          unsubFirstRender?.();
+          unsubFirstRender = null;
+          validateAndRender();
+        });
       }
 
       ctx.expose(api);
 
       return () => {
+        unsubFirstRender?.();
         unsubData();
         unsubRender();
         errors.clear();

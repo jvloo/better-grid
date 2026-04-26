@@ -534,8 +534,14 @@ export function grouping<TData = unknown>(options?: GroupingOptions<TData>): Gri
       // ── Apply initial grouping ──
 
       if (groupByColumns.length > 0) {
-        // Defer to after mount so columns/data are ready
-        setTimeout(() => applyGrouping(), 0);
+        // init() runs after the container is mounted and data/columns are
+        // already available via ctx.grid — no setTimeout needed.
+        // The previous setTimeout(0) was a Pattern B bug: under React StrictMode
+        // both the first mount's and the second mount's deferred callbacks fired
+        // after the first unmount's cleanup, causing double-grouping of the same
+        // data set (each call saved a fresh originalData snapshot and then both
+        // called setData, leaving the grid in an inconsistent state).
+        applyGrouping();
       }
 
       // ── Listen for data changes to re-apply grouping ──

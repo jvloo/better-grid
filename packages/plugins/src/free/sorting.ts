@@ -164,10 +164,15 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting', Sorting
       }
 
       function updateHeaderIndicators(): void {
+        // Scope all queries to THIS grid's container so two grids on the same
+        // page don't clobber each other's sort indicators (Pattern A fix).
+        const gridEl = ctx.grid.getContainer();
+        if (!gridEl) return;
+
         // Remove all existing indicators
-        document.querySelectorAll('.bg-sort-indicator').forEach((el) => el.remove());
+        gridEl.querySelectorAll('.bg-sort-indicator').forEach((el) => el.remove());
         // Reset aria-sort on every column header — stale cells get 'none'
-        document
+        gridEl
           .querySelectorAll('.bg-header-cell[role="columnheader"][aria-sort]')
           .forEach((el) => el.setAttribute('aria-sort', 'none'));
 
@@ -177,7 +182,7 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting', Sorting
           if (col === -1) continue;
 
           // Find column-level header cells (not group headers)
-          const headerCells = document.querySelectorAll(
+          const headerCells = gridEl.querySelectorAll(
             `.bg-header-cell[data-col="${col}"]:not(.bg-header-cell--group)`,
           );
           for (const headerCell of headerCells) {
@@ -227,12 +232,24 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting', Sorting
       // Apply initial sort if any
       if (sortState.length > 0) {
         applySort();
-        // Delay indicator update to after headers render
-        setTimeout(updateHeaderIndicators, 0);
       }
 
+      // Re-apply sort indicators after every render: headers are re-created by
+      // the rendering pipeline on each render cycle (cell pooling), so indicators
+      // must be re-injected. This also covers the initial mount case — no
+      // setTimeout needed (Pattern B fix: setTimeout caused a StrictMode
+      // double-mount race where two concurrent init()s each scheduled a deferred
+      // call and both fired, injecting duplicate indicators).
+      const unsubRender = ctx.on('render', () => {
+        if (sortState.length > 0) {
+          updateHeaderIndicators();
+        }
+      });
+
       return () => {
-        document.querySelectorAll('.bg-sort-indicator').forEach((el) => el.remove());
+        unsubRender();
+        // Scope cleanup to this grid's container (Pattern A fix).
+        ctx.grid.getContainer()?.querySelectorAll('.bg-sort-indicator').forEach((el) => el.remove());
       };
     },
   };

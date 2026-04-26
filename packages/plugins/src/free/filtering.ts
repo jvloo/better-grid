@@ -129,8 +129,13 @@ export function filtering(options?: FilteringOptions): GridPlugin<'filtering', F
       }
 
       function updateFilterIndicators(): void {
+        // Scope all queries to THIS grid's container so two grids on the same
+        // page don't clobber each other's filter indicators (Pattern A fix).
+        const gridEl = ctx.grid.getContainer();
+        if (!gridEl) return;
+
         // Remove active-filter class from all headers
-        document.querySelectorAll('.bg-header-cell--filtered').forEach((el) =>
+        gridEl.querySelectorAll('.bg-header-cell--filtered').forEach((el) =>
           el.classList.remove('bg-header-cell--filtered'),
         );
 
@@ -139,7 +144,7 @@ export function filtering(options?: FilteringOptions): GridPlugin<'filtering', F
           const col = ctx.grid.getState().columns.findIndex((c) => c.id === columnId);
           if (col === -1) continue;
 
-          const headerCells = document.querySelectorAll(
+          const headerCells = gridEl.querySelectorAll(
             `.bg-header-cell[data-col="${col}"]:not(.bg-header-cell--group)`,
           );
           for (const headerCell of headerCells) {
@@ -176,13 +181,26 @@ export function filtering(options?: FilteringOptions): GridPlugin<'filtering', F
       // Apply initial filters
       if (filters.length > 0) {
         applyFilters();
-        setTimeout(updateFilterIndicators, 0);
       }
+
+      // Re-apply filter indicators after every render: header cells are re-created
+      // by the rendering pipeline on each render cycle, so the filtered class must
+      // be re-applied after each render. This also covers the initial mount — no
+      // setTimeout needed (Pattern B fix: setTimeout caused a StrictMode
+      // double-mount race where two concurrent init()s each scheduled a deferred
+      // call and both fired, applying indicators twice or to the wrong grid).
+      const unsubRender = ctx.on('render', () => {
+        if (filters.length > 0) {
+          updateFilterIndicators();
+        }
+      });
 
       ctx.expose(api);
 
       return () => {
-        document.querySelectorAll('.bg-header-cell--filtered').forEach((el) =>
+        unsubRender();
+        // Scope cleanup to this grid's container (Pattern A fix).
+        ctx.grid.getContainer()?.querySelectorAll('.bg-header-cell--filtered').forEach((el) =>
           el.classList.remove('bg-header-cell--filtered'),
         );
       };

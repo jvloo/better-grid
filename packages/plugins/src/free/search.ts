@@ -123,9 +123,13 @@ export function search(options?: SearchOptions): GridPlugin<'search', SearchApi>
 
       function applyHighlights(): void {
         clearHighlights();
+        // Scope to THIS grid's container so two grids on the same page don't
+        // highlight each other's cells (Pattern A fix).
+        const gridEl = ctx.grid.getContainer();
+        if (!gridEl) return;
         // Apply highlight class to visible matched cells
         for (const match of matches) {
-          const cellEl = document.querySelector(
+          const cellEl = gridEl.querySelector(
             `.bg-cell[data-row="${match.rowIndex}"][data-col="${match.colIndex}"]`
           );
           if (cellEl) {
@@ -139,10 +143,13 @@ export function search(options?: SearchOptions): GridPlugin<'search', SearchApi>
       }
 
       function clearHighlights(): void {
-        document.querySelectorAll(`.${matchClass}`).forEach(el =>
+        // Scope to THIS grid's container (Pattern A fix).
+        const gridEl = ctx.grid.getContainer();
+        if (!gridEl) return;
+        gridEl.querySelectorAll(`.${matchClass}`).forEach(el =>
           el.classList.remove(matchClass)
         );
-        document.querySelectorAll('.bg-cell--search-current').forEach(el =>
+        gridEl.querySelectorAll('.bg-cell--search-current').forEach(el =>
           el.classList.remove('bg-cell--search-current')
         );
       }
@@ -196,7 +203,9 @@ export function search(options?: SearchOptions): GridPlugin<'search', SearchApi>
           return;
         }
 
-        const gridEl = document.querySelector('.bg-grid') as HTMLElement;
+        // Use THIS grid's container — not a global .bg-grid selector that would
+        // grab the first grid on the page when multiple grids coexist (Pattern A fix).
+        const gridEl = ctx.grid.getContainer();
         if (!gridEl) return;
 
         const bar = document.createElement('div');
@@ -281,9 +290,8 @@ export function search(options?: SearchOptions): GridPlugin<'search', SearchApi>
           searchBarEl = null;
         }
         clearSearch();
-        // Refocus grid
-        const gridEl = document.querySelector('.bg-grid') as HTMLElement;
-        gridEl?.focus();
+        // Refocus THIS grid's container (Pattern A fix).
+        ctx.grid.getContainer()?.focus();
       }
 
       const api: SearchApi = {
