@@ -16,6 +16,7 @@ import type {
   Command,
   PluginContext,
   HierarchyConfig,
+  CellChange,
 } from './types';
 import { EventEmitter } from './events/emitter';
 import { StateStore } from './state/store';
@@ -44,7 +45,7 @@ import { createHeaderRenderer, type HeaderRenderer } from './rendering/headers';
 import { createPinnedRowRenderer, getPinnedRowsHeight } from './rendering/pinned-rows';
 import { buildHierarchyState, buildInitialExpandedSet } from './hierarchy/build';
 
-import { clamp, snapToDevicePixel } from './utils';
+import { clamp, getCellValue, snapToDevicePixel } from './utils';
 
 // Minimal ambient `process` declaration so bundlers can statically dead-code
 // eliminate dev-mode warnings when consumers build with NODE_ENV=production.
@@ -1490,17 +1491,20 @@ export function createGrid<
 
     updateCell(rowIndex: number, columnId: string, value: unknown): void {
       const dataIndex = visibleToDataIndex(rowIndex);
-      const oldValue = store.getState().data[dataIndex];
+      const oldRow = store.getState().data[dataIndex];
+      if (oldRow === undefined) return;
+
+      // Capture the previous CELL value before mutation (not the old row object)
+      const column = columnManager.getAllColumns().find((c) => c.id === columnId);
+      const oldValue = column ? getCellValue(oldRow, column, dataIndex) : undefined;
+
       store.setCellValue(dataIndex, columnId, value);
       const newRow = store.getState().data[dataIndex];
-      if (oldValue !== undefined && newRow !== undefined) {
-        emitter.emit('data:change', [
-          { rowIndex, columnId, oldValue, newValue: value, row: newRow },
-        ]);
-        options.onCellChange?.([
-          { rowIndex, columnId, oldValue, newValue: value, row: newRow },
-        ]);
-      }
+      if (newRow === undefined) return;
+
+      const change: CellChange<TData> = { rowIndex, columnId, oldValue, newValue: value, row: newRow };
+      emitter.emit('data:change', [change]);
+      options.onCellChange?.([change]);
       scheduleRender();
     },
 

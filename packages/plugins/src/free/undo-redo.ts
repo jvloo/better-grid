@@ -37,22 +37,16 @@ export function undoRedo(options?: UndoRedoOptions): GridPlugin<'undoRedo', Undo
       let isUndoRedoAction = false; // prevent recording during undo/redo
 
       // Listen for cell changes to record history.
-      // Note: data:change passes CellChange[] where `oldValue` is the old row
-      // object, so we extract the actual cell value via columnId.
+      // change.oldValue is the previous CELL value (fixed in §1.5a).
       ctx.on('data:change', (changes) => {
         if (isUndoRedoAction) return;
 
         for (const change of changes) {
-          const oldCellValue =
-            change.oldValue != null
-              ? (change.oldValue as Record<string, unknown>)[change.columnId]
-              : undefined;
-
           undoStack.push({
             type: 'cell',
             rowIndex: change.rowIndex,
             columnId: change.columnId,
-            oldValue: oldCellValue,
+            oldValue: change.oldValue,
             newValue: change.newValue,
           });
 
