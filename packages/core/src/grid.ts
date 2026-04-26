@@ -1416,7 +1416,7 @@ export function createGrid<
 
     getData: () => store.getState().data,
 
-    setData(data: TData[]): void {
+    setData(data: TData[], setDataOptions?: { preserveScroll?: boolean }): void {
       // Selection-stability: when getRowId is provided (top-level or via
       // hierarchy), capture the selected row's id before swapping data so we
       // can relocate it in the new array after the swap.
@@ -1469,10 +1469,15 @@ export function createGrid<
         emitter.emit('selection:change', clearedSelection);
       }
 
-      store.setScroll(0, 0);
-      if (fakeScrollbar) {
-        fakeScrollbar.scrollTop = 0;
-        fakeScrollbar.scrollLeft = 0;
+      // Skip the scroll reset when the caller is doing an in-place reorder
+      // or refinement (sort, filter, search, …) of the *same* logical dataset.
+      // True data swaps (loading a new dataset) keep the original behavior.
+      if (!setDataOptions?.preserveScroll) {
+        store.setScroll(0, 0);
+        if (fakeScrollbar) {
+          fakeScrollbar.scrollTop = 0;
+          fakeScrollbar.scrollLeft = 0;
+        }
       }
       emitter.emit('data:set', data);
       scheduleRender();

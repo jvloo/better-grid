@@ -52,9 +52,10 @@ export function filtering(options?: FilteringOptions): GridPlugin<'filtering', F
         }
 
         if (filters.length === 0) {
-          // Restore original data
+          // Restore original data — preserve scroll: this is an in-place
+          // refinement, not a true data swap.
           if (unfilteredData) {
-            ctx.grid.setData(unfilteredData);
+            ctx.grid.setData(unfilteredData, { preserveScroll: true });
             unfilteredData = null;
           }
           return;
@@ -95,7 +96,9 @@ export function filtering(options?: FilteringOptions): GridPlugin<'filtering', F
           return true;
         });
 
-        ctx.grid.setData(filtered);
+        // Preserve scroll: filter is an in-place refinement, not a true data
+        // swap, so the user's horizontal/vertical scroll position must survive.
+        ctx.grid.setData(filtered, { preserveScroll: true });
       }
 
       function matchesFilter(cellValue: unknown, filterValue: unknown, operator: FilterOperator): boolean {

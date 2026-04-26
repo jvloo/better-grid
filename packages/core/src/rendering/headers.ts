@@ -232,7 +232,13 @@ export function createHeaderRenderer<TData = unknown>(
 
         const startsInFrozen = colIndex < frozenCols;
         const endsInScrollable = endCol > frozenCols;
+        // A non-leaf group header that crosses the freeze boundary is rendered as
+        // a single scrollable cell spanning all of its columns, so its label sits
+        // centered over the full span (Bug A). Leaf-row headers that cross the
+        // boundary still split, since each leaf cell binds 1:1 to a column for
+        // sort/filter/resize wiring on the frozen side.
         const crossesBoundary = startsInFrozen && endsInScrollable && span > 1;
+        const splitAtBoundary = crossesBoundary && reachesLastRow;
 
         // Only headers reaching the last row get sort/context menu
         const targetColumnId = reachesLastRow
@@ -245,7 +251,7 @@ export function createHeaderRenderer<TData = unknown>(
         // Only last-row headers get resize handles (extended upward to cover group rows)
         const canResize = reachesLastRow && lastColResizable;
 
-        if (crossesBoundary) {
+        if (splitAtBoundary) {
           // Split: frozen portion (cols colIndex..frozenCols-1)
           const frozenWidth = measurements.colOffsets[frozenCols]! - left;
           const frozenLastCol = frozenCols - 1;
@@ -292,8 +298,11 @@ export function createHeaderRenderer<TData = unknown>(
           if (!reachesLastRow) scrollEl.classList.add('bg-header-cell--group');
           appendHeaderCell(scrollEl, false);
         } else {
-          const isFrozen = startsInFrozen;
-          const isLastFrozenCol = endCol - 1 === frozenCols - 1;
+          // A non-leaf group that crosses the freeze boundary must be rendered
+          // in the scrollable header container (not the frozen overlay) so the
+          // single cell can extend past frozenCols and span all of its columns.
+          const isFrozen = startsInFrozen && !crossesBoundary;
+          const isLastFrozenCol = !crossesBoundary && endCol - 1 === frozenCols - 1;
           const width = measurements.colOffsets[endCol]! - left;
 
           // For leaf-column headers (reachesLastRow), use the column's headerAlign or align

@@ -511,6 +511,24 @@ export interface GridPlugin<TId extends string = string, TApi = unknown> {
 }
 
 // ---------------------------------------------------------------------------
+// setData options
+// ---------------------------------------------------------------------------
+
+/**
+ * Options for {@link GridInstance.setData}.
+ *
+ * The default behavior of setData is to clear selection and reset scroll to
+ * (0, 0) — appropriate for a true data swap (loading a new dataset). When a
+ * plugin (sort, filter, search, etc.) is reordering or refining the *same*
+ * conceptual dataset, pass `preserveScroll: true` so the user's horizontal/
+ * vertical scroll position survives the operation.
+ */
+export interface SetDataOptions {
+  /** Keep the current scroll position instead of resetting to (0, 0). */
+  preserveScroll?: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Grid Instance
 // ---------------------------------------------------------------------------
 
@@ -523,7 +541,7 @@ export interface GridInstance<
   destroy(): void;
 
   getData(): TData[];
-  setData(data: TData[]): void;
+  setData(data: TData[], options?: SetDataOptions): void;
   updateRow(rowIndex: number, data: Partial<TData>): void;
   updateCell(rowIndex: number, columnId: string, value: unknown): void;
 
@@ -609,7 +627,7 @@ export interface GridInstance<
 export interface PluginGridApi<TData = unknown> {
   // Data access
   getData(): TData[];
-  setData(data: TData[]): void;
+  setData(data: TData[], options?: SetDataOptions): void;
   updateCell(rowIndex: number, columnId: string, value: unknown): void;
 
   // Columns

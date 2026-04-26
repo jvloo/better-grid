@@ -93,9 +93,10 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting', Sorting
         }
 
         if (sortState.length === 0) {
-          // Restore original order
+          // Restore original order — preserve scroll: this is an in-place
+          // reorder, not a true data swap.
           if (unsortedData) {
-            ctx.grid.setData(unsortedData as typeof currentData);
+            ctx.grid.setData(unsortedData as typeof currentData, { preserveScroll: true });
             unsortedData = null;
           }
           return;
@@ -142,7 +143,9 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting', Sorting
           return 0;
         });
 
-        ctx.grid.setData(sorted as typeof currentData);
+        // Preserve scroll: sort is an in-place reorder, not a true data swap,
+        // so the user's horizontal/vertical scroll position must survive.
+        ctx.grid.setData(sorted as typeof currentData, { preserveScroll: true });
       }
 
       function defaultCompare(a: unknown, b: unknown): number {

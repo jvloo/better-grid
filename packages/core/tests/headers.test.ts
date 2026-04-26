@@ -353,4 +353,71 @@ describe('createHeaderRenderer', () => {
       .find((t) => t === 'Group');
     expect(groupLabel).toBe('Group');
   });
+
+  it('renders a group header that crosses the freeze boundary as a single cell with the full colspan (Bug A)', () => {
+    // Repro: /demo/multi-header has frozen.left = 1 with a group header
+    // ("Company Info", colSpan: 3) that starts in the frozen section and
+    // continues into the scrollable section. The previous renderer split the
+    // cell into a frozen 1-col stub holding the label and an empty 2-col
+    // continuation, so the visible label only spanned 1 column instead of 3.
+    // Fix: non-leaf group cells that cross the boundary are rendered as a
+    // single scrollable cell with the full colSpan.
+    const headerRows: HeaderRow[] = [
+      {
+        id: 'groups',
+        height: 32,
+        cells: [
+          { id: 'g-info', content: 'Company Info', colSpan: 3 },
+          { id: 'g-rev', content: 'Revenue', colSpan: 2 },
+        ],
+      },
+      {
+        id: 'cols',
+        height: 32,
+        cells: [
+          { id: 'h-name', content: 'Name', columnId: 'name' },
+          { id: 'h-sector', content: 'Sector', columnId: 'sector' },
+          { id: 'h-region', content: 'Region', columnId: 'region' },
+          { id: 'h-revQ1', content: 'Q1', columnId: 'revQ1' },
+          { id: 'h-revQ2', content: 'Q2', columnId: 'revQ2' },
+        ],
+      },
+    ];
+    const { headerContainer, frozenHeaderOverlay } = setup(
+      [
+        { id: 'name', headerName: 'Name' } as ColumnDef,
+        { id: 'sector', headerName: 'Sector' } as ColumnDef,
+        { id: 'region', headerName: 'Region' } as ColumnDef,
+        { id: 'revQ1', headerName: 'Q1' } as ColumnDef,
+        { id: 'revQ2', headerName: 'Q2' } as ColumnDef,
+      ],
+      {},
+      headerRows,
+      1, // frozen.left = 1 — group "Company Info" crosses the freeze boundary
+    );
+
+    // Find the cell whose label is "Company Info"
+    const allCells = [
+      ...Array.from(headerContainer.querySelectorAll<HTMLElement>('.bg-header-cell')),
+      ...Array.from(frozenHeaderOverlay.querySelectorAll<HTMLElement>('.bg-header-cell')),
+    ];
+    const companyInfoCells = allCells.filter(
+      (cell) => cell.querySelector('.bg-header-cell__text')?.textContent === 'Company Info',
+    );
+
+    // Exactly one DOM cell holds the "Company Info" label — no longer split.
+    expect(companyInfoCells).toHaveLength(1);
+
+    const labelCell = companyInfoCells[0]!;
+    // It carries aria-colspan="3" so screen readers + tests see the full span.
+    expect(labelCell.getAttribute('aria-colspan')).toBe('3');
+    // It still gets the centered-span styling (group label centered over span).
+    expect(labelCell.classList.contains('bg-header-cell--span')).toBe(true);
+    expect(labelCell.classList.contains('bg-header-cell--group')).toBe(true);
+    // It lives in the scrollable header container (not the frozen overlay) so
+    // the single cell can extend past the freeze boundary into the scrollable
+    // area without being clipped.
+    expect(headerContainer.contains(labelCell)).toBe(true);
+    expect(frozenHeaderOverlay.contains(labelCell)).toBe(false);
+  });
 });
