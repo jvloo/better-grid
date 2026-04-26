@@ -370,6 +370,8 @@ export interface GridOptions<
   // Behavior
   /** Default = { mode: 'cell' }. Pass `false` to disable selection entirely. */
   selection?: SelectionOptions;
+  /** Stable row identity. Used by selection-stability across data swaps. Mirrored to hierarchy.getRowId when hierarchy is configured (hierarchy.getRowId wins for hierarchy state if both are set). */
+  getRowId?: (row: TData) => string | number;
   hierarchy?: HierarchyConfig<TData>;
   virtualization?: VirtualizationOptions;
 

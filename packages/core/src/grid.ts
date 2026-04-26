@@ -78,6 +78,16 @@ export function createGrid<
   // Resolve selection options once; used throughout grid lifecycle
   const normalizedSelection = normalizeSelection(options.selection);
 
+  // Stable row-identity resolver.
+  // Priority: top-level getRowId > hierarchy.getRowId > index fallback.
+  // The hierarchy plugin always reads options.hierarchy?.getRowId for its own
+  // state (unchanged). This resolver is only used for selection-stability on
+  // setData and any future identity-sensitive paths in core.
+  const resolveRowId: (row: TData, idx: number) => string | number =
+    options.getRowId ??
+    options.hierarchy?.getRowId ??
+    ((_row: TData, idx: number) => idx);
+
   // Closure-over-scope: store on a ref so option swaps don't invalidate column
   // identity. Read at render time so handler swaps are picked up without re-init.
   const contextRef: { current: unknown } = { current: options.context };
@@ -1408,6 +1418,20 @@ export function createGrid<
     getData: () => store.getState().data,
 
     setData(data: TData[]): void {
+      // Selection-stability: when getRowId is provided (top-level or via
+      // hierarchy), capture the selected row's id before swapping data so we
+      // can relocate it in the new array after the swap.
+      const hasRowId = options.getRowId != null || options.hierarchy?.getRowId != null;
+      const oldState = store.getState();
+      const oldActiveRow = oldState.selection.active;
+      let preservedId: string | number | null = null;
+      if (hasRowId && oldActiveRow != null) {
+        const oldRow = oldState.data[oldActiveRow.rowIndex];
+        if (oldRow !== undefined) {
+          preservedId = resolveRowId(oldRow, oldActiveRow.rowIndex);
+        }
+      }
+
       store.setData(data);
       store.update('rowHeights', () => ({
         rowHeights: data.map((_, i) => getRowHeight(i)),
@@ -1415,13 +1439,37 @@ export function createGrid<
       rebuildHierarchy();
       recomputeMeasurements();
       updateAriaCounts();
+
       // Spec: state-on-data-swap defaults — selection clears, scroll resets to (0,0).
+      // Exception: when getRowId is provided, relocate the previously-selected row
+      // in the new array instead of clearing selection.
       // Editing plugin handles its own commit-or-cancel via existing rules.
       // Undo plugin clears its own history if subscribed to data:set.
       // TODO(perf): add a `resetOn: 'never' | 'data' | 'columns'` option to opt out.
-      const clearedSelection = createEmptySelection();
-      store.setSelection(clearedSelection);
-      emitter.emit('selection:change', clearedSelection);
+      if (hasRowId && preservedId !== null && oldActiveRow !== null) {
+        const newIdx = data.findIndex((row, idx) => resolveRowId(row, idx) === preservedId);
+        if (newIdx >= 0) {
+          // Row still exists in new data — update its position.
+          const relocatedSelection = {
+            ...oldState.selection,
+            active: { ...oldActiveRow, rowIndex: newIdx },
+            // Ranges are cleared on data swap; only the active anchor is preserved.
+            ranges: [],
+          };
+          store.setSelection(relocatedSelection);
+          emitter.emit('selection:change', relocatedSelection);
+        } else {
+          // Row was removed from the new dataset — fall through to clear.
+          const clearedSelection = createEmptySelection();
+          store.setSelection(clearedSelection);
+          emitter.emit('selection:change', clearedSelection);
+        }
+      } else {
+        const clearedSelection = createEmptySelection();
+        store.setSelection(clearedSelection);
+        emitter.emit('selection:change', clearedSelection);
+      }
+
       store.setScroll(0, 0);
       if (fakeScrollbar) {
         fakeScrollbar.scrollTop = 0;
