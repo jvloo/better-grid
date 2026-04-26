@@ -187,9 +187,12 @@ const changeRenderer: CellTypeRenderer = {
 const timelineRenderer: CellTypeRenderer = {
   render(container: HTMLElement, context: CellRenderContext): void {
     container.textContent = '';
-    container.style.position = 'relative';
-    container.style.width = '100%';
-    container.style.height = '100%';
+    // Cell is already position:absolute (positioning context for the bar) and
+    // sized to the column width/row height by the pipeline. Setting
+    // width/height:100% here would size the cell to the cells container (whole
+    // scroll area), making the bar overflow horizontally and pile vertically.
+    // Setting position:relative would similarly break virtualization. Don't
+    // touch the box geometry — only the bar inside it.
 
     let start: Date | null = null;
     let end: Date | null = null;
@@ -344,9 +347,21 @@ const tooltipRenderer: CellTypeRenderer = {
       tooltipType = val.type ?? 'info';
     }
 
-    container.textContent = displayText;
+    if (!tooltipText) {
+      container.textContent = displayText;
+      return;
+    }
 
-    if (!tooltipText) return;
+    // Wrap the text so we can paint a subtle hover affordance (dotted underline
+    // + help cursor) without affecting the cell's box. Cell padding/ellipsis
+    // still applies. The plain-text branch above keeps tooltip-less values
+    // visually identical to a text cell.
+    const span = document.createElement('span');
+    span.textContent = displayText;
+    span.className = 'bg-cell-tooltip-trigger';
+    span.style.borderBottom = '1px dotted currentColor';
+    span.style.cursor = 'help';
+    container.appendChild(span);
 
     let tooltipEl: HTMLDivElement | null = null;
 
