@@ -159,6 +159,8 @@ export interface ColumnDef<TData = unknown> {
 
   // Alignment
   align?: 'left' | 'center' | 'right';
+  /** Header-cell alignment. Defaults to `align` when unset. */
+  headerAlign?: 'left' | 'center' | 'right';
   verticalAlign?: 'top' | 'middle' | 'bottom';
 
   // Cell rendering

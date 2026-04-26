@@ -150,7 +150,7 @@ export function createHeaderRenderer<TData = unknown>(
         isLastFrozenCol,
         columnId: column.id,
         resizable: column.resizable !== false,
-        align: column.align,
+        align: column.headerAlign ?? column.align,
       });
 
       if (column.headerRenderer) {
@@ -296,6 +296,13 @@ export function createHeaderRenderer<TData = unknown>(
           const isLastFrozenCol = endCol - 1 === frozenCols - 1;
           const width = measurements.colOffsets[endCol]! - left;
 
+          // For leaf-column headers (reachesLastRow), use the column's headerAlign or align
+          let align: 'left' | 'center' | 'right' | undefined;
+          if (reachesLastRow && colIndex < state.columns.length) {
+            const leafColumn = state.columns[colIndex];
+            align = leafColumn.headerAlign ?? leafColumn.align;
+          }
+
           const headerEl = createHeaderCell({
             left,
             top: topOffset,
@@ -310,6 +317,7 @@ export function createHeaderRenderer<TData = unknown>(
             resizeColIndex: lastColInSpan,
             resizeHandleTop: reachesLastRow && groupSpanEndCols.has(lastColInSpan) ? -topOffset : undefined,
             colSpan: span,
+            align,
           });
 
           if (span > 1) {
@@ -335,13 +343,14 @@ export function createHeaderRenderer<TData = unknown>(
     if (opts.isLastFrozenCol) cls += ' bg-header-cell--frozen-col-last';
     cell.className = cls;
 
-    if (opts.align === 'right') {
+    const alignValue = opts.align ?? 'left';
+    if (alignValue === 'right') {
       cell.style.justifyContent = 'flex-end';
       cell.style.textAlign = 'right';
-    } else if (opts.align === 'center') {
+    } else if (alignValue === 'center') {
       cell.style.justifyContent = 'center';
       cell.style.textAlign = 'center';
-    } else if (opts.align === 'left') {
+    } else {
       cell.style.justifyContent = 'flex-start';
       cell.style.textAlign = 'left';
     }
@@ -364,7 +373,7 @@ export function createHeaderRenderer<TData = unknown>(
 
     const textSpan = document.createElement('span');
     textSpan.className = 'bg-header-cell__text';
-    if (opts.align) textSpan.style.textAlign = opts.align;
+    textSpan.style.textAlign = opts.align ?? 'left';
     textSpan.textContent = opts.content;
     cell.appendChild(textSpan);
 
