@@ -431,175 +431,186 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           document.head.appendChild(style);
         }
 
-        // Wrap cellClass on editable columns — mark empty cells for flat input styling.
-        // Guard against double-wrapping when init runs more than once (HMR, plugin
-        // re-registration): skip any column we've already wrapped.
-        const columns = ctx.store.getState().columns;
-        let changed = false;
-        for (const col of columns) {
-          if (col.editable === false) continue;
-          if (!col.field && !col.valueGetter) continue;
-          if ((col as { __inputStyleWrapped?: boolean }).__inputStyleWrapped) continue;
-          (col as { __inputStyleWrapped?: boolean }).__inputStyleWrapped = true;
+        // Wrap cellClass + cellRenderer on editable columns — mark cells for flat input
+        // styling and render permanent <input> elements for alwaysInput columns.
+        // Guard against double-wrapping (HMR, plugin re-registration): skip any column
+        // we've already wrapped via the __inputStyleWrapped sentinel.
+        //
+        // applyColumnWrap() is called once at init time and again from the
+        // 'columns:set' subscriber below, which re-wraps whenever grid.setColumns()
+        // is called (e.g. the React adapter's useEffect on first render).
+        // setColumns() creates fresh spread-copies of every ColumnDef via
+        // normalizeColumn(), discarding the mutations applied here — the subscriber
+        // ensures they are re-applied to the new column references.
+        const applyColumnWrap = (cols: (ColumnDef & { id: string })[]): void => {
+          let changed = false;
+          for (const col of cols) {
+            if (col.editable === false) continue;
+            if (!col.field && !col.valueGetter) continue;
+            if ((col as { __inputStyleWrapped?: boolean }).__inputStyleWrapped) continue;
+            (col as { __inputStyleWrapped?: boolean }).__inputStyleWrapped = true;
 
-          const origCellClass = col.cellClass;
-          const placeholder = col.placeholder;
+            const origCellClass = col.cellClass;
+            const placeholder = col.placeholder;
 
-          col.cellClass = (value: unknown, row: unknown, rowIndex: number) => {
-            let cls = origCellClass ? origCellClass(value, row as never, rowIndex) ?? '' : '';
-            const classes = new Set(cls.split(/\s+/).filter(Boolean));
-            let isEditable = true;
-            if (typeof col.editable === 'function') {
-              isEditable = col.editable(row as never, col as never);
-            }
-            if (isEditable) {
-              if (resolveAlwaysInput(col, row)) {
-                classes.add('bg-cell--always-input');
-                if (col.align === 'right') classes.add('bg-cell--align-right');
-                else if (col.align === 'center') classes.add('bg-cell--align-center');
-              } else if (config.inputStyle) {
-                classes.add('bg-cell--input-editable');
-                if (shouldUseInputEllipsis(col, row)) {
-                  classes.add('bg-cell--input-ellipsis');
-                }
-                if (shouldUseInputEditCursor(col, row)) {
-                  classes.add('bg-cell--input-edit-cursor');
+            col.cellClass = (value: unknown, row: unknown, rowIndex: number) => {
+              let cls = origCellClass ? origCellClass(value, row as never, rowIndex) ?? '' : '';
+              const classes = new Set(cls.split(/\s+/).filter(Boolean));
+              let isEditable = true;
+              if (typeof col.editable === 'function') {
+                isEditable = col.editable(row as never, col as never);
+              }
+              if (isEditable) {
+                if (resolveAlwaysInput(col, row)) {
+                  classes.add('bg-cell--always-input');
+                  if (col.align === 'right') classes.add('bg-cell--align-right');
+                  else if (col.align === 'center') classes.add('bg-cell--align-center');
+                } else if (config.inputStyle) {
+                  classes.add('bg-cell--input-editable');
+                  if (shouldUseInputEllipsis(col, row)) {
+                    classes.add('bg-cell--input-ellipsis');
+                  }
+                  if (shouldUseInputEditCursor(col, row)) {
+                    classes.add('bg-cell--input-edit-cursor');
+                  }
                 }
               }
-            }
-            cls = Array.from(classes).join(' ');
-            return cls || undefined;
-          };
+              cls = Array.from(classes).join(' ');
+              return cls || undefined;
+            };
 
-          // Wrap cellRenderer to add inner input box
-          const origRenderer = col.cellRenderer;
-          (col as { __inputStyleOriginalRenderer?: typeof origRenderer }).__inputStyleOriginalRenderer = origRenderer;
-          col.cellRenderer = (container, context) => {
-            let isEditable = col.editable !== false;
-            if (typeof col.editable === 'function') {
-              isEditable = col.editable(context.row as never, col as never);
-            }
-
-            if (!isEditable) {
-              if (origRenderer) return origRenderer(container, context);
-              renderFormattedDisplay(container, context);
-              return;
-            }
-
-            // Always-input branch: render a real <input> permanently. Skip the
-            // inputStyle styled-div path entirely. Select-style editors keep
-            // their normal dropdown editor (alwaysInput doesn't apply there).
-            if (
-              resolveAlwaysInput(col, context.row) &&
-              col.cellEditor !== 'select' &&
-              col.cellEditor !== 'selectWithInput'
-            ) {
-              renderAlwaysInputCell(container, context, col, origRenderer, placeholder);
-              return;
-            }
-
-            // No inputStyle wrapping requested → fall back to original renderer.
-            if (!config.inputStyle) {
-              if (origRenderer) return origRenderer(container, context);
-              renderFormattedDisplay(container, context);
-              return;
-            }
-
-            const selectDisplayOpts = getDropdownOptions(col, context.value);
-            if (
-              selectDisplayOpts &&
-              (col.cellEditor === 'select' || col.cellEditor === 'selectWithInput')
-            ) {
-              renderSelectDisplayCell(container, context, col, selectDisplayOpts);
-              return;
-            }
-
-            // Run original renderer to set styles (bg, font, padding) on the cell.
-            // When no column.cellRenderer is set, fall back to valueFormatter or
-            // the raw value so editable cells without a custom renderer still
-            // produce text for the input box.
-            if (origRenderer) {
-              origRenderer(container, context);
-            } else if (col.valueFormatter) {
-              renderFormattedDisplay(container, context);
-            } else if (col.cellType) {
-              renderFormattedDisplay(container, context);
-            } else {
-              renderFormattedDisplay(container, context);
-            }
-
-            // Capture text set by original renderer, then replace with input box
-            const text = container.textContent?.trim() || '';
-            container.textContent = '';
-
-            const box = document.createElement('div');
-            box.className = 'bg-input-box';
-            // Inherit alignment from column
-            if (context.column.align === 'center') box.style.justifyContent = 'center';
-            else if (context.column.align === 'right') box.style.justifyContent = 'flex-end';
-            const isPlaceholderText = Boolean(
-              placeholder &&
-              text === placeholder &&
-              (context.value == null || context.value === ''),
-            );
-            const prefix = resolveColumnPrefix(col, context.row);
-            const suffix = resolveColumnSuffix(col, context.row);
-            const isDropdown = (Array.isArray(col.options) && col.options.length > 0) || typeof context.value === 'boolean';
-            if (isDropdown) box.classList.add('bg-input-box--dropdown');
-            if (prefix || suffix) {
-              box.classList.add('bg-input-box--has-adornment');
-              if (suffix) box.classList.add('bg-input-box--has-unit');
-              // Reserve space only for the side that actually has an
-              // adornment — asymmetric padding lets the editor extend to
-              // the opposite edge when only one side has a prefix/suffix
-              // (e.g., `$27,000,000` should give the number full width to
-              // the right, not reserve phantom right-side padding).
-              box.style.setProperty('--bg-input-prefix-space', prefix ? `${getAdornmentSpace(prefix)}px` : '0px');
-              box.style.setProperty('--bg-input-suffix-space', suffix ? `${getAdornmentSpace(suffix)}px` : '0px');
-              // Structured value + adornments so editing can clear the value without destroying either edge.
-              if (prefix) {
-                const prefixSpan = document.createElement('span');
-                prefixSpan.className = 'bg-input-box__prefix';
-                prefixSpan.textContent = prefix;
-                box.appendChild(prefixSpan);
+            // Wrap cellRenderer to add inner input box
+            const origRenderer = col.cellRenderer;
+            (col as { __inputStyleOriginalRenderer?: typeof origRenderer }).__inputStyleOriginalRenderer = origRenderer;
+            col.cellRenderer = (container, context) => {
+              let isEditable = col.editable !== false;
+              if (typeof col.editable === 'function') {
+                isEditable = col.editable(context.row as never, col as never);
               }
-              const valueSpan = document.createElement('span');
-              valueSpan.className = 'bg-input-box__value';
-              const displayText = stripInputAdornments(text, prefix, suffix);
-              if (text) {
-                valueSpan.textContent = displayText;
+
+              if (!isEditable) {
+                if (origRenderer) return origRenderer(container, context);
+                renderFormattedDisplay(container, context);
+                return;
+              }
+
+              // Always-input branch: render a real <input> permanently. Skip the
+              // inputStyle styled-div path entirely. Select-style editors keep
+              // their normal dropdown editor (alwaysInput doesn't apply there).
+              if (
+                resolveAlwaysInput(col, context.row) &&
+                col.cellEditor !== 'select' &&
+                col.cellEditor !== 'selectWithInput'
+              ) {
+                renderAlwaysInputCell(container, context, col, origRenderer, placeholder);
+                return;
+              }
+
+              // No inputStyle wrapping requested → fall back to original renderer.
+              if (!config.inputStyle) {
+                if (origRenderer) return origRenderer(container, context);
+                renderFormattedDisplay(container, context);
+                return;
+              }
+
+              const selectDisplayOpts = getDropdownOptions(col, context.value);
+              if (
+                selectDisplayOpts &&
+                (col.cellEditor === 'select' || col.cellEditor === 'selectWithInput')
+              ) {
+                renderSelectDisplayCell(container, context, col, selectDisplayOpts);
+                return;
+              }
+
+              // Run original renderer to set styles (bg, font, padding) on the cell.
+              // When no column.cellRenderer is set, fall back to valueFormatter or
+              // the raw value so editable cells without a custom renderer still
+              // produce text for the input box.
+              if (origRenderer) {
+                origRenderer(container, context);
+              } else if (col.valueFormatter) {
+                renderFormattedDisplay(container, context);
+              } else if (col.cellType) {
+                renderFormattedDisplay(container, context);
+              } else {
+                renderFormattedDisplay(container, context);
+              }
+
+              // Capture text set by original renderer, then replace with input box
+              const text = container.textContent?.trim() || '';
+              container.textContent = '';
+
+              const box = document.createElement('div');
+              box.className = 'bg-input-box';
+              // Inherit alignment from column
+              if (context.column.align === 'center') box.style.justifyContent = 'center';
+              else if (context.column.align === 'right') box.style.justifyContent = 'flex-end';
+              const isPlaceholderText = Boolean(
+                placeholder &&
+                text === placeholder &&
+                (context.value == null || context.value === ''),
+              );
+              const prefix = resolveColumnPrefix(col, context.row);
+              const suffix = resolveColumnSuffix(col, context.row);
+              const isDropdown = (Array.isArray(col.options) && col.options.length > 0) || typeof context.value === 'boolean';
+              if (isDropdown) box.classList.add('bg-input-box--dropdown');
+              if (prefix || suffix) {
+                box.classList.add('bg-input-box--has-adornment');
+                if (suffix) box.classList.add('bg-input-box--has-unit');
+                // Reserve space only for the side that actually has an
+                // adornment — asymmetric padding lets the editor extend to
+                // the opposite edge when only one side has a prefix/suffix
+                // (e.g., `$27,000,000` should give the number full width to
+                // the right, not reserve phantom right-side padding).
+                box.style.setProperty('--bg-input-prefix-space', prefix ? `${getAdornmentSpace(prefix)}px` : '0px');
+                box.style.setProperty('--bg-input-suffix-space', suffix ? `${getAdornmentSpace(suffix)}px` : '0px');
+                // Structured value + adornments so editing can clear the value without destroying either edge.
+                if (prefix) {
+                  const prefixSpan = document.createElement('span');
+                  prefixSpan.className = 'bg-input-box__prefix';
+                  prefixSpan.textContent = prefix;
+                  box.appendChild(prefixSpan);
+                }
+                const valueSpan = document.createElement('span');
+                valueSpan.className = 'bg-input-box__value';
+                const displayText = stripInputAdornments(text, prefix, suffix);
+                if (text) {
+                  valueSpan.textContent = displayText;
+                  if (isPlaceholderText) box.classList.add('bg-input-box--placeholder');
+                } else if (placeholder) {
+                  valueSpan.textContent = placeholder;
+                  box.classList.add('bg-input-box--placeholder');
+                }
+                box.appendChild(valueSpan);
+                if (suffix) {
+                  const suffixSpan = document.createElement('span');
+                  suffixSpan.className = 'bg-input-box__suffix bg-input-box__unit';
+                  suffixSpan.textContent = suffix;
+                  box.appendChild(suffixSpan);
+                }
+              } else if (text) {
+                box.textContent = text;
                 if (isPlaceholderText) box.classList.add('bg-input-box--placeholder');
               } else if (placeholder) {
-                valueSpan.textContent = placeholder;
+                box.textContent = placeholder;
                 box.classList.add('bg-input-box--placeholder');
               }
-              box.appendChild(valueSpan);
-              if (suffix) {
-                const suffixSpan = document.createElement('span');
-                suffixSpan.className = 'bg-input-box__suffix bg-input-box__unit';
-                suffixSpan.textContent = suffix;
-                box.appendChild(suffixSpan);
-              }
-            } else if (text) {
-              box.textContent = text;
-              if (isPlaceholderText) box.classList.add('bg-input-box--placeholder');
-            } else if (placeholder) {
-              box.textContent = placeholder;
-              box.classList.add('bg-input-box--placeholder');
-            }
-            container.appendChild(box);
-          };
+              container.appendChild(box);
+            };
 
-          changed = true;
+            changed = true;
+          }
+
+          if (changed) {
+            ctx.store.update('columns', () => ({ columns: [...cols] }));
+          }
         }
 
-        if (changed) {
-          ctx.store.update('columns', () => ({ columns: [...columns] }));
-        }
+        applyColumnWrap(ctx.store.getState().columns);
 
         // Perf gate: warn (once per init) if alwaysInput coverage is heavy.
         if (config.alwaysInputThreshold > 0 && hasAlwaysInput) {
-          const alwaysInputCols = columns.filter(isAlwaysInputColumn).length;
+          const alwaysInputCols = ctx.store.getState().columns.filter(isAlwaysInputColumn).length;
           const rowCount = ctx.store.getState().data.length;
           const liveInputs = alwaysInputCols * rowCount;
           if (liveInputs > config.alwaysInputThreshold) {
@@ -610,6 +621,19 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             );
           }
         }
+
+        // Re-apply column wrapping whenever grid.setColumns() is called. The React
+        // adapter (and any other caller) calls setColumns() after createGrid —
+        // normalizeColumn() creates fresh ColumnDef spread-copies for every column,
+        // discarding the cellClass/cellRenderer mutations applied above. Subscribing
+        // here re-wraps the new column references so alwaysInput and inputStyle cells
+        // render correctly on every setColumns() call, including the initial one from
+        // React's useEffect mount.
+        ctx.on('columns:set', (newColumns) => {
+          const needsWrap = config.inputStyle || newColumns.some(isAlwaysInputColumn);
+          if (!needsWrap) return;
+          applyColumnWrap(newColumns);
+        });
       }
       let editingCell: CellPosition | null = null;
       let activeEditor: HTMLInputElement | null = null;

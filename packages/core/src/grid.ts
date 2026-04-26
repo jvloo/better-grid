@@ -1545,6 +1545,10 @@ export function createGrid<
         columns: columnManager.getColumns(),
         columnWidths: columnManager.getWidths(),
       }));
+      // Notify plugins that columns have been replaced with fresh objects.
+      // Plugins that mutate column defs (e.g. editing's alwaysInput wrap) must
+      // re-apply their mutations to the new column references via this event.
+      emitter.emit('columns:set', columnManager.getColumns());
       // Reset freeze clip if column count changed
       if (freezeClipWidth !== null) {
         freezeClipWidth = null;

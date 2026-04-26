@@ -275,6 +275,7 @@ export interface GridEvents<TData = unknown> {
   'data:set': (data: TData[]) => void;
 
   // Column
+  'columns:set': (columns: (ColumnDef<TData> & { id: string })[]) => void;
   'column:resize': (columnId: string, width: number) => void;
 
   // Frozen
