@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { createGrid } from '@better-grid/core';
 import type { GridInstance, GridPlugin } from '@better-grid/core';
 import type { ReactGridOptions, GridHandle } from './types';
@@ -89,14 +89,18 @@ export function useGrid<TData = unknown, TContext = unknown>(
     grid.setColumns(options.columns);
   }, [grid, options.columns]);
 
-  // Container ref: mount/unmount on attach
+  // Container ref: mount/unmount on attach.
+  // MUST be a stable callback — React re-invokes a callback ref with `null` on
+  // every render where the callback identity changes, which would unmount and
+  // remount the grid (and rebuild virtualization) on every parent render. The
+  // grid is itself stable (useMemo([])), so we depend only on it.
   const mountedRef = useRef<HTMLElement | null>(null);
-  const containerRef = (el: HTMLElement | null) => {
+  const containerRef = useCallback((el: HTMLElement | null) => {
     if (el === mountedRef.current) return;
     if (mountedRef.current) grid.unmount();
     mountedRef.current = el;
     if (el) grid.mount(el);
-  };
+  }, [grid]);
 
   useEffect(
     () => () => {
@@ -105,11 +109,14 @@ export function useGrid<TData = unknown, TContext = unknown>(
     [grid],
   );
 
-  return {
-    api: grid,
-    containerRef,
-    _internal: {
-      contextRef: { current: options.context },
-    },
-  };
+  // Stable contextRef so consumers (e.g. rhf bridge) can hold onto it across
+  // renders. Updated each render via the setContext effect above.
+  const contextRef = useRef(options.context);
+  contextRef.current = options.context;
+
+  // Stable handle so React.memo at consumer boundaries works.
+  return useMemo<GridHandle<TData, TContext>>(
+    () => ({ api: grid, containerRef, _internal: { contextRef } }),
+    [grid, containerRef],
+  );
 }
