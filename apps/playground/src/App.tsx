@@ -82,7 +82,7 @@ function parseRoute(): { view: View; page: Page } {
     return { view: 'demos', page: 'finance' };
   }
   if (path.startsWith('/demo-realworld/')) {
-    const slug = path.slice(14) as Page;
+    const slug = path.slice('/demo-realworld/'.length) as Page;
     if (REALWORLD_PAGES.has(slug)) {
       return { view: 'demos', page: slug };
     }
@@ -92,7 +92,7 @@ function parseRoute(): { view: View; page: Page } {
     return { view: 'demos', page: 'fsbt-program' };
   }
   if (path.startsWith('/demo/')) {
-    const slug = path.slice(6) as Page;
+    const slug = path.slice('/demo/'.length) as Page;
     if (VALID_PAGES.has(slug)) {
       return { view: 'demos', page: slug };
     }
