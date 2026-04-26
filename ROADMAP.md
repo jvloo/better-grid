@@ -40,17 +40,36 @@
 | RHF bridge (`useGridForm`)                         | ✓ Shipped     | `@better-grid/react/rhf` sub-export                                                    |
 | Validation `messageRenderer`                       | ✓ Shipped     | Per-rule + per-column callback returning `HTMLElement` or string                       |
 | MUI theme integration                              | ✓ Shipped     | [`docs/guides/theming-with-mui.md`](docs/guides/theming-with-mui.md)                   |
-| Phase 2 — Data type auto-detection                 | Planned       | `autoDetect()` scaffolding exists; full inference engine TODO                          |
+| Phase 1.5 — API surface refresh                    | ✓ Shipped     | `accessorKey → field`, `accessorFn → valueGetter`, `header → headerName + headerRenderer`, optional `id`, `column.hide` / `flex` / `headerAlign`, `bordered` + `striped` booleans, discriminated `selection`, `cell:change` event, `frozen.clip` event, top-level `getRowId`, `(value, row)` formatter sigs. Tagged `pre-release-phase1`. |
+| `@better-grid/codemods`                            | ✓ Shipped     | jscodeshift transforms for migration from AG Grid, MUI X, TanStack Table, Handsontable, RevoGrid, react-data-grid. Tagged `pre-release-phase2`. |
+| Phase 2 — Data type auto-detection                 | ✓ Shipped     | `autoDetect()` infers `cellType`, alignment from data values; survives `setColumns` via `'columns:set'` re-application |
 | Phase 3 — Pro plugins (full catalog)               | In progress   | gantt, aggregation, merge-cells, row-actions, pro-renderers shipped; clipboard-pro, formulas, pivot pending |
 | Phase 4 — AI integration (`mcp` + `plugin-ai`)     | Planned       |                                                                                        |
 
-## Phase 2 — Data type auto-detection
+## Phase 1.5 — API surface refresh + codemods (shipped)
+
+Pre-publish breaking changes consolidated for v1.0.0. See `docs/internal/specs/2026-04-26-incoming-migration-alignment-design.md` and `CHANGELOG.md` for the full diff.
+
+Highlights:
+- ColumnDef renames: `accessorKey → field`, `accessorFn → valueGetter`, `header` split into `headerName` + `headerRenderer`.
+- Optional `id` (defaults to `field`); object form for headers/footers dropped.
+- New: `column.hide`, `column.flex`, `column.headerAlign`, `column.precision`, `column.alwaysInput`.
+- Replaced `tableStyle` enum with `bordered` + `striped` booleans.
+- `selection` is now a discriminated union (`false | { mode: 'cell' | 'range', multiRange?, fillHandle? }`); default is `{ mode: 'cell' }`.
+- Top-level `getRowId`; `valueFormatter` / `valueParser` extended to `(value, row)`; `cellStyle` / `cellClass` extended with `rowIndex`; `comparator` extended with `(a, b, rowA?, rowB?)`.
+- `CellChange.oldValue` is now the cell value (not the whole row).
+- Events renamed: `data:change → cell:change`, `freezeClip:change → frozen:clip`.
+- `configureBetterGrid` renamed to `configure`.
+
+`@better-grid/codemods` ships 6 jscodeshift transforms to migrate from popular grid libraries; see the codemod CLI in the package README.
+
+## Phase 2 — Data type auto-detection (shipped)
 
 Infer `cellType`, editor, filter, alignment from data values:
 
 ```ts
-{ id: 'active', header: 'Active' }     // → cellType: 'boolean', editor: 'dropdown', align: 'center'
-{ id: 'salary', header: 'Salary' }     // → align: 'right', filter: 'number'
+{ id: 'active', headerName: 'Active' }     // → cellType: 'boolean', editor: 'select', align: 'center'
+{ id: 'salary', headerName: 'Salary' }     // → align: 'right', filter: 'number'
 ```
 
 Types: `text`, `number`, `boolean`, `date`, `dateString`, `currency`, `percent`, `email`, `url`.
