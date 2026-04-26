@@ -277,3 +277,72 @@ Verdict: parent/child colour + weight match. Child indent is `14px` vs Wiseway `
 - **Revenue Details header bg** (BTS Details / Holding Rental Details / Holding Sale Details): Wiseway uses grey[200], we use grey[300] = `#D0D5DD` for visual uniformity across all 5 Revenue sub-grids. Per `fsbt_ux_direction` memory rule "Keep enhancements unless told to drop".
 - **Cost child indent**: Wiseway `28px` vs ours `14px`. Same rule.
 - **`FsbtProgramSummary` mini-grid above Cost/Revenue** and the `Total Development Cost` / `Total Gross Revenue` pill badges. Per memory.
+
+---
+
+## Re-run 2026-04-26 (post-#117 + post-#119)
+
+### Login outcome
+
+- **Login**: SUCCESS. xavier.loo@wiseway.ai authenticated, redirected to `/portfolio/overview`.
+- **Live grid access**: SUCCESS. NO subscription banner this time — Portfolio / Feasibility / Development sidebar buttons all enabled. Opened `/projects/4369` (Gladstone Port Stage 1 copy) and verified Program / Revenue / Cost tabs render live.
+- This is a meaningful change vs. the original report (which fell back to source-vs-source). All findings below come from a side-by-side visual comparison of the live Wiseway QA app and `http://localhost:8686/demo-realworld/fsbt-{program,cost,revenue}`.
+
+### Recent fix verification
+
+| Fix | Source check | Live check | Status |
+|---|---|---|---|
+| #117 — Program: code 45→40 | `FsbtProgram.tsx:278` `width: 40` | "Code" column matches Wiseway narrow-width (~40px) | applied |
+| #117 — Program: duration 90→110 | `FsbtProgram.tsx:324` `width: 110` | "Duration (months)" header now fits on one line (Wiseway wraps to two; ours wraps too because we use a 12px font + center-align — see notes) | applied |
+| #117 — Program: collapse 40→55 | `FsbtProgram.tsx:409` `width: 55` | match | applied |
+| #117 — Revenue: varianceStatus added at pos 8 in BTS Details + Holding Sale Details | `FsbtRevenue.tsx:763-772` (varianceStatus def). DOM `[role=columnheader]` enumeration shows the empty-header column rendered between Variance and the monthly Aug 23 column | applied |
+| #119 — selection: false on all FSBT grids | `selection: false` present at FsbtProgram L480, FsbtCost L814, FsbtRevenue L515/662/802/954/988 (all 5 grids) | clicking a cell no longer paints a blue selection rectangle | applied |
+| #119 — editTrigger: 'click' on all FSBT grids | `editTrigger: 'click'` set at FsbtProgram L422, FsbtCost L767, FsbtRevenue L498/648/789/908/975 | applied |
+| #119 — actions/varianceStatus/collapse get `resizable: false` + minimal width | `FsbtProgram.tsx:269` `width: 40, resizable: false`; varianceStatus / collapse wrappers in FsbtRevenue lines 618 / 626 / 764 carry `resizable: false`. Cost has same on L? (verified resizable false on actions). | applied |
+
+All seven items land. No regressions found in live page rendering.
+
+### 1. Program — visual diffs that REMAIN (live-vs-live)
+
+- **Header text wrapping**: Wiseway wraps "Duration (months)" onto 2 lines (header bg appears taller). Ours uses an explicit `headerRenderer` with `whiteSpace: 'normal'` + `lineHeight: 1.4` so it ALSO wraps in our render — net result: visually equivalent.
+- **Header background**: ours `#EAECF0`, Wiseway `#EAECF0` → match.
+- **Parent row weight + bg**: Wiseway parent rows (`1 Acquisition`, `2 Planning And Design`) bold + `#F8F8F8` bg; ours match (verified in screenshot).
+- **Action kebab placement**: Wiseway shows the kebab at the LEFT of every child row (next to Code). Ours matches.
+- **Date editor**: Wiseway uses MUI DatePicker popover for Start/End (clicking opens a calendar). Ours uses a `cellEditor: 'masked'` inline `MM/YY` text input. (Already noted; intentional.)
+- **Project header pill**: Wiseway `Program  [378 Months  (May 2005 - October 2036)]` is a styled pill BEFORE the grid. Ours has the same pill `[39 Months  (August 2023 – October 2026)]`. Match.
+- **No new diffs** beyond the originally-noted DatePicker drift.
+
+### 2. Cost — visual diffs that REMAIN (live-vs-live)
+
+- **Wiseway Cost ALSO embeds a Program preview** above the Cost grid (with a collapse chevron to hide it). The original report (line 87) called this an "enhancement / drift" — that was wrong. It is in fact present in Wiseway production. No action needed; we already match.
+- **Wiseway Cost ALSO has a "Total Development Cost $XX,XXX,XXX" pill** in the Cost-section header (next to the "Cost" h2). Originally documented as an "enhancement"; it is in fact native to Wiseway. No action needed.
+- **Header bg**: Wiseway grey-200 (`#EAECF0`); ours `#EAECF0` → match.
+- **Variance status icons**: Wiseway shows a small blue/coloured circle in the variance-status slot for EVERY row (parent + child + footer). Ours leaves the slot empty when variance == 0 (per renderer comment "mirrors the production reference's $0-variance state"). On rows with non-zero variance Wiseway shows a yellow "warning" icon (e.g. `2 Acquisition Cost` row in the Gladstone project shows `-360,323` variance with a yellow indicator). Ours does NOT distinguish positive/negative/zero. **Minor visual drift** — the variance-status renderer is currently a no-op slot.
+- **Pinned-bottom totals row**: Wiseway uses `cost-table-cell-footer` with bg `#F8F8F8` and weight 500. Ours pinned bottom matches. Layout identical.
+- **Cost child indent**: Wiseway `28px` vs ours `14px` → already documented as intentional drift, kept.
+- **No new diffs** beyond the icon-renderer no-op slot.
+
+### 3. Revenue — visual diffs that REMAIN (live-vs-live)
+
+- **Wiseway Revenue ALSO embeds a Program preview** above the Revenue grid (collapse chevron). Same correction as Cost above — this is native, not an enhancement.
+- **Wiseway Revenue ALSO has a "Total Gross Revenue $XX,XXX,XXX" pill** in the Revenue-section header. Native to Wiseway; we already match.
+- **BTS General header bg**: Wiseway grey-300 (`#D0D5DD`); ours `#D0D5DD` → match.
+- **BTS General column shape**: 12 cols, all match (verified live + via `[role=columnheader]` enumeration on our page).
+- **Holding General multi-row grouped header**: VERIFIED rendering. DOM shows the three group cells "Development Costs" (colSpan 8), "On Completion" (colSpan 2), "Exit" (colSpan 5) above the leaf headers. The original "Bug B" is no longer a bug — already-fixed in the prior follow-up pass.
+- **BTS Details / Holding Sale Details variance-status column**: VERIFIED rendering. The 44px slot is between Variance and the monthly Aug 23 column. (Verified via DOM column-header enumeration; the column has empty headerName so it doesn't show in `textContent` listings but IS in the DOM.) Originally-flagged "Bug A" is no longer a bug.
+- **The Wiseway live project I tested had zero BTS / Holding Sale items** (all `0` in the totals row), so the variance-status icon RENDERING for those tables could not be visually compared on Wiseway side. Source-level: Wiseway's `revenue-details-table-cell-variance-status` renders a small icon based on variance sign. Ours currently renders nothing. **Same minor drift** as Cost: our varianceStatus renderer is a no-op slot — sign-aware icon would close the gap.
+- **No grouped-header diffs**, **no missing-column diffs**.
+
+### Top 3 actionable findings
+
+1. **`varianceStatus` cell renderer is a no-op slot across Cost / BTS Details / Holding Rental / Holding Sale**. Wiseway shows a coloured icon (yellow warning for non-zero, blue/check for zero) in this column. Implementing a sign-aware icon renderer (e.g. `value < 0 → red down arrow`, `value > 0 → green up arrow`, `value === 0 → blue dot`) would close the only remaining visual drift in the Cost grid against Wiseway. Files: `FsbtCost.tsx` (varianceStatus column), `FsbtRevenue.tsx:618-623` (Holding Rental varianceStatus), `FsbtRevenue.tsx:764-771` (BTS Details / Holding Sale varianceStatus).
+
+2. **Original report's "enhancements" list incorrectly flagged three items as Better-Grid-only that are actually native to Wiseway**: (a) Program-preview-above-Cost; (b) "Total Development Cost" pill in Cost header; (c) "Total Gross Revenue" pill in Revenue header. These should be re-classified as "MATCH (Wiseway native)" rather than "enhancement (KEEP)". No code change needed, only the doc reclassification done above.
+
+3. **No actionable column / layout / fix-deployment findings**. All five #117 + #119 changes landed correctly and render as expected against the live Wiseway grids.
+
+### Notes / non-actionable
+
+- The Gladstone Port Stage 1 test project has empty BTS and Holding-Sale data in the live Wiseway QA app; all rows in those sub-grids are zero. To make the variance-status icon comparison fully apples-to-apples, a project with non-zero variance values in BTS/Holding-Sale would be needed.
+- Selection-on-click suppression (`selection: false`) is now consistent across all 7 FSBT grids (Program, Cost, BTS-General, BTS-Details, Holding-General, Holding-Rental-Details, Holding-Sale-Details). Confirmed manually that clicking a cell goes straight to edit mode without painting a blue selection rectangle.
+- Header text wrapping for `Duration (months)` works because of a custom `headerRenderer` setting `whiteSpace: 'normal'` — verified at `FsbtProgram.tsx:314-323`.
