@@ -1,7 +1,8 @@
-﻿import { useMemo, useCallback } from 'react';
-import { useGrid, defineColumn as col } from '@better-grid/react';
+﻿import { useCallback } from 'react';
+import { BetterGrid, useGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
+import { IconButton, ExpandAllIcon, CollapseAllIcon } from './_toolbar-icons';
 
 interface DeptRow {
   id: number;
@@ -83,45 +84,29 @@ export function HierarchyDemo() {
     rowHeight: 36,
   });
 
-  const handleExpandAll = useCallback(() => {
-    grid.api.expandAll();
-  }, [grid]);
-
-  const handleCollapseAll = useCallback(() => {
-    grid.api.collapseAll();
-  }, [grid]);
-
-  // Memoize style objects to keep referential stability across renders.
-  const buttonStyle = useMemo<React.CSSProperties>(() => ({
-    padding: '5px 12px', border: '1px solid #d0d0d0', borderRadius: 6,
-    background: '#fff', cursor: 'pointer', fontSize: 12,
-  }), []);
+  const handleExpandAll = useCallback(() => grid.api.expandAll(), [grid]);
+  const handleCollapseAll = useCallback(() => grid.api.collapseAll(), [grid]);
 
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Row Hierarchy</h2>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={handleExpandAll} style={buttonStyle}>Expand All</button>
-          <button onClick={handleCollapseAll} style={buttonStyle}>Collapse All</button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <IconButton title="Expand All" onClick={handleExpandAll}><ExpandAllIcon /></IconButton>
+          <IconButton title="Collapse All" onClick={handleCollapseAll}><CollapseAllIcon /></IconButton>
         </div>
       </div>
       <p style={{ margin: '0 0 12px', color: '#666', fontSize: 13 }}>
-        Click the triangle icons to expand/collapse rows. Use Arrow Right/Left keys on parent rows.
+        Use the toolbar's <strong>Expand All</strong> / <strong>Collapse All</strong> buttons, click the
+        triangle icons on parent rows, or press Arrow Right/Left on a focused parent row.
         The <code>hierarchy</code> feature is opted-in via <code>features</code>; its config
         (<code>getRowId</code>, <code>getParentId</code>, etc.) stays as a top-level
         <code> useGrid</code> option.
       </p>
-      <div
-        ref={grid.containerRef}
-        style={{
-          height: 500,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
-          border: '1px solid #e0e0e0',
-          borderRadius: 8,
-        }}
+      <BetterGrid
+        grid={grid}
+        height={500}
+        style={{ border: '1px solid #e0e0e0', borderRadius: 8 }}
       />
     </div>
   );
