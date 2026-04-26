@@ -9,7 +9,7 @@ import {
   type FeatureName,
 } from './presets/features';
 import { resolveMode } from './presets/modes';
-import { getGlobalFeatureOptions } from './configureBetterGrid';
+import { getGlobalFeatureOptions } from './configure';
 
 const DEFAULT_MODE = 'view';
 

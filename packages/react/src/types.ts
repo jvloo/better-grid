@@ -9,7 +9,7 @@ export interface ReactGridOptions<TData = unknown, TContext = unknown>
   mode?: 'view' | 'interactive' | 'spreadsheet' | 'dashboard' | (string & {}) | null;
 
   /**
-   * Feature opt-in. String form uses global config (configureBetterGrid).
+   * Feature opt-in. String form uses global config (configure).
    * Object form overrides global per-key. Additive on top of `mode`.
    */
   features?: FeatureName[] | Partial<Record<FeatureName, boolean | object>>;

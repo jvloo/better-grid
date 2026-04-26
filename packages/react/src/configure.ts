@@ -10,7 +10,7 @@ let globalConfig: GlobalGridConfig = {};
  * Configure app-wide defaults for Better Grid features. Last write wins per
  * feature key. Per-grid options override these globals.
  */
-export function configureBetterGrid(config: GlobalGridConfig): void {
+export function configure(config: GlobalGridConfig): void {
   globalConfig = {
     ...globalConfig,
     ...config,

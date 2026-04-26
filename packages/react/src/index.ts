@@ -6,7 +6,7 @@ export { BetterGrid, type BetterGridProps } from './BetterGrid';
 export { useGrid } from './useGrid';
 export type { GridHandle, ReactGridOptions } from './types';
 export { defineColumn, registerColumn } from './defineColumn';
-export { configureBetterGrid } from './configureBetterGrid';
+export { configure } from './configure';
 export { registerMode } from './presets/modes';
 export type { ModeDefinition } from './presets/modes';
 export type { FeatureName } from './presets/features';
