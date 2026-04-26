@@ -105,8 +105,15 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         value?: unknown;
         column?: import('@better-grid/core').ColumnDef;
       };
+      type TooltipRecord = {
+        element: HTMLElement;
+        target: HTMLElement;
+        entry: InternalEntry;
+      };
+
       const errors = new Map<string, InternalEntry>();
-      const validationTooltipEls = new Map<string, HTMLElement>();
+      const validationTooltipEls = new Map<string, TooltipRecord>();
+      let validationTooltipLayer: HTMLElement | null = null;
 
       function positionKey(pos: CellPosition): string {
         return `${pos.rowIndex}:${pos.colIndex}`;
@@ -176,7 +183,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
             border: 1px solid #FFAAAA !important;
           }
           .bg-validation-tooltip {
-            position: fixed;
+            position: absolute;
             z-index: 10000;
             background: #fff;
             border-radius: 4px;
@@ -184,6 +191,13 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
             padding: 4px 8px;
             pointer-events: none;
             white-space: nowrap;
+          }
+          .bg-validation-tooltip-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 30;
+            overflow: hidden;
+            pointer-events: none;
           }
           .bg-validation-tooltip__text {
             color: #FB4C4C;
@@ -196,19 +210,32 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
       }
 
       function dismissValidationTooltips(): void {
-        for (const tooltip of validationTooltipEls.values()) {
-          tooltip.remove();
+        for (const record of validationTooltipEls.values()) {
+          record.element.remove();
         }
         validationTooltipEls.clear();
       }
 
-      function showValidationTooltip(key: string, target: HTMLElement, entry: InternalEntry): void {
-        const anchor = target.querySelector('.bg-input-box') as HTMLElement | null;
-        const rect = (anchor ?? target).getBoundingClientRect();
-        const tooltip = document.createElement('div');
-        tooltip.className = 'bg-validation-tooltip';
-        tooltip.style.left = `${rect.left}px`;
-        tooltip.style.top = `${rect.bottom + 4}px`;
+      function clamp(value: number, min: number, max: number): number {
+        if (max < min) return min;
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function getValidationTooltipLayer(gridEl: HTMLElement): HTMLElement {
+        if (validationTooltipLayer && validationTooltipLayer.isConnected) {
+          return validationTooltipLayer;
+        }
+
+        validationTooltipLayer = document.createElement('div');
+        validationTooltipLayer.className = 'bg-validation-tooltip-layer';
+        validationTooltipLayer.setAttribute('aria-hidden', 'true');
+        gridEl.appendChild(validationTooltipLayer);
+        return validationTooltipLayer;
+      }
+
+      function renderValidationTooltipContent(tooltip: HTMLElement, entry: InternalEntry): void {
+        tooltip.replaceChildren();
+        tooltip.classList.remove('bg-validation-tooltip--custom');
 
         if (entry.renderer && entry.column) {
           const issue: ValidationIssue = {
@@ -231,15 +258,72 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
             tooltip.classList.add('bg-validation-tooltip--custom');
             tooltip.appendChild(result);
           }
-        } else {
-          const text = document.createElement('p');
-          text.className = 'bg-validation-tooltip__text';
-          text.textContent = entry.message;
-          tooltip.appendChild(text);
+          return;
         }
 
-        document.body.appendChild(tooltip);
-        validationTooltipEls.set(key, tooltip);
+        const text = document.createElement('p');
+        text.className = 'bg-validation-tooltip__text';
+        text.textContent = entry.message;
+        tooltip.appendChild(text);
+      }
+
+      function positionValidationTooltip(record: TooltipRecord): boolean {
+        const gridEl = ctx.grid.getContainer();
+        if (!gridEl || !record.target.isConnected || !validationTooltipLayer?.isConnected) {
+          record.element.remove();
+          return false;
+        }
+
+        const anchor = record.target.querySelector('.bg-input-box') as HTMLElement | null;
+        const anchorRect = (anchor ?? record.target).getBoundingClientRect();
+        const gridRect = gridEl.getBoundingClientRect();
+        const tooltipRect = record.element.getBoundingClientRect();
+        const pad = 4;
+
+        let left = anchorRect.left - gridRect.left;
+        let top = anchorRect.bottom - gridRect.top + pad;
+
+        if (top + tooltipRect.height > gridRect.height - pad) {
+          top = anchorRect.top - gridRect.top - tooltipRect.height - pad;
+        }
+
+        left = clamp(left, pad, gridRect.width - tooltipRect.width - pad);
+        top = clamp(top, pad, gridRect.height - tooltipRect.height - pad);
+
+        record.element.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+        return true;
+      }
+
+      function positionValidationTooltips(): void {
+        for (const [key, record] of validationTooltipEls) {
+          if (!positionValidationTooltip(record)) {
+            validationTooltipEls.delete(key);
+          }
+        }
+      }
+
+      function showValidationTooltip(key: string, target: HTMLElement, entry: InternalEntry): void {
+        const gridEl = ctx.grid.getContainer();
+        if (!gridEl) return;
+
+        const layer = getValidationTooltipLayer(gridEl);
+        const existing = validationTooltipEls.get(key);
+        if (existing) {
+          existing.target = target;
+          existing.entry = entry;
+          renderValidationTooltipContent(existing.element, entry);
+          positionValidationTooltip(existing);
+          return;
+        }
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'bg-validation-tooltip';
+        renderValidationTooltipContent(tooltip, entry);
+        layer.appendChild(tooltip);
+
+        const record: TooltipRecord = { element: tooltip, target, entry };
+        validationTooltipEls.set(key, record);
+        positionValidationTooltip(record);
       }
 
       // Track hover listeners for cleanup
@@ -270,7 +354,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
             cell.classList.add('bg-cell--error');
             const htmlCell = cell as HTMLElement;
 
-            const key = `${positionKey(error.position)}:${validationTooltipEls.size}`;
+            const key = positionKey(error.position);
             showValidationTooltip(key, htmlCell, error);
             const onEnter = () => {
               if (!validationTooltipEls.has(key)) showValidationTooltip(key, htmlCell, error);
@@ -353,6 +437,12 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         }
       });
 
+      const unsubScroll = ctx.on('scroll', () => {
+        if (validationTooltipEls.size > 0) {
+          positionValidationTooltips();
+        }
+      });
+
       // Validate all on init if configured. Fire on the first render event so
       // that cell elements exist in the DOM before applyErrorStyles() queries them.
       // The previous setTimeout(0) caused a StrictMode double-mount race where
@@ -375,8 +465,11 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         unsubFirstRender?.();
         unsubData();
         unsubRender();
+        unsubScroll();
         errors.clear();
         dismissValidationTooltips();
+        validationTooltipLayer?.remove();
+        validationTooltipLayer = null;
         for (const cleanup of hoverCleanups.values()) cleanup();
         hoverCleanups.clear();
       };
