@@ -87,6 +87,13 @@ export interface CellRenderContext<TData = unknown, TContext = unknown> {
   isActive: boolean;
   style: CellStyle;
   context: TContext;
+  /**
+   * True when this cell is part of a pinned row (top or bottom).
+   * Custom `cellRenderer` and plugin-wrapped renderers (e.g. row-actions)
+   * should usually skip interactive UI for pinned rows — `rowIndex` here is
+   * relative to the pinned section, not the main data array.
+   */
+  isPinned?: boolean;
 }
 
 export type CellRenderer<TData = unknown, TContext = unknown> = (

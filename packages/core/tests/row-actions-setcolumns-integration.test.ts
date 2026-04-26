@@ -116,4 +116,37 @@ describe('rowActions — cellRenderer wrap survives setColumns()', () => {
     expect(triggers.length).toBeGreaterThan(0);
     grid.unmount();
   });
+
+  it('does not render the action trigger on pinned rows (e.g. aggregation totals)', () => {
+    // Regression: a pinned bottom totals row (typically produced by the
+    // aggregation plugin) was rendering the row-actions ⋮ trigger. Clicking
+    // it would call onAction with a rowIndex relative to the pinned section,
+    // operating on the wrong real-data row.
+    const host = makeHost();
+    const grid = createGrid<Row>({
+      columns,
+      data,
+      pinned: { bottom: [{ id: -1, name: 'TOTAL' }] },
+      plugins: [makePlugin()],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    // Body rows should still render triggers (3 body rows × 1 actions col)
+    const bodyTriggers = host.querySelectorAll('.bg-grid__cells .bg-row-actions-trigger');
+    expect(bodyTriggers.length).toBe(3);
+
+    // The pinned bottom container should NOT contain a trigger.
+    const pinnedSection = host.querySelector('.bg-grid__pinned-bottom');
+    if (pinnedSection) {
+      expect(pinnedSection.querySelector('.bg-row-actions-trigger')).toBeNull();
+    }
+
+    // Belt-and-suspenders: total trigger count equals body row count.
+    const allTriggers = host.querySelectorAll('.bg-row-actions-trigger');
+    expect(allTriggers.length).toBe(3);
+
+    grid.unmount();
+  });
 });

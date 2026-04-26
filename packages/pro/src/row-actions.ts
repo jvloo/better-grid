@@ -326,6 +326,15 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions',
           container.style.display = '';
           container.style.cursor = '';
 
+          // Pinned rows (e.g. aggregation totals) shouldn't expose row-actions:
+          // the rowIndex is relative to the pinned section, so onAction would
+          // operate on the wrong row. Skip wrapping entirely — original renderer
+          // (if any) still runs so any background/label is preserved.
+          if (context.isPinned) {
+            if (originalRenderer) originalRenderer(container, context);
+            return;
+          }
+
           const row = context.row;
           const actions = options.getActions(row, context.rowIndex);
 

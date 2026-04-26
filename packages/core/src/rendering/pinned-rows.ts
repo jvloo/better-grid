@@ -139,6 +139,7 @@ export function createPinnedRowRenderer<TData = unknown>(
           isActive: false,
           style: { top, left, width, height: rowH },
           context: deps.contextRef?.current,
+          isPinned: true,
         };
 
         // Render priority: column renderer > cell type > valueFormatter > default text
