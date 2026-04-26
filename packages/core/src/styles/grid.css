@@ -48,8 +48,6 @@
   align-items: center;
   padding: var(--bg-cell-padding, 0 12px);
   font-weight: var(--bg-header-font-weight, 600);
-  border-right: 1px solid var(--bg-header-border-color, #e0e0e0);
-  border-bottom: 2px solid var(--bg-header-border-color, #d0d0d0);
   background: var(--bg-header-bg, #f8f9fa);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -84,7 +82,6 @@
 
 /* Group row header cells (not the last row) */
 .bg-header-cell--group {
-  border-bottom: 1px solid var(--bg-header-border-color, #e0e0e0);
   justify-content: center;
   text-align: center;
 }
@@ -475,6 +472,18 @@
 .bg-grid--bordered .bg-cell {
   border-right: 1px solid var(--bg-cell-border-color, #e8e8e8);
   border-bottom: 1px solid var(--bg-cell-border-color, #e8e8e8);
+}
+
+/* Header cells: vertical separators between cols + thick rule under the header
+   row. Gated by bordered so unbordered grids show clean borderless headers. */
+.bg-grid--bordered .bg-header-cell {
+  border-right: 1px solid var(--bg-header-border-color, #e0e0e0);
+  border-bottom: 2px solid var(--bg-header-border-color, #d0d0d0);
+}
+
+/* Group header rows (not the bottom-most header row) get a thinner divider. */
+.bg-grid--bordered .bg-header-cell--group {
+  border-bottom: 1px solid var(--bg-header-border-color, #e0e0e0);
 }
 
 /* Restore the thicker frozen separators in bordered mode (the bordered rule
