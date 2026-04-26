@@ -136,7 +136,7 @@ export function aggregation<TData = unknown>(
 
       recompute();
 
-      const off1 = ctx.on('data:change', scheduleRecompute);
+      const off1 = ctx.on('cell:change', scheduleRecompute);
       const off2 = ctx.on('data:set', () => {
         // data:set replaces all rows — reset the numeric field cache
         numericFields = null;

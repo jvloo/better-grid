@@ -38,7 +38,7 @@ export function undoRedo(options?: UndoRedoOptions): GridPlugin<'undoRedo', Undo
 
       // Listen for cell changes to record history.
       // change.oldValue is the previous CELL value (fixed in §1.5a).
-      ctx.on('data:change', (changes) => {
+      ctx.on('cell:change', (changes) => {
         if (isUndoRedoAction) return;
 
         for (const change of changes) {

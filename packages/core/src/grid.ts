@@ -1501,7 +1501,7 @@ export function createGrid<
       if (newRow === undefined) return;
 
       const change: CellChange<TData> = { rowIndex, columnId, oldValue, newValue: value, row: newRow };
-      emitter.emit('data:change', [change]);
+      emitter.emit('cell:change', [change]);
       options.onCellChange?.([change]);
       scheduleRender();
     },

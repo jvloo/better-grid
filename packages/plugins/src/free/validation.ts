@@ -332,7 +332,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
       };
 
       // Auto-validate on data change (after edit commit)
-      const unsubData = ctx.on('data:change', (changes) => {
+      const unsubData = ctx.on('cell:change', (changes) => {
         for (const change of changes) {
           const colIndex = ctx.grid.getState().columns.findIndex((c) => c.id === change.columnId);
           if (colIndex >= 0) {

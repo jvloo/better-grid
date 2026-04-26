@@ -13,8 +13,8 @@ describe('CellChange.oldValue semantics', () => {
     });
 
     const captured: CellChange[] = [];
-    // Note: the event name is still 'data:change' until T18 renames it.
-    grid.on('data:change' as never, ((changes: CellChange[]) => { captured.push(...changes); }) as never);
+    // Note: the event name is still 'cell:change' until T18 renames it.
+    grid.on('cell:change' as never, ((changes: CellChange[]) => { captured.push(...changes); }) as never);
 
     grid.updateCell(0, 'amount', 250);
 

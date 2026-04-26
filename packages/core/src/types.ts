@@ -270,8 +270,8 @@ export interface GridEvents<TData = unknown> {
   // Scroll
   scroll: (state: ScrollState) => void;
 
-  // Data
-  'data:change': (changes: CellChange<TData>[]) => void;
+  // Cell
+  'cell:change': (changes: CellChange<TData>[]) => void;
   'data:set': (data: TData[]) => void;
 
   // Column

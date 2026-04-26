@@ -103,7 +103,7 @@ export function useGridForm<TData = unknown, TFormValues extends FieldValues = F
   const grid = opts.grid;
   useEffect(() => {
     if (!grid) return;
-    const off = grid.api.on('data:change', (changes: CellChange<TData>[]) => {
+    const off = grid.api.on('cell:change', (changes: CellChange<TData>[]) => {
       for (const change of changes) {
         forwardCellChangeToRhf(change, optsRef.current, setValue);
       }

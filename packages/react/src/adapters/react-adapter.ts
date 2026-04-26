@@ -20,7 +20,7 @@ export function createReactAdapter<TData = unknown>(
   // Subscribe to all state-changing events
   const unsubs = [
     grid.on('selection:change', updateSnapshot),
-    grid.on('data:change', updateSnapshot),
+    grid.on('cell:change', updateSnapshot),
     grid.on('data:set', updateSnapshot),
     grid.on('scroll', updateSnapshot),
     grid.on('column:resize', updateSnapshot),
