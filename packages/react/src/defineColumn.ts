@@ -61,7 +61,7 @@ function makeBuilder<TData = unknown>(type: BuiltInType | string) {
     return {
       id: field,
       field: opts.valueGetter ? undefined : (field as keyof TData & string),
-      header: opts.header ?? field,
+      headerName: opts.headerName ?? field,
       ...defaults,
       ...opts,
     } as ColumnDef<TData>;

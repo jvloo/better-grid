@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { useForm, FormProvider, useFormContext, useWatch } from 'react-hook-form';
 import { BetterGrid, defineColumn as col, useGrid } from '@better-grid/react';
 import { useGridForm } from '@better-grid/react/rhf';
@@ -28,9 +28,9 @@ const seed: CostRow[] = [
 ];
 
 const columns = [
-  col.text('item', { header: 'Item', width: 220, editable: false }),
-  col.number('qty', { header: 'Qty', width: 110, align: 'right', alwaysInput: true, precision: 0 }),
-  col.currency('unitCost', { header: 'Unit Cost', width: 140, align: 'right', alwaysInput: true, precision: 2 }),
+  col.text('item', { headerName: 'Item', width: 220, editable: false }),
+  col.number('qty', { headerName: 'Qty', width: 110, align: 'right', alwaysInput: true, precision: 0 }),
+  col.currency('unitCost', { headerName: 'Unit Cost', width: 140, align: 'right', alwaysInput: true, precision: 2 }),
 ] as ColumnDef<CostRow>[];
 
 function CostsTable({ data }: { data: CostRow[] }) {
@@ -122,3 +122,4 @@ export function RhfBridgeDemo() {
     </FormProvider>
   );
 }
+

@@ -36,8 +36,8 @@ function makeGrid(overrides: {
       { id: 2, name: 'Bob', age: 25 },
     ],
     columns: overrides.columns ?? [
-      { id: 'name', field: 'name', header: 'Name' },
-      { id: 'age', field: 'age', header: 'Age' },
+      { id: 'name', field: 'name', headerName: 'Name' },
+      { id: 'age', field: 'age', headerName: 'Age' },
     ],
   });
   grid.mount(container);
@@ -90,7 +90,7 @@ describe('ARIA', () => {
     const grid = createGrid<Row>({
       data: [{ id: 1, name: 'a', age: 1 }],
       columns: [
-        { id: 'name', field: 'name', header: 'Name', sortable: true },
+        { id: 'name', field: 'name', headerName: 'Name', sortable: true },
       ],
       plugins: [sorting()],
     });

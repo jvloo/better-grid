@@ -191,7 +191,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
           } else {
             // Single header row from column definitions
             headerRows.push(columns.map(c => ({
-              value: typeof c.header === 'function' ? resolveHeaderText(c.header) : c.header,
+              value: c.headerName,
             })));
           }
         }
@@ -199,7 +199,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
         // Build column metadata
         const columnMeta = columns.map((c, i) => ({
           id: c.id,
-          header: typeof c.header === 'function' ? resolveHeaderText(c.header) : c.header,
+          header: c.headerName,
           type: c.cellType,
           align: c.align,
           width: c.width,

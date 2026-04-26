@@ -5,10 +5,10 @@ describe('defineColumn (col.*)', () => {
   beforeEach(() => _resetColumnRegistry());
 
   test('col.text returns a ColumnDef with id + field from field', () => {
-    const c = col.text('name', { header: 'Name', width: 100 });
+    const c = col.text('name', { headerName: 'Name', width: 100 });
     expect(c.id).toBe('name');
     expect(c.field).toBe('name');
-    expect(c.header).toBe('Name');
+    expect(c.headerName).toBe('Name');
     expect(c.width).toBe(100);
   });
 
@@ -34,7 +34,7 @@ describe('defineColumn (col.*)', () => {
 
   test('default header falls back to the field name', () => {
     const c = col.text('department');
-    expect(c.header).toBe('department');
+    expect(c.headerName).toBe('department');
   });
 
   test('registerColumn adds a custom type usable as col.<name>', () => {

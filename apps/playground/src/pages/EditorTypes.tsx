@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
@@ -41,31 +41,31 @@ const initialData: EditorRow[] = [
 ];
 
 const columns = [
-  col.text('name', { header: 'Name (text)', width: 150, required: true }),
-  col.currency('price', { header: 'Price (number)', width: 130, precision: 2 }),
+  col.text('name', { headerName: 'Name (text)', width: 150, required: true }),
+  col.currency('price', { headerName: 'Price (number)', width: 130, precision: 2 }),
   col.number('quantity', {
-    header: 'Qty (number)',
+    headerName: 'Qty (number)',
     width: 100,
     cellEditor: 'number',
     precision: 0,
     rules: [{ validate: (v: unknown) => (v as number) > 0 || 'Must be > 0' }],
   }),
-  col.percent('rate', { header: 'Rate (%)', width: 100 }),
-  col.date('startDate', { header: 'Start Date', width: 130 }),
+  col.percent('rate', { headerName: 'Rate (%)', width: 100 }),
+  col.date('startDate', { headerName: 'Start Date', width: 130 }),
   col.text('category', {
-    header: 'Category',
+    headerName: 'Category',
     width: 120,
     options: ['Electronics', 'Hardware', 'Software', 'Services'],
   }),
   col.text('assignee', {
-    header: 'Assignee',
+    headerName: 'Assignee',
     width: 130,
     cellEditor: 'autocomplete',
     options: ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'],
     meta: { allowCreate: true },
   }),
   col.text('weight', {
-    header: 'Weight',
+    headerName: 'Weight',
     width: 120,
     align: 'right',
     valueFormatter: (v: unknown) => typeof v === 'number' ? `${v.toFixed(2)} kg` : String(v ?? ''),
@@ -76,8 +76,8 @@ const columns = [
       return isNaN(num) ? undefined : Math.round(num * 100) / 100;
     },
   }),
-  col.boolean('active', { header: 'Active', width: 70 }),
-  col.text('notes', { header: 'Notes', width: 150 }),
+  col.boolean('active', { headerName: 'Active', width: 70 }),
+  col.text('notes', { headerName: 'Notes', width: 150 }),
 ] as ColumnDef<EditorRow>[];
 
 export function EditorTypes() {
@@ -153,3 +153,4 @@ export function EditorTypes() {
     </div>
   );
 }
+

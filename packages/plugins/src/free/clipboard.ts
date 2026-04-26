@@ -447,8 +447,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
         // Header row
         if (config.includeHeaders) {
           const headerValues = columns.map((col) => {
-            const h = col.header;
-            return typeof h === 'function' ? '' : String(h ?? '');
+            return String(col.headerName ?? '');
           });
           tsvLines.push(headerValues.map(escapeTsv).join(config.separator));
           htmlLines.push('<tr>' + headerValues.map((v) => `<th>${escapeXml(v)}</th>`).join('') + '</tr>');

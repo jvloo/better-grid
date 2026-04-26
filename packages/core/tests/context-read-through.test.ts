@@ -29,7 +29,7 @@ describe('createGrid context ref', () => {
     const seen: unknown[] = [];
     const columns: ColumnDef[] = [{
       id: 'name',
-      header: 'Name',
+      headerName: 'Name',
       field: 'name' as never,
       cellRenderer: (container, ctx) => {
         seen.push(ctx.context);
@@ -57,7 +57,7 @@ describe('createGrid context ref', () => {
     const seen: unknown[] = [];
     const columns: ColumnDef[] = [{
       id: 'name',
-      header: 'Name',
+      headerName: 'Name',
       field: 'name' as never,
       cellRenderer: (container, ctx) => {
         seen.push(ctx.context);
@@ -72,3 +72,4 @@ describe('createGrid context ref', () => {
     grid.unmount();
   });
 });
+

@@ -335,7 +335,7 @@ export function grouping<TData = unknown>(options?: GroupingOptions<TData>): Gri
         const columns = store.getState().columns;
         autoGroupColDef = {
           id: '__bg_group__',
-          header: options?.groupColumnHeader ?? 'Group',
+          headerName: options?.groupColumnHeader ?? 'Group',
           width: options?.groupColumnWidth ?? 200,
           resizable: true,
           editable: false,

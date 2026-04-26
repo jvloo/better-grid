@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+﻿import { useMemo, useCallback } from 'react';
 import { useGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
@@ -38,11 +38,11 @@ const deptData: DeptRow[] = [
 // Status column uses a custom renderer with no scope-dependent state, so it's
 // safe to hoist alongside the other columns at module scope.
 const columns = [
-  col.text('name', { header: 'Department', width: 250 }),
-  col.currency('budget', { header: 'Budget', width: 130 }),
-  col.number('headcount', { header: 'Headcount', width: 100 }),
+  col.text('name', { headerName: 'Department', width: 250 }),
+  col.currency('budget', { headerName: 'Budget', width: 130 }),
+  col.number('headcount', { headerName: 'Headcount', width: 100 }),
   col.custom('status', {
-    header: 'Status',
+    headerName: 'Status',
     width: 100,
     cellRenderer: (container, ctx) => {
       const val = ctx.value as string;
@@ -126,3 +126,4 @@ export function HierarchyDemo() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import { useGrid, BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { BadgeOption, ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
@@ -75,7 +75,7 @@ const ts = timeSeries({
 // Module-scope columns. Drag handle is purely visual, no closure-over-scope.
 const columns = [
   col.custom('actions', {
-    header: '',
+    headerName: '',
     width: 80,
     cellRenderer: (container) => {
       container.textContent = '';
@@ -90,12 +90,12 @@ const columns = [
       container.innerHTML = '<span style="pointer-events:none;line-height:1">&#x22EE;&#x22EE;</span>';
     },
   }),
-  col.text('phase', { header: 'Phase', width: 300 }),
-  col.text('duration', { header: 'Duration (months)', width: 90, align: 'center' }),
-  col.date('start', { header: 'Start', width: 100, align: 'center', dateFormat: 'month-year' }),
-  col.date('end', { header: 'End', width: 100, align: 'center', dateFormat: 'month-year' }),
+  col.text('phase', { headerName: 'Phase', width: 300 }),
+  col.text('duration', { headerName: 'Duration (months)', width: 90, align: 'center' }),
+  col.date('start', { headerName: 'Start', width: 100, align: 'center', dateFormat: 'month-year' }),
+  col.date('end', { headerName: 'End', width: 100, align: 'center', dateFormat: 'month-year' }),
   col.badge('status', {
-    header: 'Variance',
+    headerName: 'Variance',
     width: 120,
     options: [
       { value: 'Done', label: 'Done', color: '#166534', bg: '#dcfce7', fontWeight: '500' },
@@ -167,3 +167,4 @@ export function DmTimeline() {
     </div>
   );
 }
+

@@ -11,7 +11,7 @@ import type { ColumnDef } from '../types';
 
 // Internal column shape — only the fields filter-panel actually touches.
 // Keeping this narrow avoids generic-variance headaches with ColumnDef<TData>.
-type FilterableColumn = Pick<ColumnDef<unknown>, 'id' | 'header' | 'cellType'>;
+type FilterableColumn = Pick<ColumnDef<unknown>, 'id' | 'headerName' | 'cellType'>;
 
 export interface FilterApi {
   setFilter: (columnId: string, value: unknown, operator?: string) => void;
@@ -69,7 +69,7 @@ export function createFilterPanel(deps: FilterPanelDeps): FilterPanel {
     if (!filterApi) return;
 
     const colDef = deps.getColumns().find((c) => c.id === columnId);
-    const columnName = (typeof colDef?.header === 'string' ? colDef.header : undefined) ?? columnId;
+    const columnName = colDef?.headerName ?? columnId;
     const cellType = colDef?.cellType as string | undefined;
     const isNumeric = cellType === 'number' || cellType === 'currency' || cellType === 'percent' || cellType === 'bigint';
     const operators = isNumeric ? NUMBER_OPERATORS : TEXT_OPERATORS;

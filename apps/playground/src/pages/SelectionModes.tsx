@@ -1,4 +1,4 @@
-import { BetterGrid, defineColumn as col } from '@better-grid/react';
+﻿import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
 
@@ -23,11 +23,11 @@ const data: Row[] = [
 ];
 
 const columns = [
-  col.text('product', { header: 'Product', width: 180 }),
-  col.text('category', { header: 'Category', width: 120 }),
-  col.currency('price', { header: 'Price', width: 90, precision: 2 }),
-  col.number('stock', { header: 'Stock', width: 80 }),
-  col.rating('rating', { header: 'Rating', width: 90 }),
+  col.text('product', { headerName: 'Product', width: 180 }),
+  col.text('category', { headerName: 'Category', width: 120 }),
+  col.currency('price', { headerName: 'Price', width: 90, precision: 2 }),
+  col.number('stock', { headerName: 'Stock', width: 80 }),
+  col.rating('rating', { headerName: 'Rating', width: 90 }),
 ] as ColumnDef<Row>[];
 
 const FORMAT_FEATURE = { format: { locale: 'en-US', currencyCode: 'USD' } };
@@ -119,3 +119,4 @@ export function SelectionModes() {
     </div>
   );
 }
+

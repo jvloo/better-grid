@@ -1,4 +1,4 @@
-import { BetterGrid, defineColumn as col } from '@better-grid/react';
+﻿import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { BadgeOption, ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
 
@@ -49,21 +49,21 @@ const data: Employee[] = Array.from({ length: 60 }, (_, i) => {
 });
 
 const columns = [
-  col.text('id', { header: '#', width: 50, align: 'center' }),
-  col.text('name', { header: 'Name', width: 160, sortable: true }),
-  col.text('email', { header: 'Email', width: 220, sortable: true }),
+  col.text('id', { headerName: '#', width: 50, align: 'center' }),
+  col.text('name', { headerName: 'Name', width: 160, sortable: true }),
+  col.text('email', { headerName: 'Email', width: 220, sortable: true }),
   col.badge('department', {
-    header: 'Department',
+    headerName: 'Department',
     width: 120,
     sortable: true,
     options: departments.map((d) => ({ label: d, value: d, color: '#1a1a1a', bg: '#f0f0f0' })) as BadgeOption[],
   }),
-  col.text('role', { header: 'Role', width: 150, sortable: true }),
-  col.text('location', { header: 'Location', width: 120, sortable: true }),
-  col.date('startDate', { header: 'Start Date', width: 110, sortable: true }),
-  col.currency('salary', { header: 'Salary', width: 110, sortable: true, precision: 0 }),
-  col.boolean('active', { header: 'Active', width: 70 }),
-  col.rating('rating', { header: 'Rating', width: 110 }),
+  col.text('role', { headerName: 'Role', width: 150, sortable: true }),
+  col.text('location', { headerName: 'Location', width: 120, sortable: true }),
+  col.date('startDate', { headerName: 'Start Date', width: 110, sortable: true }),
+  col.currency('salary', { headerName: 'Salary', width: 110, sortable: true, precision: 0 }),
+  col.boolean('active', { headerName: 'Active', width: 70 }),
+  col.rating('rating', { headerName: 'Rating', width: 110 }),
 ] as ColumnDef<Employee>[];
 
 export function HRDirectory() {
@@ -97,3 +97,4 @@ export function HRDirectory() {
     </div>
   );
 }
+

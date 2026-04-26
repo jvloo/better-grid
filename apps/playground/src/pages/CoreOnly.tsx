@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+﻿import { useState, useCallback } from 'react';
 import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef, Selection } from '@better-grid/core';
 import { CodeBlock } from '../components/CodeBlock';
@@ -37,12 +37,12 @@ const sampleData: SampleRow[] = [
 ];
 
 const columns = [
-  col.text('id', { header: '#', width: 40 }),
-  col.text('name', { header: 'Name', width: 140 }),
-  col.text('department', { header: 'Department', width: 110 }),
-  col.text('salary', { header: 'Salary', width: 100, align: 'right' }),
-  col.text('startDate', { header: 'Start Date', width: 110 }),
-  col.text('active', { header: 'Active', width: 80, align: 'center' }),
+  col.text('id', { headerName: '#', width: 40 }),
+  col.text('name', { headerName: 'Name', width: 140 }),
+  col.text('department', { headerName: 'Department', width: 110 }),
+  col.text('salary', { headerName: 'Salary', width: 100, align: 'right' }),
+  col.text('startDate', { headerName: 'Start Date', width: 110 }),
+  col.text('active', { headerName: 'Active', width: 80, align: 'center' }),
 ] as ColumnDef<SampleRow>[];
 
 export function CoreOnly() {
@@ -109,12 +109,12 @@ import '@better-grid/core/styles.css';
 // mode={null} disables every feature preset (no sort, filter, resize).
 // Raw values: 125000 (not $125,000), "2024-03-15" (not Mar 15, 2024).
 const columns = [
-  col.text('id', { header: '#', width: 40 }),
-  col.text('name', { header: 'Name', width: 160 }),
-  col.text('department', { header: 'Department', width: 120 }),
-  col.text('salary', { header: 'Salary', width: 120 }),
-  col.text('startDate', { header: 'Start Date', width: 120 }),
-  col.text('active', { header: 'Active', width: 80 }),
+  col.text('id', { headerName: '#', width: 40 }),
+  col.text('name', { headerName: 'Name', width: 160 }),
+  col.text('department', { headerName: 'Department', width: 120 }),
+  col.text('salary', { headerName: 'Salary', width: 120 }),
+  col.text('startDate', { headerName: 'Start Date', width: 120 }),
+  col.text('active', { headerName: 'Active', width: 80 }),
 ];
 
 <BetterGrid
@@ -129,3 +129,4 @@ const columns = [
     </div>
   );
 }
+

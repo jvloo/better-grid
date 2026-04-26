@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import { BetterGrid, useGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import type { ExportApi } from '@better-grid/plugins';
@@ -50,14 +50,14 @@ const data: EmployeeRow[] = [
 ];
 
 const columns = [
-  col.text('id', { header: '#', width: 50, sortable: true }),
-  col.text('name', { header: 'Name', width: 150, sortable: true }),
-  col.text('department', { header: 'Department', width: 120, sortable: true }),
-  col.text('role', { header: 'Role', width: 100, sortable: true }),
-  col.currency('salary', { header: 'Salary', width: 120, sortable: true }),
-  col.date('startDate', { header: 'Start Date', width: 120, sortable: true }),
-  col.text('location', { header: 'Location', width: 120, sortable: true }),
-  col.boolean('active', { header: 'Active', width: 80, sortable: true }),
+  col.text('id', { headerName: '#', width: 50, sortable: true }),
+  col.text('name', { headerName: 'Name', width: 150, sortable: true }),
+  col.text('department', { headerName: 'Department', width: 120, sortable: true }),
+  col.text('role', { headerName: 'Role', width: 100, sortable: true }),
+  col.currency('salary', { headerName: 'Salary', width: 120, sortable: true }),
+  col.date('startDate', { headerName: 'Start Date', width: 120, sortable: true }),
+  col.text('location', { headerName: 'Location', width: 120, sortable: true }),
+  col.boolean('active', { headerName: 'Active', width: 80, sortable: true }),
 ] as ColumnDef<EmployeeRow>[];
 
 export function SearchExport() {
@@ -118,3 +118,4 @@ export function SearchExport() {
     </div>
   );
 }
+

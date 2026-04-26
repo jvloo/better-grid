@@ -49,7 +49,7 @@ interface HeaderCellOpts {
   top: number;
   width: number;
   height: number;
-  content: string | (() => HTMLElement | string);
+  content: string;
   colIndex: number;
   isFrozen: boolean;
   isLastFrozenCol: boolean;
@@ -131,6 +131,13 @@ export function createHeaderRenderer<TData = unknown>(
     rendered = false;
   }
 
+  /** Resolve a HeaderCell content value (string or legacy function) to a string. */
+  function resolveContent(content: string | (() => HTMLElement | string)): string {
+    if (typeof content !== 'function') return content;
+    const result = content();
+    return typeof result === 'string' ? result : (result.textContent ?? '');
+  }
+
   function renderSingleHeaders(state: GridState<TData>, measurements: LayoutMeasurements): void {
     for (let col = 0; col < state.columns.length; col++) {
       const column = state.columns[col]! as ColumnDef<TData>;
@@ -144,7 +151,7 @@ export function createHeaderRenderer<TData = unknown>(
         top: 0,
         width,
         height: deps.headerHeight,
-        content: column.header,
+        content: column.headerName,
         colIndex: col,
         isFrozen,
         isLastFrozenCol,
@@ -152,6 +159,11 @@ export function createHeaderRenderer<TData = unknown>(
         resizable: column.resizable !== false,
         align: column.align,
       });
+
+      if (column.headerRenderer) {
+        cell.replaceChildren();
+        column.headerRenderer(cell, { column, columnIndex: col });
+      }
 
       appendHeaderCell(cell, isFrozen);
     }
@@ -247,7 +259,7 @@ export function createHeaderRenderer<TData = unknown>(
             top: topOffset,
             width: frozenWidth,
             height,
-            content: cell.content,
+            content: resolveContent(cell.content),
             colIndex,
             isFrozen: true,
             isLastFrozenCol: true,
@@ -293,7 +305,7 @@ export function createHeaderRenderer<TData = unknown>(
             top: topOffset,
             width,
             height,
-            content: cell.content,
+            content: resolveContent(cell.content),
             colIndex,
             isFrozen,
             isLastFrozenCol,
@@ -357,16 +369,7 @@ export function createHeaderRenderer<TData = unknown>(
     const textSpan = document.createElement('span');
     textSpan.className = 'bg-header-cell__text';
     if (opts.align) textSpan.style.textAlign = opts.align;
-    if (typeof opts.content === 'function') {
-      const content = opts.content();
-      if (typeof content === 'string') {
-        textSpan.textContent = content;
-      } else {
-        textSpan.appendChild(content);
-      }
-    } else {
-      textSpan.textContent = opts.content;
-    }
+    textSpan.textContent = opts.content;
     cell.appendChild(textSpan);
 
     // Tooltip on hover (when text is clipped) is handled via a single pair of

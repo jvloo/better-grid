@@ -138,7 +138,8 @@ export interface ColumnDef<TData = unknown> {
   id: string;
   field?: keyof TData & string;
   valueGetter?: (row: TData, rowIndex: number) => unknown;
-  header: string | (() => HTMLElement | string);
+  headerName: string;
+  headerRenderer?: (container: HTMLElement, ctx: { column: ColumnDef<TData>; columnIndex: number }) => void;
 
   // Layout
   width?: number;

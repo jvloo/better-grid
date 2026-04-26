@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
@@ -23,9 +23,9 @@ const initial: CostRow[] = Array.from({ length: 25 }, (_, i) => ({
 initial.forEach((r) => { r.totalCost = r.qty * r.unitCost; });
 
 const columns = [
-  col.text('item', { header: 'Item', width: 180 }),
+  col.text('item', { headerName: 'Item', width: 180 }),
   col.number('qty', {
-    header: 'Qty',
+    headerName: 'Qty',
     width: 100,
     align: 'right',
     alwaysInput: true,
@@ -53,14 +53,14 @@ const columns = [
     ],
   }),
   col.currency('unitCost', {
-    header: 'Unit Cost',
+    headerName: 'Unit Cost',
     width: 140,
     align: 'right',
     alwaysInput: true,
     precision: 2,
   }),
   col.currency('totalCost', {
-    header: 'Total',
+    headerName: 'Total',
     width: 160,
     align: 'right',
     editable: false,
@@ -69,7 +69,7 @@ const columns = [
       : '',
   }),
   col.text('notes', {
-    header: 'Notes',
+    headerName: 'Notes',
     width: 220,
     alwaysInput: (row) => (row as CostRow).qty > 50,
     placeholder: 'Add a note…',
@@ -123,3 +123,4 @@ export function AlwaysInputDemo() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import { BetterGrid, useGrid, defineColumn as col } from '@better-grid/react';
 import type { BadgeOption, ColumnDef, HeaderRow } from '@better-grid/core';
 import type { ExportApi } from '@better-grid/plugins';
@@ -61,10 +61,10 @@ const periods = [
 
 // Each quarter expands to (Actual, Budget) currency columns, precision 0.
 const columns = [
-  col.text('department', { header: 'Department', width: 200 }),
-  col.text('category', { header: 'Category', width: 120 }),
+  col.text('department', { headerName: 'Department', width: 200 }),
+  col.text('category', { headerName: 'Category', width: 120 }),
   col.badge('status', {
-    header: 'Status',
+    headerName: 'Status',
     width: 120,
     options: [
       { label: 'On Track', value: 'On Track', color: '#2e7d32', bg: '#e8f5e9' },
@@ -73,10 +73,10 @@ const columns = [
     ] as BadgeOption[],
   }),
   ...periods.flatMap((p) => [
-    col.currency(`${p.key}Actual`, { header: 'Actual', width: p.width, precision: 0 }),
-    col.currency(`${p.key}Budget`, { header: 'Budget', width: p.width, precision: 0 }),
+    col.currency(`${p.key}Actual`, { headerName: 'Actual', width: p.width, precision: 0 }),
+    col.currency(`${p.key}Budget`, { headerName: 'Budget', width: p.width, precision: 0 }),
   ]),
-  col.change('variance', { header: 'Variance', width: 120 }),
+  col.change('variance', { headerName: 'Variance', width: 120 }),
 ] as ColumnDef<BudgetRow>[];
 
 // Multi-header generated from the same `periods` array used for columns.
@@ -163,3 +163,4 @@ export function FinanceDashboard() {
     </div>
   );
 }
+

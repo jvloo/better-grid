@@ -1,4 +1,4 @@
-import { BetterGrid, defineColumn as col } from '@better-grid/react';
+﻿import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
 import '@better-grid/core/styles.css';
 
@@ -61,17 +61,17 @@ const headerRows: HeaderRow[] = [
 ];
 
 const columns = [
-  col.text('name', { header: 'Name', width: 160, sortable: true }),
-  col.text('sector', { header: 'Sector', width: 120, sortable: true }),
-  col.text('region', { header: 'Region', width: 130, sortable: true }),
-  col.currency('revQ1', { header: 'Q1', width: 110, sortable: true }),
-  col.currency('revQ2', { header: 'Q2', width: 110, sortable: true }),
-  col.currency('revQ3', { header: 'Q3', width: 110, sortable: true }),
-  col.currency('expQ1', { header: 'Q1', width: 110, sortable: true }),
-  col.currency('expQ2', { header: 'Q2', width: 110, sortable: true }),
-  col.currency('expQ3', { header: 'Q3', width: 110, sortable: true }),
+  col.text('name', { headerName: 'Name', width: 160, sortable: true }),
+  col.text('sector', { headerName: 'Sector', width: 120, sortable: true }),
+  col.text('region', { headerName: 'Region', width: 130, sortable: true }),
+  col.currency('revQ1', { headerName: 'Q1', width: 110, sortable: true }),
+  col.currency('revQ2', { headerName: 'Q2', width: 110, sortable: true }),
+  col.currency('revQ3', { headerName: 'Q3', width: 110, sortable: true }),
+  col.currency('expQ1', { headerName: 'Q1', width: 110, sortable: true }),
+  col.currency('expQ2', { headerName: 'Q2', width: 110, sortable: true }),
+  col.currency('expQ3', { headerName: 'Q3', width: 110, sortable: true }),
   col.currency('net', {
-    header: 'Net',
+    headerName: 'Net',
     width: 120,
     sortable: true,
     cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
@@ -82,7 +82,7 @@ const columns = [
     },
   }),
   col.percent('margin', {
-    header: 'Margin',
+    headerName: 'Margin',
     width: 90,
     sortable: true,
     cellRenderer: (el: HTMLElement, ctx: { value: unknown }) => {
@@ -125,3 +125,4 @@ export function MultiHeaderDemo() {
     </div>
   );
 }
+

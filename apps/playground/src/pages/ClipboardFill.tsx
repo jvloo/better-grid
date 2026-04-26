@@ -1,4 +1,4 @@
-import { BetterGrid, defineColumn as col } from '@better-grid/react';
+﻿import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
 
@@ -37,11 +37,11 @@ const data: DataRow[] = [
 // All columns hoisted at module scope — no closure-over-component-state.
 // `mode="spreadsheet"` brings sort + edit + clipboard + undo (incl. fill handle).
 const columns = [
-  col.text('month', { header: 'Month', width: 120, editable: true, sortable: true }),
-  col.currency('revenue', { header: 'Revenue', width: 130, editable: true }),
-  col.currency('cost', { header: 'Cost', width: 130, editable: true }),
-  col.currency('profit', { header: 'Profit', width: 130, editable: true }),
-  col.percent('growth', { header: 'Growth', width: 110, editable: true }),
+  col.text('month', { headerName: 'Month', width: 120, editable: true, sortable: true }),
+  col.currency('revenue', { headerName: 'Revenue', width: 130, editable: true }),
+  col.currency('cost', { headerName: 'Cost', width: 130, editable: true }),
+  col.currency('profit', { headerName: 'Profit', width: 130, editable: true }),
+  col.percent('growth', { headerName: 'Growth', width: 110, editable: true }),
 ] as ColumnDef<DataRow>[];
 
 export function ClipboardFill() {
@@ -83,3 +83,4 @@ export function ClipboardFill() {
     </div>
   );
 }
+

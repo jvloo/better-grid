@@ -1,4 +1,4 @@
-import { BetterGrid, defineColumn as col } from '@better-grid/react';
+﻿import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
 
@@ -20,10 +20,10 @@ const data: SampleRow[] = [
 ];
 
 const columns = [
-  col.text('name', { header: 'Name', width: 160 }),
-  col.text('department', { header: 'Department', width: 130 }),
-  col.currency('amount', { header: 'Salary', width: 120 }),
-  col.text('status', { header: 'Status', width: 100 }),
+  col.text('name', { headerName: 'Name', width: 160 }),
+  col.text('department', { headerName: 'Department', width: 130 }),
+  col.currency('amount', { headerName: 'Salary', width: 120 }),
+  col.text('status', { headerName: 'Status', width: 100 }),
 ] as ColumnDef<SampleRow>[];
 
 type TableStyle = 'bordered' | 'borderless' | 'striped';
@@ -95,3 +95,4 @@ export function TableStyles() {
     </div>
   );
 }
+

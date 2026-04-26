@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { BadgeOption, ColumnDef } from '@better-grid/core';
 import { CodeBlock } from '../components/CodeBlock';
@@ -44,18 +44,18 @@ const categoryOptions = [
 ] as BadgeOption[];
 
 const baseColumns = [
-  col.text('id', { header: '#', width: 40, editable: false, sortable: true }),
-  col.text('name', { header: 'Name', width: 100, required: true, sortable: true }),
-  col.badge('category', { header: 'Category', width: 100, options: categoryOptions, sortable: true }),
+  col.text('id', { headerName: '#', width: 40, editable: false, sortable: true }),
+  col.text('name', { headerName: 'Name', width: 100, required: true, sortable: true }),
+  col.badge('category', { headerName: 'Category', width: 100, options: categoryOptions, sortable: true }),
   col.currency('amount', {
-    header: 'Amount',
+    headerName: 'Amount',
     width: 120,
     sortable: true,
     rules: [{ validate: (v: unknown) => typeof v === 'number' || 'Must be number' }],
   }),
-  col.percent('rate', { header: 'Rate', width: 75, sortable: true }),
-  col.date('date', { header: 'Date', width: 120, sortable: true }),
-  col.boolean('active', { header: 'Active', width: 80 }),
+  col.percent('rate', { headerName: 'Rate', width: 75, sortable: true }),
+  col.date('date', { headerName: 'Date', width: 120, sortable: true }),
+  col.boolean('active', { headerName: 'Active', width: 80 }),
 ] as ColumnDef<DemoRow>[];
 
 export function PluginToggle() {
@@ -188,3 +188,4 @@ function FeatureCheckbox({
     </label>
   );
 }
+

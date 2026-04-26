@@ -1,4 +1,4 @@
-import { BetterGrid, defineColumn as col } from '@better-grid/react';
+﻿import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { BadgeOption, ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
 
@@ -51,9 +51,9 @@ const data: CellTypeRow[] = [
 ];
 
 const columns = [
-  col.text('name', { header: 'Name (text)', width: 140 }),
+  col.text('name', { headerName: 'Name (text)', width: 140 }),
   col.badge('status', {
-    header: 'Status (badge)',
+    headerName: 'Status (badge)',
     width: 110,
     options: [
       { label: 'Active', value: 'active', color: '#166534', bg: '#dcfce7' },
@@ -61,21 +61,21 @@ const columns = [
       { label: 'Inactive', value: 'inactive', color: '#991b1b', bg: '#fee2e2' },
     ] as BadgeOption[],
   }),
-  col.progress('progress', { header: 'Progress', width: 130 }),
-  col.boolean('active', { header: 'Active', width: 70, editable: false }),
-  col.rating('rating', { header: 'Rating', width: 110 }),
-  col.change('change', { header: 'Change', width: 100 }),
-  col.changeIndicator('changeInd', { header: 'Indicator', width: 110 }),
-  col.currency('amount', { header: 'Amount', width: 110 }),
-  col.percent('pct', { header: 'Percent', width: 80 }),
-  col.date('date', { header: 'Date', width: 120 }),
+  col.progress('progress', { headerName: 'Progress', width: 130 }),
+  col.boolean('active', { headerName: 'Active', width: 70, editable: false }),
+  col.rating('rating', { headerName: 'Rating', width: 110 }),
+  col.change('change', { headerName: 'Change', width: 100 }),
+  col.changeIndicator('changeInd', { headerName: 'Indicator', width: 110 }),
+  col.currency('amount', { headerName: 'Amount', width: 110 }),
+  col.percent('pct', { headerName: 'Percent', width: 80 }),
+  col.date('date', { headerName: 'Date', width: 120 }),
   col.timeline('timeline', {
-    header: 'Timeline',
+    headerName: 'Timeline',
     width: 160,
     meta: { timelineStart: '2026-01-01', timelineEnd: '2026-12-31' },
   }),
-  col.tooltip('info', { header: 'Info (tooltip)', width: 120 }),
-  col.loading('loading', { header: 'Loading', width: 100 }),
+  col.tooltip('info', { headerName: 'Info (tooltip)', width: 120 }),
+  col.loading('loading', { headerName: 'Loading', width: 100 }),
 ] as ColumnDef<CellTypeRow>[];
 
 export function CellTypes() {
@@ -104,3 +104,4 @@ export function CellTypes() {
     </div>
   );
 }
+

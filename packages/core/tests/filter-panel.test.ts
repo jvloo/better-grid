@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFilterPanel, type FilterApi } from '../src/ui/filter-panel';
 
-type Col = { id: string; header?: string; cellType?: string };
+type Col = { id: string; headerName?: string; cellType?: string };
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -40,7 +40,7 @@ describe('createFilterPanel', () => {
 
   it('renders title, operator select, input, and buttons', () => {
     const api: FilterApi = { setFilter: vi.fn(), removeFilter: vi.fn() };
-    openAgainst([{ id: 'name', header: 'Full Name' }], api, 'name');
+    openAgainst([{ id: 'name', headerName: 'Full Name' }], api, 'name');
 
     const root = document.querySelector('.bg-filter-panel');
     expect(root).not.toBeNull();
@@ -135,8 +135,8 @@ describe('createFilterPanel', () => {
   it('show() replaces an already-open panel from the same instance', () => {
     const api: FilterApi = { setFilter: vi.fn(), removeFilter: vi.fn() };
     const columns = [
-      { id: 'a', header: 'First' },
-      { id: 'b', header: 'Second' },
+      { id: 'a', headerName: 'First' },
+      { id: 'b', headerName: 'Second' },
     ];
     const panel = createFilterPanel({
       getColumns: () => columns,

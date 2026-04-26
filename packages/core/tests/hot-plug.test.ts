@@ -9,9 +9,9 @@ interface Row {
 }
 
 const columns: ColumnDef<Row>[] = [
-  { id: 'id', field: 'id', header: 'ID' } as ColumnDef<Row>,
-  { id: 'name', field: 'name', header: 'Name' } as ColumnDef<Row>,
-  { id: 'value', field: 'value', header: 'Value' } as ColumnDef<Row>,
+  { id: 'id', field: 'id', headerName: 'ID' } as ColumnDef<Row>,
+  { id: 'name', field: 'name', headerName: 'Name' } as ColumnDef<Row>,
+  { id: 'value', field: 'value', headerName: 'Value' } as ColumnDef<Row>,
 ];
 
 const seedData = (): Row[] => [

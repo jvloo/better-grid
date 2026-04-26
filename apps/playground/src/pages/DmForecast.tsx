@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+﻿import { useCallback, useMemo, useRef } from 'react';
 import { useGrid, BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef, GridInstance } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
@@ -155,14 +155,14 @@ interface ForecastContext {
 
 // Module-scope columns. Custom <select> cellRenderers read `ctx.context.updateCell`.
 const columns = [
-  col.text('toggle', { header: '', width: 30 }),
-  col.text('accountCode', { header: 'ID', width: 70, align: 'center' }),
-  col.text('accountName', { header: 'Description', width: 210 }),
+  col.text('toggle', { headerName: '', width: 30 }),
+  col.text('accountCode', { headerName: 'ID', width: 70, align: 'center' }),
+  col.text('accountName', { headerName: 'Description', width: 210 }),
   // Escalation — styled <select> matching FsbtCost / FsbtRevenue dropdowns.
   // editable: false disables the editing plugin's dropdown wrap; parent
   // rows skip rendering so only child rows show the dropdown.
   col.custom('escalationRate', {
-    header: 'Escalation',
+    headerName: 'Escalation',
     width: 130,
     align: 'center',
     editable: false,
@@ -187,7 +187,7 @@ const columns = [
   // Frequency — same pattern, different options. 130px width accommodates
   // the longer "Quarterly" / "Annually" labels with the chevron.
   col.custom('frequency', {
-    header: 'Frequency',
+    headerName: 'Frequency',
     width: 130,
     align: 'center',
     editable: false,
@@ -209,12 +209,12 @@ const columns = [
       container.appendChild(select);
     },
   }),
-  col.date('startDate', { header: 'Start', width: 80, dateFormat: 'month-year' }),
-  col.date('endDate', { header: 'End', width: 80, dateFormat: 'month-year' }),
-  col.currency('remainingValue', { header: 'Remaining Value', width: 100, precision: 0, editable: true, hideZero: true }),
-  col.currency('amountPerFreq', { header: 'Amount per Freq.', width: 100, precision: 0, editable: true, hideZero: true }),
+  col.date('startDate', { headerName: 'Start', width: 80, dateFormat: 'month-year' }),
+  col.date('endDate', { headerName: 'End', width: 80, dateFormat: 'month-year' }),
+  col.currency('remainingValue', { headerName: 'Remaining Value', width: 100, precision: 0, editable: true, hideZero: true }),
+  col.currency('amountPerFreq', { headerName: 'Amount per Freq.', width: 100, precision: 0, editable: true, hideZero: true }),
   col.currency('totalAmount', {
-    header: 'Total Amount',
+    headerName: 'Total Amount',
     width: 110,
     precision: 0,
     cellStyle: (v: unknown) => {
@@ -303,3 +303,4 @@ export function DmForecast() {
     </div>
   );
 }
+

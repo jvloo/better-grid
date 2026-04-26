@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+﻿import { useState, useCallback } from 'react';
 import { BetterGrid, useGrid, defineColumn as col } from '@better-grid/react';
 import type { BadgeOption, ColumnDef } from '@better-grid/core';
 import type { ExportApi } from '@better-grid/plugins';
@@ -73,32 +73,32 @@ const initialData: StockRow[] = items.map((name, i) => {
 });
 
 const columns = [
-  col.text('sku', { header: 'SKU', width: 90, sortable: true }),
-  col.text('name', { header: 'Item Name', width: 170, sortable: true, required: true }),
+  col.text('sku', { headerName: 'SKU', width: 90, sortable: true }),
+  col.text('name', { headerName: 'Item Name', width: 170, sortable: true, required: true }),
   col.badge('category', {
-    header: 'Category',
+    headerName: 'Category',
     width: 110,
     sortable: true,
     options: categories.map((c) => ({ label: c, value: c, color: '#333', bg: '#f0f0f0' })) as BadgeOption[],
   }),
   col.text('supplier', {
-    header: 'Supplier',
+    headerName: 'Supplier',
     width: 110,
     sortable: true,
     cellEditor: 'dropdown',
     options: suppliers,
   }),
   col.text('warehouse', {
-    header: 'Warehouse',
+    headerName: 'Warehouse',
     width: 110,
     sortable: true,
     cellEditor: 'dropdown',
     options: warehouses,
   }),
-  col.text('unit', { header: 'Unit', width: 70, align: 'center' }),
-  col.currency('unitCost', { header: 'Unit Cost', width: 90, precision: 2, sortable: true }),
+  col.text('unit', { headerName: 'Unit', width: 70, align: 'center' }),
+  col.currency('unitCost', { headerName: 'Unit Cost', width: 90, precision: 2, sortable: true }),
   col.number('quantity', {
-    header: 'Qty',
+    headerName: 'Qty',
     width: 70,
     sortable: true,
     rules: [{ validate: (v: unknown) => (v as number) >= 0 || 'Cannot be negative' }],
@@ -109,12 +109,12 @@ const columns = [
       return undefined;
     },
   }),
-  col.number('reorderLevel', { header: 'Reorder At', width: 85, sortable: true }),
-  col.progress('stockLevel', { header: 'Stock Level', width: 120, sortable: true }),
-  col.tooltip('status', { header: 'Status', width: 110 }),
-  col.number('leadDays', { header: 'Lead (d)', width: 75, sortable: true }),
-  col.date('lastRestock', { header: 'Last Restock', width: 110, sortable: true }),
-  col.date('nextRestock', { header: 'Next Restock', width: 110, sortable: true }),
+  col.number('reorderLevel', { headerName: 'Reorder At', width: 85, sortable: true }),
+  col.progress('stockLevel', { headerName: 'Stock Level', width: 120, sortable: true }),
+  col.tooltip('status', { headerName: 'Status', width: 110 }),
+  col.number('leadDays', { headerName: 'Lead (d)', width: 75, sortable: true }),
+  col.date('lastRestock', { headerName: 'Last Restock', width: 110, sortable: true }),
+  col.date('nextRestock', { headerName: 'Next Restock', width: 110, sortable: true }),
 ] as ColumnDef<StockRow>[];
 
 export function InventoryTracker() {
@@ -166,3 +166,4 @@ export function InventoryTracker() {
     </div>
   );
 }
+

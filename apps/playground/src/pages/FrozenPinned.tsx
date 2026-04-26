@@ -1,4 +1,4 @@
-import { BetterGrid, defineColumn as col } from '@better-grid/react';
+﻿import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
 import '@better-grid/core/styles.css';
 
@@ -110,19 +110,19 @@ const headerRows: HeaderRow[] = [
 ];
 
 const salesColumns = [
-  col.text('id', { header: '#', width: 40, sortable: true, hideZero: true }),
-  col.text('region', { header: 'Region', width: 130, sortable: true }),
-  col.text('product', { header: 'Product', width: 130, sortable: true }),
+  col.text('id', { headerName: '#', width: 40, sortable: true, hideZero: true }),
+  col.text('region', { headerName: 'Region', width: 130, sortable: true }),
+  col.text('product', { headerName: 'Product', width: 130, sortable: true }),
   ...monthKeys.map((m) =>
     col.currency(m, {
-      header: m.charAt(0).toUpperCase() + m.slice(1),
+      headerName: m.charAt(0).toUpperCase() + m.slice(1),
       width: 100,
       precision: 0,
       sortable: true,
     }),
   ),
   col.currency('total', {
-    header: 'Total',
+    headerName: 'Total',
     width: 120,
     precision: 0,
     sortable: true,
@@ -204,16 +204,16 @@ const budgetTotals: BudgetRow = {
 };
 
 const budgetColumns = [
-  col.text('code', { header: 'Code', width: 80 }),
-  col.text('description', { header: 'Description', width: 200 }),
-  col.text('category', { header: 'Category', width: 100 }),
-  col.text('type', { header: 'Type', width: 80 }),
-  col.percent('rate', { header: 'Esc. Rate', width: 80 }),
-  col.date('startDate', { header: 'Start', width: 100 }),
-  col.date('endDate', { header: 'End', width: 100 }),
+  col.text('code', { headerName: 'Code', width: 80 }),
+  col.text('description', { headerName: 'Description', width: 200 }),
+  col.text('category', { headerName: 'Category', width: 100 }),
+  col.text('type', { headerName: 'Type', width: 80 }),
+  col.percent('rate', { headerName: 'Esc. Rate', width: 80 }),
+  col.date('startDate', { headerName: 'Start', width: 100 }),
+  col.date('endDate', { headerName: 'End', width: 100 }),
   ...budgetMonths.map((m, i) =>
     col.currency(m, {
-      header: budgetMonthLabels[i]!,
+      headerName: budgetMonthLabels[i]!,
       width: 90,
       precision: 0,
     }),
@@ -272,3 +272,4 @@ export function FrozenPinned() {
     </div>
   );
 }
+

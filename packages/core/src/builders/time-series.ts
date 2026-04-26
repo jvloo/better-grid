@@ -146,7 +146,7 @@ export function timeSeries(options: TimeSeriesOptions): TimeSeriesResult {
     return {
       id: key,
       field: key,
-      header: fmt(d),
+      headerName: fmt(d),
       width: columnWidth,
       ...columnDefaults,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

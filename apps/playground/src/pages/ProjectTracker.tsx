@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+﻿import { useMemo, useState, useCallback } from 'react';
 import { BetterGrid, useGrid, defineColumn as col } from '@better-grid/react';
 import type { BadgeOption, ColumnDef } from '@better-grid/core';
 import type { ExportApi } from '@better-grid/plugins';
@@ -69,9 +69,9 @@ const statusOptions = [
 ] as BadgeOption[];
 
 const columns = [
-  col.text('task', { header: 'Task', width: 200, required: true, sortable: true }),
+  col.text('task', { headerName: 'Task', width: 200, required: true, sortable: true }),
   col.text('assignee', {
-    header: 'Assignee',
+    headerName: 'Assignee',
     width: 120,
     cellEditor: 'autocomplete',
     options: ['Alice', 'Bob', 'Carol', 'David', 'Emma'],
@@ -79,22 +79,22 @@ const columns = [
     sortable: true,
   }),
   col.badge('priority', {
-    header: 'Priority',
+    headerName: 'Priority',
     width: 90,
     cellEditor: 'dropdown',
     sortable: true,
     options: priorityOptions,
   }),
   col.badge('status', {
-    header: 'Status',
+    headerName: 'Status',
     width: 120,
     cellEditor: 'dropdown',
     sortable: true,
     options: statusOptions,
   }),
-  col.date('dueDate', { header: 'Due Date', width: 110, sortable: true }),
+  col.date('dueDate', { headerName: 'Due Date', width: 110, sortable: true }),
   col.number('estimate', {
-    header: 'Est',
+    headerName: 'Est',
     width: 80,
     align: 'right',
     precision: 0,
@@ -105,10 +105,10 @@ const columns = [
       container.textContent = val != null ? `${val}h` : '';
     },
   }),
-  col.progress('progress', { header: 'Progress', width: 120, sortable: true }),
-  col.rating('rating', { header: 'Rating', width: 110, sortable: true }),
-  col.boolean('active', { header: 'Active', width: 70 }),
-  col.text('tags', { header: 'Tags', width: 100, sortable: true }),
+  col.progress('progress', { headerName: 'Progress', width: 120, sortable: true }),
+  col.rating('rating', { headerName: 'Rating', width: 110, sortable: true }),
+  col.boolean('active', { headerName: 'Active', width: 70 }),
+  col.text('tags', { headerName: 'Tags', width: 100, sortable: true }),
 ] as ColumnDef<TaskRow>[];
 
 export function ProjectTracker() {
@@ -167,3 +167,4 @@ export function ProjectTracker() {
     </div>
   );
 }
+

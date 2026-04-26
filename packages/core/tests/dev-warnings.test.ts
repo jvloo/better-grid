@@ -40,8 +40,8 @@ describe('dev-mode warnings', () => {
   describe('duplicate column id', () => {
     it('throws when two columns share the same id', () => {
       const columns: ColumnDef<Row>[] = [
-        { id: 'name', field: 'name', header: 'Name' },
-        { id: 'name', field: 'salary', header: 'Salary' },
+        { id: 'name', field: 'name', headerName: 'Name' },
+        { id: 'name', field: 'salary', headerName: 'Salary' },
       ];
       expect(() => createGrid<Row>({ columns, data: seedData() })).toThrow(
         /\[better-grid\] Duplicate column id: "name"/,
@@ -50,8 +50,8 @@ describe('dev-mode warnings', () => {
 
     it('does not throw when all column ids are unique', () => {
       const columns: ColumnDef<Row>[] = [
-        { id: 'name', field: 'name', header: 'Name' },
-        { id: 'salary', field: 'salary', header: 'Salary' },
+        { id: 'name', field: 'name', headerName: 'Name' },
+        { id: 'salary', field: 'salary', headerName: 'Salary' },
       ];
       expect(() => createGrid<Row>({ columns, data: seedData() })).not.toThrow();
     });
@@ -61,7 +61,7 @@ describe('dev-mode warnings', () => {
     it('warns when explicit field is missing from the sample row', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const columns: ColumnDef<Row>[] = [
-        { id: 'salary', field: 'sallary' as keyof Row & string, header: 'Salary' },
+        { id: 'salary', field: 'sallary' as keyof Row & string, headerName: 'Salary' },
       ];
       createGrid<Row>({ columns, data: seedData() });
       expect(warn).toHaveBeenCalledWith(
@@ -75,7 +75,7 @@ describe('dev-mode warnings', () => {
         {
           id: 'fullName',
           valueGetter: (row) => row.name,
-          header: 'Full name',
+          headerName: 'Full name',
         },
       ];
       createGrid<Row>({ columns, data: seedData() });
@@ -89,7 +89,7 @@ describe('dev-mode warnings', () => {
       // User provides field === id explicitly; we still skip (can't tell apart
       // from auto-fill, and users rarely pick a typo that matches the id).
       const columns: ColumnDef<Row>[] = [
-        { id: 'missing', field: 'missing' as keyof Row & string, header: 'Missing' },
+        { id: 'missing', field: 'missing' as keyof Row & string, headerName: 'Missing' },
       ];
       createGrid<Row>({ columns, data: seedData() });
       expect(warn).not.toHaveBeenCalledWith(
@@ -100,7 +100,7 @@ describe('dev-mode warnings', () => {
     it('is silent when data is empty', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const columns: ColumnDef<Row>[] = [
-        { id: 'salary', field: 'sallary' as keyof Row & string, header: 'Salary' },
+        { id: 'salary', field: 'sallary' as keyof Row & string, headerName: 'Salary' },
       ];
       createGrid<Row>({ columns, data: [] });
       expect(warn).not.toHaveBeenCalledWith(
@@ -111,7 +111,7 @@ describe('dev-mode warnings', () => {
     it('is silent when field exists on the sample row', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const columns: ColumnDef<Row>[] = [
-        { id: 'displayName', field: 'name', header: 'Name' },
+        { id: 'displayName', field: 'name', headerName: 'Name' },
       ];
       createGrid<Row>({ columns, data: seedData() });
       expect(warn).not.toHaveBeenCalledWith(
@@ -124,7 +124,7 @@ describe('dev-mode warnings', () => {
     it('warns on mount when cellType is not built-in and no plugin handles it', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const columns: ColumnDef<Row>[] = [
-        { id: 'priority', field: 'priority', header: 'Priority', cellType: 'priotity' },
+        { id: 'priority', field: 'priority', headerName: 'Priority', cellType: 'priotity' },
       ];
       const grid = createGrid<Row>({ columns, data: seedData() });
       // Should not have warned yet — mount hasn't happened
@@ -140,7 +140,7 @@ describe('dev-mode warnings', () => {
     it('is silent for built-in cellTypes (currency)', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const columns: ColumnDef<Row>[] = [
-        { id: 'salary', field: 'salary', header: 'Salary', cellType: 'currency' },
+        { id: 'salary', field: 'salary', headerName: 'Salary', cellType: 'currency' },
       ];
       const grid = createGrid<Row>({ columns, data: seedData() });
       grid.mount(container);
@@ -162,7 +162,7 @@ describe('dev-mode warnings', () => {
         },
       };
       const columns: ColumnDef<Row>[] = [
-        { id: 'priority', field: 'priority', header: 'Priority', cellType: 'star' },
+        { id: 'priority', field: 'priority', headerName: 'Priority', cellType: 'star' },
       ];
       const grid = createGrid<Row>({
         columns,
@@ -176,3 +176,4 @@ describe('dev-mode warnings', () => {
     });
   });
 });
+

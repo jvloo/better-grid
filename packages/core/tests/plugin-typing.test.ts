@@ -50,8 +50,8 @@ function filtering(): GridPlugin<'filtering', FilteringApi> {
 }
 
 const columns: ColumnDef<Row>[] = [
-  { id: 'id', field: 'id', header: 'ID' } as ColumnDef<Row>,
-  { id: 'name', field: 'name', header: 'Name' } as ColumnDef<Row>,
+  { id: 'id', field: 'id', headerName: 'ID' } as ColumnDef<Row>,
+  { id: 'name', field: 'name', headerName: 'Name' } as ColumnDef<Row>,
 ];
 
 beforeEach(() => { document.body.innerHTML = ''; });

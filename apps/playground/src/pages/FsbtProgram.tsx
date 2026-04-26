@@ -266,7 +266,7 @@ export function FsbtProgram() {
   const columns = useMemo<ColumnDef<ProgramRow>[]>(() => [
     // ── Col 0: Menu (handled by rowActions plugin) ──────────────────────
     {
-      id: 'actions', header: '', width: 50, editable: false,
+      id: 'actions', headerName: '', width: 50, editable: false,
       cellRenderer: (container, ctx) => {
         // Background only — rowActions plugin wraps this to add menu button
         const row = ctx.row as ProgramRow;
@@ -275,7 +275,7 @@ export function FsbtProgram() {
     },
     // ── Col 1: Code (right-aligned with left gap) ───────────────────────
     {
-      id: 'code', field: 'code', header: 'Code', width: 45, align: 'right' as const, editable: false,
+      id: 'code', field: 'code', headerName: 'Code', width: 45, align: 'right' as const, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
@@ -290,7 +290,10 @@ export function FsbtProgram() {
     },
     // ── Col 2: Phase (indented name) ────────────────────────────────────
     {
-      id: 'name', field: 'name', header: (() => { const el = document.createElement('span'); el.textContent = 'Phase'; el.style.paddingLeft = '8px'; return el; }) as any, width: 236,
+      id: 'name', field: 'name',
+      headerName: 'Phase',
+      headerRenderer: (container) => { const el = document.createElement('span'); el.className = 'bg-header-cell__text'; el.textContent = 'Phase'; el.style.paddingLeft = '8px'; container.replaceChildren(el); },
+      width: 236,
       editable: ((row: ProgramRow) => row.parentId !== null && row.custom) as any,
       rules: [{ validate: (v: unknown) => !v || String(v).trim().length >= 3 || 'Name is too short. Please re-enter.', message: 'Min 3 characters' }],
       cellRenderer: (container, ctx) => {
@@ -307,15 +310,17 @@ export function FsbtProgram() {
     // ── Col 3: Duration (center-aligned, wrapping header) ─────────────
     {
       id: 'duration', field: 'duration', cellType: 'number' as const, min: 1, max: 999,
-      header: (() => {
+      headerName: 'Duration (months)',
+      headerRenderer: (container) => {
         const el = document.createElement('span');
+        el.className = 'bg-header-cell__text';
         el.textContent = 'Duration (months)';
         el.style.whiteSpace = 'normal';
         el.style.lineHeight = '1.4';
         el.style.textAlign = 'center';
         el.style.display = 'block';
-        return el;
-      }) as any,
+        container.replaceChildren(el);
+      },
       width: 90, align: 'center' as const,
       editable: ((row: ProgramRow) => row.parentId !== null) as any,
       rules: [{ validate: (v: unknown) => { if (v == null || v === '') return true; const n = Number(v); return (Number.isInteger(n) && n >= 1 && n <= 999) || 'Duration must be 1-999'; } }],
@@ -331,7 +336,10 @@ export function FsbtProgram() {
     },
     // ── Col 4: Start (left-aligned) ─────────────────────────────────────
     {
-      id: 'start', field: 'start', header: (() => { const el = document.createElement('span'); el.textContent = 'Start'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, placeholder: 'MM/YY',
+      id: 'start', field: 'start',
+      headerName: 'Start',
+      headerRenderer: (container) => { const el = document.createElement('span'); el.className = 'bg-header-cell__text'; el.textContent = 'Start'; el.style.paddingLeft = '8px'; container.replaceChildren(el); },
+      width: 110, placeholder: 'MM/YY',
       cellEditor: 'masked' as const, mask: 'MM/YY',
       rules: [
         { validate: (v: unknown) => { if (!v || v === '') return true; const s = String(v); return /^\d{4}-\d{2}-\d{2}$/.test(s) || 'Invalid date'; } },
@@ -381,7 +389,10 @@ export function FsbtProgram() {
     },
     // ── Col 5: End (left-aligned, always read-only) ───────────────────
     {
-      id: 'end', field: 'end', header: (() => { const el = document.createElement('span'); el.textContent = 'End'; el.style.paddingLeft = '8px'; return el; }) as any, width: 110, editable: false,
+      id: 'end', field: 'end',
+      headerName: 'End',
+      headerRenderer: (container) => { const el = document.createElement('span'); el.className = 'bg-header-cell__text'; el.textContent = 'End'; el.style.paddingLeft = '8px'; container.replaceChildren(el); },
+      width: 110, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
@@ -395,7 +406,7 @@ export function FsbtProgram() {
     },
     // ── Col 6: Collapse/expand chevron (handled by hierarchy plugin) ────
     {
-      id: 'collapse', header: '', width: 40, editable: false,
+      id: 'collapse', headerName: '', width: 40, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
@@ -513,3 +524,4 @@ export function FsbtProgram() {
     </div>
   );
 }
+

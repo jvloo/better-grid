@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import { useGrid, BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
@@ -82,14 +82,14 @@ const pinnedBottomRows = [totalsRow];
 
 // Columns hoisted at module scope — no closure-over-component-state.
 const columns = [
-  col.text('actions', { header: '', width: 50 }),
-  col.text('child2Code', { header: 'ID', width: 85, align: 'center' }),
-  col.text('child2Name', { header: 'Description', width: 200, editable: true }),
-  col.text('child1Code', { header: 'ID', width: 85, align: 'center' }),
-  col.text('child1Name', { header: 'Description', width: 200 }),
-  col.text('parentCode', { header: 'ID', width: 85, align: 'center' }),
-  col.text('parentName', { header: 'Description', width: 200 }),
-  col.currency('total', { header: 'Total', width: 72, precision: 0 }),
+  col.text('actions', { headerName: '', width: 50 }),
+  col.text('child2Code', { headerName: 'ID', width: 85, align: 'center' }),
+  col.text('child2Name', { headerName: 'Description', width: 200, editable: true }),
+  col.text('child1Code', { headerName: 'ID', width: 85, align: 'center' }),
+  col.text('child1Name', { headerName: 'Description', width: 200 }),
+  col.text('parentCode', { headerName: 'ID', width: 85, align: 'center' }),
+  col.text('parentName', { headerName: 'Description', width: 200 }),
+  col.currency('total', { headerName: 'Total', width: 72, precision: 0 }),
   ...ts.columns,
 ] as ColumnDef<ActualRow>[];
 
@@ -176,3 +176,4 @@ export function DmActuals() {
     </div>
   );
 }
+

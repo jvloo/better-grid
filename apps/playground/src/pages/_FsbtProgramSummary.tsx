@@ -26,7 +26,7 @@ export function FsbtProgramSummary() {
 
   const columns = useMemo<ColumnDef<FsbtProgramRow>[]>(() => [
     {
-      id: 'code', field: 'code', header: 'Code', width: 45, align: 'right' as const, editable: false,
+      id: 'code', field: 'code', headerName: 'Code', width: 45, align: 'right' as const, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
         const isParent = row.parentId === null;
@@ -40,7 +40,7 @@ export function FsbtProgramSummary() {
       },
     },
     {
-      id: 'name', field: 'name', header: 'Phase', width: 240, editable: false,
+      id: 'name', field: 'name', headerName: 'Phase', width: 240, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
         const isParent = row.parentId === null;
@@ -53,7 +53,7 @@ export function FsbtProgramSummary() {
       },
     },
     {
-      id: 'duration', field: 'duration', header: 'Duration (months)', width: 110, align: 'center' as const, editable: false,
+      id: 'duration', field: 'duration', headerName: 'Duration (months)', width: 110, align: 'center' as const, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
         const isParent = row.parentId === null;
@@ -64,7 +64,7 @@ export function FsbtProgramSummary() {
       },
     },
     {
-      id: 'start', field: 'start', header: 'Start', width: 90, editable: false,
+      id: 'start', field: 'start', headerName: 'Start', width: 90, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
         const isParent = row.parentId === null;
@@ -76,7 +76,7 @@ export function FsbtProgramSummary() {
       },
     },
     {
-      id: 'end', field: 'end', header: 'End', width: 90, editable: false,
+      id: 'end', field: 'end', headerName: 'End', width: 90, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
         const isParent = row.parentId === null;
@@ -88,7 +88,7 @@ export function FsbtProgramSummary() {
       },
     },
     {
-      id: 'collapse', header: '', width: 40, editable: false,
+      id: 'collapse', headerName: '', width: 40, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as FsbtProgramRow;
         container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
@@ -144,3 +144,4 @@ export function FsbtProgramSummary() {
     />
   );
 }
+

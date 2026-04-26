@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import { BetterGrid, useGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import type { ExportApi } from '@better-grid/plugins';
@@ -43,12 +43,12 @@ const scheduleData: ScheduleRow[] = [
 ];
 
 const columns = [
-  col.text('day', { header: 'Day', width: 110 }),
-  col.text('time', { header: 'Time', width: 70, align: 'center' }),
-  col.text('room', { header: 'Room', width: 70, align: 'center' }),
-  col.text('subject', { header: 'Subject', width: 160 }),
-  col.text('instructor', { header: 'Instructor', width: 140 }),
-  col.text('type', { header: 'Type', width: 100 }),
+  col.text('day', { headerName: 'Day', width: 110 }),
+  col.text('time', { headerName: 'Time', width: 70, align: 'center' }),
+  col.text('room', { headerName: 'Room', width: 70, align: 'center' }),
+  col.text('subject', { headerName: 'Subject', width: 160 }),
+  col.text('instructor', { headerName: 'Instructor', width: 140 }),
+  col.text('type', { headerName: 'Type', width: 100 }),
 ] as ColumnDef<ScheduleRow>[];
 
 // Static merge config — derived once from data shape.
@@ -119,3 +119,4 @@ export function MergeCellsDemo() {
     </div>
   );
 }
+

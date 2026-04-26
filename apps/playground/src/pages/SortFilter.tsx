@@ -1,4 +1,4 @@
-import { BetterGrid, defineColumn as col } from '@better-grid/react';
+﻿import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { CodeBlock } from '../components/CodeBlock';
 import '@better-grid/core/styles.css';
@@ -38,14 +38,14 @@ const data: EmployeeRow[] = [
 ];
 
 const columns = [
-  col.text('id', { header: '#', width: 40, editable: false, sortable: true }),
-  col.text('name', { header: 'Name', width: 140, sortable: true }),
-  col.text('department', { header: 'Dept', width: 110, sortable: true }),
-  col.text('role', { header: 'Role', width: 90, sortable: true }),
-  col.currency('salary', { header: 'Salary', width: 110, sortable: true }),
-  col.number('experience', { header: 'Exp (yrs)', width: 90, sortable: true }),
+  col.text('id', { headerName: '#', width: 40, editable: false, sortable: true }),
+  col.text('name', { headerName: 'Name', width: 140, sortable: true }),
+  col.text('department', { headerName: 'Dept', width: 110, sortable: true }),
+  col.text('role', { headerName: 'Role', width: 90, sortable: true }),
+  col.currency('salary', { headerName: 'Salary', width: 110, sortable: true }),
+  col.number('experience', { headerName: 'Exp (yrs)', width: 90, sortable: true }),
   col.number('rating', {
-    header: 'Rating',
+    headerName: 'Rating',
     width: 80,
     sortable: true,
     cellRenderer: (container, ctx) => {
@@ -56,7 +56,7 @@ const columns = [
       container.style.fontWeight = '500';
     },
   }),
-  col.text('location', { header: 'Location', width: 120, sortable: true }),
+  col.text('location', { headerName: 'Location', width: 120, sortable: true }),
 ] as ColumnDef<EmployeeRow>[];
 
 export function SortFilter() {
@@ -90,20 +90,20 @@ export function SortFilter() {
 // Right-click header → Filter... / Clear Filter
 
 const columns = [
-  col.text('id', { header: '#', width: 40, editable: false, sortable: true }),
-  col.text('name', { header: 'Name', width: 140, sortable: true }),
-  col.text('department', { header: 'Dept', width: 110, sortable: true }),
-  col.text('role', { header: 'Role', width: 90, sortable: true }),
-  col.currency('salary', { header: 'Salary', width: 110, sortable: true }),
-  col.number('experience', { header: 'Exp (yrs)', width: 90, sortable: true }),
-  col.number('rating', { header: 'Rating', width: 80, sortable: true,
+  col.text('id', { headerName: '#', width: 40, editable: false, sortable: true }),
+  col.text('name', { headerName: 'Name', width: 140, sortable: true }),
+  col.text('department', { headerName: 'Dept', width: 110, sortable: true }),
+  col.text('role', { headerName: 'Role', width: 90, sortable: true }),
+  col.currency('salary', { headerName: 'Salary', width: 110, sortable: true }),
+  col.number('experience', { headerName: 'Exp (yrs)', width: 90, sortable: true }),
+  col.number('rating', { headerName: 'Rating', width: 80, sortable: true,
     cellRenderer: (el, ctx) => {
       el.textContent = ctx.value.toFixed(1);
       el.style.color = ctx.value >= 4.5 ? '#2e7d32'
                       : ctx.value >= 4.0 ? '#f57f17' : '#c62828';
     },
   }),
-  col.text('location', { header: 'Location', width: 120, sortable: true }),
+  col.text('location', { headerName: 'Location', width: 120, sortable: true }),
 ];
 
 <BetterGrid
@@ -116,3 +116,4 @@ const columns = [
     </div>
   );
 }
+

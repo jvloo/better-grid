@@ -1,4 +1,4 @@
-import { BetterGrid, defineColumn as col } from '@better-grid/react';
+﻿import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef, HeaderRow } from '@better-grid/core';
 import '@better-grid/core/styles.css';
 
@@ -46,13 +46,13 @@ const heroHeaders: HeaderRow[] = [
 ];
 
 const heroCols = [
-  col.text('id', { header: '#', width: 40, editable: false }),
-  col.text('project', { header: 'Project', width: 120 }),
-  col.text('category', { header: 'Type', width: 80 }),
-  col.currency('total', { header: 'Total', width: 110, sortable: true }),
+  col.text('id', { headerName: '#', width: 40, editable: false }),
+  col.text('project', { headerName: 'Project', width: 120 }),
+  col.text('category', { headerName: 'Type', width: 80 }),
+  col.currency('total', { headerName: 'Total', width: 110, sortable: true }),
   ...(['jan', 'feb', 'mar', 'apr', 'may', 'jun'] as const).map((m) =>
     col.currency(m, {
-      header: m.charAt(0).toUpperCase() + m.slice(1),
+      headerName: m.charAt(0).toUpperCase() + m.slice(1),
       width: 90,
       cellRenderer: (container: HTMLElement, ctx: { value: unknown }) => {
         const val = ctx.value as number;
@@ -320,3 +320,4 @@ function TierCard({ title, price, color, features, featured }: { title: string; 
     </div>
   );
 }
+

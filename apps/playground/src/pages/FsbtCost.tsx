@@ -599,7 +599,7 @@ export function FsbtCost() {
     () => [
       // ── Col 0: Menu — the production reference's add/delete ⋮ (handled by rowActions plugin) ──
       {
-        id: 'actions', header: '', width: 50, editable: false,
+        id: 'actions', headerName: '', width: 50, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
@@ -608,7 +608,7 @@ export function FsbtCost() {
       // ── Col 1: Code — right-aligned, read-only. Explicit cellRenderer
       //    keeps inputStyle: true from painting an empty input here. ──
       {
-        id: 'code', field: 'code', header: 'Code', width: 40, align: 'right' as const, editable: false,
+        id: 'code', field: 'code', headerName: 'Code', width: 40, align: 'right' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.textContent = row.code;
@@ -619,14 +619,14 @@ export function FsbtCost() {
       // ── Col 2: Phase — 8px parent / 28px child padding, bold on parent.
       //    Editable only for custom children (the production reference convention — only custom rows are named by the user).
       {
-        id: 'name', field: 'name', header: 'Phase', width: 236, cellStyle: phaseCellStyle,
+        id: 'name', field: 'name', headerName: 'Phase', width: 236, cellStyle: phaseCellStyle,
         editable: ((row: CostRow) => row.parentId !== null && row.custom) as unknown as boolean,
         rules: [{ validate: (v: unknown) => !v || String(v).trim().length >= 3 || 'Name is too short. Please re-enter.' }],
       },
       // ── Col 3: Input — percent rows show number + "%" suffix; parent rows except Land Cost render empty.
       //    Editable unless the row is inputType='none' (parent rollups). Land Cost (parent with code='1') is still editable.
       {
-        id: 'input', field: 'input', header: 'Input', width: 110, align: 'center' as const,
+        id: 'input', field: 'input', headerName: 'Input', width: 110, align: 'center' as const,
         editable: ((row: CostRow) => row.inputType !== 'none') as unknown as boolean,
         cellType: 'number' as const,
         min: 0,
@@ -659,7 +659,7 @@ export function FsbtCost() {
       },
       // ── Col 4: Input Note — derived from code via the production reference's getCostInputNote() ──
       {
-        id: 'inputNote', header: '', width: 140, align: 'left' as const, editable: false,
+        id: 'inputNote', headerName: '', width: 140, align: 'left' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.textContent = getCostInputNote(row.code);
@@ -668,7 +668,7 @@ export function FsbtCost() {
       },
       // ── Col 5: Escalation — native Better Grid select (CPI / Non-CPI).
       {
-        id: 'escalation', field: 'escalation', header: 'Escalation', width: 110, align: 'center' as const,
+        id: 'escalation', field: 'escalation', headerName: 'Escalation', width: 110, align: 'center' as const,
         editable: ((row: CostRow) => row.parentId !== null && row.escalation !== 'none') as unknown as boolean,
         cellEditor: 'select' as const,
         options: [...ESCALATION_OPTIONS],
@@ -677,7 +677,7 @@ export function FsbtCost() {
       },
       // ── Col 6: Amount — plain number (the production reference uses formatNumber, not currency), read-only ──
       {
-        id: 'amount', field: 'amount', header: 'Amount', width: 110, align: 'center' as const, editable: false,
+        id: 'amount', field: 'amount', headerName: 'Amount', width: 110, align: 'center' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           if (typeof row.amount !== 'number') { container.textContent = ''; return; }
@@ -694,7 +694,7 @@ export function FsbtCost() {
       },
       // ── Col 7: Start — masked MM/YY input, matches FsbtProgram's Start column styling ──
       {
-        id: 'start', field: 'start', header: 'Start', width: 85, placeholder: 'MM/YY',
+        id: 'start', field: 'start', headerName: 'Start', width: 85, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
         rules: [{ validate: validateStartDate }],
@@ -713,7 +713,7 @@ export function FsbtCost() {
       },
       // ── Col 8: End — masked MM/YY input, matches Program styling ──
       {
-        id: 'end', field: 'end', header: 'End', width: 85, placeholder: 'MM/YY',
+        id: 'end', field: 'end', headerName: 'End', width: 85, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
         editable: ((row: CostRow) => row.parentId !== null) as unknown as boolean,
         rules: [{ validate: validateEndDate }],
@@ -732,7 +732,7 @@ export function FsbtCost() {
       },
       // ── Col 9: Variance (read-only, computed) ──
       {
-        id: 'variance', field: 'variance', header: 'Variance', width: 85, align: 'center' as const, editable: false,
+        id: 'variance', field: 'variance', headerName: 'Variance', width: 85, align: 'center' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.textContent = typeof row.variance === 'number' ? formatAU(Math.round(row.variance)) : '';
@@ -741,7 +741,7 @@ export function FsbtCost() {
       },
       // ── Col 10: Variance status — valid/warning/empty circle icon ──
       {
-        id: 'varianceStatus', header: '', width: 44, editable: false,
+        id: 'varianceStatus', headerName: '', width: 44, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
@@ -750,7 +750,7 @@ export function FsbtCost() {
       },
       // ── Col 11: Collapse/expand chevron (at end of frozen row, matches FsbtProgram) ──
       {
-        id: 'collapse', header: '', width: 40, editable: false,
+        id: 'collapse', headerName: '', width: 40, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
@@ -878,3 +878,4 @@ export function FsbtCost() {
     </div>
   );
 }
+

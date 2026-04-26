@@ -76,8 +76,8 @@ afterEach(() => {
 describe('createHeaderRenderer', () => {
   it('renders one header cell per column in single-row mode', () => {
     const { headerContainer } = setup([
-      { id: 'a', header: 'Alpha' } as ColumnDef,
-      { id: 'b', header: 'Beta' } as ColumnDef,
+      { id: 'a', headerName: 'Alpha' } as ColumnDef,
+      { id: 'b', headerName: 'Beta' } as ColumnDef,
     ]);
     const cells = headerContainer.querySelectorAll('.bg-header-cell');
     expect(cells).toHaveLength(2);
@@ -88,9 +88,9 @@ describe('createHeaderRenderer', () => {
   it('routes frozen columns to the overlay and scrollable to the main container', () => {
     const { headerContainer, frozenHeaderOverlay } = setup(
       [
-        { id: 'a', header: 'A' } as ColumnDef,
-        { id: 'b', header: 'B' } as ColumnDef,
-        { id: 'c', header: 'C' } as ColumnDef,
+        { id: 'a', headerName: 'A' } as ColumnDef,
+        { id: 'b', headerName: 'B' } as ColumnDef,
+        { id: 'c', headerName: 'C' } as ColumnDef,
       ],
       {},
       undefined,
@@ -103,7 +103,7 @@ describe('createHeaderRenderer', () => {
   it('invokes onHeaderClick when a header cell is clicked', () => {
     const onHeaderClick = vi.fn();
     const { headerContainer } = setup(
-      [{ id: 'a', header: 'A' } as ColumnDef],
+      [{ id: 'a', headerName: 'A' } as ColumnDef],
       { onHeaderClick },
     );
     (headerContainer.querySelector('.bg-header-cell') as HTMLElement).click();
@@ -113,7 +113,7 @@ describe('createHeaderRenderer', () => {
   it('invokes onHeaderContextMenu on right-click and prevents default', () => {
     const onHeaderContextMenu = vi.fn();
     const { headerContainer } = setup(
-      [{ id: 'a', header: 'A' } as ColumnDef],
+      [{ id: 'a', headerName: 'A' } as ColumnDef],
       { onHeaderContextMenu },
     );
     const cell = headerContainer.querySelector('.bg-header-cell') as HTMLElement;
@@ -125,14 +125,14 @@ describe('createHeaderRenderer', () => {
 
   it('renders a filter button only when hasFilterPlugin() is true', () => {
     const { headerContainer: withOff } = setup(
-      [{ id: 'a', header: 'A' } as ColumnDef],
+      [{ id: 'a', headerName: 'A' } as ColumnDef],
       { hasFilterPlugin: () => false },
     );
     expect(withOff.querySelector('.bg-header-cell__filter-btn')).toBeNull();
 
     document.body.innerHTML = '';
     const { headerContainer: withOn } = setup(
-      [{ id: 'a', header: 'A' } as ColumnDef],
+      [{ id: 'a', headerName: 'A' } as ColumnDef],
       { hasFilterPlugin: () => true },
     );
     expect(withOn.querySelector('.bg-header-cell__filter-btn')).not.toBeNull();
@@ -141,7 +141,7 @@ describe('createHeaderRenderer', () => {
   it('routes filter button mousedown to onFilterButtonClick', () => {
     const onFilterButtonClick = vi.fn();
     const { headerContainer } = setup(
-      [{ id: 'a', header: 'A' } as ColumnDef],
+      [{ id: 'a', headerName: 'A' } as ColumnDef],
       { hasFilterPlugin: () => true, onFilterButtonClick },
     );
     const btn = headerContainer.querySelector('.bg-header-cell__filter-btn') as HTMLElement;
@@ -153,7 +153,7 @@ describe('createHeaderRenderer', () => {
   it('renders a resize handle and calls onColumnResize on pointerdown', () => {
     const onColumnResize = vi.fn();
     const { headerContainer } = setup(
-      [{ id: 'a', header: 'A' } as ColumnDef],
+      [{ id: 'a', headerName: 'A' } as ColumnDef],
       { onColumnResize },
     );
     const handle = headerContainer.querySelector('.bg-resize-handle') as HTMLElement;
@@ -164,20 +164,20 @@ describe('createHeaderRenderer', () => {
 
   it('omits the resize handle when column.resizable === false', () => {
     const { headerContainer } = setup([
-      { id: 'a', header: 'A', resizable: false } as ColumnDef,
+      { id: 'a', headerName: 'A', resizable: false } as ColumnDef,
     ]);
     expect(headerContainer.querySelector('.bg-resize-handle')).toBeNull();
   });
 
   it('render() is idempotent until invalidate() is called', () => {
     const { renderer, headerContainer, deps } = setup([
-      { id: 'a', header: 'A' } as ColumnDef,
+      { id: 'a', headerName: 'A' } as ColumnDef,
     ]);
     const firstCount = headerContainer.querySelectorAll('.bg-header-cell').length;
 
     // Re-render without invalidating — no changes expected
     renderer.render(
-      makeState([{ id: 'a', header: 'A' } as ColumnDef]),
+      makeState([{ id: 'a', headerName: 'A' } as ColumnDef]),
       makeMeasurements([100]),
     );
     expect(headerContainer.querySelectorAll('.bg-header-cell').length).toBe(firstCount);
@@ -186,8 +186,8 @@ describe('createHeaderRenderer', () => {
     renderer.invalidate();
     renderer.render(
       makeState([
-        { id: 'a', header: 'A' } as ColumnDef,
-        { id: 'b', header: 'B' } as ColumnDef,
+        { id: 'a', headerName: 'A' } as ColumnDef,
+        { id: 'b', headerName: 'B' } as ColumnDef,
       ]),
       makeMeasurements([100, 100]),
     );
@@ -199,7 +199,7 @@ describe('createHeaderRenderer', () => {
     const show = vi.fn();
     const dismiss = vi.fn();
     const { headerContainer } = setup(
-      [{ id: 'a', header: 'A very long header label that will clip' } as ColumnDef],
+      [{ id: 'a', headerName: 'A very long header label that will clip' } as ColumnDef],
       { tooltip: { show, dismiss } as unknown as HeaderRendererDeps['tooltip'] },
     );
     const cell = headerContainer.querySelector('.bg-header-cell') as HTMLElement;
@@ -224,7 +224,7 @@ describe('createHeaderRenderer', () => {
     const show = vi.fn();
     const dismiss = vi.fn();
     const { headerContainer } = setup(
-      [{ id: 'a', header: 'Long clipped header' } as ColumnDef],
+      [{ id: 'a', headerName: 'Long clipped header' } as ColumnDef],
       {
         tooltip: { show, dismiss } as unknown as HeaderRendererDeps['tooltip'],
         hasFilterPlugin: () => true,
@@ -286,7 +286,7 @@ describe('createHeaderRenderer', () => {
     } as unknown as HeaderRendererDeps;
 
     const renderer = createHeaderRenderer(deps);
-    const columns = Array.from({ length: 5 }, (_, i) => ({ id: `c${i}`, header: `H${i}` } as ColumnDef));
+    const columns = Array.from({ length: 5 }, (_, i) => ({ id: `c${i}`, headerName: `H${i}` } as ColumnDef));
     const widths = columns.map(() => 100);
     renderer.render(makeState(columns), makeMeasurements(widths));
 
@@ -322,9 +322,9 @@ describe('createHeaderRenderer', () => {
     ];
     const { headerContainer } = setup(
       [
-        { id: 'a', header: 'A' } as ColumnDef,
-        { id: 'b', header: 'B' } as ColumnDef,
-        { id: 'c', header: 'C' } as ColumnDef,
+        { id: 'a', headerName: 'A' } as ColumnDef,
+        { id: 'b', headerName: 'B' } as ColumnDef,
+        { id: 'c', headerName: 'C' } as ColumnDef,
       ],
       {},
       headerRows,

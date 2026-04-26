@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import { useGrid, BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import { timeSeries } from '@better-grid/core';
@@ -79,10 +79,10 @@ const descriptionStyleFn = (_v: unknown, row: unknown): Record<string, string> |
 
 // Module-scope columns. ts.columns is also module-scope so this is safe.
 const columns = [
-  col.text('description', { header: 'Description', width: 500, cellStyle: descriptionStyleFn }),
-  col.currency('actualAmount', { header: 'Actual to Date', width: 150, precision: 0, align: 'center', cellStyle: rowStyleFn, hideZero: true }),
-  col.currency('forecastAmount', { header: 'Forecast to Go', width: 150, precision: 0, align: 'center', cellStyle: rowStyleFn, hideZero: true }),
-  col.currency('totalAmount', { header: 'Total Amount', width: 150, precision: 0, align: 'center', cellStyle: rowStyleFn, hideZero: true }),
+  col.text('description', { headerName: 'Description', width: 500, cellStyle: descriptionStyleFn }),
+  col.currency('actualAmount', { headerName: 'Actual to Date', width: 150, precision: 0, align: 'center', cellStyle: rowStyleFn, hideZero: true }),
+  col.currency('forecastAmount', { headerName: 'Forecast to Go', width: 150, precision: 0, align: 'center', cellStyle: rowStyleFn, hideZero: true }),
+  col.currency('totalAmount', { headerName: 'Total Amount', width: 150, precision: 0, align: 'center', cellStyle: rowStyleFn, hideZero: true }),
   ...ts.columns.map(c => ({
     ...c,
     cellType: 'currency' as const,
@@ -138,3 +138,4 @@ export function DmSummary() {
     </div>
   );
 }
+
