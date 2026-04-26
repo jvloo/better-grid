@@ -6,8 +6,8 @@ A cheat-sheet for translating Adazzle's `react-data-grid` to Better Grid. Both r
 
 | react-data-grid                                | Better Grid                                                                                                                              |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `key: 'amount'`                                | `id: 'amount'` + `accessorKey: 'amount'` (or just `col.currency('amount', {...})`)                                                       |
-| `name: 'Amount'`                               | `header: 'Amount'`                                                                                                                       |
+| `key: 'amount'`                                | `id: 'amount'` + `field: 'amount'` (or just `col.currency('amount', {...})`)                                                       |
+| `name: 'Amount'`                               | `headerName: 'Amount'`                                                                                                                       |
 | `formatter: ({ row, column }) => <Cell />`     | `cellRenderer: (container, ctx) => void` — DOM mutation, no JSX. For built-in types, set `cellType` and skip writing a renderer.         |
 | `editor: TextEditor / DropDownEditor`          | `cellEditor: 'text' \| 'select' \| 'number' \| 'date' \| 'autocomplete' \| 'masked'` + `options: [...]` for select editors               |
 | `editorOptions: { editOnClick: true }`         | `features={{ edit: { editTrigger: 'click' } }}` (or `'dblclick' \| 'type'`)                                                              |

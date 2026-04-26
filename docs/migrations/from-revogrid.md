@@ -6,8 +6,8 @@ A cheat-sheet for translating RevoGrid (`@revolist/revogrid` and `@revolist/revo
 
 | RevoGrid                                       | Better Grid                                                                                                                              |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `prop: 'amount'`                               | `accessorKey: 'amount'` (or `accessorFn` for derived) — `defineColumn` builder fills both: `col.currency('amount', {...})`               |
-| `name: 'Amount'`                               | `header: 'Amount'`                                                                                                                       |
+| `prop: 'amount'`                               | `field: 'amount'` (or `valueGetter` for derived) — `defineColumn` builder fills both: `col.currency('amount', {...})`               |
+| `name: 'Amount'`                               | `headerName: 'Amount'`                                                                                                                       |
 | `cellTemplate: (h, props) => h('span', ...)`   | `cellRenderer: (container, ctx) => void` — DOM mutation, no JSX/h(). For built-ins set `cellType` and skip writing a renderer.            |
 | `cellProperties: () => ({ class: '...' })`     | `cellClass: (value, row) => string` and `cellStyle: (value, row) => Record<string, string>`                                              |
 | `editor: 'select'` + custom editor classes     | `cellEditor: 'select'` (or `'selectWithInput'`) + `options: [...]`. Other editors: `'text' \| 'number' \| 'date' \| 'autocomplete' \| 'masked'`. |

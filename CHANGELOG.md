@@ -34,7 +34,7 @@ First public release.
 - `defineColumn` builders: `col.text` / `col.currency` / `col.percent` / `col.date` / `col.badge` / `col.boolean` / `col.progress` / `col.rating` / `col.change` / `col.changeIndicator` / `col.link` / `col.timeline` / `col.tooltip` / `col.loading` / `col.custom`. Extend with `registerColumn`.
 - Mode presets: `null` / `view` / `interactive` / `spreadsheet` / `dashboard`. Extend with `registerMode`.
 - Feature registry: `features={['edit', 'sort']}` (string opt-in) or `features={{ edit: { editTrigger: 'click' } }}` (with options). Auto-includes feature dependencies with a one-time dev warning.
-- `configureBetterGrid({...})` for app-wide feature-option defaults.
+- `configure({...})` for app-wide feature-option defaults.
 - `@better-grid/react/rhf` sub-export — `useGridForm({ grid, baseName })` bridges cell commits into a surrounding `<FormProvider>` (react-hook-form is an optional peer dep).
 
 ### Free plugins (`@better-grid/plugins`)

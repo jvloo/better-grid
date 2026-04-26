@@ -6,8 +6,8 @@ A cheat-sheet for translating AG Grid column definitions and grid options to Bet
 
 | AG Grid                                  | Better Grid                                                                                                                                      |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `field: 'amount'`                        | `accessorKey: 'amount'` (or `accessorFn: (row) => ...` for derived values). The `defineColumn` builder fills this in for you: `col.currency('amount', {...})`. |
-| `headerName: 'Amount'`                   | `header: 'Amount'`                                                                                                                               |
+| `field: 'amount'`                        | `field: 'amount'` (or `valueGetter: (row) => ...` for derived values). The `defineColumn` builder fills this in for you: `col.currency('amount', {...})`. |
+| `headerName: 'Amount'`                   | `headerName: 'Amount'`                                                                                                                               |
 | `valueFormatter: params => string`       | `valueFormatter: (value) => string` — **same name, different signature**: no `params` object, you get the raw value directly                      |
 | `valueParser: params => any`             | `valueParser: (str) => unknown` — **same name, different signature**: flat, no `params`                                                          |
 | `cellRenderer: MyReactComponent`         | `cellRenderer: (container, ctx) => void` — **same name, different contract**: DOM-first, no JSX. Mutate `container` directly; optionally return a cleanup function. Use `ctx.context` to read closure-over-component-scope values without re-init. |

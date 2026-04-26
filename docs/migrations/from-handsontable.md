@@ -6,8 +6,8 @@ A cheat-sheet for translating Handsontable to Better Grid. Both are spreadsheet-
 
 | Handsontable                                   | Better Grid                                                                                                                              |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `data: 'amount'`                               | `accessorKey: 'amount'` (or `accessorFn: (row) => ...` for derived values) — the `defineColumn` builder fills both: `col.currency('amount', {...})` |
-| `title: 'Amount'`                              | `header: 'Amount'`                                                                                                                       |
+| `data: 'amount'`                               | `field: 'amount'` (or `valueGetter: (row) => ...` for derived values) — the `defineColumn` builder fills both: `col.currency('amount', {...})` |
+| `title: 'Amount'`                              | `headerName: 'Amount'`                                                                                                                       |
 | `type: 'numeric'`                              | `cellType: 'number'` (or `col.number(...)`)                                                                                              |
 | `type: 'date'` / `dateFormat`                  | `cellType: 'date'` (or `col.date(...)`); `dateFormat` is set on the formatting plugin                                                    |
 | `type: 'checkbox'`                             | `cellType: 'boolean'` (or `col.boolean(...)`)                                                                                            |
@@ -42,11 +42,11 @@ A cheat-sheet for translating Handsontable to Better Grid. Both are spreadsheet-
 | `mergeCells: [{ row: 1, col: 1, rowspan: 2 }]` | Use the `mergeCells` plugin (Pro)                                                                                                        |
 | `nestedHeaders: [...]`                         | `headers: [{ id: 'group', cells: [{ content: 'Group', colSpan: 3 }] }, { id: 'detail', cells: [...] }]`                                  |
 | `nestedRows: true`                             | Use the `hierarchy` plugin + `hierarchy: { getRowId, getParentId }` option                                                               |
-| `formulas: true` (HyperFormula)                | Not built-in in v1. Compute derived columns in `accessorFn`, or wire HyperFormula yourself in your data layer.                           |
+| `formulas: true` (HyperFormula)                | Not built-in in v1. Compute derived columns in `valueGetter`, or wire HyperFormula yourself in your data layer.                           |
 | `copyPaste: true`                              | Add `'clipboard'` to `features` (in `mode="spreadsheet"` or higher) — Excel-compatible TSV + HTML rich paste                              |
 | `undo: true`                                   | Add `'undo'` to `features` (in `mode="spreadsheet"`)                                                                                     |
 | `afterChange(changes, source)`                 | `onCellChange(changes)` — receives `CellChange[]` (no source string; check via plugin events if needed)                                  |
-| `Handsontable.hooks.add('afterCreateRow', fn)` | `grid.api.on('data:set', fn)` for the wholesale data updates; cell-level changes via `'data:change'`                                     |
+| `Handsontable.hooks.add('afterCreateRow', fn)` | `grid.api.on('data:set', fn)` for the wholesale data updates; cell-level changes via `'cell:change'`                                     |
 | Handsontable instance                          | `const grid = useGrid({...})` — `grid.api` is the imperative handle (or `createGrid({...})` for vanilla TS)                              |
 
 ## What's different philosophically

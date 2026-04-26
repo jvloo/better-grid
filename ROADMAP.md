@@ -36,7 +36,7 @@
 | Phase 0F — Row aggregation in hierarchy            | ✓ Shipped     | `aggregation()` in `@better-grid/pro`                                                  |
 | Phase 0G — Bug fixes & cleanup                     | ✓ Shipped     | Multi-range Ctrl+click, key binding dispatch, `precision` promotion, etc.              |
 | Phase 1 — Built-in cell renderers                  | ✓ Shipped     | `cellRenderers()` plugin: `badge`, `progress`, `boolean`, `rating`, `change`, `changeIndicator`, `link`, `timeline`, `tooltip`, `loading`, `custom`. React `defineColumn` (`col.<type>`) wraps them. |
-| v1 init API redesign                               | ✓ Shipped     | `mode` presets, `features` registry, `defineColumn`, `useGrid`, `configureBetterGrid`, `context` ref. See [`docs/internal/v1-init-api-history.md`](docs/internal/v1-init-api-history.md). |
+| v1 init API redesign                               | ✓ Shipped     | `mode` presets, `features` registry, `defineColumn`, `useGrid`, `configure`, `context` ref. See [`docs/internal/v1-init-api-history.md`](docs/internal/v1-init-api-history.md). |
 | RHF bridge (`useGridForm`)                         | ✓ Shipped     | `@better-grid/react/rhf` sub-export                                                    |
 | Validation `messageRenderer`                       | ✓ Shipped     | Per-rule + per-column callback returning `HTMLElement` or string                       |
 | MUI theme integration                              | ✓ Shipped     | [`docs/guides/theming-with-mui.md`](docs/guides/theming-with-mui.md)                   |

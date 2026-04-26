@@ -15,7 +15,7 @@ These apply to every coding agent in this repo (Claude Code, Cursor, Copilot, et
 | Package                  | Purpose                                                                                                              | License      |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------ |
 | `@better-grid/core`      | Framework-agnostic engine                                                                                            | MIT          |
-| `@better-grid/react`     | React adapter (`useGrid`, `BetterGrid`, `defineColumn`, `configureBetterGrid`, mode/feature resolver). Sub-export `@better-grid/react/rhf` (`useGridForm`). | MIT          |
+| `@better-grid/react`     | React adapter (`useGrid`, `BetterGrid`, `defineColumn`, `configure`, mode/feature resolver). Sub-export `@better-grid/react/rhf` (`useGridForm`). | MIT          |
 | `@better-grid/plugins`   | Free plugins (editing, sorting, filtering, formatting, validation, hierarchy, clipboard, grouping, pagination, search, export, undoRedo, cellRenderers, autoDetect) + built-in cell renderers | MIT          |
 | `@better-grid/pro`       | Commercial plugins (gantt, aggregation, merge-cells, row-actions, pro-renderers)                                    | Source-available |
 
@@ -37,7 +37,7 @@ These apply to every coding agent in this repo (Claude Code, Cursor, Copilot, et
 | `spreadsheet` | interactive + edit + clipboard + undo          |
 | `dashboard`   | view + export                                  |
 
-`features` is additive on top of mode. Object form passes options: `features={{ edit: { editTrigger: 'click' } }}`. `plugins` is the escape hatch for plugins not in the registry. App-wide defaults: `configureBetterGrid({ features: { format: { locale: 'en-US' } } })`.
+`features` is additive on top of mode. Object form passes options: `features={{ edit: { editTrigger: 'click' } }}`. `plugins` is the escape hatch for plugins not in the registry. App-wide defaults: `configure({ features: { format: { locale: 'en-US' } } })`.
 
 ## Core design
 
@@ -91,15 +91,16 @@ Augmentations flow globally; only augment fields your plugin owns. Consumers who
 ## ColumnDef
 
 ```
-Identity:    id, accessorKey, accessorFn, header
-Layout:      width, minWidth, maxWidth, resizable
+Identity:    id (optional, defaults to field), field, valueGetter
+Header:      headerName (string), headerRenderer ((container, ctx?) => void), headerAlign
+Layout:      width, minWidth, maxWidth, flex, hide, resizable
 Alignment:   align ('left'|'center'|'right'), verticalAlign ('top'|'middle'|'bottom')
 Rendering:   cellType ('number'|'currency'|'percent'|'date'|'bigint'|'select'|'boolean'|'badge'|'progress'|'rating'|'change'|'changeIndicator'|'link'|'timeline'|'tooltip'|'loading'|'custom'),
-             cellRenderer, cellStyle, cellClass
-Editing:     editable, cellEditor ('text'|'dropdown'|'select'|'selectWithInput'|'number'|'date'|'autocomplete'|'masked'),
-             options, valueParser
-Sorting:     sortable, comparator
-Formatting:  hideZero, valueFormatter
+             cellRenderer, cellStyle ((value, row, rowIndex) => …), cellClass ((value, row, rowIndex) => …)
+Editing:     editable, cellEditor ('text'|'select'|'selectWithInput'|'number'|'date'|'autocomplete'|'masked'),
+             options, valueParser ((value, row) => …)
+Sorting:     sortable, comparator ((a, b, rowA?, rowB?) => number)
+Formatting:  hideZero, valueFormatter ((value, row) => …)
 Extension:   meta
 ```
 
@@ -109,7 +110,7 @@ Plugin-only fields (added via module augmentation; only present when the plugin 
 - `formatting` → `dateFormat`
 - `validation` → `required`, `rules`, `validationMessageRenderer`
 
-The React `defineColumn` builders (`col.text`, `col.currency`, etc.) wrap these with type-aware factories that set `id`, `accessorKey`, `cellType`, and default alignment.
+The React `defineColumn` builders (`col.text`, `col.currency`, etc.) wrap these with type-aware factories that set `id`, `field`, `cellType`, and default alignment.
 
 ## Build & dev
 
@@ -135,7 +136,7 @@ packages/core/src/
   keyboard/, columns/, events/, plugin/, styles/grid.css
 
 packages/react/src/
-  BetterGrid.tsx, useGrid.ts, defineColumn.ts, configureBetterGrid.ts,
+  BetterGrid.tsx, useGrid.ts, defineColumn.ts, configure.ts,
   presets/{features,modes}.ts, rhf.ts (sub-export at @better-grid/react/rhf),
   adapters/
 
@@ -154,4 +155,4 @@ apps/playground/        # ~25 demo pages — /demo/* and /demo-realworld/*
 
 ## Reference docs
 
-See [`docs/README.md`](docs/README.md) for the index. Highlights: [`ROADMAP.md`](ROADMAP.md), [`docs/migrations/`](docs/migrations/), [`docs/guides/theming-with-mui.md`](docs/guides/theming-with-mui.md), [`docs/internal/`](docs/internal/) (contributor reference).
+See [`docs/README.md`](docs/README.md) for the index. Highlights: [`ROADMAP.md`](ROADMAP.md), [`docs/migrations/`](docs/migrations/), [`docs/guides/theming-with-mui.md`](docs/guides/theming-with-mui.md), [`docs/guides/kitchen-sink.md`](docs/guides/kitchen-sink.md) (every prop in one annotated example), [`docs/internal/`](docs/internal/) (contributor reference).

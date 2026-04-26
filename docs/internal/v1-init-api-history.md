@@ -36,7 +36,7 @@ import { defineColumn as col } from '@better-grid/react';
 col.currency('q1Actual', { header: 'Actual', precision: 0 })
 ```
 
-The `col.<type>(field, opts)` builder sets `id`, `accessorKey`, `cellType`, and `align` for you. `field` becomes both `id` and `accessorKey`; pass `accessorFn` in opts for non-trivial paths.
+The `col.<type>(field, opts)` builder sets `id`, `field`, `cellType`, and `align` for you. `field` becomes both `id` and `field`; pass `valueGetter` in opts for non-trivial paths.
 
 Custom column types: `registerColumn('avatar', { ... })` at app boot, then `col.avatar(...)`.
 

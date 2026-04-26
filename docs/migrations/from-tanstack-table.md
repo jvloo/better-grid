@@ -6,10 +6,11 @@ A cheat-sheet for translating TanStack Table column definitions and table option
 
 | TanStack Table                                     | Better Grid                                                                                                                           |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `accessorKey: 'amount'`                            | `accessorKey: 'amount'` (same) — or `accessorFn: (row, rowIndex) => unknown` for derived values. The `defineColumn` builder fills both keys for you: `col.currency('amount', {...})`. |
-| `id: 'amount'`                                     | `id: 'amount'` (same — required for every column; auto-set by `defineColumn` builders)                                                |
-| `header: 'Amount'`                                 | `header: 'Amount'` (same — also accepts `() => HTMLElement \| string`)                                                                |
-| `header: info => <strong>Amount</strong>`          | `header: () => { const el = document.createElement('strong'); el.textContent = 'Amount'; return el; }` — DOM, not JSX                 |
+| `accessorKey: 'amount'`                            | `field: 'amount'` — the `defineColumn` builder fills `id` and `field`: `col.currency('amount', {...})`.                                |
+| `id: 'amount'`                                     | `id: 'amount'` (optional — defaults to `field` when omitted; auto-set by `defineColumn` builders)                                     |
+| `accessorFn: (row) => row.x + row.y`               | `valueGetter: (row) => row.x + row.y`                                                                                                  |
+| `header: 'Amount'` (string)                        | `headerName: 'Amount'`                                                                                                                |
+| `header: info => <strong>Amount</strong>` (JSX)    | `headerRenderer: (container) => { const el = document.createElement('strong'); el.textContent = 'Amount'; container.replaceChildren(el); }` — DOM, not JSX |
 | `cell: info => <Badge>{info.getValue()}</Badge>`   | `cellType: 'badge'` + `options` on the column. Or, for fully custom: `cellRenderer: (container, ctx) => void` — mutate `container` directly, read value from `ctx.value`. |
 | `cell: info => formatCurrency(info.getValue())`    | `col.currency('amount', { precision: 2 })` (or set `cellType: 'currency'` manually) + the `'format'` feature — no custom renderer needed |
 | `flexRender(cell.column.columnDef.cell, ...)`      | Not needed — Better Grid owns rendering. You write `cellRenderer` (or pick a `cellType`) and the grid handles the pipeline.           |
@@ -31,7 +32,7 @@ A cheat-sheet for translating TanStack Table column definitions and table option
 | `getFilteredRowModel: getFilteredRowModel()`          | Add `'filter'` to `features`                                                                                                                |
 | `getPaginationRowModel: getPaginationRowModel()`      | Use the `pagination()` plugin via the `plugins` escape hatch (not in the default mode/features registry)                                    |
 | `getGroupedRowModel: getGroupedRowModel()`            | Use the `grouping()` plugin via the `plugins` escape hatch (`@better-grid/pro`)                                                             |
-| `getExpandedRowModel: getExpandedRowModel()`          | Use the `hierarchy()` plugin via the `plugins` escape hatch + top-level `hierarchy: { getRowId, getParentId }` option                       |
+| `getExpandedRowModel: getExpandedRowModel()`          | Use the `hierarchy()` plugin via the `plugins` escape hatch + `hierarchy: { getParentId }` option (top-level `getRowId` covers stable selection too) |
 | `state: { sorting, columnFilters, ... }`              | Plugin-local state. Query via `grid.api.plugins.sorting?.getSortState()` etc. (typed from the plugins tuple)                                |
 | `onSortingChange`                                     | `features={{ sort: { onSortChange: (state) => ... } }}` — feature options pass through to the underlying plugin                             |
 | `onColumnFiltersChange`                               | `features={{ filter: { onFilterChange: (filters) => ... } }}`                                                                               |

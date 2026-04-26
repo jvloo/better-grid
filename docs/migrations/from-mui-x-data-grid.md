@@ -6,10 +6,10 @@ A cheat-sheet for translating MUI X Data Grid (`@mui/x-data-grid` and the Pro/Pr
 
 | MUI X Data Grid                                | Better Grid                                                                                                                              |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `field: 'amount'`                              | `accessorKey: 'amount'` (or use the builder: `col.currency('amount', {...})`)                                                            |
-| `headerName: 'Amount'`                         | `header: 'Amount'`                                                                                                                       |
+| `field: 'amount'`                              | `field: 'amount'` (or use the builder: `col.currency('amount', {...})`)                                                            |
+| `headerName: 'Amount'`                         | `headerName: 'Amount'`                                                                                                                       |
 | `type: 'number'` / `'date'` / `'singleSelect'` | `cellType: 'number'` / `'date'` / `'select'` — or the builder: `col.number(...)`, `col.date(...)`                                        |
-| `valueGetter: ({ row }) => row.x + row.y`      | `accessorFn: (row) => row.x + row.y`                                                                                                     |
+| `valueGetter: ({ row }) => row.x + row.y`      | `valueGetter: (row) => row.x + row.y`                                                                                                     |
 | `valueFormatter: ({ value }) => string`        | `valueFormatter: (value) => string` — flat signature, no `params` object                                                                 |
 | `valueParser: ({ value }) => parsed`           | `valueParser: (str) => unknown` — flat signature                                                                                         |
 | `renderCell: (params) => <Cell />`             | `cellRenderer: (container, ctx) => void` — DOM-first; mutate `container` directly. Use `ctx.context` to read latest closure-over-scope values without re-init. |
