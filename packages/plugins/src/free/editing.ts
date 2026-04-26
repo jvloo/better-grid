@@ -204,6 +204,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             display: flex !important;
             align-items: center !important;
             padding: 0 !important;
+            position: relative;
           }
           .bg-cell--always-input > .bg-always-input {
             flex: 1 1 auto;
@@ -217,11 +218,26 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             color: inherit;
             font: inherit;
             text-align: inherit;
-            padding: 0 8px;
+            padding: 0 var(--bg-input-suffix-space, 8px) 0 var(--bg-input-prefix-space, 8px);
             margin: 0;
           }
           .bg-cell--always-input.bg-cell--align-right > .bg-always-input { text-align: right; }
           .bg-cell--always-input.bg-cell--align-center > .bg-always-input { text-align: center; }
+          .bg-cell--always-input > .bg-cell-input-prefix,
+          .bg-cell--always-input > .bg-cell-input-suffix {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            pointer-events: none;
+            color: var(--bg-input-unit, #98A2B3);
+            font-size: inherit;
+            line-height: 1;
+          }
+          .bg-cell--always-input > .bg-cell-input-prefix { left: 6px; }
+          .bg-cell--always-input > .bg-cell-input-suffix { right: 6px; }
         `;
         document.head.appendChild(style);
       }
@@ -799,7 +815,28 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           }
         });
 
+        // Render prefix/suffix adornment spans so percent/currency/unit columns
+        // display their symbols visually (e.g. "$" before, "%" after) while the
+        // input value remains the bare number.
+        if (prefix) {
+          const prefixSpan = document.createElement('span');
+          prefixSpan.className = 'bg-cell-input-prefix';
+          prefixSpan.textContent = prefix;
+          container.style.setProperty('--bg-input-prefix-space', `${getAdornmentSpace(prefix)}px`);
+          container.appendChild(prefixSpan);
+        }
         container.appendChild(input);
+        if (suffix) {
+          const suffixSpan = document.createElement('span');
+          suffixSpan.className = 'bg-cell-input-suffix';
+          suffixSpan.textContent = suffix;
+          container.style.setProperty('--bg-input-suffix-space', `${getAdornmentSpace(suffix)}px`);
+          container.appendChild(suffixSpan);
+        }
+        // Clear adornment CSS variables when neither side has an adornment so
+        // recycled cells from a column-with-adornments don't bleed padding.
+        if (!prefix) container.style.removeProperty('--bg-input-prefix-space');
+        if (!suffix) container.style.removeProperty('--bg-input-suffix-space');
       }
 
       function getInputStyleDisplayText(
