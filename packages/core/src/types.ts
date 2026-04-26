@@ -184,6 +184,10 @@ export interface ColumnDef<TData = unknown> {
   cellStyle?: (value: unknown, row: unknown) => Record<string, string> | undefined;
   cellClass?: (value: unknown, row: unknown) => string | undefined;
 
+  // Visibility
+  /** When true, column is excluded from the rendered layout but stays in `columns`. Toggle via `grid.setColumnHidden(id, hide)`. */
+  hide?: boolean;
+
   // Extensibility (for third-party plugins)
   meta?: Record<string, unknown>;
 }
@@ -516,6 +520,8 @@ export interface GridInstance<
   getColumns(): NormalizedColumnDef<TData>[];
   setColumns(columns: ColumnDef<TData>[]): void;
   setColumnWidth(columnId: string, width: number): void;
+  /** Toggle a column's hidden state at runtime. */
+  setColumnHidden(columnId: string, hide: boolean): void;
 
   setContext(context: unknown): void;
 

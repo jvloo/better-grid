@@ -1509,6 +1509,17 @@ export function createGrid<
       scheduleRender();
     },
 
+    setColumnHidden(columnId: string, hide: boolean): void {
+      columnManager.setColumnHidden(columnId, hide);
+      store.update('columns', () => ({
+        columns: columnManager.getColumns(),
+        columnWidths: columnManager.getWidths(),
+      }));
+      invalidateHeaders();
+      recomputeMeasurements();
+      scheduleRender();
+    },
+
     setContext,
 
     getSelection: () => store.getState().selection,

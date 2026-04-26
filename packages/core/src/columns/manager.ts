@@ -31,7 +31,10 @@ function normalizeColumn<TData>(col: ColumnDef<TData>): NormalizedColumnDef<TDat
 }
 
 export class ColumnManager<TData = unknown> {
-  private columns: NormalizedColumnDef<TData>[] = [];
+  /** All columns (including hidden) in original order. */
+  private allColumns: NormalizedColumnDef<TData>[] = [];
+  /** Visible-only subset — what renderers see. Index-parallel to widths + readonlyCols. */
+  private visibleColumns: NormalizedColumnDef<TData>[] = [];
   private widths: number[] = [];
   private readonlyCols = new Set<number>();
 
@@ -51,7 +54,7 @@ export class ColumnManager<TData = unknown> {
     }
 
     // Normalize columns: default field, validate widths
-    this.columns = idResolved.map((col) => {
+    this.allColumns = idResolved.map((col) => {
       const withField = !col.field && !col.valueGetter
         ? { ...col, field: col.id as keyof TData & string }
         : col;
@@ -63,11 +66,24 @@ export class ColumnManager<TData = unknown> {
 
       return withField;
     });
-    this.widths = this.columns.map((col) => col.width ?? DEFAULT_WIDTH);
+    this.recomputeVisible();
+  }
+
+  private recomputeVisible(): void {
+    this.visibleColumns = this.allColumns.filter((c) => c.hide !== true);
+    this.widths = this.visibleColumns.map((col) => col.width ?? DEFAULT_WIDTH);
     this.readonlyCols.clear();
-    for (let i = 0; i < this.columns.length; i++) {
-      if (this.columns[i]?.editable === false) this.readonlyCols.add(i);
+    for (let i = 0; i < this.visibleColumns.length; i++) {
+      if (this.visibleColumns[i]?.editable === false) this.readonlyCols.add(i);
     }
+  }
+
+  setColumnHidden(columnId: string, hide: boolean): void {
+    const col = this.allColumns.find((c) => c.id === columnId);
+    if (!col) return;
+    if (col.hide === hide) return;
+    col.hide = hide;
+    this.recomputeVisible();
   }
 
   /**
@@ -103,24 +119,34 @@ export class ColumnManager<TData = unknown> {
     return this.readonlyCols;
   }
 
+  /** Renderer-facing: returns only visible (non-hidden) columns. */
   getColumns(): NormalizedColumnDef<TData>[] {
-    return this.columns;
+    return this.visibleColumns;
   }
 
+  /** Returns all columns, including hidden ones, in original order. */
+  getAllColumns(): NormalizedColumnDef<TData>[] {
+    return this.allColumns;
+  }
+
+  /** Index is relative to visible columns. */
   getColumn(index: number): NormalizedColumnDef<TData> | undefined {
-    return this.columns[index];
+    return this.visibleColumns[index];
   }
 
+  /** Searches visible columns only. Hidden columns cannot be looked up by id here. */
   getColumnById(id: string): NormalizedColumnDef<TData> | undefined {
-    return this.columns.find((c) => c.id === id);
+    return this.visibleColumns.find((c) => c.id === id);
   }
 
+  /** Returns the visible-index of a column, or -1 if hidden/not found. */
   getColumnIndex(id: string): number {
-    return this.columns.findIndex((c) => c.id === id);
+    return this.visibleColumns.findIndex((c) => c.id === id);
   }
 
+  /** Count of visible columns. */
   getColumnCount(): number {
-    return this.columns.length;
+    return this.visibleColumns.length;
   }
 
   getWidth(index: number): number {
@@ -132,16 +158,16 @@ export class ColumnManager<TData = unknown> {
   }
 
   setWidth(index: number, width: number): void {
-    const col = this.columns[index];
+    const col = this.visibleColumns[index];
     if (!col) return;
     const min = col.minWidth ?? DEFAULT_MIN_WIDTH;
     const max = col.maxWidth ?? Infinity;
     this.widths[index] = Math.max(min, Math.min(max, width));
   }
 
-  /** Extract a cell value from a row using the column's accessor */
+  /** Extract a cell value from a row using the column's accessor (colIndex is visible-indexed). */
   getCellValue(row: TData, colIndex: number): unknown {
-    const col = this.columns[colIndex];
+    const col = this.visibleColumns[colIndex];
     if (!col) return undefined;
 
     if (col.valueGetter) {
