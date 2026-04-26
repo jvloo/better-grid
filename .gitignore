@@ -55,6 +55,9 @@ tmp-*.gif
 tmp-*.mp4
 tmp-*.webm
 
+# QA evidence (reports tracked under docs/internal/, raw captures local-only)
+dogfood-output/
+
 # Agents
 .claude/settings.local.json
 snapshot.txt
