@@ -221,3 +221,59 @@ Looking at FsbtRevenue.tsx, the Holding Sale Details grid is built but I did not
 
 - **Login success**: YES (xavier.loo@wiseway.ai authenticated, redirected to /portfolio then /settings/company).
 - **Live grid access**: NO (subscription expired, Portfolio/Feasibility/Development buttons disabled). Comparison was done against Wiseway's production source code in `D:/Projects/Wiseway/Repositories/wise-frontend-app`.
+
+---
+
+## Follow-up: 2026-04-26 alignment pass
+
+### Applied
+
+| # | File | Change | Lines |
+|---|---|---|---|
+| 1 | `apps/playground/src/pages/FsbtRevenue.tsx` | Added `varianceStatus` (44px) column at position 8 in `btsDetailsColumns`. Affects both BTS Details and Holding Sale Details (Holding Sale reuses `btsDetailsColumns`). | +12 |
+| 2 | `apps/playground/src/pages/FsbtRevenue.tsx` | Bumped `frozen.left` 7 → 8 on `btsDetailsGrid` and `holdingSaleGrid` so the new column stays in the frozen left set. | 2 |
+| 3 | `apps/playground/src/pages/FsbtProgram.tsx` | Restored `code` width 45 → 40 (Wiseway). | 1 |
+| 4 | `apps/playground/src/pages/FsbtProgram.tsx` | Restored `duration` width 90 → 110 (Wiseway). Header no longer wraps. | 1 |
+| 5 | `apps/playground/src/pages/FsbtProgram.tsx` | Restored `collapse` width 40 → 55 (Wiseway). | 1 |
+
+### Already implemented (no change needed)
+
+- **Holding General multi-row grouped header** (Bug B in original report). The `holdingGeneralHeaderLayout` (`headers` GridOption) with `Development Costs` / `On Completion` / `Exit` group cells was already in place at `FsbtRevenue.tsx:908-931`, wired via `headers: holdingGeneralHeaderLayout` in `useGrid` at line 939. The original report appears to have been written before this was added.
+
+### Header background + font-weight audit (added scope)
+
+Wiseway theme tokens (`src/themes/default/palette.ts`):
+- `grey[200] = #EAECF0`, `grey[300] = #D0D5DD`, `black[11] = #F8F8F8`.
+
+| Page | Wiseway header bg | Our `--bg-header-bg` | Verdict |
+|---|---|---|---|
+| Program | grey[200] = `#EAECF0` | `#EAECF0` | match |
+| Cost | grey[200] = `#EAECF0` | `#EAECF0` | match |
+| Revenue / BTS General | grey[300] = `#D0D5DD` | `#D0D5DD` | match |
+| Revenue / Holding General | grey[300] = `#D0D5DD` | `#D0D5DD` | match |
+| Revenue / BTS Details | grey[200] = `#EAECF0` | `#D0D5DD` | drift (intentional uniformity) |
+| Revenue / Holding Rental Details | grey[200] = `#EAECF0` | `#D0D5DD` | drift (intentional uniformity) |
+| Revenue / Holding Sale Details | grey[200] = `#EAECF0` | `#D0D5DD` | drift (intentional uniformity) |
+
+Header text fontWeight is `500` in every Wiseway variant (`PTableHead` / `HeadText` styled components) and matches better-grid's default header weight.
+
+### Body row hierarchy styling audit
+
+Wiseway `Cell` (`cost-table-cell.tsx:7-15`):
+- `borderBottom: 1px solid grey[200]`
+- parent → `color: valueTextColorBold`, `fontWeight: 500`
+- child → `color: valueTextColor`, `fontWeight: 400`
+- padding `~10px 8px`; child phase column adds `paddingLeft: spacing(3.5)` ≈ `28px`
+
+Our `_fsbt-cell-styles.ts`:
+- parent → `fontWeight: '500'`, `color: '#101828'`, `background: '#F8F8F8'`
+- child → `fontWeight: '400'`, `color: '#282F3D'`
+- `childIndent: '14px'` (vs Wiseway's `28px`)
+
+Verdict: parent/child colour + weight match. Child indent is `14px` vs Wiseway `28px` — kept per `fsbt_ux_direction` memory ("wider columns / extended Program/Cost aesthetic is target, not Wiseway-exact"). Pinned-bottom Total row uses `cost-table-cell-footer.tsx` with bg `black[11] = #F8F8F8` and weight 500 — matches our `parentRowBg` and pinned bottom rendering.
+
+### Drifts intentionally NOT applied
+
+- **Revenue Details header bg** (BTS Details / Holding Rental Details / Holding Sale Details): Wiseway uses grey[200], we use grey[300] = `#D0D5DD` for visual uniformity across all 5 Revenue sub-grids. Per `fsbt_ux_direction` memory rule "Keep enhancements unless told to drop".
+- **Cost child indent**: Wiseway `28px` vs ours `14px`. Same rule.
+- **`FsbtProgramSummary` mini-grid above Cost/Revenue** and the `Total Development Cost` / `Total Gross Revenue` pill badges. Per memory.

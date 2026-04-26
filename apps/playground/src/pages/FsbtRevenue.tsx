@@ -755,6 +755,19 @@ export function FsbtRevenue() {
         cellStyle: btsDetailCellStyle,
       },
       { id: 'variance', field: 'variance', headerName: 'Variance', width: 80, cellType: 'change' as const, align: 'center' as const, editable: false, cellStyle: btsDetailCellStyle },
+      // Variance status icon slot — 44px column at position 8 matches the production
+      // reference's revenue-details-table-cell-variance-status renderer; shown on item
+      // rows only (sections + totals leave the slot blank).
+      {
+        id: 'varianceStatus', headerName: '', width: 44, editable: false,
+        cellRenderer: (container) => {
+          // Icon-only slot — variance icon is rendered downstream via the change/badge
+          // cellType once a non-zero variance is present. For now we leave the slot
+          // empty (mirrors the production reference's $0-variance state on every row).
+          container.textContent = '';
+        },
+        cellStyle: btsDetailCellStyle,
+      },
       // Monthly — editable on every section per the production reference (users can override
       // the auto-computed per-month distribution).
       ...holdingTs.columns.map(c => ({
@@ -784,7 +797,7 @@ export function FsbtRevenue() {
     columns: btsDetailsColumns,
     mode: null,
     plugins: btsDetailsPlugins,
-    frozen: { left: 7, clip: { minVisible: 2 } },
+    frozen: { left: 8, clip: { minVisible: 2 } },
     striped: true,
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
@@ -968,7 +981,7 @@ export function FsbtRevenue() {
     columns: holdingSaleColumns,
     mode: null,
     plugins: holdingSalePlugins,
-    frozen: { left: 7, clip: { minVisible: 2 } },
+    frozen: { left: 8, clip: { minVisible: 2 } },
     striped: true,
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,

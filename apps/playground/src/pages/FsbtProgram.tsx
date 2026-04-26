@@ -275,7 +275,7 @@ export function FsbtProgram() {
     },
     // ── Col 1: Code (right-aligned with left gap) ───────────────────────
     {
-      id: 'code', field: 'code', headerName: 'Code', width: 45, align: 'right' as const, editable: false,
+      id: 'code', field: 'code', headerName: 'Code', width: 40, align: 'right' as const, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         const isParent = row.parentId === null;
@@ -321,7 +321,7 @@ export function FsbtProgram() {
         el.style.display = 'block';
         container.replaceChildren(el);
       },
-      width: 90, align: 'center' as const,
+      width: 110, align: 'center' as const,
       editable: ((row: ProgramRow) => row.parentId !== null) as any,
       rules: [{ validate: (v: unknown) => { if (v == null || v === '') return true; const n = Number(v); return (Number.isInteger(n) && n >= 1 && n <= 999) || 'Duration must be 1-999'; } }],
       cellRenderer: (container, ctx) => {
@@ -406,7 +406,7 @@ export function FsbtProgram() {
     },
     // ── Col 6: Collapse/expand chevron (handled by hierarchy plugin) ────
     {
-      id: 'collapse', headerName: '', width: 40, editable: false,
+      id: 'collapse', headerName: '', width: 55, editable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
