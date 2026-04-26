@@ -49,19 +49,20 @@ export function SelectionModes() {
     <div>
       <h1 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 600 }}>Selection Modes</h1>
       <p style={{ margin: '0 0 24px', color: '#666', fontSize: 13, lineHeight: 1.5 }}>
-        Selection is <strong>disabled by default</strong>. Pass the <code style={{ background: '#f0f0f0', padding: '1px 5px', borderRadius: 3, fontSize: 12 }}>selection</code> prop to enable it. Each mode controls what the user can do with clicks, keyboard, and drag.
+        Selection defaults to <code style={{ background: '#f0f0f0', padding: '1px 5px', borderRadius: 3, fontSize: 12 }}>{'{ mode: "cell" }'}</code> when the <code style={{ background: '#f0f0f0', padding: '1px 5px', borderRadius: 3, fontSize: 12 }}>selection</code> prop is omitted. Pass <code style={{ background: '#f0f0f0', padding: '1px 5px', borderRadius: 3, fontSize: 12 }}>selection={'{false}'}</code> to disable. <code style={{ background: '#f0f0f0', padding: '1px 5px', borderRadius: 3, fontSize: 12 }}>range</code> mode enables Shift+click; add <code style={{ background: '#f0f0f0', padding: '1px 5px', borderRadius: 3, fontSize: 12 }}>multiRange: true</code> for Ctrl+click multi-range.
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
         <GridCard
-          title="No selection (default)"
-          description="No selection prop passed. Clicking cells does nothing. Arrow keys don't navigate. Pure read-only display."
+          title="selection: false"
+          description="Selection turned off. Clicking cells does nothing — pure read-only display. Use this when the grid is purely a display surface (dashboards, reports)."
         >
           <BetterGrid<Row>
             columns={columns}
             data={data}
             mode={null}
             features={FORMAT_FEATURE}
+            selection={false}
             rowHeight={36}
             height={320}
             style={{ borderRadius: 8 }}
@@ -69,15 +70,14 @@ export function SelectionModes() {
         </GridCard>
 
         <GridCard
-          title='selection: { mode: "cell" }'
-          description="Click selects a single cell. Arrow keys move between cells. Shift+click and Ctrl+click have no effect — no range extension, no multi-select."
+          title="Default — no selection prop"
+          description='Omitting the prop is equivalent to selection={{ mode: "cell" }}. Click selects a single cell. Arrow keys move between cells. Shift+click and Ctrl+click have no effect.'
         >
           <BetterGrid<Row>
             columns={columns}
             data={data}
             mode={null}
             features={FORMAT_FEATURE}
-            selection={{ mode: 'cell' }}
             rowHeight={36}
             height={320}
             style={{ borderRadius: 8 }}
@@ -86,7 +86,7 @@ export function SelectionModes() {
 
         <GridCard
           title='selection: { mode: "range" }'
-          description="Click selects a cell. Shift+click extends to a range. Ctrl+click adds additional ranges. Shift+Arrow extends range via keyboard."
+          description="Click selects a cell. Shift+click extends to a range. Shift+Arrow extends via keyboard. The bottom-right fill handle is on by default — drag to fill from the selected range. Ctrl+click does NOT add additional ranges (see next tile)."
         >
           <BetterGrid<Row>
             columns={columns}
@@ -101,15 +101,31 @@ export function SelectionModes() {
         </GridCard>
 
         <GridCard
-          title='selection: { mode: "range", fillHandle: true }'
-          description="Same as range mode, plus a small square handle at the bottom-right corner of the selection. Drag it to fill cells with values from the selected range."
+          title='selection: { mode: "range", multiRange: true }'
+          description="Range mode with Ctrl+click multi-range. Click + Shift+click selects one range; Ctrl+click adds another disjoint range. Use when consumers need to apply a single operation to several discontiguous regions."
         >
           <BetterGrid<Row>
             columns={columns}
             data={data}
             mode={null}
             features={FORMAT_FEATURE}
-            selection={{ mode: 'range', fillHandle: true }}
+            selection={{ mode: 'range', multiRange: true }}
+            rowHeight={36}
+            height={320}
+            style={{ borderRadius: 8 }}
+          />
+        </GridCard>
+
+        <GridCard
+          title='selection: { mode: "range", fillHandle: false }'
+          description="Range mode with the bottom-right fill handle suppressed. Selection still works (click, Shift+click) but no draggable square appears. Use when the grid should not allow value-fill (e.g. read-only ranges that consumers may copy from)."
+        >
+          <BetterGrid<Row>
+            columns={columns}
+            data={data}
+            mode={null}
+            features={FORMAT_FEATURE}
+            selection={{ mode: 'range', fillHandle: false }}
             rowHeight={36}
             height={320}
             style={{ borderRadius: 8 }}
