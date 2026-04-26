@@ -291,19 +291,61 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
        * The tooltip is absolutely positioned inside the layer; the layer's
        * overflow:hidden automatically clips tooltips whose anchors scroll under
        * chrome zones.
+       *
+       * Flip-on-overflow: if the natural "below the cell" placement would extend
+       * past the layer's bottom edge, the tooltip is flipped to sit ABOVE the
+       * cell instead. When flipped, the class `bg-validation-tooltip--flipped`
+       * is added so consumers can adjust arrow/pointer styling.
        */
       function positionTooltip(tooltipEl: HTMLElement, anchorEl: HTMLElement): void {
         if (!tooltipLayer) return;
 
         const layerRect = tooltipLayer.getBoundingClientRect();
+        const layerHeight = layerRect.height;
         const anchorRect = anchorEl.getBoundingClientRect();
 
-        // Position tooltip below the anchor cell, relative to layer origin
-        const left = anchorRect.left - layerRect.left;
-        const top = anchorRect.bottom - layerRect.top + 4;
+        // Natural placement: tooltip just below the anchor cell
+        let left = anchorRect.left - layerRect.left;
+        const naturalTop = anchorRect.bottom - layerRect.top + 4;
+
+        // Tooltip height — use offsetHeight (already rendered, 0 on first call
+        // before layout, which is fine — we'll re-position on next render).
+        const tooltipHeight = tooltipEl.offsetHeight;
+
+        // Flip vertically if the tooltip would extend past the layer's bottom.
+        const wouldOverflowBottom = naturalTop + tooltipHeight > layerHeight;
+        const flippedTop = (anchorRect.top - layerRect.top) - tooltipHeight - 4;
+        const wouldOverflowTopWhenFlipped = flippedTop < 0;
+
+        let top: number;
+        let flipped: boolean;
+        if (wouldOverflowBottom && !wouldOverflowTopWhenFlipped) {
+          // Flip to above the cell
+          top = flippedTop;
+          flipped = true;
+        } else {
+          // Prefer natural (below) — the layer's overflow:hidden clips if needed
+          top = naturalTop;
+          flipped = false;
+        }
+
+        // Flip horizontally if the tooltip would extend past the layer's right edge.
+        // Uses min() so we never push past the left edge of the layer.
+        const layerWidth = layerRect.width;
+        const tooltipWidth = tooltipEl.offsetWidth;
+        if (tooltipWidth > 0 && left + tooltipWidth > layerWidth) {
+          // Align tooltip's right edge with the anchor's right edge (or layer right)
+          left = Math.max(0, anchorRect.right - layerRect.left - tooltipWidth);
+        }
 
         tooltipEl.style.left = `${left}px`;
         tooltipEl.style.top = `${top}px`;
+
+        if (flipped) {
+          tooltipEl.classList.add('bg-validation-tooltip--flipped');
+        } else {
+          tooltipEl.classList.remove('bg-validation-tooltip--flipped');
+        }
       }
 
       /** Reposition all visible tooltips (called on scroll). */
