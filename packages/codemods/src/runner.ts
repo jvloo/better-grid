@@ -17,14 +17,27 @@ export async function runTransform(args: {
   dryRun?: boolean;
   extensions?: string[];          // default: ['ts', 'tsx', 'js', 'jsx']
 }): Promise<TransformReport> {
-  const transformPath = path.resolve(__dirname, 'transforms', args.transform, 'index.js');
-  if (!fs.existsSync(transformPath)) {
+  // jscodeshift uses CJS at runtime — load the .cjs build of the transform.
+  // Search a couple of candidate paths so this works whether the runner is
+  // bundled into dist/bin/migrate.cjs (__dirname=dist/bin) or invoked via the
+  // package entry at dist/src/index.cjs (__dirname=dist/src).
+  const candidates = [
+    path.resolve(__dirname, 'transforms', args.transform, 'index.cjs'),
+    path.resolve(__dirname, '..', 'src', 'transforms', args.transform, 'index.cjs'),
+    path.resolve(__dirname, '..', 'transforms', args.transform, 'index.cjs'),
+    path.resolve(__dirname, '..', '..', 'src', 'transforms', args.transform, 'index.cjs'),
+  ];
+  const transformPath = candidates.find((p) => fs.existsSync(p));
+  if (!transformPath) {
     throw new Error(`Unknown transform: ${args.transform}`);
   }
 
   const exts = args.extensions ?? ['ts', 'tsx', 'js', 'jsx'];
+  // Use babel parser (with JSX) so AST node types align with what the
+  // transforms expect (Property, not ObjectProperty — the 'tsx' parser
+  // would emit ObjectProperty and the visitors would all miss).
   const result = await jscodeshiftRun(transformPath, args.paths, {
-    parser: 'tsx',
+    parser: 'babel',
     extensions: exts.join(','),
     dry: args.dryRun ?? false,
     print: args.dryRun ?? false,
