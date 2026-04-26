@@ -158,6 +158,15 @@ const CHEVRON_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200
 // allocating a canvas on every cell click).
 let caretMeasureCanvas: HTMLCanvasElement | null = null;
 
+// Cell types whose value is structurally complex (chart data, image refs,
+// indicator objects, etc.) — String(value) on these produces "[object Object]"
+// or similar garbage when fed to a text editor. Default to non-editable for
+// these unless the user explicitly opts in via column.editable: true.
+const COMPLEX_VALUE_CELL_TYPES = new Set<string>([
+  'sparkline', 'miniChart', 'heatmap', 'timeline', 'avatar',
+  'circularProgress', 'changeIndicator', 'progress', 'rating', 'gantt',
+]);
+
 // Static per-column check: is this column potentially alwaysInput? (truthy or
 // function). Function variants might return false per-row, but the column still
 // needs the input wrapper installed.
@@ -499,6 +508,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             const origRenderer = col.cellRenderer;
             (col as { __inputStyleOriginalRenderer?: typeof origRenderer }).__inputStyleOriginalRenderer = origRenderer;
             col.cellRenderer = (container, context) => {
+              // The rendering pipeline re-renders all visible cells (including the
+              // one being edited) in the rAF that follows the click. Skipping the
+              // overwrite prevents the editor DOM from being destroyed, which would
+              // fire blur on the focused input and close the dropdown immediately.
+              if (container.dataset.bgEditing) return;
+
               let isEditable = col.editable !== false;
               if (typeof col.editable === 'function') {
                 isEditable = col.editable(context.row as never, col as never);
@@ -1626,6 +1641,18 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           if (!rowData || !column.editable(rowData, column)) return;
         }
 
+        // Complex-value cellTypes (charts, indicators, custom-shape values)
+        // are not inline-editable by default. Their values are objects/arrays
+        // that String() turns into "[object Object]". Users who want them
+        // editable opt in explicitly via column.editable: true.
+        if (
+          column.cellType &&
+          COMPLEX_VALUE_CELL_TYPES.has(column.cellType) &&
+          column.editable === undefined
+        ) {
+          return;
+        }
+
         // alwaysInput cells render their own permanent <input>. Forward focus
         // to it instead of opening the floating editor. (selectWithInput
         // already returned above; only need to exclude 'select' here.)
@@ -1672,6 +1699,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           cellEl.textContent = '';
         }
         cellEl.classList.add('bg-cell--editing');
+        // Mark the cell so the wrapped cellRenderer skips re-rendering it while
+        // the editor is open (prevents the rAF render from destroying editor DOM).
+        cellEl.dataset.bgEditing = '1';
 
         // Hide fill handle during editing
         const fillHandle = getGridContainer().querySelector('.bg-fill-handle') as HTMLElement | null;
@@ -3664,6 +3694,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const cellEl = getCellElement(editingCell);
           if (cellEl) {
             cellEl.classList.remove('bg-cell--editing');
+            delete cellEl.dataset.bgEditing;
             cellEl.style.overflow = '';
             cellEl.style.zIndex = '';
           }
