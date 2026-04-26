@@ -231,12 +231,11 @@ export interface FooterRow {
 // Selection Options
 // ---------------------------------------------------------------------------
 
-export interface SelectionOptions {
-  mode: 'cell' | 'row' | 'range' | 'none';
-  multiRange?: boolean;
-  /** Show fill handle at bottom-right of selection. Default: true */
-  fillHandle?: boolean;
-}
+export type SelectionOptions =
+  | false
+  | { mode: 'cell' }
+  | { mode: 'row' }
+  | { mode: 'range'; multiRange?: boolean; fillHandle?: boolean };
 
 // ---------------------------------------------------------------------------
 // Virtualization Options
@@ -369,6 +368,7 @@ export interface GridOptions<
   striped?: boolean;
 
   // Behavior
+  /** Default = { mode: 'cell' }. Pass `false` to disable selection entirely. */
   selection?: SelectionOptions;
   hierarchy?: HierarchyConfig<TData>;
   virtualization?: VirtualizationOptions;
@@ -535,6 +535,8 @@ export interface GridInstance<
   getSelection(): Selection;
   setSelection(selection: Selection): void;
   clearSelection(): void;
+  /** Returns the resolved selection mode: 'cell' | 'row' | 'range' | 'off'. */
+  getSelectionMode(): 'cell' | 'row' | 'range' | 'off';
 
   /** Get the current freeze clip width in pixels, or null if no clip is active. */
   getFreezeClipWidth(): number | null;

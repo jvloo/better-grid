@@ -1,10 +1,11 @@
+import type { SelectionOptions } from '@better-grid/core';
 import type { FeatureName } from './features';
 
 export interface ModeDefinition {
   features: FeatureName[];
   defaults: {
     rowHeight?: number;
-    selection?: { mode?: 'cell' | 'row' | 'range' | 'none'; multiRange?: boolean };
+    selection?: SelectionOptions;
   };
 }
 

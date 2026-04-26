@@ -2,7 +2,26 @@
 // Selection Model — Cell, range, and multi-range selection
 // ============================================================================
 
-import type { CellPosition, CellRange, Selection } from '../types';
+import type { CellPosition, CellRange, Selection, SelectionOptions } from '../types';
+
+// ---------------------------------------------------------------------------
+// Normalized selection config
+// ---------------------------------------------------------------------------
+
+export interface NormalizedSelection {
+  mode: 'cell' | 'row' | 'range' | 'off';
+  multiRange: boolean;
+  fillHandle: boolean;
+}
+
+export function normalizeSelection(opt: SelectionOptions | undefined): NormalizedSelection {
+  if (opt === false) return { mode: 'off', multiRange: false, fillHandle: false };
+  if (!opt) return { mode: 'cell', multiRange: false, fillHandle: false };
+  if (opt.mode === 'range') {
+    return { mode: 'range', multiRange: !!opt.multiRange, fillHandle: opt.fillHandle ?? true };
+  }
+  return { mode: opt.mode, multiRange: false, fillHandle: false };
+}
 
 export function createEmptySelection(): Selection {
   return { active: null, ranges: [] };

@@ -25,7 +25,7 @@ import { VirtualizationEngine } from './virtualization/engine';
 import type { LayoutMeasurements } from './virtualization/engine';
 import { RenderingPipeline } from './rendering/pipeline';
 import { SelectionLayer } from './rendering/layers';
-import { createEmptySelection, createCellSelection, extendSelection, addRangeToSelection } from './selection/model';
+import { createEmptySelection, createCellSelection, extendSelection, addRangeToSelection, normalizeSelection } from './selection/model';
 import { navigateCell, navigateTab, getNavigationDirection } from './keyboard/navigation';
 import { computeZoneDimensions } from './virtualization/layout';
 import { createFilterPanel, type FilterApi } from './ui/filter-panel';
@@ -74,6 +74,9 @@ export function createGrid<
   const pluginRegistry = new PluginRegistry();
   const keyBindings: KeyBinding[] = [];
   const commands = new Map<string, Command>();
+
+  // Resolve selection options once; used throughout grid lifecycle
+  const normalizedSelection = normalizeSelection(options.selection);
 
   // Closure-over-scope: store on a ref so option swaps don't invalidate column
   // identity. Read at render time so handler swaps are picked up without re-init.
@@ -631,12 +634,12 @@ export function createGrid<
     // Always emit cell:click (editing and other plugins depend on it)
     emitter.emit('cell:click', cell, event as unknown as MouseEvent);
 
-    const selectionMode = options.selection?.mode ?? 'none';
-    if (selectionMode === 'none') return;
+    const selectionMode = normalizedSelection.mode;
+    if (selectionMode === 'off') return;
 
     const isCtrlHeld = event.ctrlKey || event.metaKey;
     const allowRange = selectionMode === 'range';
-    const allowMultiRange = allowRange && options.selection?.multiRange !== false;
+    const allowMultiRange = allowRange && normalizedSelection.multiRange;
 
     if (event.shiftKey && allowRange && store.getState().selection.active) {
       const newSelection = extendSelection(store.getState().selection, cell);
@@ -715,8 +718,7 @@ export function createGrid<
     const direction = getNavigationDirection(event);
     if (direction) {
       event.preventDefault();
-      const kbSelectionMode = options.selection?.mode ?? 'none';
-      if (event.shiftKey && kbSelectionMode === 'range') {
+      if (event.shiftKey && normalizedSelection.mode === 'range') {
         // Shift+arrow: extend range (range mode only)
         const lastRange = state.selection.ranges[state.selection.ranges.length - 1];
         if (lastRange) {
@@ -1231,7 +1233,7 @@ export function createGrid<
 
       // Selection layer (inside cell container so offsets align with cells)
       selectionLayer = new SelectionLayer(cellContainer, container!);
-      selectionLayer.setFillHandleEnabled(options.selection != null && options.selection.fillHandle !== false);
+      selectionLayer.setFillHandleEnabled(normalizedSelection.mode !== 'off' && normalizedSelection.fillHandle);
 
       // Fill handle drag → emit event for plugins, fallback to basic copy
       selectionLayer.setFillDragHandler(({ sourceRange, targetRange }) => {
@@ -1538,6 +1540,10 @@ export function createGrid<
 
     clearSelection(): void {
       instance.setSelection(createEmptySelection());
+    },
+
+    getSelectionMode(): 'cell' | 'row' | 'range' | 'off' {
+      return normalizedSelection.mode;
     },
 
     getFreezeClipWidth(): number | null {
