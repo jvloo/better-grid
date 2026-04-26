@@ -1577,8 +1577,13 @@ export function createGrid<
         columns: columnManager.getColumns(),
         columnWidths: columnManager.getWidths(),
       }));
+      // Reset freeze clip when column count changes (mirrors setColumns behaviour)
+      if (freezeClipWidth !== null) {
+        freezeClipWidth = null;
+      }
       invalidateHeaders();
       recomputeMeasurements();
+      updateAriaCounts();
       scheduleRender();
     },
 
