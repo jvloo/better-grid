@@ -2,6 +2,14 @@
 
 A cheat-sheet for translating Handsontable to Better Grid. Both are spreadsheet-style libraries; the surface concepts (cell types, validators, formula support, copy/paste) line up cleanly. The biggest shifts are (a) Better Grid is plugin-additive instead of monolithic option soup, and (b) renderers are DOM mutations instead of jQuery-style imperative renderers.
 
+## Codemod
+
+```bash
+npx @better-grid/codemods from-handsontable src/
+```
+
+Auto-converts the rename rows below; flags renderer-signature and structural rows for manual review (marker: `// @better-grid/migrate: review`). Flags: `--dry-run`, `--report=<path>`, `--ext=ts,tsx,js,jsx`.
+
 ## Column definition mapping
 
 | Handsontable                                   | Better Grid                                                                                                                              |

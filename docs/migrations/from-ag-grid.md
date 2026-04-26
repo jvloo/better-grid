@@ -2,6 +2,14 @@
 
 A cheat-sheet for translating AG Grid column definitions and grid options to Better Grid. Most names survive the move; the main shifts are (a) renderers are DOM-based rather than JSX, and (b) features ship as plugins you opt into via a `mode` preset or a `features` list rather than modules you register on a singleton.
 
+## Codemod
+
+```bash
+npx @better-grid/codemods from-ag-grid src/
+```
+
+Auto-converts the rename rows below; flags renderer-signature and structural rows for manual review (marker: `// @better-grid/migrate: review`). Flags: `--dry-run`, `--report=<path>`, `--ext=ts,tsx,js,jsx`.
+
 ## Column definition mapping
 
 | AG Grid                                  | Better Grid                                                                                                                                      |

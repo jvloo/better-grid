@@ -2,6 +2,14 @@
 
 A cheat-sheet for translating RevoGrid (`@revolist/revogrid` and `@revolist/revogrid-pro`) to Better Grid. The two libraries have similar shapes — both are framework-agnostic Web Components / vanilla cores with thin React/Vue/Angular adapters, both ship a plugin model, both lean spreadsheet-y. The main migration cost is plugin shape and renderer contract.
 
+## Codemod
+
+```bash
+npx @better-grid/codemods from-revogrid src/
+```
+
+Auto-converts the rename rows below; flags renderer-signature and structural rows for manual review (marker: `// @better-grid/migrate: review`). Flags: `--dry-run`, `--report=<path>`, `--ext=ts,tsx,js,jsx`.
+
 ## Column definition mapping
 
 | RevoGrid                                       | Better Grid                                                                                                                              |

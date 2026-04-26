@@ -2,6 +2,14 @@
 
 A cheat-sheet for translating TanStack Table column definitions and table options to Better Grid. Most column-definition keys survive verbatim; the biggest shift is that rendering is included — you don't pipe cells through `flexRender` anymore, and features ship via a `mode`/`features` preset instead of row-model functions.
 
+## Codemod
+
+```bash
+npx @better-grid/codemods from-tanstack-table src/
+```
+
+Auto-converts the rename rows below; flags renderer-signature and structural rows for manual review (marker: `// @better-grid/migrate: review`). Flags: `--dry-run`, `--report=<path>`, `--ext=ts,tsx,js,jsx`.
+
 ## Column definition mapping
 
 | TanStack Table                                     | Better Grid                                                                                                                           |

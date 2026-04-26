@@ -2,6 +2,14 @@
 
 A cheat-sheet for translating Adazzle's `react-data-grid` to Better Grid. Both render virtualized rows of cells with editing, frozen columns, and tree data. The migration cost is mostly mechanical — column key naming, renderer signature, and feature opt-in.
 
+## Codemod
+
+```bash
+npx @better-grid/codemods from-react-data-grid src/
+```
+
+Auto-converts the rename rows below; flags renderer-signature and structural rows for manual review (marker: `// @better-grid/migrate: review`). Flags: `--dry-run`, `--report=<path>`, `--ext=ts,tsx,js,jsx`.
+
 ## Column definition mapping
 
 | react-data-grid                                | Better Grid                                                                                                                              |

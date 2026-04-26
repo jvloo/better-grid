@@ -2,6 +2,14 @@
 
 A cheat-sheet for translating MUI X Data Grid (`@mui/x-data-grid` and the Pro/Premium tiers) to Better Grid. The mental shift is small for column definitions; the bigger differences are around (a) features (MUI X uses props + slots, Better Grid uses a `mode`/`features` registry), and (b) renderers (MUI X cells are React; Better Grid cells are DOM mutations).
 
+## Codemod
+
+```bash
+npx @better-grid/codemods from-mui-x-data-grid src/
+```
+
+Auto-converts the rename rows below; flags renderer-signature and structural rows for manual review (marker: `// @better-grid/migrate: review`). Flags: `--dry-run`, `--report=<path>`, `--ext=ts,tsx,js,jsx`.
+
 ## Column definition mapping
 
 | MUI X Data Grid                                | Better Grid                                                                                                                              |
