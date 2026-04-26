@@ -1,61 +1,63 @@
 # Changelog
 
-All notable changes to Better Grid are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to Better Grid are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
 The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`, `@better-grid/plugins`, and `@better-grid/pro` until the packages diverge.
 
 ## [Unreleased]
 
-### Planned
-
-- Phase B — production-shape finance tables (cost / program / revenue) migrated behind a feature flag in a downstream app.
-
-### Documentation
-
-- Synced package-level license files so all npm tarballs include the correct MIT or Pro license text.
+_(no changes yet)_
 
 ## [1.0.0] — 2026-04-26
 
-### Added — Production-shape foundation (Phase A)
+First public release.
 
-- **`column.alwaysInput: boolean | (row, col) => boolean`** on the `editing` plugin. Renders a real `<input>` permanently in every editable cell instead of opening a floating editor on click. Reuses the input across cell re-renders so focus and in-progress text survive grid refreshes.
-- **`editing({ alwaysInputThreshold })`** — perf gate that warns once per init when `alwaysInput cols × visible rows` exceeds the threshold (default 1000).
-- **`@better-grid/react/rhf`** sub-export with `useGridForm({ grid, baseName, getFieldPath?, transform?, shouldDirty?, shouldTouch?, shouldValidate? })`. Listens to `data:change` events on a grid handle and forwards each commit into a surrounding RHF `<FormProvider>`'s `setValue`. `react-hook-form` is an optional peer dep.
-- **Validation `messageRenderer`** — per-rule (`ColumnValidationRule.messageRenderer`) and per-column (`ColumnDef.validationMessageRenderer`) callback that returns an `HTMLElement` or string. Lets the error tooltip body be rendered as an MUI Alert (or any other rich UI) while the wrapper still owns positioning.
-- **`docs/guides/theming-with-mui.md`** — recipe wiring `theme.palette` / `theme.typography` / `theme.spacing` / dark mode through Better Grid's CSS custom properties via a single `styled()` wrapper.
-- New playground demos: `/demo/always-input` (live inputs + validation rendering) and `/demo/rhf-bridge` (cell commits flowing into a FormProvider with live total/dirty state).
+### Packages
 
-### Added — v1 init API redesign
+- `@better-grid/core` — framework-agnostic grid engine (MIT)
+- `@better-grid/react` — React adapter (MIT)
+- `@better-grid/plugins` — official free plugins + built-in cell renderers (MIT)
+- `@better-grid/pro` — source-available pro plugins (Better Grid Pro Source-Available License)
 
-- New layered React init API:
-  - **Sugar** — `<BetterGrid columns data mode="spreadsheet" />` for the simple case.
-  - **Handle** — `const grid = useGrid({...}); <BetterGrid grid={grid} />` for callers that need the imperative API or `context` ref.
-  - **Vanilla** — `createGrid({...}).mount(el)` from `@better-grid/core` for non-React consumers.
-- **Mode presets** — `null` / `view` / `interactive` / `spreadsheet` / `dashboard`. Extend with `registerMode`.
-- **Feature registry** — `features={['edit', 'sort']}` (string opt-in) or `features={{ edit: { editTrigger: 'click' } }}` (with options). Auto-includes feature dependencies (e.g. `clipboard` and `undo` auto-add `edit`) with a one-time dev warning.
-- **`defineColumn` builders** — `col.text` / `col.currency` / `col.percent` / `col.date` / `col.badge` / `col.boolean` / `col.progress` / `col.rating` / `col.change` / `col.changeIndicator` / `col.link` / `col.timeline` / `col.tooltip` / `col.loading` / `col.custom`. Extend with `registerColumn`.
-- **`configureBetterGrid`** — app-wide feature option defaults, applied to every grid that uses the matching feature key.
-- **`context` ref** — `useGrid({ context })` stores the value on a ref; cell renderers read it as `ctx.context` and always see the latest closure without re-init.
-- **`GridSlots` / `GridSlotProps`** — empty interface seam reserved for v1.x slot extensions; passable as `slots` / `slotProps` props today, populated incrementally.
+### Core engine (`@better-grid/core`)
 
-### Changed (breaking)
+- Virtualized rendering pipeline with DOM cell pooling (~200 elements regardless of dataset size).
+- Fake-scrollbar scroll architecture, multi-level headers, frozen rows/columns, separate pinned-row overlay, range/multi-range selection, keyboard navigation.
+- `cellType` registry, custom `cellRenderer` API, CSS custom properties for theming.
+- `createGrid<TData, TContext, const TPlugins>({...})` with grouped layout (`frozen`, `pinned`, `headers`, `footers`, `size`), ref-based `context`, and a typed plugin tuple.
+- Inference helpers: `InferRow`, `InferState`, `InferPluginApis`, `InferPluginErrorCodes`.
 
-- v1.0.0 is the **first public release**. There is no v0 published; the items below describe the shape that landed in v1, captured for contributors who tracked the pre-release iterations. New consumers can ignore this section. Full design history: [`docs/internal/v1-init-api-history.md`](docs/internal/v1-init-api-history.md).
-- Grouped layout props: `frozenLeftColumns` / `frozenTopRows` / `freezeClip` → `frozen: { left, top, clip }`. `pinnedTopRows` / `pinnedBottomRows` → `pinned: { top, bottom }`. `headerLayout` → `headers`. `footerLayout` → `footers`. `width` / `height` (on options) → `size: { width, height }` (top-level `height` on `<BetterGrid>` still works as sugar).
-- `onDataChange` → `onCellChange`.
-- `getRowStyle` → `rowStyle`. The dual `rowStyles={{ field, styles }}` shape is dropped — use `rowStyle: (row, idx) => ({...})`.
-- State on data swap: replacing the `data` reference clears selection, resets scroll to (0, 0), and clears undo history (when the undo plugin is loaded). Edit-in-progress commit-or-cancels per the editing plugin's rules.
+### React adapter (`@better-grid/react`)
 
-### Migrations
+- `<BetterGrid>` accepts either inline options (sugar) or a `grid={handle}` from `useGrid({...})`.
+- `useGrid` returns a `GridHandle { api, containerRef }` and stores `context` on a ref so cell renderers always read the latest closure.
+- `defineColumn` builders: `col.text` / `col.currency` / `col.percent` / `col.date` / `col.badge` / `col.boolean` / `col.progress` / `col.rating` / `col.change` / `col.changeIndicator` / `col.link` / `col.timeline` / `col.tooltip` / `col.loading` / `col.custom`. Extend with `registerColumn`.
+- Mode presets: `null` / `view` / `interactive` / `spreadsheet` / `dashboard`. Extend with `registerMode`.
+- Feature registry: `features={['edit', 'sort']}` (string opt-in) or `features={{ edit: { editTrigger: 'click' } }}` (with options). Auto-includes feature dependencies with a one-time dev warning.
+- `configureBetterGrid({...})` for app-wide feature-option defaults.
+- `@better-grid/react/rhf` sub-export — `useGridForm({ grid, baseName })` bridges cell commits into a surrounding `<FormProvider>` (react-hook-form is an optional peer dep).
 
-- All ~25 playground pages and 3 production-shape finance pages migrated to the v1 API.
-- The most complex production-shape demo (cost table — `apps/playground/src/pages/FsbtCost.tsx`) migrated with zero behavior change as the success criterion.
+### Free plugins (`@better-grid/plugins`)
 
-### Documentation
+- **Formatting** — currency, percent, dates via the `Intl` API.
+- **Editing** — text / dropdown / boolean / date / masked / autocomplete editors. Floating or inline editor mode. `inputStyle` for placeholder + prefix/suffix adornments. Per-column `alwaysInput` flag for permanent live `<input>` cells (with a perf gate).
+- **Sorting** — single/multi-column, custom comparators, header click.
+- **Filtering** — 9 operators with a column-header filter panel.
+- **Validation** — required fields, custom rules, error tooltip UI. Per-rule and per-column `messageRenderer` callback returning `HTMLElement` or string.
+- **Hierarchy** — parent/child rows with virtualized collapse/expand.
+- **Clipboard** — Excel-compatible copy/cut/paste, fill-down.
+- **Undo/redo** — history stack on cell commits.
+- **Search & highlight**, **CSV/Excel export**, **pagination**, **grouping**, **cellRenderers** (badge, progress, boolean, rating, change, changeIndicator, link, timeline, tooltip, loading, custom).
 
-- `README.md`, `AGENTS.md`, the migration cheat sheets in `docs/migrations/`, and `docs/internal/v1-init-api-history.md` describe the v1 surface.
-- `docs/internal/pr-summaries/grid-init-api-v1.md` — historical PR summary for the v1 redesign.
-- `docs/internal/pr-summaries/phase-a-foundation.md` — PR summary for the four Phase A commits.
+### Pro plugins (`@better-grid/pro`)
+
+- **Gantt** — timeline bars with drag-to-move and resize.
+- **Aggregation** — summary rows and grouped totals.
+- **Merge cells** — row/column spanning.
+- **Row actions** — contextual per-row action menus.
+- **Pro renderers** — sparkline, heatmap, mini-chart, advanced commercial renderers.
+
+`@better-grid/pro` is source-available and ships under the Better Grid Pro Source-Available License — see [`/LICENSE-PRO`](LICENSE-PRO). Commercial production use requires a Pro license. There is no runtime DRM in v1.
 
 [Unreleased]: https://github.com/jvloo/better-grid/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/jvloo/better-grid/releases/tag/v1.0.0
