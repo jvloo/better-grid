@@ -224,7 +224,17 @@ export class RenderingPipeline<TData = unknown> {
           cell.setAttribute('aria-colindex', String(col + 1));
           this.cellPool.set(key, cell);
         }
-        cell.className = 'bg-cell';
+        // Skip re-rendering a cell that is actively being edited. The editing
+        // plugin marks it with bg-cell--editing and injects a live editor (input
+        // or dropdown trigger) directly into the cell element. A re-render caused
+        // by a selection change or data update would destroy that editor, causing
+        // an immediate blur → premature close of dropdowns (bool/badge cells).
+        // We still update position so the cell stays correctly placed on scroll.
+        const isEditingCell = cell.classList.contains('bg-cell--editing');
+
+        if (!isEditingCell) {
+          cell.className = 'bg-cell';
+        }
 
         // Position — snap to device pixel boundaries for crisp rendering at all zoom levels
         const top = snapToDevicePixel(measurements.rowOffsets[row]!);
@@ -256,6 +266,9 @@ export class RenderingPipeline<TData = unknown> {
         const active = isCellActive(row, col, selection);
         cell.classList.toggle('bg-cell--selected', selected);
         cell.classList.toggle('bg-cell--active', active);
+
+        // Skip content re-render for actively edited cells — preserve the live editor.
+        if (isEditingCell) continue;
 
         // Build context
         const column = columns[col]!;

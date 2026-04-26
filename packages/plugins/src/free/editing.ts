@@ -3107,6 +3107,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           panel.appendChild(item);
         }
 
+        panel.setAttribute('tabindex', '-1');
         document.body.appendChild(panel);
         activeDropdownPanel = panel;
 
@@ -3167,7 +3168,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           }
         });
 
-        input.addEventListener('blur', () => {
+        input.addEventListener('blur', (e) => {
+          const next = (e as FocusEvent).relatedTarget as HTMLElement | null;
+          if (next && (next === panel || next.closest('.bg-dropdown-panel'))) return;
           if (typeSearchTimer !== null) { clearTimeout(typeSearchTimer); typeSearchTimer = null; }
           setTimeout(() => {
             if (editingCell && activeDropdownPanel) {
