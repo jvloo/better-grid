@@ -443,6 +443,16 @@
   border-bottom: 1px solid var(--bg-cell-border-color, #e8e8e8);
 }
 
+/* Restore the thicker frozen separators in bordered mode (the bordered rule
+   above has equal specificity to .bg-cell--frozen-col-last but appears later,
+   so it wins without these explicit overrides). */
+.bg-grid--bordered .bg-cell--frozen-col-last {
+  border-right: var(--bg-frozen-col-border, 2px solid #d0d0d0);
+}
+.bg-grid--bordered .bg-cell--frozen-row-last {
+  border-bottom: var(--bg-frozen-row-border, 2px solid #d0d0d0);
+}
+
 /* Striped — alternate-row background. Combinable with bordered. */
 .bg-grid--striped .bg-cell[data-row-even="1"] {
   background: var(--bg-stripe-bg, #F9FAFB);

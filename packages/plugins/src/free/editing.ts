@@ -1443,12 +1443,24 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         }
         window.addEventListener('resize', onSync);
 
+        // Defense-in-depth: also listen to the grid's own scroll/column-resize/
+        // frozen-clip events. The DOM 'scroll' listener above usually catches
+        // every scroll source, but core fires emitter events for every layout
+        // change — subscribing here means a missed DOM listener (e.g. fakeScrollbar
+        // not in the ancestor chain we walk) doesn't leave the editor stranded.
+        const offScroll = ctx.on('scroll', onSync);
+        const offColResize = ctx.on('column:resize', onSync);
+        const offFrozenClip = ctx.on('frozen:clip', onSync);
+
         return () => {
           if (rafId !== null) cancelAnimationFrame(rafId);
           for (const target of targets) {
             target.removeEventListener('scroll', onSync);
           }
           window.removeEventListener('resize', onSync);
+          offScroll();
+          offColResize();
+          offFrozenClip();
         };
       }
 

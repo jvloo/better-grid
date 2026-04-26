@@ -171,16 +171,11 @@ export class SelectionLayer {
         handle.style.zIndex = '20';
         handle.style.pointerEvents = 'auto';
 
-        // Position relative to the grid root (above frozen overlay z-index 8)
-        // by computing the cell container's offset from the grid root.
-        if (!this.fillHandleOffsetValid) {
-          const containerRect = this.container.getBoundingClientRect();
-          const rootRect = this.gridRoot.getBoundingClientRect();
-          this.fillHandleOffsetX = containerRect.left - rootRect.left;
-          this.fillHandleOffsetY = containerRect.top - rootRect.top;
-          this.fillHandleOffsetValid = true;
-        }
-        handle.style.transform = `translate3d(${right - 4 + this.fillHandleOffsetX}px, ${bottom - 4 + this.fillHandleOffsetY}px, 0)`;
+        // Position in cell-container space (offsets are in data-space). Appending
+        // to this.container means the handle inherits the container's translate3d
+        // and follows the cells on scroll automatically — no scroll listener
+        // needed and no cached offset to invalidate.
+        handle.style.transform = `translate3d(${right - 4}px, ${bottom - 4}px, 0)`;
 
         // Hide when editing
         if (this.isEditing) handle.style.display = 'none';
@@ -192,8 +187,7 @@ export class SelectionLayer {
           this.startFillDrag(e, lastRange, measurements);
         });
 
-        // Append to grid root so z-index is above frozen overlay
-        this.gridRoot.appendChild(handle);
+        this.container.appendChild(handle);
         this.fillHandle = handle;
       }
     }
