@@ -106,7 +106,13 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         column?: import('@better-grid/core').ColumnDef;
       };
       const errors = new Map<string, InternalEntry>();
-      const validationTooltipEls = new Map<string, HTMLElement>();
+
+      // Map from tooltip key → { tooltip element, anchor cell element }
+      type TooltipRecord = { el: HTMLElement; anchor: HTMLElement };
+      const tooltipRecords = new Map<string, TooltipRecord>();
+
+      /** The per-grid tooltip layer element. Created on first mount. */
+      let tooltipLayer: HTMLElement | null = null;
 
       function positionKey(pos: CellPosition): string {
         return `${pos.rowIndex}:${pos.colIndex}`;
@@ -164,7 +170,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         return null;
       }
 
-      // Inject error border CSS once
+      // Inject error border CSS once (shared across all grid instances)
       if (!document.getElementById('bg-validation-style')) {
         const style = document.createElement('style');
         style.id = 'bg-validation-style';
@@ -175,9 +181,14 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
           .bg-cell--error .bg-input-box {
             border: 1px solid #FFAAAA !important;
           }
+          .bg-validation-tooltip-layer {
+            position: absolute;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 20;
+          }
           .bg-validation-tooltip {
-            position: fixed;
-            z-index: 10000;
+            position: absolute;
             background: #fff;
             border-radius: 4px;
             box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.10);
@@ -195,21 +206,115 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         document.head.appendChild(style);
       }
 
-      function dismissValidationTooltips(): void {
-        for (const tooltip of validationTooltipEls.values()) {
-          tooltip.remove();
+      // ---------------------------------------------------------------------------
+      // Tooltip layer management
+      // ---------------------------------------------------------------------------
+
+      /**
+       * Ensure the tooltip layer exists inside the grid container and is sized to
+       * the "body region" — below the header, above pinned-bottom, right of the
+       * frozen-col overlay. overflow:hidden on the layer clips any tooltip whose
+       * anchor has scrolled into a chrome zone.
+       */
+      function ensureTooltipLayer(): HTMLElement {
+        const gridEl = ctx.grid.getContainer();
+        if (!gridEl) throw new Error('Grid not mounted');
+
+        if (!tooltipLayer || !gridEl.contains(tooltipLayer)) {
+          // Create fresh layer
+          tooltipLayer = document.createElement('div');
+          tooltipLayer.className = 'bg-validation-tooltip-layer';
+          // Set critical layout/clip styles inline so they are programmatically
+          // testable and work even when the <style> injection is deduped/skipped.
+          tooltipLayer.style.position = 'absolute';
+          tooltipLayer.style.overflow = 'hidden';
+          tooltipLayer.style.pointerEvents = 'none';
+          tooltipLayer.style.zIndex = '20';
+          gridEl.appendChild(tooltipLayer);
         }
-        validationTooltipEls.clear();
+
+        return tooltipLayer;
       }
 
-      function showValidationTooltip(key: string, target: HTMLElement, entry: InternalEntry): void {
-        const anchor = target.querySelector('.bg-input-box') as HTMLElement | null;
-        const rect = (anchor ?? target).getBoundingClientRect();
-        const tooltip = document.createElement('div');
-        tooltip.className = 'bg-validation-tooltip';
-        tooltip.style.left = `${rect.left}px`;
-        tooltip.style.top = `${rect.bottom + 4}px`;
+      /**
+       * Recompute layer geometry from the grid's current DOM chrome elements.
+       * Called after every render so the layer stays in sync with header/pinned
+       * heights and frozen-col widths.
+       */
+      function updateLayerGeometry(): void {
+        const gridEl = ctx.grid.getContainer();
+        if (!gridEl || !tooltipLayer) return;
 
+        const gridRect = gridEl.getBoundingClientRect();
+
+        // Top boundary: bottom of the header row
+        const headerEl = gridEl.querySelector('.bg-grid__headers') as HTMLElement | null;
+        const headerBottom = headerEl
+          ? headerEl.getBoundingClientRect().bottom - gridRect.top
+          : 0;
+
+        // Left boundary: right edge of the frozen column overlay (if present)
+        const frozenEl = gridEl.querySelector('.bg-grid__frozen-overlay') as HTMLElement | null;
+        const frozenRight = frozenEl
+          ? frozenEl.getBoundingClientRect().right - gridRect.left
+          : 0;
+
+        // Bottom boundary: top of the pinned-bottom wrapper (if non-zero height)
+        const pinnedBottomEl = gridEl.querySelector('.bg-grid__pinned-bottom') as HTMLElement | null;
+        let bottomOffset = 0;
+        if (pinnedBottomEl) {
+          const h = pinnedBottomEl.getBoundingClientRect().height;
+          if (h > 0) {
+            bottomOffset = gridRect.height - (pinnedBottomEl.getBoundingClientRect().top - gridRect.top);
+          }
+        }
+
+        tooltipLayer.style.top = `${headerBottom}px`;
+        tooltipLayer.style.left = `${frozenRight}px`;
+        tooltipLayer.style.right = '0';
+        tooltipLayer.style.bottom = `${bottomOffset}px`;
+      }
+
+      // ---------------------------------------------------------------------------
+      // Tooltip creation & positioning
+      // ---------------------------------------------------------------------------
+
+      function dismissValidationTooltips(): void {
+        for (const record of tooltipRecords.values()) {
+          record.el.remove();
+        }
+        tooltipRecords.clear();
+      }
+
+      /**
+       * Position (or reposition) a single tooltip relative to the tooltip layer.
+       * The tooltip is absolutely positioned inside the layer; the layer's
+       * overflow:hidden automatically clips tooltips whose anchors scroll under
+       * chrome zones.
+       */
+      function positionTooltip(tooltipEl: HTMLElement, anchorEl: HTMLElement): void {
+        if (!tooltipLayer) return;
+
+        const layerRect = tooltipLayer.getBoundingClientRect();
+        const anchorRect = anchorEl.getBoundingClientRect();
+
+        // Position tooltip below the anchor cell, relative to layer origin
+        const left = anchorRect.left - layerRect.left;
+        const top = anchorRect.bottom - layerRect.top + 4;
+
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.style.top = `${top}px`;
+      }
+
+      /** Reposition all visible tooltips (called on scroll). */
+      function repositionAllTooltips(): void {
+        if (!tooltipLayer || tooltipRecords.size === 0) return;
+        for (const record of tooltipRecords.values()) {
+          positionTooltip(record.el, record.anchor);
+        }
+      }
+
+      function buildTooltipContent(tooltip: HTMLElement, entry: InternalEntry): void {
         if (entry.renderer && entry.column) {
           const issue: ValidationIssue = {
             message: entry.message,
@@ -226,8 +331,6 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
             text.textContent = result;
             tooltip.appendChild(text);
           } else {
-            // The renderer returned a node — drop the default styling and let
-            // it own its appearance entirely.
             tooltip.classList.add('bg-validation-tooltip--custom');
             tooltip.appendChild(result);
           }
@@ -237,9 +340,19 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
           text.textContent = entry.message;
           tooltip.appendChild(text);
         }
+      }
 
-        document.body.appendChild(tooltip);
-        validationTooltipEls.set(key, tooltip);
+      function showValidationTooltip(key: string, anchorEl: HTMLElement, entry: InternalEntry): void {
+        const layer = ensureTooltipLayer();
+        updateLayerGeometry();
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'bg-validation-tooltip';
+        buildTooltipContent(tooltip, entry);
+        layer.appendChild(tooltip);
+        positionTooltip(tooltip, anchorEl);
+
+        tooltipRecords.set(key, { el: tooltip, anchor: anchorEl });
       }
 
       // Track hover listeners for cleanup
@@ -260,6 +373,12 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
           if (cleanup) { cleanup(); hoverCleanups.delete(el as HTMLElement); }
         });
 
+        // Ensure layer exists and geometry is current before creating tooltips
+        if (errors.size > 0) {
+          ensureTooltipLayer();
+          updateLayerGeometry();
+        }
+
         // Apply error styles and tooltip hover to cells with errors
         for (const error of errors.values()) {
           const { rowIndex, colIndex } = error.position;
@@ -269,11 +388,18 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
           for (const cell of cells) {
             cell.classList.add('bg-cell--error');
             const htmlCell = cell as HTMLElement;
+            const anchor = htmlCell.querySelector('.bg-input-box') as HTMLElement | null ?? htmlCell;
 
-            const key = `${positionKey(error.position)}:${validationTooltipEls.size}`;
-            showValidationTooltip(key, htmlCell, error);
+            const key = positionKey(error.position);
+            // Only show one tooltip per error position (first cell rendered wins)
+            if (!tooltipRecords.has(key)) {
+              showValidationTooltip(key, anchor, error);
+            }
+
             const onEnter = () => {
-              if (!validationTooltipEls.has(key)) showValidationTooltip(key, htmlCell, error);
+              if (!tooltipRecords.has(key)) {
+                showValidationTooltip(key, anchor, error);
+              }
             };
             htmlCell.addEventListener('mouseenter', onEnter);
             hoverCleanups.set(htmlCell, () => {
@@ -347,9 +473,17 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
       });
 
       // Re-apply error styles after render (cells get recreated by virtualization)
+      // Also update layer geometry and reposition tooltips so they track scroll.
       const unsubRender = ctx.on('render', () => {
         if (errors.size > 0) {
           applyErrorStyles();
+        }
+      });
+
+      // Reposition tooltips on scroll without a full applyErrorStyles pass.
+      const unsubScroll = ctx.on('scroll', () => {
+        if (tooltipLayer && tooltipRecords.size > 0) {
+          repositionAllTooltips();
         }
       });
 
@@ -375,8 +509,13 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         unsubFirstRender?.();
         unsubData();
         unsubRender();
+        unsubScroll();
         errors.clear();
         dismissValidationTooltips();
+        if (tooltipLayer) {
+          tooltipLayer.remove();
+          tooltipLayer = null;
+        }
         for (const cleanup of hoverCleanups.values()) cleanup();
         hoverCleanups.clear();
       };
