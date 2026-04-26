@@ -1,0 +1,109 @@
+name: Bug report
+description: Report a reproducible defect in Better Grid.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Before you file:
+
+        - Confirm you're on the latest `1.x` of `@better-grid/*`.
+        - Search [open](https://github.com/jvloo/better-grid/issues?q=is%3Aopen+is%3Aissue+label%3Abug) and [closed](https://github.com/jvloo/better-grid/issues?q=is%3Aclosed+is%3Aissue+label%3Abug) bugs first.
+        - For security issues, **do not open a public issue.** See [`SECURITY.md`](https://github.com/jvloo/better-grid/blob/main/SECURITY.md).
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One-line description of the bug.
+      placeholder: "Selection state isn't cleared when data is replaced via setData()"
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: |
+        Minimal steps to reproduce. A code snippet or a link to a forked playground (`apps/playground`)
+        is ideal. The smaller, the better.
+      placeholder: |
+        ```tsx
+        const grid = useGrid({ data, columns });
+        // ...
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include console errors / stack traces if any.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Affected package(s)
+      multiple: true
+      options:
+        - "@better-grid/core"
+        - "@better-grid/react"
+        - "@better-grid/plugins"
+        - "@better-grid/pro"
+        - "apps/playground (demo only)"
+        - "Docs"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Better Grid version
+      description: From `package.json` of the affected package.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: framework
+    attributes:
+      label: Framework + version
+      description: e.g. React 19.0.0, vanilla TS, Next.js 15
+      placeholder: "React 19.0.0"
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      multiple: true
+      options:
+        - Chrome
+        - Edge
+        - Firefox
+        - Safari
+        - Mobile Safari
+        - Chrome Android
+        - Other (note in environment)
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "Windows 11 / macOS 15 / Ubuntu 24.04"
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Additional context, screenshots, recordings, etc.

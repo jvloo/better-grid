@@ -1,0 +1,76 @@
+name: Feature request
+description: Propose a new feature, plugin, or API change.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for thinking about Better Grid! Before you file:
+
+        - Skim [`ROADMAP.md`](https://github.com/jvloo/better-grid/blob/main/ROADMAP.md) — the feature may already be planned.
+        - Search [open requests](https://github.com/jvloo/better-grid/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement) and add a 👍 if one matches.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: |
+        What use case isn't well served today? Lead with the problem, not the solution.
+        Examples: "I can't…" / "It takes N steps to…" / "There's no way to…"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: |
+        Sketch the API or behavior you'd want. TypeScript signatures + a tiny example
+        beat prose. It's fine if you have multiple options — list them.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workarounds exist today? Why aren't they enough?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Where does this live?
+      options:
+        - Core engine (`@better-grid/core`)
+        - React adapter (`@better-grid/react`)
+        - Free plugin (`@better-grid/plugins`)
+        - Pro plugin (`@better-grid/pro`)
+        - Docs / DX
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Breaking change?
+      options:
+        - "No"
+        - "Yes — public API changes"
+        - "Maybe — needs design discussion"
+    validations:
+      required: true
+
+  - type: textarea
+    id: prior-art
+    attributes:
+      label: Prior art
+      description: |
+        Has another grid (AG Grid, TanStack, Handsontable, RevoGrid, MUI X, etc.) shipped
+        something similar? Link to their docs if so — saves us research time.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?

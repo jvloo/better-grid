@@ -1,0 +1,79 @@
+Better Grid Pro Source-Available License
+Version 1.0, 2026
+
+Copyright (c) 2026 Better Grid Contributors
+
+This license governs the contents of the `@better-grid/pro` package only. The
+remaining packages in this repository (`@better-grid/core`, `@better-grid/react`,
+`@better-grid/plugins`) are licensed under MIT — see `LICENSE`.
+
+1. Definitions.
+
+   "Software" means the source code, build artifacts, and documentation
+   contained in the `packages/pro/` directory of the Better Grid repository.
+
+   "You" means an individual or legal entity exercising permissions granted by
+   this license.
+
+   "Production Use" means any use of the Software (a) in a deployment that
+   serves end users outside Your organization, (b) in a deployment that
+   processes data on behalf of paying customers, or (c) in a deployment whose
+   primary purpose is to generate revenue.
+
+   "Non-Production Use" means evaluation, learning, debugging, internal
+   tooling not exposed to end users, contributing back to this repository,
+   or development environments preceding a Production Use deployment.
+
+2. Grant for Non-Production Use.
+
+   Permission is hereby granted, free of charge, to any person obtaining a
+   copy of the Software, to use, copy, modify, merge, and distribute the
+   Software for Non-Production Use, subject to the following conditions:
+
+   a. The above copyright notice and this permission notice shall be included
+      in all copies or substantial portions of the Software.
+
+   b. You may not redistribute the Software, modified or unmodified, in a way
+      that competes with or substitutes for a Better Grid Pro commercial
+      offering.
+
+3. Production Use requires a commercial license.
+
+   Production Use of the Software requires a separate commercial license
+   agreement with the copyright holder. Contact the maintainer to discuss
+   terms (see SUPPORT.md for current contact details). There is no hard
+   runtime DRM in the Software in this version; the absence of enforcement
+   mechanism is not a grant of permission.
+
+4. Contributions.
+
+   Any contribution intentionally submitted by You for inclusion in the
+   Software shall be licensed under this license, without any additional
+   terms or conditions, unless an explicit alternative agreement is recorded
+   in writing.
+
+5. Termination.
+
+   This license terminates automatically if You fail to comply with any of
+   its terms. Upon termination, You shall cease all use of the Software and
+   destroy all copies in Your possession or control. Sections 1, 6, 7, and 8
+   survive termination.
+
+6. Trademarks.
+
+   "Better Grid" and any associated logos are trademarks of the copyright
+   holder. This license does not grant rights to use those trademarks except
+   as required for reasonable and customary attribution.
+
+7. Disclaimer of Warranty.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+8. Limitation of Liability.
+
+   IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+   DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR
+   OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE
+   USE OR OTHER DEALINGS IN THE SOFTWARE.

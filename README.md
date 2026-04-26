@@ -167,8 +167,12 @@ Inspired by [Better Auth](https://better-auth.com):
 ## Support
 
 Better Grid is an independent project. If it saves you time or helps your work,
-you can support development through sponsorship or commercial support. A coffee
-link will be added once it is available.
+support development through sponsorship or commercial support:
+
+- **General questions / how-do-I-…?** — see [`SUPPORT.md`](SUPPORT.md)
+- **Commercial support / custom plugins** — `ping@xavierloo.com`
+- **Sponsorship** — `sponsors@xavierloo.com` (or GitHub Sponsors when enabled)
+- **Project / library questions** — `projects@xavierloo.com`
 
 ## Theming
 
@@ -208,13 +212,17 @@ See [ROADMAP.md](ROADMAP.md) for the full feature roadmap, tier strategy, and co
 
 ## License
 
-| Package | License |
-| ------- | ------- |
-| `@better-grid/core` | MIT |
-| `@better-grid/react` | MIT |
-| `@better-grid/plugins` | MIT |
-| `@better-grid/pro` | Better Grid Pro Source-Available License |
+| Package | License | File |
+| ------- | ------- | ---- |
+| `@better-grid/core` | MIT | [`LICENSE`](LICENSE) |
+| `@better-grid/react` | MIT | [`LICENSE`](LICENSE) |
+| `@better-grid/plugins` | MIT | [`LICENSE`](LICENSE) |
+| `@better-grid/pro` | Better Grid Pro Source-Available License | [`LICENSE-PRO`](LICENSE-PRO) |
 
 `@better-grid/pro` is source-available for transparency, evaluation, learning,
 debugging, and easier integration. Commercial production use requires a Better
 Grid Pro license. There is no hard runtime DRM in v1.
+
+## Contributing
+
+Bugs, plugins, docs, and tests are all welcome. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md). By participating you agree to the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). For security issues see [`SECURITY.md`](SECURITY.md). For "how do I…?" questions see [`SUPPORT.md`](SUPPORT.md). Release history lives in [`CHANGELOG.md`](CHANGELOG.md).

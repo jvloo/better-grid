@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / how-do-I-…
+    url: https://github.com/jvloo/better-grid/discussions
+    about: For usage questions, please open a Discussion instead of an issue.
+  - name: Security disclosure
+    url: https://github.com/jvloo/better-grid/security/advisories/new
+    about: Privately report a vulnerability. Do NOT open a public issue.
+  - name: Migration question (v0 → v1)
+    url: https://github.com/jvloo/better-grid/blob/main/docs/migration-v0-to-v1.md
+    about: Inventory of every breaking change between the v0 and v1 init APIs.
