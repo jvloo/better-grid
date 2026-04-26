@@ -61,8 +61,13 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
       const grid = ctx.grid;
       const store = ctx.store;
 
-      // Resolve column IDs
-      const indentColId = options?.indentColumn;
+      // Resolve column IDs.
+      // `indentColumn` defaults to the first column so that callers using only
+      // top-level `hierarchy: { getRowId, getParentId }` (and no plugin opts)
+      // still get carets + depth indentation on the leftmost column. Without
+      // this fallback, configuring hierarchy via React's `features: { hierarchy: true }`
+      // (which calls `hierarchy(undefined)`) silently renders no toggles or indent.
+      const indentColId = options?.indentColumn ?? store.getState().columns[0]?.id;
       const toggleColId = options?.toggleColumn;
       const hasSeparateToggle = toggleColId != null && toggleColId !== indentColId;
 

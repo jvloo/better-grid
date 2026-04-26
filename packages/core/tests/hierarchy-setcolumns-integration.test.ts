@@ -143,4 +143,32 @@ describe('hierarchy — cellRenderer wrap survives setColumns()', () => {
     expect(toggles.length).toBeGreaterThan(0);
     grid.unmount();
   });
+
+  it('indentColumn defaults to first column when not specified', () => {
+    // Regression: React's `features: { hierarchy: true }` calls hierarchy(undefined),
+    // so options.indentColumn is undefined. Without a fallback to columns[0]?.id,
+    // no column ever gets wrapped — no carets, no indent. This is what made
+    // /demo/finance silently render flat after enabling the plugin.
+    const host = makeHost();
+    const grid = createGrid<Row>({
+      columns,
+      data,
+      hierarchy: hierarchyConfig,
+      plugins: [hierarchy()],  // no options at all
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const toggles = host.querySelectorAll('.bg-hierarchy-toggle');
+    expect(toggles.length).toBeGreaterThan(0);
+
+    // Depth classes should still be applied to the first column's cells
+    const depth0 = host.querySelectorAll('.bg-cell--depth-0');
+    const depth1 = host.querySelectorAll('.bg-cell--depth-1');
+    expect(depth0.length).toBeGreaterThan(0);
+    expect(depth1.length).toBeGreaterThan(0);
+
+    grid.unmount();
+  });
 });
