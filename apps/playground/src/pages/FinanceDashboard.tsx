@@ -124,6 +124,7 @@ export function FinanceDashboard() {
       edit: { editTrigger: 'dblclick', precision: 0 },
       validation: true,
       export: { filename: 'budget-report' },
+      hierarchy: true,
     },
     headers: multiHeaders,
     pinned: { bottom: [totalsRow] },
