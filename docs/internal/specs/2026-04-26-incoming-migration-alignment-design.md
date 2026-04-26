@@ -13,45 +13,77 @@ A developer copying a column definition or a grid options object from AG Grid or
 - Aligning the plugin/feature opt-in model to AG Grid's `ModuleRegistry` — the typed `mode`/`features` registry is intentional.
 - Adding new column features (`flex`, `headerAlign`, `hidden`) — handled separately as additive PRs when adoption signals demand.
 
-## Phase 1 — Pre-publish renames
+## Phase 1 — Pre-publish renames + small additive props
 
 ### Renames
 
-The set where AG Grid + MUI X agree and Better Grid currently differs is exactly two properties on `ColumnDef`:
+Where AG Grid + MUI X agree and Better Grid currently differs:
 
-| Concept                            | AG / MUI X    | Better Grid (now) | Better Grid (after) |
-| ---------------------------------- | ------------- | ----------------- | ------------------- |
-| Bind a column to a row field       | `field`       | `accessorKey`     | `field`             |
-| Column header label / renderer     | `headerName`  | `header`          | `headerName`        |
-
-`accessorFn` stays — it's the union sibling for computed columns and has no AG/MUI equivalent.
+| Concept                            | AG / MUI X     | Better Grid (now)         | Better Grid (after)                              |
+| ---------------------------------- | -------------- | ------------------------- | ------------------------------------------------ |
+| Bind a column to a row field       | `field`        | `accessorKey`             | `field`                                          |
+| Column header label / renderer     | `headerName`   | `header`                  | `headerName`                                     |
+| Computed column value              | `valueGetter`  | `accessorFn`              | `valueGetter`                                    |
+| Top-level row-id resolver          | `getRowId`     | `hierarchy.getRowId`      | top-level `getRowId` (still mirrored at `hierarchy.getRowId` for hierarchy users) |
 
 `headerName` keeps the union shape Better Grid already uses: `string | (() => HTMLElement | string)`. AG Grid users who only set strings copy-paste verbatim; users who want a custom-rendered header use the function form.
 
+`valueGetter` keeps the existing signature: `(row: TData, rowIndex: number) => unknown`. AG Grid passes a `params` object; MUI X passes `({ row, …})`. The codemod (Phase 2) unwraps both into our flat shape.
+
+`getRowId` becomes a top-level `GridOptions` field accepting `(row: TData) => string | number`. When `hierarchy: { getRowId }` is also set, the hierarchy field wins for hierarchy state, but selection / data-swap stability uses the top-level resolver. Documenting both paths keeps the hierarchy-only consumers' code identical.
+
+### New column props (additive)
+
+Properties that AG Grid and/or MUI X have and Better Grid currently doesn't — adopting them under the same name removes a migration site:
+
+| Property                       | Source       | Type                                       | Behavior                                                                                  |
+| ------------------------------ | ------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `column.hide`                  | AG + MUI X   | `boolean`                                  | When `true`, column is excluded from the rendered layout but stays in `columns`. Toggleable at runtime via `grid.api.setColumnHidden(id, hide)`. |
+| `column.flex`                  | MUI X        | `number`                                   | Flex-grow share for spare horizontal space. Mirrors flexbox: a column with `flex: 2` gets twice the share of `flex: 1`. Combines with `width` (treated as `flex-basis`) and respects `minWidth` / `maxWidth`. |
+| `column.headerAlign`           | MUI X        | `'left' \| 'center' \| 'right'`            | Header-cell alignment, independent of cell `align`. Defaults to `align` when unset (preserving today's behavior).                |
+
+These are additive; existing column definitions keep working unchanged.
+
 ### Files touched
 
-- `packages/core/src/types.ts` — rename the two fields in `ColumnDef<TData>`.
-- `packages/core/src/columns/manager.ts` — read sites for `accessorKey` → `field`.
+**Renames:**
+
+- `packages/core/src/types.ts` — rename the four fields (in `ColumnDef<TData>` and `GridOptions<TData>`).
+- `packages/core/src/grid.ts` — wire top-level `getRowId` through `createGrid`; default to `hierarchy.getRowId` when only that is set.
+- `packages/core/src/columns/manager.ts` — read sites for `accessorKey` → `field`, `accessorFn` → `valueGetter`.
 - `packages/core/src/rendering/headers.ts`, `pipeline.ts`, `pinned-rows.ts` — read sites for `header` → `headerName`.
-- `packages/react/src/defineColumn.ts` — builders set `field` and `headerName`.
-- `packages/plugins/src/free/*.ts` — every plugin that reads `accessorKey` (editing, validation, hierarchy, etc.) — bulk find/replace.
+- `packages/core/src/selection/`, `packages/core/src/state/` — any selection-stability paths that previously relied on `hierarchy.getRowId` should now read the top-level `getRowId` (with the hierarchy mirror as fallback).
+- `packages/react/src/defineColumn.ts` — builders set `field` and `headerName`; new builders accept `hide`, `flex`, `headerAlign`.
+- `packages/react/src/useGrid.ts` — accepts top-level `getRowId` in options.
+- `packages/plugins/src/free/*.ts` — every plugin that reads the renamed fields (editing, validation, hierarchy, sorting, filtering, etc.) — bulk find/replace.
 - `packages/pro/src/*.ts` — same.
+
+**New column props:**
+
+- `packages/core/src/types.ts` — add `hide?: boolean`, `flex?: number`, `headerAlign?: 'left' | 'center' | 'right'` to `ColumnDef<TData>`.
+- `packages/core/src/columns/manager.ts` — `hide` excludes the column from the live `columns` array consumed by the renderer; `setColumnHidden(id, hide)` API for runtime toggling.
+- `packages/core/src/virtualization/layout.ts` — `flex` integrates into the column-width allocation pass (`flex-basis = width`, distribute remaining viewport width by `flex` ratio, clamp to `minWidth` / `maxWidth`).
+- `packages/core/src/rendering/headers.ts` — `headerAlign` overrides `align` for the header cell; default falls back to `align`.
+
+**Docs / playground / tests:**
+
 - `apps/playground/src/pages/*.tsx` — every demo page that uses raw `ColumnDef` (the FSBT pages and the few non-`col.*` examples).
-- `docs/migrations/from-*.md` — update the right column of every mapping table.
+- `docs/migrations/from-*.md` — update the right column of every mapping table; rows that were previously "flagged" because we lacked `flex` / `headerAlign` / `hide` flip to "auto-converted".
 - `docs/internal/v1-init-api-history.md` — historical paragraph mentioning `accessorKey`.
 - `docs/guides/theming-with-mui.md`, `README.md`, `AGENTS.md`, `CHANGELOG.md` — any prose mention.
-- `packages/core/tests/`, `packages/react/tests/` — fixtures and assertions.
+- `packages/core/tests/`, `packages/react/tests/` — fixtures and assertions; new tests for `hide` toggling, `flex` width allocation, `headerAlign` rendering.
 
 ### Verification
 
 - All package builds green (`node scripts/build.js`).
-- `pnpm --filter @better-grid/core test` (135 tests) and `pnpm --filter @better-grid/react test` (32 tests) green.
+- `pnpm --filter @better-grid/core test` and `pnpm --filter @better-grid/react test` green (existing tests + new ones for `hide` / `flex` / `headerAlign`).
 - Visual check `/demo/*` and `/demo-realworld/*` in the playground — no regressions.
+- A new `/demo/column-features` page exercises `hide` / `flex` / `headerAlign` end-to-end.
 
 ### Out of scope for Phase 1
 
 - Codemod package (Phase 2).
-- Any new column property.
+- Per-column header-class hook (`headerClass` / `headerClassName`) — AG and MUI disagree on the name, defer until consistent need.
 - Aliasing.
 
 ## Phase 2 — `@better-grid/codemods` package
@@ -99,11 +131,14 @@ Each transform handles three layers, in order: per-column property renames, grid
 | `cellEditor: 'agNumberCellEditor'`                         | `cellEditor: 'number'`                                                   |
 | `cellEditor: 'agDateCellEditor'`                           | `cellEditor: 'date'`                                                     |
 | `cellEditorParams: { values: [...] }`                      | column-level `options: [...]`                                            |
+| `valueGetter: ({ data, node }) => …`                       | `valueGetter: (row) => …` (unwrap params; `data` → `row`)                |
+| `hide: true`                                               | `hide: true` (no change — adopted name)                                  |
 | `cellRenderer: MyReactComponent`                           | flagged — manual port to `(container, ctx) => void`                      |
 | `cellRendererParams: {...}`                                | flagged — usually unused after manual port                               |
 | `pinned: 'left'` (per column)                              | flagged — move to grid-level `frozen: { left: N }`                       |
 | `rowData`                                                  | `data`                                                                   |
 | `columnDefs`                                               | `columns`                                                                |
+| `getRowId`                                                 | `getRowId` (no change — adopted top-level)                               |
 | `pinnedTopRowData`                                         | `pinned: { top: [...] }`                                                 |
 | `pinnedBottomRowData`                                      | `pinned: { bottom: [...] }` (merges if both present)                     |
 | `onCellValueChanged`                                       | `onCellChange`                                                           |
@@ -125,8 +160,11 @@ Each transform handles three layers, in order: per-column property renames, grid
 | `cellClassName: 'red'`                                     | `cellClass: () => 'red'` (string → function form)                        |
 | `cellClassName: ({ row }) => 'red'`                        | `cellClass: (value, row) => 'red'` (param shape change)                  |
 | `pinnedRows={{ top, bottom }}`                             | `pinned={{ top, bottom }}`                                               |
-| `flex: 1`                                                  | flagged — Better Grid has no flex-grow column today                      |
-| `headerAlign: 'left'`                                      | flagged — Better Grid doesn't separate header alignment today            |
+| `valueGetter: ({ row }) => …`                              | `valueGetter: (row) => …` (unwrap params)                                |
+| `getRowId={(row) => row.id}`                               | `getRowId: (row) => row.id` (no rename — top-level adopted)              |
+| `hide: true`                                               | `hide: true` (no change — adopted name)                                  |
+| `flex: 1`                                                  | `flex: 1` (no change — adopted)                                          |
+| `headerAlign: 'left'`                                      | `headerAlign: 'left'` (no change — adopted)                              |
 | `apiRef.current.method()`                                  | flagged — `grid.api.method()` after `useGrid({...})` refactor            |
 
 #### `from-tanstack-table`
@@ -134,10 +172,12 @@ Each transform handles three layers, in order: per-column property renames, grid
 | Source                                                     | Output                                                                   |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
 | `accessorKey: 'amount'`                                    | `field: 'amount'`                                                        |
+| `accessorFn: (row) => row.x + row.y`                       | `valueGetter: (row) => row.x + row.y`                                    |
 | `header: 'Amount'`                                         | `headerName: 'Amount'`                                                   |
 | `cell: ({ row, column }) => <Cell />`                      | flagged — manual port to DOM `cellRenderer`                              |
 | `enableSorting: true`                                      | `sortable: true`                                                         |
 | `enableColumnFilter`                                       | flagged — drop; filtering comes from the `'filter'` feature              |
+| `enableHiding: true` + `column.getIsVisible()` state       | flagged — add `hide: false` initially; toggle via `grid.api.setColumnHidden(id, !visible)` |
 | `size`, `minSize`, `maxSize`                               | `width`, `minWidth`, `maxWidth`                                          |
 | `useReactTable({...})`                                     | flagged — refactor to `useGrid({...})` + `<BetterGrid grid={...} />`     |
 
@@ -258,11 +298,21 @@ packages/codemods/transforms/from-ag-grid/
 
 ## Out-of-scope (whole spec)
 
-- Phase 3 alignment additions (`column.flex`, `column.headerAlign`, `column.hidden`) — separate small PRs when adoption signals demand.
+- Per-column header-class hook (`headerClass` AG / `headerClassName` MUI X disagree on the name).
+- Per-column tooltip / `description` (AG `headerTooltip` + `tooltipField` vs MUI X `description` — name disagreement).
+- `cellType` → `type` rename (semantic precision wins over alignment).
+- `data` → `rows` rename (only matches MUI X; AG uses `rowData`).
 - Aliasing of any kind.
 - Renderer signature alignment.
 
 ## Success criteria
 
-- Phase 1: All 167 tests pass post-rename. Playground demos render identically. Migration cheat sheets show `field` / `headerName` consistently.
-- Phase 2: Per-transform fixture tests pass for every documented mapping. `npx @better-grid/migrate from-ag-grid` on a hand-written 10-column AG Grid sample converts the rename rows automatically and flags the rows the spec says should be flagged.
+- **Phase 1:**
+  - All existing tests pass post-rename. Existing playground demos render identically.
+  - New tests cover `hide` toggling, `flex` width allocation across viewport-resize, `headerAlign` rendering vs `align` fallback.
+  - New `/demo/column-features` page exercises `hide` / `flex` / `headerAlign` end-to-end.
+  - Migration cheat sheets list `field`, `headerName`, `valueGetter`, `getRowId`, `hide`, `flex`, `headerAlign` as direct copy-paste rows (no rename column needed) for AG Grid and MUI X where applicable.
+- **Phase 2:**
+  - Per-transform fixture tests pass for every documented mapping.
+  - `npx @better-grid/migrate from-ag-grid` on a hand-written 10-column AG Grid sample converts the auto-convert rows and flags exactly the rows the spec says should be flagged.
+  - Same for the other 5 transforms with their respective fixtures.
