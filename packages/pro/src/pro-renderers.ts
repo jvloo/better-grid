@@ -530,19 +530,25 @@ function createSliderRenderer(ctx: PluginContext): CellTypeRenderer {
         ctx.grid.updateCell(context.rowIndex, context.column.id, newVal);
       };
 
-      // Prevent grid selection/keyboard from interfering
-      const onMouseDown = (e: Event) => {
-        e.stopPropagation();
-      };
+      // Prevent the editing plugin from intercepting pointer/click/dblclick events
+      // on the slider and opening a cell editor. Mirror the pattern used in
+      // row-actions.ts (stopPropagation on pointerdown + click).
+      const stopProp = (e: Event) => { e.stopPropagation(); };
 
+      wrapper.addEventListener('pointerdown', stopProp);
+      wrapper.addEventListener('mousedown', stopProp);
+      wrapper.addEventListener('click', stopProp);
+      wrapper.addEventListener('dblclick', stopProp);
       input.addEventListener('input', onInput);
       input.addEventListener('change', onChange);
-      input.addEventListener('mousedown', onMouseDown);
 
       return () => {
+        wrapper.removeEventListener('pointerdown', stopProp);
+        wrapper.removeEventListener('mousedown', stopProp);
+        wrapper.removeEventListener('click', stopProp);
+        wrapper.removeEventListener('dblclick', stopProp);
         input.removeEventListener('input', onInput);
         input.removeEventListener('change', onChange);
-        input.removeEventListener('mousedown', onMouseDown);
       };
     },
     getStringValue(context: CellRenderContext): string {
