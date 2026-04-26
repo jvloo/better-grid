@@ -1143,9 +1143,15 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       ): void {
         closeDisplaySelectPanel();
 
+        // Stable panel id derived from the anchor element's position in the DOM
+        const panelId = 'bg-select-panel-' + (anchorEl.dataset.bgCellKey ?? Math.random().toString(36).slice(2));
+
         const rect = anchorEl.getBoundingClientRect();
         const panel = document.createElement('div');
+        panel.id = panelId;
         panel.className = 'bg-dropdown-panel bg-select-panel';
+        panel.setAttribute('role', 'listbox');
+        panel.setAttribute('tabindex', '-1');
         panel.style.cssText = `
           position: fixed;
           left: ${rect.left}px;
@@ -1163,24 +1169,37 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           line-height: normal;
         `;
 
+        // Wire ARIA on the trigger
+        anchorEl.setAttribute('role', 'combobox');
+        anchorEl.setAttribute('aria-haspopup', 'listbox');
+        anchorEl.setAttribute('aria-expanded', 'true');
+        anchorEl.setAttribute('aria-controls', panelId);
+
         let selectedIndex = Math.max(0, opts.findIndex((opt) => optionValuesEqual(opt.value, selectedValue)));
 
         const highlight = (index: number): void => {
           selectedIndex = index;
-          const items = panel.querySelectorAll('.bg-dropdown-item');
-          items.forEach((item, i) => {
-            const el = item as HTMLElement;
+          const items = panel.querySelectorAll<HTMLElement>('.bg-dropdown-item');
+          items.forEach((el, i) => {
             const selected = i === selectedIndex;
             el.classList.toggle('bg-dropdown-item--selected', selected);
             el.style.background = selected ? 'var(--bg-dropdown-selected-bg, #F2F4F7)' : '';
             el.style.fontWeight = selected ? '500' : '';
-            if (selected) el.scrollIntoView({ block: 'nearest' });
+            el.setAttribute('aria-selected', selected ? 'true' : 'false');
+            if (selected) {
+              el.scrollIntoView({ block: 'nearest' });
+              anchorEl.setAttribute('aria-activedescendant', el.id);
+            }
           });
         };
 
         opts.forEach((opt, index) => {
           const item = document.createElement('div');
+          const itemId = panelId + '-opt-' + index;
+          item.id = itemId;
           item.className = 'bg-dropdown-item';
+          item.setAttribute('role', 'option');
+          item.setAttribute('aria-selected', index === selectedIndex ? 'true' : 'false');
           item.textContent = opt.label;
           item.style.cssText = `
             padding: 8px 12px;
@@ -1215,6 +1234,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           closeDisplaySelectPanel();
         };
         const closeOnScroll = () => closeDisplaySelectPanel();
+        // Type-to-search state for display select
+        let typeSearchPrefix = '';
+        let typeSearchTimer: ReturnType<typeof setTimeout> | null = null;
+
         const onKeyDown = (event: KeyboardEvent) => {
           if (!activeDisplaySelectPanel) return;
           if (event.key === 'Escape') {
@@ -1226,11 +1249,24 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           } else if (event.key === 'ArrowUp') {
             event.preventDefault();
             highlight(Math.max(selectedIndex - 1, 0));
+          } else if (event.key === 'Home') {
+            event.preventDefault();
+            highlight(0);
+          } else if (event.key === 'End') {
+            event.preventDefault();
+            highlight(opts.length - 1);
           } else if (event.key === 'Enter') {
             event.preventDefault();
             closeDisplaySelectPanel();
             const opt = opts[selectedIndex];
             if (opt) onSelect(opt);
+          } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+            // Type-to-search: jump to first option whose label starts with the typed prefix
+            if (typeSearchTimer !== null) clearTimeout(typeSearchTimer);
+            typeSearchPrefix += event.key.toLowerCase();
+            typeSearchTimer = setTimeout(() => { typeSearchPrefix = ''; typeSearchTimer = null; }, 500);
+            const matchIdx = opts.findIndex((o) => o.label.toLowerCase().startsWith(typeSearchPrefix));
+            if (matchIdx !== -1) highlight(matchIdx);
           }
         };
 
@@ -1245,6 +1281,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           document.removeEventListener('keydown', onKeyDown, true);
           for (const target of syncTargets) target.removeEventListener('scroll', closeOnScroll);
           window.removeEventListener('resize', closeOnScroll);
+          if (typeSearchTimer !== null) clearTimeout(typeSearchTimer);
+          // Reset ARIA expanded state on the trigger when panel closes
+          anchorEl.setAttribute('aria-expanded', 'false');
+          anchorEl.removeAttribute('aria-activedescendant');
         };
       }
 
@@ -1263,6 +1303,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             : 'flex-start';
         trigger.style.width = '100%';
         trigger.style.pointerEvents = 'auto';
+        // Initial ARIA: closed combobox — openDisplaySelectPanel sets expanded+controls
+        trigger.setAttribute('role', 'combobox');
+        trigger.setAttribute('aria-haspopup', 'listbox');
+        trigger.setAttribute('aria-expanded', 'false');
         trigger.addEventListener('pointerdown', (event) => event.stopPropagation());
         return trigger;
       }
@@ -2903,11 +2947,21 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       ): HTMLInputElement {
         activeDropdownOptions = opts;
 
+        // Stable ids for ARIA linkage
+        const panelId = 'bg-dropdown-panel-' + (editingCell
+          ? `r${editingCell.rowIndex}c${editingCell.colIndex}`
+          : Math.random().toString(36).slice(2));
+
         // Hidden input for focus and keyboard handling
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'bg-cell-editor bg-cell-editor--dropdown-trigger';
         input.readOnly = true;
+        // ARIA: combobox trigger
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-haspopup', 'listbox');
+        input.setAttribute('aria-expanded', 'true');
+        input.setAttribute('aria-controls', panelId);
 
         const currentOpt = opts.find((o) => o.value === currentValue || String(o.value) === String(currentValue));
         input.value = currentOpt?.label ?? String(currentValue ?? '');
@@ -2956,7 +3010,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         const rect = cellEl.getBoundingClientRect();
         const cellFont = getComputedStyle(cellEl).font;
         const panel = document.createElement('div');
+        panel.id = panelId;
         panel.className = 'bg-dropdown-panel';
+        panel.setAttribute('role', 'listbox');
+        panel.setAttribute('tabindex', '-1');
         panel.style.cssText = `
           position: fixed;
           left: ${rect.left}px;
@@ -2978,7 +3035,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         for (let i = 0; i < opts.length; i++) {
           const opt = opts[i]!;
           const item = document.createElement('div');
+          const itemId = panelId + '-opt-' + i;
+          item.id = itemId;
           item.className = 'bg-dropdown-item' + (i === selectedIndex ? ' bg-dropdown-item--selected' : '');
+          item.setAttribute('role', 'option');
+          item.setAttribute('aria-selected', i === selectedIndex ? 'true' : 'false');
           item.style.cssText = `
             padding: 6px 12px;
             cursor: pointer;
@@ -3015,16 +3076,37 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         document.body.appendChild(panel);
         activeDropdownPanel = panel;
 
+        // Set initial activedescendant if a value is already selected
+        if (selectedIndex >= 0) {
+          input.setAttribute('aria-activedescendant', panelId + '-opt-' + selectedIndex);
+        }
+
+        // Type-to-search state
+        let typeSearchPrefix = '';
+        let typeSearchTimer: ReturnType<typeof setTimeout> | null = null;
+
         // Keyboard navigation in dropdown
         input.addEventListener('keydown', (e) => {
           if (e.key === 'ArrowDown') {
             e.preventDefault();
             selectedIndex = Math.min(selectedIndex + 1, opts.length - 1);
             highlightDropdownItem(panel, selectedIndex);
+            input.setAttribute('aria-activedescendant', panelId + '-opt-' + selectedIndex);
           } else if (e.key === 'ArrowUp') {
             e.preventDefault();
             selectedIndex = Math.max(selectedIndex - 1, 0);
             highlightDropdownItem(panel, selectedIndex);
+            input.setAttribute('aria-activedescendant', panelId + '-opt-' + selectedIndex);
+          } else if (e.key === 'Home') {
+            e.preventDefault();
+            selectedIndex = 0;
+            highlightDropdownItem(panel, selectedIndex);
+            input.setAttribute('aria-activedescendant', panelId + '-opt-' + selectedIndex);
+          } else if (e.key === 'End') {
+            e.preventDefault();
+            selectedIndex = opts.length - 1;
+            highlightDropdownItem(panel, selectedIndex);
+            input.setAttribute('aria-activedescendant', panelId + '-opt-' + selectedIndex);
           } else if (e.key === 'Enter') {
             e.preventDefault();
             e.stopPropagation();
@@ -3037,10 +3119,22 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             e.preventDefault();
             e.stopPropagation();
             commitDropdown(selectedIndex);
+          } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+            // Type-to-search: jump to first option whose label starts with the typed prefix
+            if (typeSearchTimer !== null) clearTimeout(typeSearchTimer);
+            typeSearchPrefix += e.key.toLowerCase();
+            typeSearchTimer = setTimeout(() => { typeSearchPrefix = ''; typeSearchTimer = null; }, 500);
+            const matchIdx = opts.findIndex((o) => o.label.toLowerCase().startsWith(typeSearchPrefix));
+            if (matchIdx !== -1) {
+              selectedIndex = matchIdx;
+              highlightDropdownItem(panel, selectedIndex);
+              input.setAttribute('aria-activedescendant', panelId + '-opt-' + selectedIndex);
+            }
           }
         });
 
         input.addEventListener('blur', () => {
+          if (typeSearchTimer !== null) { clearTimeout(typeSearchTimer); typeSearchTimer = null; }
           setTimeout(() => {
             if (editingCell && activeDropdownPanel) {
               commitDropdown(selectedIndex);
@@ -3069,18 +3163,19 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       }
 
       function highlightDropdownItem(panel: HTMLElement, index: number): void {
-        const items = panel.querySelectorAll('.bg-dropdown-item');
-        items.forEach((item, i) => {
-          const el = item as HTMLElement;
+        const items = panel.querySelectorAll<HTMLElement>('.bg-dropdown-item');
+        items.forEach((el, i) => {
           if (i === index) {
             el.classList.add('bg-dropdown-item--selected');
             el.style.background = 'var(--bg-dropdown-selected-bg, #e8f0fe)';
             el.style.fontWeight = '500';
+            el.setAttribute('aria-selected', 'true');
             el.scrollIntoView({ block: 'nearest' });
           } else {
             el.classList.remove('bg-dropdown-item--selected');
             el.style.background = '';
             el.style.fontWeight = '';
+            el.setAttribute('aria-selected', 'false');
           }
         });
       }
