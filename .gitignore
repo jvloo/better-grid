@@ -58,3 +58,7 @@ tmp-*.webm
 # Agents
 .claude/settings.local.json
 snapshot.txt
+
+# Private working notes (strategy, commercialization, roadmap, competitor
+# analysis). Kept locally for the maintainer only — never tracked in git.
+docs/private/

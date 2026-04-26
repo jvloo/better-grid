@@ -68,23 +68,12 @@ The vanilla path takes plugin instances directly — no `mode`/`features` regist
 
 ## Migrating from another grid?
 
-- [From AG Grid](docs/migration-from-ag-grid.md) — column-def + grid-options cheat sheet
-- [From TanStack Table](docs/migration-from-tanstack-table.md) — rendering-included vs headless cheat sheet
-
-## Why Better Grid?
-
-The data grid market has a gap — no library combines a rich free tier, type-safe plugin composition, and framework-agnostic design. As of April 2026:
-
-| Library         | Free renderers | Type-safe plugin DX | Framework-agnostic? | Free badge/progress/rating?                 |
-| --------------- | -------------- | ------------------- | ------------------- | ------------------------------------------: |
-| AG Grid         | 3              | No (modules)        | Yes                 |   No (not in any tier — Enterprise $999+/dev) |
-| MUI X Data Grid | 8              | No (slots)          | No (React only)     |                                          No |
-| Handsontable    | ~11            | No (monolithic)     | Yes                 |     No (commercial-only; Hobby = non-commercial) |
-| RevoGrid        | ~4             | No (BasePlugin)     | Yes                 |               No (Pro $199–$499/dev/yr)     |
-| TanStack Table  | 0 (headless)   | Partial (features)  | Yes                 |                                         N/A |
-| **Better Grid** | **10+ (MIT)**  | **Yes (InferRow)**  | **Yes**             |                                       **Yes** |
-
-Renderer counts are based on each project's official docs (April 2026). AG Grid's badge/progress/rating cells aren't shipped in Community **or** Enterprise — those need a custom `cellRenderer`. RevoGrid Pro Lite is $199/dev/yr; Pro Advanced is $499/dev/yr.
+- [From AG Grid](docs/migrations/from-ag-grid.md)
+- [From MUI X Data Grid](docs/migrations/from-mui-x-data-grid.md)
+- [From Handsontable](docs/migrations/from-handsontable.md)
+- [From RevoGrid](docs/migrations/from-revogrid.md)
+- [From react-data-grid](docs/migrations/from-react-data-grid.md)
+- [From TanStack Table](docs/migrations/from-tanstack-table.md)
 
 ## Features
 
@@ -114,9 +103,6 @@ Renderer counts are based on each project's official docs (April 2026). AG Grid'
 - **Filtering** — 9 operators, context menu, column filters
 - **Validation** — required fields, custom rules, error tooltip UI
   - **`messageRenderer` callback** — return any HTMLElement (e.g. an MUI Alert) to control the error body
-
-### Additional Free Plugins (MIT)
-
 - Clipboard (copy/cut/paste, fill-down)
 - Row grouping with collapse/expand
 - Undo/redo history
@@ -140,21 +126,6 @@ Renderer counts are based on each project's official docs (April 2026). AG Grid'
 - **Row actions** — contextual per-row action menus
 - **Pro renderers** — advanced commercial renderers
 
-### AI Integration (coming soon)
-
-- **MCP Server** — AI-assisted column config, schema inference, migration from other grids
-- **AI Plugin** — natural language filtering, data summarization, smart suggestions
-
-## Design Philosophy
-
-Inspired by [Better Auth](https://better-auth.com):
-
-- **Type-safe plugin composition** — composable, tree-shakeable plugins with `InferRow<typeof grid>` for full TypeScript inference
-- **Framework-agnostic** — vanilla TS core, thin framework adapters
-- **Works out of the box** — sensible defaults, zero config needed
-- **AI-ready** — composable AI plugins with free NL filtering (planned)
-- **Performance first** — 10M cells, 60 FPS sustained, ~200 cell elements
-
 ## Packages
 
 | Package                      | Description                                                                          |
@@ -164,17 +135,6 @@ Inspired by [Better Auth](https://better-auth.com):
 | `@better-grid/react/rhf`     | Optional react-hook-form bridge (`useGridForm`)                                      |
 | `@better-grid/plugins`       | Official free plugins + built-in cell renderers                                      |
 | `@better-grid/pro`           | Source-available pro plugins                                                         |
-
-## Support
-
-Better Grid is an independent project. If it saves you time or helps your work,
-support development through sponsorship, Pro licensing, or commercial support:
-
-- **General questions / how-do-I-…?** — see [`SUPPORT.md`](SUPPORT.md)
-- **Pro license / commercial use** — `ping@xavierloo.com`
-- **Commercial support / custom plugins** — `ping@xavierloo.com`
-- **Sponsorship** — `sponsors@xavierloo.com` (or GitHub Sponsors when enabled)
-- **Project / library questions** — `projects@xavierloo.com`
 
 ## Theming
 
@@ -194,7 +154,7 @@ Customize via CSS custom properties:
 }
 ```
 
-For Material UI integration — palette, typography, density, dark mode wired through one `styled()` wrapper — see [`docs/mui-theme-integration.md`](docs/mui-theme-integration.md).
+For Material UI integration — palette, typography, density, dark mode wired through one `styled()` wrapper — see [`docs/guides/theming-with-mui.md`](docs/guides/theming-with-mui.md).
 
 ## Browser support
 
@@ -208,10 +168,6 @@ Better Grid targets evergreen browsers and assumes native support for `ResizeObs
 
 Older browsers are not supported. If you need to serve them, polyfill `ResizeObserver` and `PointerEvent` yourself — we do not ship polyfills.
 
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for the full feature roadmap, tier strategy, and competitive analysis.
-
 ## License
 
 | Package | License | File |
@@ -221,10 +177,15 @@ See [ROADMAP.md](ROADMAP.md) for the full feature roadmap, tier strategy, and co
 | `@better-grid/plugins` | MIT | [`LICENSE`](LICENSE) |
 | `@better-grid/pro` | Better Grid Pro Source-Available License | [`LICENSE-PRO`](LICENSE-PRO) |
 
-`@better-grid/pro` is source-available for transparency, evaluation, learning,
-debugging, and easier integration. Commercial production use requires a Better
-Grid Pro license. There is no hard runtime DRM in v1.
+`@better-grid/pro` is source-available for transparency, evaluation, learning, debugging, and easier integration. Commercial production use requires a Better Grid Pro license — contact `ping@xavierloo.com`.
+
+## Support
+
+- **General questions / how-do-I-…?** — see [`SUPPORT.md`](SUPPORT.md)
+- **Pro license / commercial use / custom plugins** — `ping@xavierloo.com`
+- **Sponsorship** — `sponsors@xavierloo.com` (or GitHub Sponsors when enabled)
+- **Project / library questions** — `projects@xavierloo.com`
 
 ## Contributing
 
-Bugs, plugins, docs, and tests are all welcome. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md). By participating you agree to the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). For security issues see [`SECURITY.md`](SECURITY.md). For "how do I…?" questions see [`SUPPORT.md`](SUPPORT.md). Release history lives in [`CHANGELOG.md`](CHANGELOG.md).
+Bugs, plugins, docs, and tests are all welcome. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md). By participating you agree to the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). For security issues see [`SECURITY.md`](SECURITY.md). Release history lives in [`CHANGELOG.md`](CHANGELOG.md).

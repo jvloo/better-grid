@@ -15,7 +15,7 @@ By participating you agree to abide by [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md
 
 ## Project layout
 
-Monorepo with pnpm workspaces + Turborepo. See [`AGENTS.md`](AGENTS.md) for the full architecture overview, and [`ROADMAP.md`](ROADMAP.md) for what's planned.
+Monorepo with pnpm workspaces + Turborepo. See [`AGENTS.md`](AGENTS.md) for the full architecture overview.
 
 ```
 packages/core      Framework-agnostic engine (MIT)
@@ -75,7 +75,7 @@ pnpm --filter @better-grid/core typecheck
 4. **TypeScript strict.** `strict: true` is required across the monorepo — it's load-bearing for the inference helpers (`InferRow`, `InferState`, etc.). Don't loosen it.
 5. **Lint clean.** Run `pnpm format` (Prettier) before committing. The repo's Prettier config is in `.prettierrc`.
 6. **Conventional commit subjects** are encouraged but not enforced — `editing: add alwaysInput flag`, `react/rhf: bridge cell commits` etc. Look at recent `git log --oneline` for the style.
-7. **Update docs** when you change public surface. README quick-start, AGENTS.md ColumnDef Props table, the migration guides, and `docs/mui-theme-integration.md` are the surfaces most consumers touch.
+7. **Update docs** when you change public surface. README quick-start, AGENTS.md ColumnDef Props table, the migration guides under `docs/migrations/`, and `docs/guides/theming-with-mui.md` are the surfaces most consumers touch.
 8. **Update CHANGELOG.md** under the `[Unreleased]` section.
 9. **Never push to `main` directly.** All changes go through PR review even from maintainers.
 

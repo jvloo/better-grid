@@ -12,7 +12,6 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 
 ### Documentation
 
-- Added `docs/v1-release-playbook.md` to capture the v1 public/source-available Pro licensing decision and npm publish checklist.
 - Synced package-level license files so all npm tarballs include the correct MIT or Pro license text.
 
 ## [1.0.0] — 2026-04-26
@@ -54,7 +53,7 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 
 ### Documentation
 
-- `README.md`, `AGENTS.md`, `ROADMAP.md`, `docs/migration-from-ag-grid.md`, `docs/migration-from-tanstack-table.md`, and `docs/v1-init-api-history.md` describe the v1 surface.
+- `README.md`, `AGENTS.md`, the migration cheat sheets in `docs/migrations/`, and `docs/internal/v1-init-api-history.md` describe the v1 surface.
 - `docs/pr-summaries/grid-init-api-v1.md` — historical PR summary for the v1 redesign.
 - `docs/pr-summaries/phase-a-foundation.md` — PR summary for the four Phase A commits.
 

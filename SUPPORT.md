@@ -26,7 +26,7 @@ Better Grid is an OSS-first project with source-available pro plugins, maintaine
 There is no paid support tier. Realistic timing:
 
 - **Bugs with a clear repro:** triaged within a week, often within 48 hours.
-- **Feature requests:** read promptly, queued against the [roadmap](ROADMAP.md). Some sit for months because the use case is rare; that's not a rejection.
+- **Feature requests:** read promptly. Some sit for months because the use case is rare; that's not a rejection.
 - **Discussions questions:** answered when a maintainer is around; the community can also help — please pay it forward when you find an answer.
 
 ## Commercial use and support
@@ -41,9 +41,6 @@ Better Grid is independent. If it saves your team time and you'd like to support
 
 - [`README.md`](README.md) — install + quick start + features
 - [`AGENTS.md`](AGENTS.md) — full architecture + plugin contract
-- [`ROADMAP.md`](ROADMAP.md) — what's planned, what's shipped
 - [`CHANGELOG.md`](CHANGELOG.md) — release history
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to contribute
-- [`docs/migration-from-ag-grid.md`](docs/migration-from-ag-grid.md), [`docs/migration-from-tanstack-table.md`](docs/migration-from-tanstack-table.md) — incoming-migration cheat sheets
-- [`docs/mui-theme-integration.md`](docs/mui-theme-integration.md) — MUI palette → CSS variables recipe
-- [`docs/v1-release-playbook.md`](docs/v1-release-playbook.md) — v1 publish checklist and pro licensing decision record
+- [`docs/`](docs/) — migration cheat sheets, theming guide, contributor reference
