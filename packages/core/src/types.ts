@@ -153,6 +153,8 @@ export interface ColumnDef<TData = unknown> {
   width?: number;
   minWidth?: number;
   maxWidth?: number;
+  /** Flex-grow share for spare horizontal space. `width` is treated as flex-basis. Respects minWidth / maxWidth. */
+  flex?: number;
   resizable?: boolean;
 
   // Alignment

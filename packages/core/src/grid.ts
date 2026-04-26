@@ -230,6 +230,12 @@ export function createGrid<
     const state = store.getState();
     const rowCount = getEffectiveRowCount();
     const hs = state.hierarchyState;
+
+    // Apply flex sizing when viewport is available (after mount).
+    if (viewport) {
+      columnManager.recomputeFlexWidths(viewport.clientWidth);
+    }
+
     virtualization.recompute(
       rowCount,
       state.columns.length,
@@ -1323,6 +1329,7 @@ export function createGrid<
       // Resize observer
       resizeObserver = new ResizeObserver(() => {
         selectionLayer?.invalidateLayout();
+        recomputeMeasurements();
         scheduleRender();
       });
       resizeObserver.observe(container);

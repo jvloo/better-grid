@@ -3,6 +3,7 @@
 // ============================================================================
 
 import type { ColumnDef } from '../types';
+import { computeColumnWidths } from '../virtualization/layout';
 
 // Minimal ambient `process` declaration so bundlers can statically dead-code
 // eliminate dev-mode warnings when consumers build with NODE_ENV=production.
@@ -71,11 +72,22 @@ export class ColumnManager<TData = unknown> {
 
   private recomputeVisible(): void {
     this.visibleColumns = this.allColumns.filter((c) => c.hide !== true);
-    this.widths = this.visibleColumns.map((col) => col.width ?? DEFAULT_WIDTH);
+    this.widths = this.visibleColumns.map((col) => Math.max(col.minWidth ?? 0, col.width ?? DEFAULT_WIDTH));
     this.readonlyCols.clear();
     for (let i = 0; i < this.visibleColumns.length; i++) {
       if (this.visibleColumns[i]?.editable === false) this.readonlyCols.add(i);
     }
+  }
+
+  /**
+   * Recompute widths using flex distribution.
+   * Call this whenever the viewport width is known (after mount, on resize, on
+   * setColumns / setColumnHidden). No-op when no column has a flex value set.
+   */
+  recomputeFlexWidths(viewportWidth: number): void {
+    const hasFlex = this.visibleColumns.some((c) => (c.flex ?? 0) > 0);
+    if (!hasFlex) return;
+    this.widths = computeColumnWidths({ columns: this.visibleColumns, viewportWidth });
   }
 
   setColumnHidden(columnId: string, hide: boolean): void {
