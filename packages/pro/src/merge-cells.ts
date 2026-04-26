@@ -86,15 +86,17 @@ export function mergeCells(options?: MergeCellsOptions): GridPlugin<'mergeCells'
           const originWidth = parseFloat(originEl.style.width) || 0;
           const originHeight = parseFloat(originEl.style.height) || 0;
 
-          // Calculate expanded width by summing widths of spanned columns
+          // Calculate expanded width by summing widths of spanned columns.
+          // Cells use box-sizing:border-box and stack at exact pixel boundaries
+          // (no inter-cell gap), so the merged dimension is just the plain sum.
+          // Adding +1 per cell for borders overshoots into the next row/col and
+          // produces a misaligned outer border line outside the merged region.
           let expandedWidth = originWidth;
           if (cs > 1) {
             for (let c = 1; c < cs; c++) {
               const coveredEl = cellMap.get(k(merge.row, merge.col + c));
               if (coveredEl) {
                 expandedWidth += parseFloat(coveredEl.style.width) || 0;
-                // Account for border (1px right border per cell)
-                expandedWidth += 1;
               }
             }
           }
@@ -106,7 +108,6 @@ export function mergeCells(options?: MergeCellsOptions): GridPlugin<'mergeCells'
               const coveredEl = cellMap.get(k(merge.row + r, merge.col));
               if (coveredEl) {
                 expandedHeight += parseFloat(coveredEl.style.height) || 0;
-                expandedHeight += 1; // border
               }
             }
           }

@@ -75,10 +75,11 @@ export function TableStyles() {
         Combine them freely. Stripe color customizable with <code>--bg-stripe-bg</code>.
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-        <StyleGrid label="Bordered (default)" />
-        <StyleGrid bordered={false} label="Borderless (bordered=false)" />
-        <StyleGrid striped label="Striped (bordered + striped)" />
-        <StyleGrid striped stripeBg="#fff" label="Striped, no bg (--bg-stripe-bg: #fff)" />
+        <StyleGrid bordered={false} label="Plain (bordered=false, striped=false)" />
+        <StyleGrid label="Bordered only (bordered=true, striped=false) — default" />
+        <StyleGrid bordered={false} striped label="Striped only (bordered=false, striped=true)" />
+        <StyleGrid striped label="Bordered + striped (bordered=true, striped=true)" />
+        <StyleGrid striped stripeBg="#FEF3C7" label="Custom stripe color (--bg-stripe-bg: #FEF3C7)" />
       </div>
     </div>
   );

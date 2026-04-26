@@ -214,6 +214,10 @@
 .bg-cell--merge-hidden {
   visibility: hidden;
   pointer-events: none;
+  /* Suppress borders so internal grid lines don't bleed through if display:none
+     is ever cleared (e.g. by a recycled-cell reset before the merge plugin
+     re-runs in the next render frame). */
+  border-width: 0 !important;
 }
 
 /* Frozen cells need opaque background to cover scrolling cells beneath */
