@@ -4,33 +4,37 @@ All notable changes to Better Grid are documented here. Format follows [Keep a C
 
 The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`, `@better-grid/plugins`, and `@better-grid/pro` until the packages diverge.
 
-## [Unreleased]
+## [1.0.0] — 2026-04-27
 
-### Breaking changes
+First public release. The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`, `@better-grid/plugins`, `@better-grid/codemods`, and `@better-grid/pro` until the packages diverge.
 
-- React adapter: the default `mode` for `useGrid` / `<BetterGrid>` is now `null` (no preset features) when `mode` is omitted. Previously omitting `mode` resolved to `'view'` (sort + filter + resize + select). Rationale: omitting the prop should be the most minimal, predictable behavior — users opt into curated bundles explicitly. To restore the previous default, pass `mode="view"`. The cellRenderers plugin remains always-loaded.
+### React-adapter defaults
 
-### Phase 1 surface refresh (pre-publish, no back-compat)
+- The default `mode` for `useGrid` / `<BetterGrid>` is `null` (no preset features) when `mode` is omitted. Pass `mode="view"` for sort + filter + resize + select.
 
-- ColumnDef renames: `accessorKey` → `field`, `accessorFn` → `valueGetter`, `header` → `headerName` (split with new `headerRenderer` for DOM custom headers).
-- ColumnDef new props: `hide` (AG + MUI X), `flex` (MUI X), `headerAlign` (MUI X).
-- ColumnDef DX: `id` is now optional (defaults to `field`); `cellEditor: 'dropdown'` dropped (use `'select'`).
-- ColumnDef signatures extended: `valueFormatter(value, row)`, `valueParser(value, row)`, `cellStyle(value, row, rowIndex)`, `cellClass(value, row, rowIndex)`, `comparator(a, b, rowA?, rowB?)`.
-- GridOptions: top-level `getRowId` (was nested under `hierarchy`); `bordered` + `striped` flags replace `tableStyle` enum; `headers`/`footers` accept `HeaderRow[]`/`FooterRow[]` only (object form dropped); `selection` is a discriminated union (`false` disables, no `'none'` sentinel).
-- GridState mirrors GridOptions shape: `state.frozen.{top,left}` / `state.pinned.{top,bottom}` (was flat `frozenTopRows` / `frozenLeftColumns` / `pinnedTopRows` / `pinnedBottomRows`).
-- New API: `grid.setColumnHidden(columnId, hide)` toggles column visibility at runtime. `grid.getSelectionMode()` returns the resolved selection mode.
-- Bug fix: `CellChange.oldValue` is the previous CELL value (was the previous row object).
-- Event renames: `'data:change'` → `'cell:change'`; `'freezeClip:change'` → `'frozen:clip'`.
-- React: `configureBetterGrid` renamed to `configure`.
+### ColumnDef surface
+
+- `field` (rename of `accessorKey`), `valueGetter` (rename of `accessorFn`), `headerName` + `headerRenderer` (split of `header`).
+- New props: `hide`, `flex`, `headerAlign`.
+- DX: `id` is optional (defaults to `field`).
+- Signatures: `valueFormatter(value, row)`, `valueParser(value, row)`, `cellStyle(value, row, rowIndex)`, `cellClass(value, row, rowIndex)`, `comparator(a, b, rowA?, rowB?)`.
+
+### GridOptions / GridState
+
+- Top-level `getRowId`.
+- `bordered` + `striped` boolean flags (replaces `tableStyle` enum).
+- `headers` / `footers` accept `HeaderRow[]` / `FooterRow[]` only.
+- `selection` is a discriminated union (`false` disables, no `'none'` sentinel).
+- GridState mirrors GridOptions shape: `state.frozen.{top,left}` / `state.pinned.{top,bottom}`.
+- `grid.setColumnHidden(columnId, hide)` toggles column visibility at runtime; `grid.getSelectionMode()` returns the resolved mode.
+- `CellChange.oldValue` is the previous CELL value.
+- Events: `'cell:change'` (per-cell write), `'frozen:clip'` (frozen-area clip change).
+- React: app-wide defaults via `configure({...})`.
 - `headerRenderer` mutates the header label area (`.bg-header-cell__text`) — filter button, resize handle, and ARIA wiring on the cell are preserved automatically.
 
-### Added — codemods package
+### Codemods package
 
-- `@better-grid/codemods` — six jscodeshift transforms (`from-ag-grid`, `from-mui-x-data-grid`, `from-tanstack-table`, `from-handsontable`, `from-revogrid`, `from-react-data-grid`). CLI: `npx @better-grid/codemods from-<lib> src/`. Auto-converts the mechanical renames; flags renderer-signature, plugin-instance, and structural changes for manual review with a `// @better-grid/migrate: review` marker. Flags: `--dry-run`, `--report=<path>`, `--ext=ts,tsx,js,jsx`.
-
-## [1.0.0] — 2026-04-26
-
-First public release.
+- `@better-grid/codemods` — six jscodeshift transforms (`from-ag-grid`, `from-mui-x-data-grid`, `from-tanstack-table`, `from-handsontable`, `from-revogrid`, `from-react-data-grid`). CLI: `npx @better-grid/codemods from-<lib> src/`. Flags: `--dry-run`, `--report=<path>`, `--ext=ts,tsx,js,jsx`.
 
 ### Packages
 
