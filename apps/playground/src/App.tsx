@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import './wiseway-theme.css';
+import './realworld-theme.css';
 import { Landing } from './pages/Landing';
 import { FinanceDashboard } from './pages/FinanceDashboard';
 import { ProjectTracker } from './pages/ProjectTracker';
@@ -69,7 +69,7 @@ const VALID_PAGES = new Set<Page>([
   'dm-timeline', 'dm-forecast', 'dm-actuals', 'dm-summary',
 ]);
 
-const WISEWAY_PAGES = new Set<Page>([
+const REALWORLD_PAGES = new Set<Page>([
   'fsbt-program', 'fsbt-cost', 'fsbt-revenue',
   'dm-timeline', 'dm-forecast', 'dm-actuals', 'dm-summary',
 ]);
@@ -79,14 +79,14 @@ function parseRoute(): { view: View; page: Page } {
   if (path === '/demo' || path === '/demos') {
     return { view: 'demos', page: 'finance' };
   }
-  if (path.startsWith('/demo-wiseway/')) {
+  if (path.startsWith('/demo-realworld/')) {
     const slug = path.slice(14) as Page;
-    if (WISEWAY_PAGES.has(slug)) {
+    if (REALWORLD_PAGES.has(slug)) {
       return { view: 'demos', page: slug };
     }
     return { view: 'demos', page: 'fsbt-program' };
   }
-  if (path === '/demo-wiseway') {
+  if (path === '/demo-realworld') {
     return { view: 'demos', page: 'fsbt-program' };
   }
   if (path.startsWith('/demo/')) {
@@ -113,7 +113,7 @@ export function App() {
 
   const navigatePage = useCallback((p: Page) => {
     setPage(p);
-    const prefix = WISEWAY_PAGES.has(p) ? '/demo-wiseway' : '/demo';
+    const prefix = REALWORLD_PAGES.has(p) ? '/demo-realworld' : '/demo';
     window.history.pushState(null, '', `${prefix}/${p}`);
   }, []);
 
@@ -132,13 +132,13 @@ export function App() {
     return <Landing onExploreDemos={() => navigate('demos', 'finance')} />;
   }
 
-  const isWiseway = WISEWAY_PAGES.has(page);
+  const isRealworld = REALWORLD_PAGES.has(page);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: isWiseway ? '#fff' : '#fafbfc' }}>
+    <div style={{ display: 'flex', height: '100vh', background: isRealworld ? '#fff' : '#fafbfc' }}>
 
       {/* ═══ Sidebar ═══ */}
-      {isWiseway ? (
+      {isRealworld ? (
         <nav style={{
           width: 240,
           background: '#fff',
@@ -151,7 +151,7 @@ export function App() {
           fontFamily: "'Inter', sans-serif",
         }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #EAECF0' }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#101828' }}>Wiseway</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#101828' }}>Real-world</span>
           </div>
 
           <div style={{ padding: '12px 12px', flex: 1 }}>
@@ -233,7 +233,7 @@ export function App() {
 
       {/* ═══ Content ═══ */}
       <main style={{ flex: 1, overflow: 'auto', padding: '24px 28px', minWidth: 0 }}>
-        <div style={{ maxWidth: isWiseway ? undefined : 1200 }}>
+        <div style={{ maxWidth: isRealworld ? undefined : 1200 }}>
           {page === 'finance' && <FinanceDashboard />}
           {page === 'project-tracker' && <ProjectTracker />}
           {page === 'hr-directory' && <HRDirectory />}
@@ -254,13 +254,13 @@ export function App() {
           {page === 'table-styles' && <TableStyles />}
           {page === 'always-input' && <AlwaysInputDemo />}
           {page === 'rhf-bridge' && <RhfBridgeDemo />}
-          {page === 'fsbt-program' && <div className="wiseway-theme"><FsbtProgram /></div>}
-          {page === 'fsbt-cost' && <div className="wiseway-theme"><FsbtCost /></div>}
-          {page === 'fsbt-revenue' && <div className="wiseway-theme"><FsbtRevenue /></div>}
-          {page === 'dm-timeline' && <div className="wiseway-theme"><DmTimeline /></div>}
-          {page === 'dm-forecast' && <div className="wiseway-theme"><DmForecast /></div>}
-          {page === 'dm-actuals' && <div className="wiseway-theme"><DmActuals /></div>}
-          {page === 'dm-summary' && <div className="wiseway-theme"><DmSummary /></div>}
+          {page === 'fsbt-program' && <div className="realworld-theme"><FsbtProgram /></div>}
+          {page === 'fsbt-cost' && <div className="realworld-theme"><FsbtCost /></div>}
+          {page === 'fsbt-revenue' && <div className="realworld-theme"><FsbtRevenue /></div>}
+          {page === 'dm-timeline' && <div className="realworld-theme"><DmTimeline /></div>}
+          {page === 'dm-forecast' && <div className="realworld-theme"><DmForecast /></div>}
+          {page === 'dm-actuals' && <div className="realworld-theme"><DmActuals /></div>}
+          {page === 'dm-summary' && <div className="realworld-theme"><DmSummary /></div>}
           {page === 'pro' && <ProPreview />}
         </div>
       </main>

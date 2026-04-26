@@ -1,10 +1,10 @@
-# Phase A — Wiseway-shape foundation
+# Phase A — Production-shape foundation
 
-Four additive features that close the remaining gaps Better Grid needs before the production Wiseway feasibility tables can migrate. Lands on top of v1 (commit `27feca6`).
+Four additive features that close the remaining gaps Better Grid needs before complex production finance tables can migrate. Lands on top of v1 (commit `27feca6`).
 
 ## Summary
 
-- **`column.alwaysInput`** — per-column flag that renders a real `<input>` permanently in every editable cell. No double-click required. Wiseway parity for finance-style sheets where every visible cell is already an editor.
+- **`column.alwaysInput`** — per-column flag that renders a real `<input>` permanently in every editable cell. No double-click required. Parity for finance-style sheets where every visible cell is already an editor.
 - **`@better-grid/react/rhf`** — opt-in sub-export with `useGridForm({ grid, baseName })`. Listens to `data:change` from the grid and forwards each cell commit into a surrounding RHF `<FormProvider>`'s `setValue('${baseName}.${rowIndex}.${columnId}', newValue)`. `react-hook-form` is an optional peer dep.
 - **Validation `messageRenderer`** — per-rule and per-column callback returning an `HTMLElement` or string. Lets the validation tooltip body be styled as an MUI Alert (or any other rich UI) while the wrapper still owns positioning.
 - **MUI theme integration doc** — recipe wiring `theme.palette` / `theme.typography` / `theme.spacing` / dark mode through Better Grid's existing CSS custom properties via a single `styled()` wrapper.
@@ -26,7 +26,7 @@ a35398e validation: per-rule and per-column messageRenderer callback
 - Browser verification on the playground (vite dev `:5183`):
   - `/demo/always-input` — 25 rows × 3 columns of live `<input>`. Per-row predicate (`(row) => row.qty > 50`) correctly hides/shows the Notes input. Custom-rendered validation tooltip (red border + ⚠ icon + bold message + "Got: 0" subtitle) fires when qty is set to 0.
   - `/demo/rhf-bridge` — editing Steel beams Qty `120 → 200120` makes the form-state inspector report `Total = $90,118,355.00` and `Dirty rows = 1` via `useWatch`.
-  - `/demo-wiseway/fsbt-cost` — existing FSBT Cost demo still renders; no console errors, no visual regression. Confirms `inputStyle`/`alwaysInput` decoupling preserved the pre-existing `inputStyle` path.
+  - `/demo-realworld/fsbt-cost` — existing finance cost demo still renders; no console errors, no visual regression. Confirms `inputStyle`/`alwaysInput` decoupling preserved the pre-existing `inputStyle` path.
 
 ## Surface added
 
@@ -95,7 +95,7 @@ useGridForm<TData, TFormValues>({
 
 ## What's next (Phase B)
 
-- B.1 — Render Wiseway's `cost-table.tsx` behind a `?better-grid=true` URL flag with parity to the production react-virtualized + RHF + MUI implementation.
-- B.2 — Enable the 9 enhancements (collapsible hierarchy, Excel clipboard, Excel export, freeze-clip drag, sortable columns, striped rows, accounting-format currency, rowActions menu, formal validation framework). `undoRedo` dropped per user.
+- B.1 — Render the production cost table behind a `?better-grid=true` URL flag with parity to the legacy react-virtualized + RHF + MUI implementation.
+- B.2 — Enable the 9 enhancements (collapsible hierarchy, Excel clipboard, Excel export, freeze-clip drag, sortable columns, striped rows, accounting-format currency, rowActions menu, formal validation framework). `undoRedo` deferred.
 
-Phase B requires architecture decisions about how `wise-frontend-app` consumes the unpublished Better Grid packages (workspace link vs file: dep vs publish). Tracked separately from this summary.
+Phase B requires architecture decisions about how the downstream consumer app consumes the (unpublished or freshly-published) Better Grid packages. Tracked separately from this summary.

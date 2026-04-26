@@ -10,7 +10,7 @@ Migration guide: `docs/migration-v0-to-v1.md`.
 
 - Reshapes `GridOptions` (groups frozen/pinned/headers/size, adds `mode`/`context`/`slots` seam) and adds `@better-grid/react` ergonomics: `defineColumn` builders, mode presets, `features` registry with auto-dep expansion, `configureBetterGrid` for app-wide defaults, and a unified `useGrid` hook returning a `GridHandle`.
 - User-facing benefit: dramatically less boilerplate at call sites — pages opt into capabilities by string (`mode="spreadsheet"` / `features={['edit','sort']}`) instead of hand-wiring plugin instances; column types are defined via `col.currency('field', {...})` instead of free-form `cellType` strings.
-- Pre-release breaking change: every consumer must migrate (no back-compat shim). All ~25 playground pages and 3 Wiseway FSBT pages migrated; behavior preserved.
+- Pre-release breaking change: every consumer must migrate (no back-compat shim). All ~25 playground pages and 3 production-shape finance pages migrated; behavior preserved.
 
 ## Spec success criteria
 
@@ -25,7 +25,7 @@ Migration guide: `docs/migration-v0-to-v1.md`.
 ```
 ffbb592 playground: hoist MergeCellsDemo proPlugins to module scope (mergeConfig is static)
 cf43628 playground: migrate remaining pages (Landing, PluginToggle, ProjectTracker, SearchExport, SelectionModes, SortFilter, TableStyles) to v1 API
-88df7a2 playground: migrate Wiseway FSBT pages (Cost/Program/Revenue) to v1 API
+88df7a2 playground: migrate finance demo pages (Cost/Program/Revenue) to v1 API
 8c80c0f playground: migrate batch 3 (Clipboard, Performance, DM*) to v1 API
 7b1611e playground: migrate batch 2 (FinanceDashboard, HRDirectory, InventoryTracker, MultiHeader, MergeCells) to v1 API
 277f6e1 plugins(editing): add context: undefined to fallback CellRenderContext sites
@@ -96,10 +96,10 @@ Static routes (no dev server reachable from this agent):
 - http://localhost:5173/demo/dm-actuals
 - http://localhost:5173/demo/dm-summary
 - http://localhost:5173/demo/pro
-- http://localhost:5173/demo-wiseway — default (FSBT Program)
-- http://localhost:5173/demo-wiseway/fsbt-program
-- http://localhost:5173/demo-wiseway/fsbt-cost
-- http://localhost:5173/demo-wiseway/fsbt-revenue
+- http://localhost:5173/demo-realworld — default (Program)
+- http://localhost:5173/demo-realworld/fsbt-program
+- http://localhost:5173/demo-realworld/fsbt-cost
+- http://localhost:5173/demo-realworld/fsbt-revenue
 
 29 URLs total.
 

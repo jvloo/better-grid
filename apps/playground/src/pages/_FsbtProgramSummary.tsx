@@ -8,7 +8,7 @@ import { FSBT_PROGRAM_ROWS, formatMonYY, columnToDate, type FsbtProgramRow } fro
 
 /**
  * Read-only program summary used at the top of FsbtCost / FsbtRevenue —
- * mirrors the Wiseway feasibility layout where each tab shows the program
+ * mirrors the the production reference feasibility layout where each tab shows the program
  * overview above its main grid.
  */
 export function FsbtProgramSummary() {

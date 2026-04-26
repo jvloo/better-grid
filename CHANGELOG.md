@@ -8,7 +8,7 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 
 ### Planned
 
-- Phase B — Wiseway feasibility tables (cost / program / revenue) migrated behind a feature flag in production.
+- Phase B — production-shape finance tables (cost / program / revenue) migrated behind a feature flag in a downstream app.
 
 ### Documentation
 
@@ -17,7 +17,7 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 
 ## [1.0.0] — 2026-04-26
 
-### Added — Wiseway-shape foundation (Phase A)
+### Added — Production-shape foundation (Phase A)
 
 - **`column.alwaysInput: boolean | (row, col) => boolean`** on the `editing` plugin. Renders a real `<input>` permanently in every editable cell instead of opening a floating editor on click. Reuses the input across cell re-renders so focus and in-progress text survive grid refreshes.
 - **`editing({ alwaysInputThreshold })`** — perf gate that warns once per init when `alwaysInput cols × visible rows` exceeds the threshold (default 1000).
@@ -41,7 +41,7 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 
 ### Changed (breaking)
 
-- **Pre-release breaking change. Every consumer must migrate.** See [`docs/migration-v0-to-v1.md`](docs/migration-v0-to-v1.md) for the full inventory.
+- v1.0.0 is the **first public release**. There is no v0 published; the items below describe the shape that landed in v1, captured for contributors who tracked the pre-release iterations. New consumers can ignore this section. Full design history: [`docs/v1-init-api-history.md`](docs/v1-init-api-history.md).
 - Grouped layout props: `frozenLeftColumns` / `frozenTopRows` / `freezeClip` → `frozen: { left, top, clip }`. `pinnedTopRows` / `pinnedBottomRows` → `pinned: { top, bottom }`. `headerLayout` → `headers`. `footerLayout` → `footers`. `width` / `height` (on options) → `size: { width, height }` (top-level `height` on `<BetterGrid>` still works as sugar).
 - `onDataChange` → `onCellChange`.
 - `getRowStyle` → `rowStyle`. The dual `rowStyles={{ field, styles }}` shape is dropped — use `rowStyle: (row, idx) => ({...})`.
@@ -49,14 +49,14 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 
 ### Migrations
 
-- All ~25 playground pages and 3 Wiseway-themed FSBT pages migrated to the v1 API.
-- `apps/playground/src/pages/FsbtCost.tsx` (the production-shaped success criterion) migrated with zero behavior change.
+- All ~25 playground pages and 3 production-shape finance pages migrated to the v1 API.
+- The most complex production-shape demo (cost table — `apps/playground/src/pages/FsbtCost.tsx`) migrated with zero behavior change as the success criterion.
 
 ### Documentation
 
-- `README.md`, `AGENTS.md`, `ROADMAP.md`, `docs/migration-from-ag-grid.md`, and `docs/migration-from-tanstack-table.md` refreshed to reflect the v1 surface.
+- `README.md`, `AGENTS.md`, `ROADMAP.md`, `docs/migration-from-ag-grid.md`, `docs/migration-from-tanstack-table.md`, and `docs/v1-init-api-history.md` describe the v1 surface.
 - `docs/pr-summaries/grid-init-api-v1.md` — historical PR summary for the v1 redesign.
-- `docs/pr-summaries/phase-a-wiseway-foundation.md` — PR summary for the four Phase A commits.
+- `docs/pr-summaries/phase-a-foundation.md` — PR summary for the four Phase A commits.
 
 [Unreleased]: https://github.com/jvloo/better-grid/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/jvloo/better-grid/releases/tag/v1.0.0

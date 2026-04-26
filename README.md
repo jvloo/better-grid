@@ -43,7 +43,7 @@ function MyGrid({ data }: { data: Row[] }) {
 }
 ```
 
-The `col.<type>(field, opts)` builder fills in `id`, `accessorKey`, `cellType`, and alignment for you. The `mode` preset opts you into a curated bundle of features; use `features={['edit', 'sort']}` for finer control or `features={{ edit: { editTrigger: 'click' } }}` to pass options. See [`docs/migration-v0-to-v1.md`](docs/migration-v0-to-v1.md) for every breaking change vs v0.
+The `col.<type>(field, opts)` builder fills in `id`, `accessorKey`, `cellType`, and alignment for you. The `mode` preset opts you into a curated bundle of features; use `features={['edit', 'sort']}` for finer control or `features={{ edit: { editTrigger: 'click' } }}` to pass options.
 
 **Vanilla TypeScript** (no framework):
 
@@ -68,7 +68,6 @@ The vanilla path takes plugin instances directly — no `mode`/`features` regist
 
 ## Migrating from another grid?
 
-- [From v0 to v1 (Better Grid)](docs/migration-v0-to-v1.md) — full breaking-change inventory for the new init API
 - [From AG Grid](docs/migration-from-ag-grid.md) — column-def + grid-options cheat sheet
 - [From TanStack Table](docs/migration-from-tanstack-table.md) — rendering-included vs headless cheat sheet
 
@@ -106,7 +105,7 @@ The data grid market has a gap — no library combines a rich free tier, type-sa
 
 - **Formatting** — currency, percent, dates via Intl API
 - **Editing** — text input, dropdown, boolean toggle, date, masked, autocomplete
-  - **`alwaysInput` per-column flag** — render a real `<input>` permanently in every cell (Wiseway-shape finance sheets)
+  - **`alwaysInput` per-column flag** — render a real `<input>` permanently in every cell (always-on finance-sheet inputs)
   - Floating or inline editor mode
   - `inputStyle` cells with placeholder + prefix/suffix adornments
 - **Sorting** — single/multi-column, custom comparators, header click

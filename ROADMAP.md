@@ -77,9 +77,9 @@ AI toolkit (runtime)       ✓ ($$$)    ✗              ✗            ✓ ($$$
 
 ### 0A. Row Hierarchy (Core + Free Plugin)
 
-**Why:** Both Feasibility (cost hierarchy) and Dev Mgmt (forecast parent→child1→child2) modules
-need parent-child rows with collapse/expand. ReactGrid's lack of virtualization for collapsed
-rows is the primary performance problem we're solving.
+**Why:** Many production finance/forecast tables need parent→child1→child2 hierarchies with
+collapse/expand. Existing libraries' lack of virtualization across collapsed subtrees is the
+primary performance problem we're solving.
 
 **Core engine (`@better-grid/core`):**
 
@@ -132,15 +132,15 @@ Features:
 - CSS classes: `bg-cell--parent`, `bg-cell--leaf`, `bg-cell--depth-{n}`
 - Row styling hooks: parent rows can have bold/grey background via `cellClass`
 
-**Wise-frontend-app mapping:**
-- Feasibility cost tables: `parentId` links cost items to parent categories
-- DM forecast tables: `parentCode` → child1 → child2 hierarchy
-- DM timeline tables: `parentCode` + `isParent` flag with collapse state
-- DM summary tables: multi-level parent > child1 > child2 > cashflow
+**Real-world example mapping:**
+- Cost tables: `parentId` links line items to parent categories
+- Forecast tables: `parentCode` → child1 → child2 hierarchy
+- Timeline tables: `parentCode` + `isParent` flag with collapse state
+- Summary tables: multi-level parent > child1 > child2 > cashflow
 
 ### 0B. Pinned Rows — Footer & Summary (Core)
 
-**Why:** Feasibility module uses separate synced MultiGrid instances for footer/total rows.
+**Why:** Many finance modules use separate synced MultiGrid instances for footer/total rows.
 Core needs native pinned row support to eliminate this hack.
 
 ```ts
@@ -161,20 +161,21 @@ layout and horizontal scroll position. Similar to frozen header rows but for dat
 
 No deprecation. `frozen` = lock N items from main array. `pinned` = attach separate data outside main array.
 
-**Wise-frontend-app mapping:**
+**Real-world example mapping:**
 - Cost tables: footer row with column totals synced via ScrollSync
 - Summary tables: aggregation rows pinned at bottom
 
 ### 0C. Additional Editor Types + Editor Mode (Free Plugin)
 
-**Why:** Dev Mgmt module uses date pickers, autocomplete with "create new" capability,
-and number inputs with accounting format. Current editing plugin only has text and dropdown.
+**Why:** Production data-entry modules use date pickers, autocomplete with "create new"
+capability, and number inputs with accounting format. Current editing plugin only has
+text and dropdown.
 
 Extend the `editing()` plugin with new editor types and configurable editor mode:
 
 | Editor | Trigger | Config | Wise-app usage |
 |--------|---------|--------|----------------|
-| `date` | Calendar popup | `dateFormat`, `min`, `max` | Cost start/end dates, timeline phases |
+| `date` | Calendar popup | `dateFormat`, `min`, `max` | Start/end dates, timeline phases |
 | `autocomplete` | Searchable dropdown | `options`, `allowCreate`, `onCreateOption` | Account selection with "create new item" |
 | `number` | Formatted number input | `precision`, `min`, `max`, `accounting` | Monthly amounts, rates, percentages |
 
@@ -203,9 +204,9 @@ editing({
 
 ### 0D. Clipboard — Copy & Paste (Free Plugin)
 
-**Why:** Dev Mgmt module uses copy/paste heavily for monthly data entry (filling 24+ month
-columns). AG Grid gates clipboard behind Enterprise ($999/yr). Making basic clipboard free
-is a competitive differentiator.
+**Why:** Production data-entry tables use copy/paste heavily for monthly data entry
+(filling 24+ month columns). AG Grid gates clipboard behind Enterprise ($999/yr). Making
+basic clipboard free is a competitive differentiator.
 
 ```ts
 import { clipboard } from '@better-grid/plugins';
@@ -225,8 +226,8 @@ plugins: [
 - Multi-range copy support
 - Paste size validation (warn if paste range exceeds data bounds)
 
-**Wise-frontend-app mapping:**
-- `rg-table.tsx` has custom copy handler that builds plain text + HTML tables manually
+**Real-world example mapping:**
+- Existing custom copy handlers that build plain text + HTML tables manually can be removed
 - Monthly data entry: paste 24 months of values from Excel in one operation
 
 ### 0E. Filter UI Overhaul (Free Plugin)
@@ -414,9 +415,9 @@ const gridData = api.getExportData({
 // ExportCell: { value, formattedValue, colSpan, rowSpan, style, columnDef }
 ```
 
-`getExportData()` is designed for existing export pipelines (e.g., wise-frontend-app's
-ExcelJS + jsPDF + html2canvas Web Worker architecture) — provides structured cell data
-without requiring rewrite of the export logic.
+`getExportData()` is designed for existing export pipelines (typical setups combine ExcelJS,
+jsPDF, and html2canvas in a Web Worker) — provides structured cell data without requiring
+rewrite of the export logic.
 
 ### Advanced Cell Renderers (Pro)
 

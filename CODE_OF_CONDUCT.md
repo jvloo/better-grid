@@ -1,6 +1,6 @@
 # Code of Conduct
 
-Better Grid follows the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). The full text is the authoritative source; the summary below is the working version for the repo.
+Better Grid follows the [Contributor Covenant, version 3.0](https://www.contributor-covenant.org/version/3/0/code_of_conduct/). The full text is the authoritative source; the summary below is the working version for the repo.
 
 ## In short
 
@@ -17,7 +17,7 @@ This applies wherever you represent Better Grid: the GitHub repo, project-affili
 
 Report unacceptable behavior to the maintainer at **projects@xavierloo.com**. Reports will be reviewed promptly and confidentially. We will not retaliate against anyone making a good-faith report.
 
-If your report concerns the maintainer, escalate via the [Contributor Covenant enforcement guidelines](https://www.contributor-covenant.org/version/2/1/code_of_conduct/#enforcement) — find another contributor you trust to mediate.
+If your report concerns the maintainer, escalate via the [Contributor Covenant enforcement guidelines](https://www.contributor-covenant.org/version/3/0/code_of_conduct/#enforcement) — find another contributor you trust to mediate.
 
 ## Consequences
 

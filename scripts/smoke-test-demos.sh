@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test all demo + wiseway pages for regressions
+# Smoke test all demo + real-world finance pages for regressions
 
 set -u
 SESSION="bg-smoke-test"
@@ -12,7 +12,7 @@ DEMO_PAGES=(
   "core-only" "plugin-toggle" "performance" "selection-modes" "pro"
 )
 
-WISEWAY_PAGES=(
+REALWORLD_PAGES=(
   "fsbt-program" "fsbt-cost" "fsbt-revenue" "fsbt-funding"
   "dm-timeline" "dm-forecast" "dm-actuals" "dm-summary"
 )
@@ -71,9 +71,9 @@ for page in "${DEMO_PAGES[@]}"; do
 done
 
 echo ""
-echo "=== Testing ${#WISEWAY_PAGES[@]} Wiseway demo pages ==="
-for page in "${WISEWAY_PAGES[@]}"; do
-  check_page "$BASE/demo-wiseway/$page" "demo-wiseway/$page"
+echo "=== Testing ${#REALWORLD_PAGES[@]} real-world finance demo pages ==="
+for page in "${REALWORLD_PAGES[@]}"; do
+  check_page "$BASE/demo-realworld/$page" "demo-realworld/$page"
 done
 
 echo ""

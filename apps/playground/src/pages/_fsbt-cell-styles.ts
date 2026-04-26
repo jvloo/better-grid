@@ -23,9 +23,9 @@ export const FSBT_STYLES = {
   rowHeight: 44,
   /** Header height used by every FSBT grid */
   headerHeight: 44,
-  /** Header background for Program + Cost tables (Wiseway's lighter tone) */
+  /** Header background for Program + Cost tables (the production reference's lighter tone) */
   headerBg: '#EAECF0',
-  /** Header background for Revenue tables (Wiseway's darker tone) */
+  /** Header background for Revenue tables (the production reference's darker tone) */
   revenueHeaderBg: '#D0D5DD',
 } as const;
 
@@ -62,7 +62,7 @@ export function parentRowCellStyle(_value: unknown, row: unknown): Record<string
       fontSize: FSBT_STYLES.infoFontSize,
       // Parent rows share the same #F8F8F8 background as the default input box,
       // so the box would disappear. Flip to white on parent rows to match
-      // Wiseway's cost-table-cell-input.tsx override.
+      // the production reference's cost-table-cell-input.tsx override.
       '--bg-input-bg': '#FFFFFF',
       '--bg-input-hover-bg': FSBT_STYLES.parentRowBg,
     };
@@ -88,7 +88,7 @@ export function parentRowCellStyleIndented(_value: unknown, row: unknown): Recor
       fontSize: FSBT_STYLES.infoFontSize,
       // Parent rows share the same #F8F8F8 background as the default input box,
       // so the box would disappear. Flip to white on parent rows to match
-      // Wiseway's cost-table-cell-input.tsx override.
+      // the production reference's cost-table-cell-input.tsx override.
       '--bg-input-bg': '#FFFFFF',
       '--bg-input-hover-bg': FSBT_STYLES.parentRowBg,
     };

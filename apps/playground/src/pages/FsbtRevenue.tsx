@@ -51,7 +51,7 @@ function formatAU(value: number): string {
   return value.toLocaleString('en-AU', { maximumFractionDigits: 0 });
 }
 
-// Monthly-cell formatter: blanks out zeros (Wiseway convention — empty cells
+// Monthly-cell formatter: blanks out zeros (the production reference convention — empty cells
 // beat a sea of "0"s) and groups thousands with commas.
 const monthValueFormatter = (v: unknown): string => {
   if (v == null || v === 0 || typeof v !== 'number') return '';
@@ -78,10 +78,10 @@ interface BtsRow {
   commBackend: number;
 }
 
-// Data from QA app project 4288: https://qa-app.wiseway.ai/projects/4288/revenue
+// Data from QA app project 4288: the production reference app
 // Total Gross Revenue: $224,739,528
 //
-// growthRate encodes escalation using the same convention as Wiseway's
+// growthRate encodes escalation using the same convention as the production reference's
 // `RevenueBTSEscalationCPI | number` union: string 'cpi' / 'non-cpi' for the
 // two preset options, or a number for the "Custom" percent option.
 const btsData: BtsRow[] = [
@@ -90,7 +90,7 @@ const btsData: BtsRow[] = [
   { id: 3, type: 'Land - BTS', stage: 0, nsa: 0, units: 0, salePrice: 1960, growthRate: 'cpi', launchDate: '', projectedPrice: 1960, grossRevenue: 0, gst: 9.09, commUpfront: 0, commBackend: 0 },
 ];
 
-// Growth Rate select options — three fixed choices per Wiseway spec.
+// Growth Rate select options — three fixed choices per the production reference spec.
 const GROWTH_RATE_OPTIONS: Array<{ value: 'cpi' | 'non-cpi' | 'custom'; label: string }> = [
   { value: 'non-cpi', label: 'Non CPI' },
   { value: 'cpi',     label: 'CPI' },
@@ -110,15 +110,15 @@ const TOTAL_GROSS_REVENUE = btsData.reduce((s, r) => s + r.grossRevenue, 0); // 
 // 39-month window; values are concentrated in the sale month (Oct 2026).
 // ============================================================================
 
-// Row shape uses a `kind` discriminator matching Wiseway's source, which
+// Row shape uses a `kind` discriminator matching the production reference's source, which
 // models sections as { type: 'title' | 'item' | 'accumulation' } — there's
 // no parent/child collapsing, just visual grouping, so hierarchy would be
 // overkill. Flat array + cellStyle based on `kind` keeps it simple.
 type BtsDetailKind = 'section' | 'item' | 'total';
 
-// Section name maps to Wiseway's RevenueBTSItemKeys: 'gross' | 'gst' |
+// Section name maps to the production reference's RevenueBTSItemKeys: 'gross' | 'gst' |
 // 'commission' | 'net'. The edit matrix depends on this field — per
-// Wiseway, Gross/GST/Commission allow editing both Input and Monthly cells,
+// the production reference, Gross/GST/Commission allow editing both Input and Monthly cells,
 // while Net allows only Monthly edits.
 type BtsSectionName = 'gross' | 'gst' | 'commission' | 'net' | 'sale-commission' | 'remaining-incentive' | 'net-sale';
 
@@ -134,7 +134,7 @@ interface BtsDetailRow {
   start?: string;
   end?: string;
   variance?: number;
-  m_2026_10?: number;        // sale month — only month populated in Wiseway
+  m_2026_10?: number;        // sale month — only month populated in the production reference
   [key: string]: string | number | null | undefined;
 }
 
@@ -171,12 +171,12 @@ const btsDetailsData: BtsDetailRow[] = [
   { id: 405, kind: 'total',   sectionName: 'net',        amount: 175226975, start: '2026-10-01', end: '2026-10-01', variance: 0, m_2026_10: 175226975 },
 ];
 
-// Edit matrix from Wiseway's bts-details-table.tsx:EDITABLE_FIELD —
+// Edit matrix from the production reference's bts-details-table.tsx:EDITABLE_FIELD —
 // Gross/GST/Commission allow Input + Monthly edits; Net allows only Monthly.
 const BTS_DETAILS_INPUT_EDITABLE = new Set<BtsSectionName>(['gross', 'gst', 'commission']);
 const BTS_DETAILS_MONTHLY_EDITABLE = new Set<BtsSectionName>(['gross', 'gst', 'commission', 'net']);
 
-// Section/total row styling — Wiseway shades sections with a grey rule and
+// Section/total row styling — the production reference shades sections with a grey rule and
 // bolds total rows. Centralised here so every column picks up the same look.
 const SECTION_BG = '#F8F8F8';
 const TOTAL_BORDER_TOP = '1.5px solid #EAECF0';
@@ -201,13 +201,13 @@ function btsDetailRowStyle(row: BtsDetailRow): Record<string, string> | undefine
 
 // ============================================================================
 // Grid C: Holding Rental General Table — NLA / rental rates rollup
-// Wiseway's "HoldingGeneralTable" — summary of the rentable stock before
+// the production reference's "HoldingGeneralTable" — summary of the rentable stock before
 // the monthly cashflow details. Since project 4288 has no holding stock
 // configured, we mock plausible data using the same residential/retail/etc
 // breakdown that appears in the Holding Rental Details table below.
 // ============================================================================
 
-// Shape mirrors Wiseway's RevenueHoldingGeneralItem exactly — 30 fields
+// Shape mirrors the production reference's RevenueHoldingGeneralItem exactly — 30 fields
 // across 4 logical groups (basic / development-costs / on-completion / exit).
 interface HoldingGeneralRow {
   id: number;
@@ -234,7 +234,7 @@ interface HoldingGeneralRow {
   incentives: number;            // % — editable
   incentivesPaidUpfront: number; // % — editable
   // Remaining Incentives: toggle between "rent-free" and "discount" — matches
-  // Wiseway's holding-general-table-row.tsx:57-68 (remainingIncentiveOptions).
+  // the production reference's holding-general-table-row.tsx:57-68 (remainingIncentiveOptions).
   // Controls how Discount Months is applied downstream.
   remainingIncentives: 'rent-free' | 'discount';
   discountMonths: number;        // months — editable
@@ -315,20 +315,20 @@ interface HoldingRow {
 // Holding data — sourced from QA project 4288. Parent rows (parentId: null)
 // are the category rollups; children carry the per-item breakdown.
 const holdingData: HoldingRow[] = [
-  // Gross Rental Income (matches Wiseway holding-general-table section label)
+  // Gross Rental Income (matches the production reference holding-general-table section label)
   { id: 1, parentId: null, type: 'Gross Rental Income', description: '', input: 0, amount: 8400000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
   { id: 2, parentId: 1, type: '', description: 'Residential', input: 520, amount: 4264000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: 710667, m_2026_02: 710667, m_2026_03: 710667, m_2026_04: 710667, m_2026_05: 710667, m_2026_06: 710665 },
   { id: 3, parentId: 1, type: '', description: 'Commercial', input: 650, amount: 2080000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: 346667, m_2026_02: 346667, m_2026_03: 346667, m_2026_04: 346667, m_2026_05: 346667, m_2026_06: 346665 },
   { id: 4, parentId: 1, type: '', description: 'Retail', input: 850, amount: 1275000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: 212500, m_2026_02: 212500, m_2026_03: 212500, m_2026_04: 212500, m_2026_05: 212500, m_2026_06: 212500 },
   { id: 5, parentId: 1, type: '', description: 'Parking', input: 250, amount: 781000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: 130167, m_2026_02: 130167, m_2026_03: 130167, m_2026_04: 130167, m_2026_05: 130167, m_2026_06: 130165 },
 
-  // Outgoings (matches Wiseway exactly — no "Less:" prefix)
+  // Outgoings (matches the production reference exactly — no "Less:" prefix)
   { id: 6, parentId: null, type: 'Outgoings', description: '', input: 0, amount: -1260000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
   { id: 7, parentId: 6, type: '', description: 'Property Management', input: 0, amount: -504000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: -84000, m_2026_02: -84000, m_2026_03: -84000, m_2026_04: -84000, m_2026_05: -84000, m_2026_06: -84000 },
   { id: 8, parentId: 6, type: '', description: 'Maintenance & Repairs', input: 0, amount: -378000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: -63000, m_2026_02: -63000, m_2026_03: -63000, m_2026_04: -63000, m_2026_05: -63000, m_2026_06: -63000 },
   { id: 9, parentId: 6, type: '', description: 'Insurance & Rates', input: 0, amount: -378000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: -63000, m_2026_02: -63000, m_2026_03: -63000, m_2026_04: -63000, m_2026_05: -63000, m_2026_06: -63000 },
 
-  // Incentive (singular, matches Wiseway exactly — no "Less:" prefix)
+  // Incentive (singular, matches the production reference exactly — no "Less:" prefix)
   { id: 10, parentId: null, type: 'Incentive', description: '', input: 0, amount: -420000, start: '2026-01-01', end: '2028-06-30', variance: 0 },
   { id: 11, parentId: 10, type: '', description: 'Leasing Incentive (5%)', input: 5, amount: -420000, start: '2026-01-01', end: '2028-06-30', variance: 0, m_2026_01: -70000, m_2026_02: -70000, m_2026_03: -70000, m_2026_04: -70000, m_2026_05: -70000, m_2026_06: -70000 },
 
@@ -340,7 +340,7 @@ const holdingData: HoldingRow[] = [
 // Grid E: Holding Sale Details — Sale Commission / Remaining Incentive / Net
 // Same flat-with-kind shape as BTS Details. In project 4288 the holding-sale
 // pool is empty, so values are $0 — we include the structure so the demo
-// shows the three-section layout Wiseway users expect on this tab.
+// shows the three-section layout the production reference users expect on this tab.
 // ============================================================================
 
 const holdingSaleData: BtsDetailRow[] = [
@@ -389,12 +389,12 @@ export function FsbtRevenue() {
       { id: 'stage', accessorKey: 'stage', header: 'Stage', width: 105, align: 'center' as const, editable: false },
       { id: 'nsa', accessorKey: 'nsa', header: 'NSA (m2)', width: 105, align: 'center' as const, valueFormatter: formatInt, editable: false },
       { id: 'units', accessorKey: 'units', header: 'Unit/Lot/Tenancy', width: 105, align: 'center' as const, valueFormatter: formatInt, editable: false },
-      // Wiseway shows plain numbers here (no $ prefix) — the column header
+      // the production reference shows plain numbers here (no $ prefix) — the column header
       //    already says "$/m²" so the unit is implied.
       { id: 'salePrice', accessorKey: 'salePrice', header: 'Current Sale Price ($/m2)', width: 190, align: 'center' as const, editable: true, valueFormatter: formatInt },
       // Growth Rate — native Better Grid compound select. Custom reveals a
       // sibling percent input and stores the numeric percentage directly.
-      //    Width: 190 matches Wiseway BtsGeneralTable header minWidth.
+      //    Width: 190 matches the production reference BtsGeneralTable header minWidth.
       {
         id: 'growthRate', accessorKey: 'growthRate', header: 'Growth Rate',
         width: 190, align: 'center' as const,
@@ -434,7 +434,7 @@ export function FsbtRevenue() {
         cellStyle: () => ({ background: '#f5f5f5' }),
       },
       // Gross Revenue — computed from Projected × NSA; read-only. Plain number
-      //    (no $ prefix) matching Wiseway; width: 105 matches Wiseway source.
+      //    (no $ prefix) matching the production reference; width: 105 matches the production reference source.
       {
         id: 'grossRevenue',
         accessorKey: 'grossRevenue',
@@ -453,7 +453,7 @@ export function FsbtRevenue() {
     [],
   );
 
-  // Totals row — Wiseway's QA app computes a simple (unweighted) arithmetic
+  // Totals row — the production reference's QA app computes a simple (unweighted) arithmetic
   // mean across product rows for per-unit columns. E.g. Sale Price total is
   // (8,803 + 15,898 + 1,960) / 3 = 8,887 — matches the live app exactly.
   // Sum columns (NSA, Units, Gross Revenue) are additive as you'd expect.
@@ -464,7 +464,7 @@ export function FsbtRevenue() {
     return {
       id: -1,
       type: 'Total',
-      stage: 1, // Wiseway shows the project stage (not a sum)
+      stage: 1, // the production reference shows the project stage (not a sum)
       nsa: btsRows.reduce((s, r) => s + r.nsa, 0),
       units: btsRows.reduce((s, r) => s + r.units, 0),
       salePrice: Math.round(avg(r => r.salePrice)),
@@ -526,13 +526,13 @@ export function FsbtRevenue() {
   const holdingColumns = useMemo<ColumnDef<HoldingRow>[]>(
     () => [
       // ── Type — left column, shows parent labels; width 200 matches
-      //    Wiseway holding-rental-details-table defaultColumns.
+      //    the production reference holding-rental-details-table defaultColumns.
       { id: 'type', accessorKey: 'type', header: 'Type', width: 200, align: 'left' as const, cellStyle: parentRowCellStyle },
-      // ── Description — 80 matches Wiseway; longer labels truncate per
+      // ── Description — 80 matches the production reference; longer labels truncate per
       //    native CSS (same behaviour as the live app).
       { id: 'description', accessorKey: 'description', header: 'Description', width: 80, align: 'left' as const, cellStyle: parentRowCellStyle },
       // ── Input — per-m2 rate on children, blank on parents. READ-ONLY per
-      //    Wiseway: the Input value is sourced from the Holding General table
+      //    the production reference: the Input value is sourced from the Holding General table
       //    above and never edited in the Details table. Only monthly cells
       //    are editable here (see holdingTs.columns below).
       {
@@ -551,7 +551,7 @@ export function FsbtRevenue() {
       // ── Amount — sum for the section. Red when negative. Explicit
       //    cellRenderer: inputStyle wrap bypasses the currency cellType when
       //    no renderer/valueFormatter is set, so we format by hand here.
-      //    Width 100 matches Wiseway.
+      //    Width 100 matches the production reference.
       {
         id: 'amount',
         accessorKey: 'amount',
@@ -575,7 +575,7 @@ export function FsbtRevenue() {
         },
       },
       // ── Start / End — masked MM/YY editor, Mon-YY display, width 80
-      //    matches Wiseway holding-rental-details-table.
+      //    matches the production reference holding-rental-details-table.
       {
         id: 'start', accessorKey: 'start', header: 'Start', width: 80, align: 'left' as const, placeholder: 'MM/YY',
         cellEditor: 'masked' as const, mask: 'MM/YY',
@@ -610,7 +610,7 @@ export function FsbtRevenue() {
           container.style.paddingLeft = '14px';
         },
       },
-      // ── Variance — shown via change cellType. Width 80 matches Wiseway.
+      // ── Variance — shown via change cellType. Width 80 matches the production reference.
       { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 80, cellType: 'change' as const, align: 'center' as const, editable: false, cellStyle: parentRowCellStyle },
       // ── Variance status icon slot ──
       {
@@ -680,7 +680,7 @@ export function FsbtRevenue() {
   const btsDetailsColumns = useMemo<ColumnDef<BtsDetailRow>[]>(
     () => [
       // Type column — item rows show product name, section rows show section
-      //    label. Width 200 matches Wiseway bts-details-table defaultColumns.
+      //    label. Width 200 matches the production reference bts-details-table defaultColumns.
       {
         id: 'type', accessorKey: 'type', header: 'Type', width: 200, align: 'left' as const, editable: false,
         cellRenderer: (container, ctx) => {
@@ -695,31 +695,31 @@ export function FsbtRevenue() {
         },
         cellStyle: btsDetailCellStyle,
       },
-      // Description — 80px matches Wiseway; labels like "West G Floor"
+      // Description — 80px matches the production reference; labels like "West G Floor"
       //    truncate to "West G Flo…" per native CSS text-overflow.
       { id: 'description', accessorKey: 'description', header: 'Description', width: 80, align: 'left' as const, editable: false, cellStyle: btsDetailCellStyle },
       // Input — editable on Gross (flat $) / GST+Commission (percent);
-      //    read-only on Net per Wiseway's EDITABLE_FIELD matrix.
+      //    read-only on Net per the production reference's EDITABLE_FIELD matrix.
       {
         id: 'input', accessorKey: 'input', header: 'Input', width: 100, align: 'center' as const,
         editable: ((row: BtsDetailRow) =>
           row.kind === 'item' && !!row.sectionName && BTS_DETAILS_INPUT_EDITABLE.has(row.sectionName)
         ) as unknown as boolean,
-        // Percent unit badge for GST/Commission rows (Wiseway shows "1.50 %")
+        // Percent unit badge for GST/Commission rows (the production reference shows "1.50 %")
         unit: ((row: BtsDetailRow) =>
           row.sectionName === 'gst' || row.sectionName === 'commission' ? '%' : undefined
         ) as unknown as string,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as BtsDetailRow;
           if (row.kind !== 'item' || row.input == null) { container.textContent = ''; return; }
-          // GST/Commission display percent; Gross would display flat $ (blank here — Wiseway default)
+          // GST/Commission display percent; Gross would display flat $ (blank here — the production reference default)
           const suffix = (row.sectionName === 'gst' || row.sectionName === 'commission') ? '' : '';
           container.textContent = row.input.toFixed(2) + suffix;
         },
         cellStyle: btsDetailCellStyle,
       },
       // Amount — formatted currency, blank on section rows. Width 100
-      //    matches Wiseway.
+      //    matches the production reference.
       {
         id: 'amount', accessorKey: 'amount', header: 'Amount', width: 100, align: 'center' as const, editable: false,
         cellRenderer: (container, ctx) => {
@@ -755,7 +755,7 @@ export function FsbtRevenue() {
         cellStyle: btsDetailCellStyle,
       },
       { id: 'variance', accessorKey: 'variance', header: 'Variance', width: 80, cellType: 'change' as const, align: 'center' as const, editable: false, cellStyle: btsDetailCellStyle },
-      // Monthly — editable on every section per Wiseway (users can override
+      // Monthly — editable on every section per the production reference (users can override
       // the auto-computed per-month distribution).
       ...holdingTs.columns.map(c => ({
         ...c,
@@ -806,7 +806,7 @@ export function FsbtRevenue() {
       stage: 1,
       nla: sum(r => r.nla),
       unit: sum(r => r.unit),
-      // per-m² rates: totals shown blank; Wiseway Footer leaves them empty
+      // per-m² rates: totals shown blank; the production reference Footer leaves them empty
       grossRent: null,
       outgoings: null,
       netRent: null,
@@ -815,7 +815,7 @@ export function FsbtRevenue() {
       rentReview: null, reviewFrequency: null,
       lettingFee: null, payableCommitment: null, totalLettingFee: sum(r => r.totalLettingFee),
       // Remaining Incentives is a per-row toggle (rent-free / discount), not a
-      // summable number — totals row leaves it blank, matching Wiseway.
+      // summable number — totals row leaves it blank, matching the production reference.
       incentives: null, incentivesPaidUpfront: null, remainingIncentives: null,
       discountMonths: null, totalIncentives: sum(r => r.totalIncentives),
       completionCapRate: null, completionCapValue: sum(r => r.completionCapValue),
@@ -853,7 +853,7 @@ export function FsbtRevenue() {
       { id: 'totalLettingFee',    accessorKey: 'totalLettingFee',    header: 'Total Letting Fee',       width: 140, align: 'center' as const, editable: false, valueFormatter: formatDollars, cellStyle: computedCellStyle },
       { id: 'incentives',         accessorKey: 'incentives',         header: 'Incentives (%)',          width: 110, align: 'center' as const, editable: true,  unit: '%', valueFormatter: pct },
       { id: 'incentivesPaidUpfront', accessorKey: 'incentivesPaidUpfront', header: '% Incentives Paid Upfront', width: 140, align: 'center' as const, editable: true, unit: '%', valueFormatter: pct },
-      // Remaining Incentives — dropdown matching Wiseway's
+      // Remaining Incentives — dropdown matching the production reference's
       // holding-general-table-row.tsx:57-68 (remainingIncentiveOptions):
       // 'rent-free' → "Rent Free" vs 'discount' → "Discount".
       {
@@ -899,7 +899,7 @@ export function FsbtRevenue() {
     [],
   );
 
-  // Multi-header groups match Wiseway's holding-general-table layout —
+  // Multi-header groups match the production reference's holding-general-table layout —
   // "Development Costs" / "On Completion" / "Exit" banner above the 15 detail
   // columns that make up each logical section. Since `headerLayout` replaces
   // the grid's default per-column header row, we also emit a second row that
@@ -993,7 +993,7 @@ export function FsbtRevenue() {
 
   return (
     <div>
-      {/* Program summary — matches Wiseway's feasibility layout where program is shown above each financial tab */}
+      {/* Program summary — matches the production reference's feasibility layout where program is shown above each financial tab */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 12px' }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Program</h2>
         <span style={pillStyle}>
@@ -1082,7 +1082,7 @@ export function FsbtRevenue() {
         />
       </div>
 
-      {/* Holding Asset - Sale — third section, mirrors Wiseway's empty-state layout */}
+      {/* Holding Asset - Sale — third section, mirrors the production reference's empty-state layout */}
       <div style={{ marginTop: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' as const }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Holding Asset - Sale</h3>

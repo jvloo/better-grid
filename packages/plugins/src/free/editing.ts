@@ -74,7 +74,7 @@ declare module '@better-grid/core' {
     /**
      * Render an actual `<input>` element permanently inside the cell — instead
      * of opening a floating editor on click. Designed for finance-style sheets
-     * where every visible cell should already accept keystrokes (Wiseway parity).
+     * where every visible cell should already accept keystrokes.
      *
      * Commits via the standard parser path on `change`/`blur`/`Enter`; reverts
      * on `Escape`. Cannot coexist with `cellEditor: 'select' | 'selectWithInput'`
@@ -2017,7 +2017,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const numberMin = getMin(numberColumn, rowData);
           const numberMax = getMax(numberColumn, rowData);
 
-          // Thousand-separator formatting — Wiseway retains comma grouping
+          // Thousand-separator formatting — retain comma grouping
           // while editing ("27,000,000") rather than reverting to the raw
           // "27000000". Uses toLocaleString to insert commas in the integer
           // portion; decimal portion is kept verbatim so mid-typing strings

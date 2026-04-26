@@ -1,24 +1,24 @@
-# Migrating from v0 to v1
+# v1 Init API — design history
 
-The v1 release reshapes the Better Grid init API for better DX. Pre-release, no back-compat — every consumer must migrate. This doc lists every breaking change and shows the before/after.
+Better Grid was rebuilt before its first public release. This document captures the shape of the pre-release API and the reasoning behind the changes that landed in v1.0.0. It's preserved as a contributor reference — there is no public "v0" to migrate from.
 
-## TL;DR
+If you're a new consumer, you don't need this. Read the [README](../README.md) quick-start and [`AGENTS.md`](../AGENTS.md) instead.
 
-- `useMemo` around columns: usually no longer needed (hoist columns at module scope).
-- `cellType: 'currency'` etc.: replace with `col.currency('field', { precision: 0 })`.
-- Plugin instantiation: replace with `mode="spreadsheet"` or `features={['edit', 'clipboard']}` strings; full plugin instances still work via `plugins={[...]}`.
-- `<BetterGrid columns={} data={} />` flat: still works. New advanced path: `const grid = useGrid({...}); <BetterGrid grid={grid} />`.
+## TL;DR of what shipped
 
-## What's new in v1 (additive)
+- Hoist columns at module scope; no `useMemo` needed in most cases.
+- Use the `defineColumn` builder: `col.currency('field', { precision: 0 })`.
+- Opt into capabilities via `mode="spreadsheet"` or `features={['edit', 'clipboard']}`. The `plugins` array remains the escape hatch.
+- Two component shapes coexist: `<BetterGrid columns={} data={} />` (sugar) and `const grid = useGrid({...}); <BetterGrid grid={grid} />` (handle).
 
-These features did not exist in v0. They aren't migration steps — adopt them when you're ready:
+## Notable v1 capabilities
 
-- **`column.alwaysInput: boolean | (row, col) => boolean`** — render a real `<input>` permanently in every visible cell (Wiseway-shape finance sheets). Commits via the standard parser path on change/blur/Enter. Plugin warns when `alwaysInput cols × rows > editing.alwaysInputThreshold` (default 1000).
+- **`column.alwaysInput: boolean | (row, col) => boolean`** — render a real `<input>` permanently in every visible cell (always-on finance-sheet inputs). Commits via the standard parser path on change/blur/Enter. Plugin warns when `alwaysInput cols × rows > editing.alwaysInputThreshold` (default 1000).
 - **`@better-grid/react/rhf` sub-export** — `useGridForm({ grid, baseName: 'rows' })` listens to `data:change` events from the grid and forwards each into `setValue('${baseName}.${rowIndex}.${columnId}', newValue)` so cells participate in a surrounding RHF `<FormProvider>`'s dirty/touched/validation state. `react-hook-form` is an optional peer dep.
 - **`column.validationMessageRenderer`** and **`ColumnValidationRule.messageRenderer`** — return any HTMLElement (e.g. an MUI Alert mounted via `createRoot`) to control the error tooltip body. Falls back to the default text bubble when omitted.
-- **MUI theme bridge** — see [`docs/mui-theme-integration.md`](mui-theme-integration.md) for the recipe wiring `palette` / `typography` / `mode` through Better Grid's CSS custom properties.
+- **MUI theme bridge** — see [`mui-theme-integration.md`](mui-theme-integration.md) for the recipe wiring `palette` / `typography` / `mode` through Better Grid's CSS custom properties.
 
-## Breaking changes
+## Pre-release shape changes (historical)
 
 ### 1. Column definitions
 

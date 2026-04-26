@@ -455,7 +455,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
           bar.style.position = 'absolute';
           bar.style.left = '-1px';
           bar.style.top = `${barTop}px`;
-          // Width: 100% + 2px to cover cell borders seamlessly (matches Wiseway)
+          // Width: 100% + 2px to cover cell borders seamlessly
           bar.style.width = `calc(100% + 2px)`;
           bar.style.height = `${barH}px`;
           bar.style.backgroundColor = barColor;

@@ -20,7 +20,7 @@ export interface HierarchyOptions {
   /**
    * Which column shows the expand/collapse toggle icon.
    * Can be the same as indentColumn (classic tree-view) or a different column
-   * (e.g. the last frozen column for a Wiseway-style layout).
+   * (e.g. the last frozen column for a finance-style layout).
    */
   toggleColumn?: string;
 

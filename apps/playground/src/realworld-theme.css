@@ -1,9 +1,9 @@
 /* ============================================================================
-   Wiseway Theme — Matches qa-app.wiseway.ai table styling
-   Apply via class "wiseway-theme" on a wrapper element around the grid container
+   Real-world finance theme — production-shape table styling
+   Apply via class "realworld-theme" on a wrapper element around the grid container
    ============================================================================ */
 
-.wiseway-theme {
+.realworld-theme {
   /* Font */
   --bg-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --bg-font-size: 12px;
@@ -31,7 +31,7 @@
   /* No alternating stripe bg — just use striped for borderless vertical */
   --bg-stripe-bg: #fff;
 
-  /* Editor: subtle focus style matching Wiseway (barely visible border, same bg) */
+  /* Editor: subtle focus style matching Real-world finance (barely visible border, same bg) */
   --bg-editor-bg: #F8F8F8;
   --bg-editor-border: #EFEFEF;
   --bg-editor-border-width: 0.8px;
@@ -62,8 +62,8 @@
   --bg-scrollbar-thumb-hover: #667085;
 }
 
-/* Override header cell styling (Wiseway uses #475467 grey-600) */
-.wiseway-theme .bg-header-cell {
+/* Override header cell styling (Real-world finance uses #475467 grey-600) */
+.realworld-theme .bg-header-cell {
   color: #475467;
   font-size: 10px;
   padding: 10px 6px;
@@ -71,12 +71,12 @@
 }
 
 /* Date column headers use lighter background */
-.wiseway-theme .bg-header-cell:not(.bg-header-cell--frozen-left):not(.bg-header-cell--span):not(.bg-header-cell--group) {
+.realworld-theme .bg-header-cell:not(.bg-header-cell--frozen-left):not(.bg-header-cell--span):not(.bg-header-cell--group) {
   background: #F9FAFB;
 }
 
-/* Data cell styling — Wiseway uses flex for vertical centering */
-.wiseway-theme .bg-cell {
+/* Data cell styling — Real-world finance uses flex for vertical centering */
+.realworld-theme .bg-cell {
   color: #282F3D;
   font-size: 12px;
   display: flex;
@@ -85,20 +85,20 @@
 }
 
 /* Parent rows in hierarchy get distinct background */
-.wiseway-theme .bg-cell[data-depth="0"] {
+.realworld-theme .bg-cell[data-depth="0"] {
   font-weight: 500;
 }
 
-/* Grid container — rounded corners with shadow (Wiseway RGTable style) */
-.wiseway-theme .bg-grid {
+/* Grid container — rounded corners with shadow (Real-world finance RGTable style) */
+.realworld-theme .bg-grid {
   border-radius: 12px;
   box-shadow: 0px 1px 3px rgba(16, 24, 40, 0.1);
   border: 1px solid #EAECF0;
 }
 
 /* Pinned bottom row styling */
-.wiseway-theme .bg-grid__pinned-bottom .bg-cell,
-.wiseway-theme .bg-grid__frozen-pinned-bottom .bg-cell {
+.realworld-theme .bg-grid__pinned-bottom .bg-cell,
+.realworld-theme .bg-grid__frozen-pinned-bottom .bg-cell {
   background: #F9FAFB;
   font-weight: 600;
   color: #101828;

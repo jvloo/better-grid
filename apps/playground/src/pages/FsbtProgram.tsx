@@ -29,12 +29,12 @@ interface ProgramRow {
 }
 
 // ---------------------------------------------------------------------------
-// Exact Wiseway default program phases (5 parents + 19 children + custom rows)
+// Exact the production reference default program phases (5 parents + 19 children + custom rows)
 // Dates computed sequentially from Jul 2025 base to create realistic Gantt
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Data from QA app project 4288: https://qa-app.wiseway.ai/projects/4288/program
+// Data from QA app project 4288: the production reference app
 // Base month: Aug 2023 (month index 0). 39 months total (Aug 2023 – Oct 2026).
 // ---------------------------------------------------------------------------
 
@@ -506,7 +506,7 @@ export function FsbtProgram() {
           // Inset the scrollbar by the same radius so it doesn't get
           // clipped at the rounded corners.
           '--bg-scrollbar-inset': '12px',
-          // Match Wiseway's Program table header grey.
+          // Match the production reference's Program table header grey.
           '--bg-header-bg': '#EAECF0',
         } as CSSProperties}
       />

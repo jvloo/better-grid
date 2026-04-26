@@ -84,7 +84,7 @@ export function AlwaysInputDemo() {
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Always-Input Cells</h1>
       <p style={{ marginBottom: 12, color: '#666', lineHeight: 1.5 }}>
         Per-column <code>alwaysInput</code> renders a real <code>&lt;input&gt;</code> permanently in
-        every visible cell — no double-click required. Wiseway parity for finance sheets.
+        every visible cell — no double-click required. Real-world parity for finance sheets.
       </p>
       <ul style={{ marginBottom: 16, color: '#666', fontSize: 13, lineHeight: 1.7 }}>
         <li><strong>Qty</strong> &amp; <strong>Unit Cost</strong>: <code>alwaysInput: true</code> on every row.</li>

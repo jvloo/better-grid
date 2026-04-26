@@ -234,7 +234,7 @@ packages/pro/src/
   pro-renderers.ts      # Sparklines, heatmaps, mini charts
 
 apps/playground/        # Vite + React dev playground (~25 demo pages — Better Grid showcase
-                        # under /demo/* and Wiseway-themed demos under /demo-wiseway/*)
+                        # under /demo/* and finance/real-world demos under /demo-realworld/*)
 
 .ref/                   # Third-party reference material (gitignored, see .ref/CLAUDE.md)
 ```
@@ -243,7 +243,7 @@ See `ROADMAP.md` for strategic tier analysis and feature roadmap.
 
 ## Reference docs
 
-- [`docs/migration-v0-to-v1.md`](docs/migration-v0-to-v1.md) — every breaking change between the v0 and v1 init APIs
 - [`docs/migration-from-ag-grid.md`](docs/migration-from-ag-grid.md), [`docs/migration-from-tanstack-table.md`](docs/migration-from-tanstack-table.md) — cheat sheets for incoming migrations
 - [`docs/mui-theme-integration.md`](docs/mui-theme-integration.md) — drive Better Grid CSS variables from a Material UI theme
+- [`docs/v1-init-api-history.md`](docs/v1-init-api-history.md) — pre-release design history of the v1 init API (contributor reference)
 - [`docs/superpowers/specs/`](docs/superpowers/specs/) and [`docs/superpowers/plans/`](docs/superpowers/plans/) — historical specs and plans (kept for context, not required reading)

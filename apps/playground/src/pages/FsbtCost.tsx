@@ -17,8 +17,8 @@ import {
 } from './_toolbar-icons';
 
 // ---------------------------------------------------------------------------
-// Data model — mirrors Wiseway's feasibility/types/project-cost.ts
-// (src/modules/feasibility/components/cost/cost-table.tsx in wise-frontend-app)
+// Data model — mirrors the production reference's feasibility/types/project-cost.ts
+// (src/modules/feasibility/components/cost/cost-table.tsx in the production reference repo)
 // Parent rows have inputType='none' and no input. Percent rows store the
 // percentage value (e.g. 10.0) with inputType='percent'; number rows store the
 // raw currency amount.
@@ -119,7 +119,7 @@ function deleteCustomCostRow(rows: CostRow[], sourceRow: CostRow): CostRow[] {
   return renumberCustomCostChildren(next, sourceRow.parentId);
 }
 
-// Port of getCostInputNote from wise-frontend-app/src/modules/feasibility/utils/cost.utils.ts
+// Port of getCostInputNote from the production reference repo/src/modules/feasibility/utils/cost.utils.ts
 function getCostInputNote(code: string): string {
   if (code.startsWith('1.')) return 'Land Cost';
   switch (code) {
@@ -265,10 +265,10 @@ function isMonthlyEditable(row: CostRow, column: ColumnDef<CostRow>): boolean {
   return current >= start && current <= end;
 }
 
-// Data from QA app project 4288: https://qa-app.wiseway.ai/projects/4288/cost
+// Data from QA app project 4288: the production reference app
 // Total Development Cost: $161,041,739 (13 phases, 39 months Aug 2023 – Oct 2026)
 const rawData: CostRow[] = [
-  // 1. Land Cost — $27,000,000 (Wiseway special-cases this parent to show its input)
+  // 1. Land Cost — $27,000,000 (the production reference special-cases this parent to show its input)
   { id: 1, parentId: null, code: '1', name: 'Land Cost', inputType: 'number', input: 27000000, escalation: 'none', amount: 27000000, start: '2023-08-01', end: '2024-01-31', variance: 0, custom: false, m_2023_08: 27000000 },
   { id: 2, parentId: 1, code: '1.01', name: 'Deposit', inputType: 'percent', input: 10, escalation: 'none', amount: 2700000, start: '2023-08-01', end: '2023-08-31', variance: 0, custom: false, m_2023_08: 2700000 },
   { id: 3, parentId: 1, code: '1.02', name: 'Settlement', inputType: 'percent', input: 90, escalation: 'none', amount: 24300000, start: '2024-01-01', end: '2024-01-31', variance: 0, custom: false, m_2024_01: 24300000 },
@@ -383,7 +383,7 @@ const ts = timeSeries({
   },
 });
 
-// Compute pinned bottom totals row from root-level rows. Matches Wiseway's
+// Compute pinned bottom totals row from root-level rows. Matches the production reference's
 // cost-table footer: the "Total Development Cost" label spans the first
 // informational columns, Amount/Start/End/Variance show aggregated values,
 // and monthly columns show the grand total per month.
@@ -426,7 +426,7 @@ function buildTotalsRow(rows: CostRow[]): CostRow {
 }
 
 // ---------------------------------------------------------------------------
-// Cell-level helpers that mirror Wiseway's per-component styling
+// Cell-level helpers that mirror the production reference's per-component styling
 // ---------------------------------------------------------------------------
 
 function formatAU(value: number): string {
@@ -436,7 +436,7 @@ function formatAU(value: number): string {
 function phaseCellStyle(_v: unknown, row: unknown): Record<string, string> | undefined {
   const r = row as CostRow;
   const base = parentRowCellStyle(_v, row) ?? {};
-  // Wiseway's phase cell: parent padL 8px, child padL 28px (theme.spacing(1) / theme.spacing(3.5))
+  // the production reference's phase cell: parent padL 8px, child padL 28px (theme.spacing(1) / theme.spacing(3.5))
   return { ...base, paddingLeft: r.parentId === null ? '8px' : '28px' };
 }
 
@@ -597,7 +597,7 @@ export function FsbtCost() {
 
   const columns = useMemo<ColumnDef<CostRow>[]>(
     () => [
-      // ── Col 0: Menu — Wiseway's add/delete ⋮ (handled by rowActions plugin) ──
+      // ── Col 0: Menu — the production reference's add/delete ⋮ (handled by rowActions plugin) ──
       {
         id: 'actions', header: '', width: 50, editable: false,
         cellRenderer: (container, ctx) => {
@@ -617,7 +617,7 @@ export function FsbtCost() {
         cellStyle: parentRowCellStyle,
       },
       // ── Col 2: Phase — 8px parent / 28px child padding, bold on parent.
-      //    Editable only for custom children (Wiseway convention — only custom rows are named by the user).
+      //    Editable only for custom children (the production reference convention — only custom rows are named by the user).
       {
         id: 'name', accessorKey: 'name', header: 'Phase', width: 236, cellStyle: phaseCellStyle,
         editable: ((row: CostRow) => row.parentId !== null && row.custom) as unknown as boolean,
@@ -642,7 +642,7 @@ export function FsbtCost() {
         unit: (row: CostRow) => (row.inputType === 'percent' ? '%' : undefined),
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
-          // Parent rows (except Land Cost, code='1') render empty — Wiseway's convention.
+          // Parent rows (except Land Cost, code='1') render empty — the production reference's convention.
           const isParent = row.parentId === null;
           const isParentWithoutInput = isParent && row.code !== '1';
           if (isParentWithoutInput || row.inputType === 'none') {
@@ -657,7 +657,7 @@ export function FsbtCost() {
         },
         cellStyle: parentRowCellStyle,
       },
-      // ── Col 4: Input Note — derived from code via Wiseway's getCostInputNote() ──
+      // ── Col 4: Input Note — derived from code via the production reference's getCostInputNote() ──
       {
         id: 'inputNote', header: '', width: 140, align: 'left' as const, editable: false,
         cellRenderer: (container, ctx) => {
@@ -675,13 +675,13 @@ export function FsbtCost() {
         valueFormatter: (value) => ESCALATION_OPTIONS.find(option => option.value === value)?.label ?? '',
         cellStyle: parentRowCellStyle,
       },
-      // ── Col 6: Amount — plain number (Wiseway uses formatNumber, not currency), read-only ──
+      // ── Col 6: Amount — plain number (the production reference uses formatNumber, not currency), read-only ──
       {
         id: 'amount', accessorKey: 'amount', header: 'Amount', width: 110, align: 'center' as const, editable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           if (typeof row.amount !== 'number') { container.textContent = ''; return; }
-          // Pinned TOTAL row (id=-1) gets a $ prefix to match Wiseway's
+          // Pinned TOTAL row (id=-1) gets a $ prefix to match the production reference's
           // "Total Development Cost → $161,041,739" footer emphasis.
           const prefix = row.id === -1 ? '$' : '';
           container.textContent = prefix + formatAU(Math.round(row.amount));
@@ -764,7 +764,7 @@ export function FsbtCost() {
   const plugins = useMemo(
     () => [
       formatting({ locale: 'en-AU', currencyCode: 'AUD', accountingFormat: true }),
-      // inputStyle: true makes editable cells always look like inputs/dropdowns (matching Wiseway), even when not focused.
+      // inputStyle: true makes editable cells always look like inputs/dropdowns (matching the production reference), even when not focused.
       editing({ editTrigger: 'click', inputStyle: true, precision: 0 }),
       sorting(),
       hierarchy({ toggleColumn: 'collapse', toggleStyle: 'chevron' }),
@@ -812,7 +812,7 @@ export function FsbtCost() {
     columns,
     mode: null,
     plugins,
-    // Freeze 12 columns (Wiseway's 11 defaults + our trailing collapse column).
+    // Freeze 12 columns (the production reference's 11 defaults + our trailing collapse column).
     // Monthly columns scroll horizontally. clip lets the user drag the clip
     // handle to hide some pinned columns when the viewport is narrow;
     // minVisible: 2 keeps at least Menu + Code visible at all times.
@@ -838,7 +838,7 @@ export function FsbtCost() {
 
   return (
     <div>
-      {/* Program summary — matches Wiseway's feasibility layout where program is shown above each financial tab */}
+      {/* Program summary — matches the production reference's feasibility layout where program is shown above each financial tab */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 12px' }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Program</h2>
         <span style={pillStyle}>
