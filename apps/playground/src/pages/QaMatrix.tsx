@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { FormProvider, useForm } from 'react-hook-form';
 import { BetterGrid, defineColumn as col, useGrid } from '@better-grid/react';
+import { useGridForm } from '@better-grid/react/rhf';
 import type { ColumnDef } from '@better-grid/core';
 import {
   autoDetect,
@@ -1205,6 +1207,328 @@ function ProGrid() {
   );
 }
 
+// ─── Section 6: Clipboard, Fill, Undo/Redo ───────────────────────────────────
+
+interface ClipRow { id: number; label: string; amount: number; currency: string; date: string; status: string }
+
+const clipSeedRows: ClipRow[] = [
+  { id: 1, label: 'Alpha', amount: 1000, currency: 'USD', date: '2026-01-10', status: 'Open' },
+  { id: 2, label: 'Beta', amount: 2500, currency: 'AUD', date: '2026-02-14', status: 'Closed' },
+  { id: 3, label: 'Gamma', amount: 750, currency: 'USD', date: '2026-03-05', status: 'Open' },
+  { id: 4, label: 'Delta', amount: 4200, currency: 'GBP', date: '2026-04-20', status: 'Pending' },
+  { id: 5, label: 'Epsilon', amount: 900, currency: 'USD', date: '2026-05-01', status: 'Open' },
+  { id: 6, label: 'Zeta', amount: 1800, currency: 'AUD', date: '2026-06-15', status: 'Closed' },
+  { id: 7, label: 'Eta', amount: 3300, currency: 'USD', date: '2026-07-08', status: 'Pending' },
+  { id: 8, label: 'Theta', amount: 5500, currency: 'GBP', date: '2026-08-22', status: 'Open' },
+];
+
+const clipColumns: ColumnDef<ClipRow>[] = [
+  col.text('label', { headerName: 'Label', width: 120, editable: true }),
+  col.number('amount', { headerName: 'Amount', width: 110, precision: 0, editable: true }),
+  col.currency('currency', { headerName: 'Currency', width: 110, editable: true }),
+  col.date('date', { headerName: 'Date', width: 120, editable: true }),
+  col.text('status', { headerName: 'Status', width: 110, cellEditor: 'select', options: [{ label: 'Open', value: 'Open' }, { label: 'Closed', value: 'Closed' }, { label: 'Pending', value: 'Pending' }], editable: true }),
+] as ColumnDef<ClipRow>[];
+
+function ClipboardUndoGrid() {
+  const [rows, setRows] = useState(clipSeedRows);
+  const [status, setStatus] = useState('Edit cells, copy ranges, fill down, undo or redo.');
+
+  const grid = useGrid<ClipRow>({
+    data: rows,
+    columns: clipColumns,
+    mode: 'view',
+    features: {
+      format: { locale: 'en-US', currencyCode: 'USD' },
+      edit: { editTrigger: 'dblclick' },
+      clipboard: true,
+      undo: { historySize: 50 },
+    },
+    selection: { mode: 'range', fillHandle: true },
+    rowHeight: 36,
+    onCellChange: (changes) => {
+      setRows((prev) => {
+        const next = [...prev];
+        for (const ch of changes) next[ch.rowIndex] = ch.row as ClipRow;
+        return next;
+      });
+      setStatus(`Changed ${changes.map((c) => `${c.columnId}@r${c.rowIndex + 1}`).join(', ')}`);
+    },
+  });
+
+  const apis = grid.api.plugins as { undoRedo?: UndoRedoApi; clipboard?: ClipboardApi };
+
+  return (
+    <Section
+      title="Clipboard, Fill, Undo/Redo"
+      detail="Verifies clipboard copy/paste, fill-down via fill handle, undo/redo stack, and select-all range. Uses dblclick-to-edit and range selection."
+    >
+      <div style={toolbarStyle}>
+        <ToolbarButton onClick={() => { apis.undoRedo?.undo(); setStatus('Undo requested.'); }}>Undo (⌘Z)</ToolbarButton>
+        <ToolbarButton onClick={() => { apis.undoRedo?.redo(); setStatus('Redo requested.'); }}>Redo (⇧⌘Z)</ToolbarButton>
+        <ToolbarButton onClick={() => {
+          const rowCount = rows.length;
+          const colCount = clipColumns.length;
+          grid.api.setSelection({
+            active: { rowIndex: 0, colIndex: 0 },
+            ranges: [{ startRow: 0, endRow: rowCount - 1, startCol: 0, endCol: colCount - 1 }],
+          });
+          setStatus('Selected all cells.');
+        }}>Select all</ToolbarButton>
+        <ToolbarButton onClick={() => {
+          const rowCount = rows.length;
+          const colCount = clipColumns.length;
+          grid.api.setSelection({
+            active: { rowIndex: 0, colIndex: 0 },
+            ranges: [{ startRow: 0, endRow: rowCount - 1, startCol: 0, endCol: colCount - 1 }],
+          });
+          document.execCommand('copy');
+          setStatus('Copied all cells to clipboard.');
+        }}>Copy</ToolbarButton>
+        <ToolbarButton onClick={() => {
+          grid.api.setSelection({
+            active: { rowIndex: 0, colIndex: 0 },
+            ranges: [{ startRow: 0, endRow: rows.length - 1, startCol: 0, endCol: clipColumns.length - 1 }],
+          });
+          const empty = rows.map((r) => ({ ...r, label: '', amount: 0, currency: '', date: '', status: '' }));
+          setRows(empty);
+          setStatus('Cleared all cell values.');
+        }}>Clear all</ToolbarButton>
+        <span style={{ fontSize: 12, color: '#667085', fontStyle: 'italic' }}>
+          <kbd style={{ background: '#f0f0f0', border: '1px solid #ccc', borderRadius: 3, padding: '1px 4px', fontSize: 11 }}>Tip</kbd>
+          {' '}Copy a cell, paste below, or select a range and Ctrl+D to fill down.
+        </span>
+      </div>
+      <div style={statusStyle}>{status}</div>
+      <BetterGrid grid={grid} height={300} style={gridFrameStyle} />
+    </Section>
+  );
+}
+
+// ─── Section 7: RHF Bridge ────────────────────────────────────────────────────
+
+interface RhfQaRow { id: number; name: string; qty: number; rate: number }
+interface RhfQaForm { items: RhfQaRow[] }
+
+const rhfQaSeed: RhfQaRow[] = [
+  { id: 1, name: 'Alpha', qty: 10, rate: 25.5 },
+  { id: 2, name: 'Beta', qty: 5, rate: 48 },
+  { id: 3, name: 'Gamma', qty: 20, rate: 12.75 },
+  { id: 4, name: 'Delta', qty: 8, rate: 99.99 },
+];
+
+const rhfQaColumns: ColumnDef<RhfQaRow>[] = [
+  col.text('name', { headerName: 'Name', width: 140, editable: true }),
+  col.number('qty', { headerName: 'Qty', width: 90, precision: 0, editable: true, alwaysInput: true }),
+  col.currency('rate', { headerName: 'Rate', width: 110, precision: 2, editable: true, alwaysInput: true }),
+] as ColumnDef<RhfQaRow>[];
+
+function RhfQaTable({ data }: { data: RhfQaRow[] }) {
+  const grid = useGrid<RhfQaRow>({
+    columns: rhfQaColumns,
+    data,
+    mode: 'view',
+    features: {
+      format: { locale: 'en-US', currencyCode: 'USD' },
+      edit: { editTrigger: 'click' },
+    },
+    selection: { mode: 'range' },
+    rowHeight: 36,
+  });
+
+  useGridForm<RhfQaRow, RhfQaForm>({ grid, baseName: 'items', shouldValidate: true });
+
+  return <BetterGrid grid={grid} height={180} style={gridFrameStyle} />;
+}
+
+function RhfBridgeGrid() {
+  const methods = useForm<RhfQaForm>({ defaultValues: { items: rhfQaSeed } });
+  const data = useMemo(() => methods.getValues('items'), [methods]);
+  const watched = methods.watch();
+  const dirtyCount = Object.keys(methods.formState.dirtyFields.items ?? {}).length;
+
+  return (
+    <Section
+      title="RHF Bridge: useGridForm cell-commit → form state"
+      detail="Wraps a 3-column grid in a FormProvider. Every cell commit is forwarded to RHF via useGridForm. The pre block shows live form state as you edit."
+    >
+      <FormProvider {...methods}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 420px', minWidth: 0 }}>
+            <RhfQaTable data={data} />
+          </div>
+          <div style={{ flex: '0 0 260px', fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>
+            <div style={{ marginBottom: 6, color: '#667085' }}>
+              isDirty: <strong>{methods.formState.isDirty.toString()}</strong>
+              {' '}| dirtyFields count: <strong>{dirtyCount}</strong>
+            </div>
+            <pre style={{
+              margin: 0, padding: 10, background: '#f8f9fa', border: '1px solid #e0e0e0',
+              borderRadius: 6, fontSize: 11, lineHeight: 1.5, maxHeight: 180, overflow: 'auto',
+              whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+            }}>
+              {JSON.stringify(watched, null, 2)}
+            </pre>
+          </div>
+        </div>
+      </FormProvider>
+    </Section>
+  );
+}
+
+// ─── Section 8: Column Visibility Toggle ─────────────────────────────────────
+
+interface HideRow { id: number; name: string; qty: number; status: string }
+
+const hideRows: HideRow[] = Array.from({ length: 6 }, (_, i) => ({
+  id: i + 1,
+  name: `Item ${i + 1}`,
+  qty: (i + 1) * 15,
+  status: i % 2 === 0 ? 'Open' : 'Closed',
+}));
+
+const hideColumns: ColumnDef<HideRow>[] = [
+  col.text('id', { headerName: 'ID', width: 70, hide: true }),
+  col.text('name', { headerName: 'Name', width: 160 }),
+  col.number('qty', { headerName: 'Qty', width: 90, precision: 0 }),
+  col.text('status', { headerName: 'Status', width: 110 }),
+] as ColumnDef<HideRow>[];
+
+function ColumnHideToggleGrid() {
+  const [status, setStatus] = useState('ID column starts hidden. Visible columns: 3.');
+  const [statusHidden, setStatusHidden] = useState(false);
+
+  const grid = useGrid<HideRow>({
+    data: hideRows,
+    columns: hideColumns,
+    mode: 'view',
+    selection: { mode: 'cell' },
+    rowHeight: 36,
+  });
+
+  const updateStatus = useCallback((msg: string) => {
+    const visibleCount = grid.api.getColumns().length;
+    setStatus(`${msg} Visible columns: ${visibleCount}.`);
+  }, [grid.api]);
+
+  return (
+    <Section
+      title="Column visibility: hide / setColumnHidden runtime toggle"
+      detail="Validates setColumnHidden updates aria-colcount and resets freeze-clip. ID starts hidden via hide: true in the column def."
+    >
+      <div style={toolbarStyle}>
+        <ToolbarButton onClick={() => { grid.api.setColumnHidden('id', false); updateStatus('ID shown.'); }}>Show ID</ToolbarButton>
+        <ToolbarButton onClick={() => { grid.api.setColumnHidden('id', true); updateStatus('ID hidden.'); }}>Hide ID</ToolbarButton>
+        <ToolbarButton onClick={() => {
+          const nextHidden = !statusHidden;
+          grid.api.setColumnHidden('status', nextHidden);
+          setStatusHidden(nextHidden);
+          updateStatus(`Status ${nextHidden ? 'hidden' : 'shown'}.`);
+        }}>Toggle Status</ToolbarButton>
+        <ToolbarButton onClick={() => {
+          grid.api.setColumnHidden('id', true);
+          grid.api.setColumnHidden('status', true);
+          setStatusHidden(true);
+          updateStatus('ID and Status hidden.');
+        }}>Hide all</ToolbarButton>
+        <ToolbarButton onClick={() => {
+          grid.api.setColumnHidden('id', false);
+          grid.api.setColumnHidden('status', false);
+          setStatusHidden(false);
+          updateStatus('All columns shown.');
+        }}>Show all</ToolbarButton>
+      </div>
+      <div style={statusStyle}>{status}</div>
+      <BetterGrid grid={grid} height={250} style={gridFrameStyle} />
+    </Section>
+  );
+}
+
+// ─── Section 9: Empty Data + Single Row ──────────────────────────────────────
+
+interface EdgeRow { id: number; name: string; value: number }
+
+const edgeColumns: ColumnDef<EdgeRow>[] = [
+  col.text('id', { headerName: 'ID', width: 70 }),
+  col.text('name', { headerName: 'Name', width: 150 }),
+  col.number('value', { headerName: 'Value', width: 100, precision: 0 }),
+] as ColumnDef<EdgeRow>[];
+
+function EmptyGrid() {
+  const grid = useGrid<EdgeRow>({ data: [], columns: edgeColumns, mode: null, rowHeight: 36 });
+  return <BetterGrid grid={grid} height={160} style={gridFrameStyle} />;
+}
+
+function SingleRowGrid() {
+  const grid = useGrid<EdgeRow>({
+    data: [{ id: 1, name: 'Solo', value: 42 }],
+    columns: edgeColumns,
+    mode: null,
+    rowHeight: 36,
+  });
+  return <BetterGrid grid={grid} height={160} style={gridFrameStyle} />;
+}
+
+function EmptyDataAndSingleRowGrid() {
+  return (
+    <Section
+      title="Empty data + single row edge cases"
+      detail="Both grids should render headers + correct cells (or empty body) without console errors."
+    >
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 300px' }}>
+          <p style={{ margin: '0 0 6px', fontSize: 12, color: '#667085' }}>Left: data=[] (empty)</p>
+          <EmptyGrid />
+        </div>
+        <div style={{ flex: '1 1 300px' }}>
+          <p style={{ margin: '0 0 6px', fontSize: 12, color: '#667085' }}>Right: single row</p>
+          <SingleRowGrid />
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+// ─── Section 10: selection: false (read-only display) ────────────────────────
+
+interface ReadOnlyRow { id: number; product: string; price: number }
+
+const readOnlyRows: ReadOnlyRow[] = [
+  { id: 1, product: 'Widget A', price: 29.99 },
+  { id: 2, product: 'Widget B', price: 49.99 },
+  { id: 3, product: 'Widget C', price: 14.99 },
+  { id: 4, product: 'Widget D', price: 89.99 },
+];
+
+const readOnlyColumns: ColumnDef<ReadOnlyRow>[] = [
+  col.text('id', { headerName: 'ID', width: 70 }),
+  col.text('product', { headerName: 'Product', width: 180 }),
+  col.currency('price', { headerName: 'Price', width: 110, precision: 2 }),
+] as ColumnDef<ReadOnlyRow>[];
+
+function SelectionDisabledGrid() {
+  const grid = useGrid<ReadOnlyRow>({
+    data: readOnlyRows,
+    columns: readOnlyColumns,
+    mode: 'view',
+    features: { format: { locale: 'en-US', currencyCode: 'USD' } },
+    selection: false,
+    rowHeight: 36,
+  });
+
+  return (
+    <Section
+      title="selection: false (read-only display)"
+      detail="Cells should not show the active-cell border on click. No selection overlay renders."
+    >
+      <div style={statusStyle}>Cells should not show the active-cell border on click.</div>
+      <BetterGrid grid={grid} height={200} style={gridFrameStyle} />
+    </Section>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export function QaMatrix() {
   return (
     <div style={pageShell}>
@@ -1214,7 +1538,8 @@ export function QaMatrix() {
         <p style={introStyle}>
           Use this page as the smoke, regression, and exploratory QA surface before releases. It keeps edge cases visible:
           invalid seed values, overflowing editable text, native dropdowns, select-with-input, masked periods, prefix and suffix inputs,
-          grouped hierarchy, pro renderers, Gantt bars, row actions, export APIs, pagination, autodetect, frozen areas and pinned rows.
+          grouped hierarchy, pro renderers, Gantt bars, row actions, export APIs, pagination, autodetect, frozen areas, pinned rows,
+          clipboard, undo/redo, RHF integration, column visibility, and empty-data edge cases.
         </p>
       </div>
 
@@ -1223,6 +1548,11 @@ export function QaMatrix() {
       <StructureGrid />
       <PaginationAutoDetectGrid />
       <ProGrid />
+      <ClipboardUndoGrid />
+      <RhfBridgeGrid />
+      <ColumnHideToggleGrid />
+      <EmptyDataAndSingleRowGrid />
+      <SelectionDisabledGrid />
     </div>
   );
 }

@@ -30,6 +30,7 @@ import { DmForecast } from './pages/DmForecast';
 import { DmActuals } from './pages/DmActuals';
 import { DmSummary } from './pages/DmSummary';
 import { ColumnFeaturesDemo } from './pages/ColumnFeaturesDemo';
+import { QaMatrix } from './pages/QaMatrix';
 
 type View = 'landing' | 'demos';
 type Page =
@@ -61,12 +62,13 @@ type Page =
   | 'dm-actuals'
   | 'dm-summary'
   | 'column-features'
+  | 'qa-matrix'
   | 'pro';
 
 const VALID_PAGES = new Set<Page>([
   'finance', 'project-tracker', 'hr-directory', 'inventory', 'editors', 'cell-types', 'clipboard',
   'sort-filter', 'search-export', 'hierarchy', 'frozen-pinned', 'multi-header', 'merge-cells',
-  'core-only', 'plugin-toggle', 'performance', 'selection-modes', 'table-styles', 'always-input', 'rhf-bridge', 'column-features', 'pro',
+  'core-only', 'plugin-toggle', 'performance', 'selection-modes', 'table-styles', 'always-input', 'rhf-bridge', 'column-features', 'qa-matrix', 'pro',
   'fsbt-program', 'fsbt-cost', 'fsbt-revenue',
   'dm-timeline', 'dm-forecast', 'dm-actuals', 'dm-summary',
 ]);
@@ -225,6 +227,7 @@ export function App() {
             <NavButton active={page === 'table-styles'} onClick={() => navigatePage('table-styles')} icon="🎨">Table Styles</NavButton>
 
             <SectionLabel>Other</SectionLabel>
+            <NavButton active={page === 'qa-matrix'} onClick={() => navigatePage('qa-matrix')} icon="🧪">QA Matrix</NavButton>
             <NavButton active={page === 'pro'} onClick={() => navigatePage('pro')} icon="🗺️">Roadmap</NavButton>
           </div>
 
@@ -258,6 +261,7 @@ export function App() {
           {page === 'always-input' && <AlwaysInputDemo />}
           {page === 'rhf-bridge' && <RhfBridgeDemo />}
           {page === 'column-features' && <ColumnFeaturesDemo />}
+          {page === 'qa-matrix' && <QaMatrix />}
           {page === 'fsbt-program' && <div className="realworld-theme"><FsbtProgram /></div>}
           {page === 'fsbt-cost' && <div className="realworld-theme"><FsbtCost /></div>}
           {page === 'fsbt-revenue' && <div className="realworld-theme"><FsbtRevenue /></div>}
