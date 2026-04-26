@@ -1,8 +1,8 @@
-# [WIP] Better Grid
+# Better Grid
 
-A framework-agnostic, TypeScript-first data grid & spreadsheet library with a composable plugin architecture. Ships a virtualized rendering pipeline, range selection, keyboard navigation, and 15+ free plugins (formatting, editing, sorting, filtering, clipboard, export, hierarchy, search, validation, pagination, undo/redo, ...) — without the "Community vs Enterprise" fork.
+A framework-agnostic, TypeScript-first data grid & spreadsheet library with a composable plugin architecture. Ships a virtualized rendering pipeline, range selection, keyboard navigation, a rich MIT plugin set, and source-available pro plugins.
 
-> **Status**: Early development (v0.0.1). API is unstable.
+> **Status**: v1.0.0. Ready for early production use, with active iteration expected.
 
 ## Quick Start
 
@@ -109,15 +109,22 @@ The data grid market has a gap — no library combines a rich free tier, type-sa
 - **Filtering** — 9 operators, context menu, column filters
 - **Validation** — required fields, custom rules, error state UI
 
-### Pro Plugins (Commercial, coming soon)
+### Additional Free Plugins (MIT)
 
 - Clipboard (copy/cut/paste, fill-down)
 - Row grouping with collapse/expand
 - Undo/redo history
 - CSV/Excel export
 - Search & highlight
-- Formulas (=SUM, =IF, =VLOOKUP)
-- Advanced cell renderers (sparkline, heatmap, avatar, mini charts)
+- Hierarchy, pagination, cell renderers, and auto-detect helpers
+
+### Pro Plugins (source-available)
+
+- **Gantt** — timeline bars with drag-to-move and resize
+- **Aggregation** — summary rows and grouped totals
+- **Merge cells** — row/column spanning
+- **Row actions** — contextual per-row action menus
+- **Pro renderers** — advanced commercial renderers
 
 ### AI Integration (coming soon)
 
@@ -141,6 +148,13 @@ Inspired by [Better Auth](https://better-auth.com):
 | `@better-grid/core`    | Framework-agnostic grid engine                          |
 | `@better-grid/react`   | React adapter (`useGrid` hook + `BetterGrid` component) |
 | `@better-grid/plugins` | Official free plugins + built-in cell renderers         |
+| `@better-grid/pro`     | Source-available pro plugins                            |
+
+## Support
+
+Better Grid is an independent project. If it saves you time or helps your work,
+you can support development through sponsorship or commercial support. A coffee
+link will be added once it is available.
 
 ## Theming
 
@@ -178,4 +192,13 @@ See [ROADMAP.md](ROADMAP.md) for the full feature roadmap, tier strategy, and co
 
 ## License
 
-MIT (core + free plugins). Commercial license for pro plugins.
+| Package | License |
+| ------- | ------- |
+| `@better-grid/core` | MIT |
+| `@better-grid/react` | MIT |
+| `@better-grid/plugins` | MIT |
+| `@better-grid/pro` | Better Grid Pro Source-Available License |
+
+`@better-grid/pro` is source-available for transparency, evaluation, learning,
+debugging, and easier integration. Commercial production use requires a Better
+Grid Pro license. There is no hard runtime DRM in v1.

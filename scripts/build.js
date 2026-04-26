@@ -23,10 +23,10 @@ const root = path.resolve(__dirname, '..');
 const target = process.argv[2]; // 'core', 'plugins', 'react', or undefined for all
 
 const packages = [
-  { name: 'core', dir: 'packages/core', external: [] },
-  { name: 'plugins', dir: 'packages/plugins', external: ['@better-grid/core'] },
-  { name: 'pro', dir: 'packages/pro', external: ['@better-grid/core'] },
-  { name: 'react', dir: 'packages/react', external: ['react', 'react-dom', '@better-grid/core'] },
+  { name: 'core', dir: 'packages/core' },
+  { name: 'plugins', dir: 'packages/plugins' },
+  { name: 'pro', dir: 'packages/pro' },
+  { name: 'react', dir: 'packages/react' },
 ];
 
 const toBuild = target ? packages.filter((p) => p.name === target) : packages;
@@ -44,7 +44,8 @@ let tsupPath;
 if (require('fs').existsSync(pnpmDir)) {
   const tsupEntry = readdirSync(pnpmDir).find((d) => d.startsWith('tsup@'));
   if (tsupEntry) {
-    tsupPath = path.join(pnpmDir, tsupEntry, 'node_modules/tsup/dist/cli-default.js');
+    const candidate = path.join(pnpmDir, tsupEntry, 'node_modules/tsup/dist/cli-default.js');
+    if (require('fs').existsSync(candidate)) tsupPath = candidate;
   }
 }
 if (!tsupPath) {
@@ -52,7 +53,8 @@ if (!tsupPath) {
   const pnpmDirStd = path.join(root, 'node_modules/.pnpm');
   const tsupEntry = readdirSync(pnpmDirStd).find((d) => d.startsWith('tsup@'));
   if (tsupEntry) {
-    tsupPath = path.join(pnpmDirStd, tsupEntry, 'node_modules/tsup/dist/cli-default.js');
+    const candidate = path.join(pnpmDirStd, tsupEntry, 'node_modules/tsup/dist/cli-default.js');
+    if (require('fs').existsSync(candidate)) tsupPath = candidate;
   }
 }
 
@@ -63,8 +65,7 @@ if (!tsupPath) {
 
 for (const pkg of toBuild) {
   console.log(`\n=== Building @better-grid/${pkg.name} ===`);
-  const externals = pkg.external.map((e) => `--external ${e}`).join(' ');
-  const cmd = `node ${tsupPath} src/index.ts --format esm,cjs --dts --sourcemap --clean --outDir dist ${externals}`;
+  const cmd = `node ${tsupPath} --config tsup.config.ts`;
   try {
     execSync(cmd, {
       stdio: 'inherit',
