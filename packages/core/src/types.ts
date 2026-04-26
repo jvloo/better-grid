@@ -180,9 +180,9 @@ export interface ColumnDef<TData = unknown> {
   hideZero?: boolean;
 
   /** Format the raw cell value to a display string (render time). */
-  valueFormatter?: (value: unknown) => string;
+  valueFormatter?: (value: unknown, row: TData) => string;
   /** Parse a user-entered string back into the cell value (edit commit time). Return undefined to keep the original. */
-  valueParser?: (value: string) => unknown;
+  valueParser?: (value: string, row: TData) => unknown;
 
   // Conditional styling
   cellStyle?: (value: unknown, row: unknown) => Record<string, string> | undefined;

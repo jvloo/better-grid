@@ -109,13 +109,13 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
         return 'text';
       }
 
-      function formatCell(value: unknown, column: NormalizedColumnDef<unknown>): string {
+      function formatCell(value: unknown, column: NormalizedColumnDef<unknown>, row?: unknown): string {
         // Use formatting plugin if available
         const fmtApi = ctx.getPluginApi<{ formatValue: (v: unknown, t: string, c: ColumnDef) => string }>('formatting');
         if (fmtApi && column.cellType) {
           return fmtApi.formatValue(value, column.cellType, column as never);
         }
-        if (column.valueFormatter) return column.valueFormatter(value);
+        if (column.valueFormatter) return column.valueFormatter(value, row as never);
         if (column.hideZero && value === 0) return '';
         if (typeof value === 'boolean') return value ? 'Yes' : 'No';
         return value != null ? String(value) : '';
@@ -141,7 +141,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
 
         const cell: ExportCell = {
           value,
-          formattedValue: optLabel ?? formatCell(value, column),
+          formattedValue: optLabel ?? formatCell(value, column, row),
           columnId: column.id,
           type: resolveType(column, value),
           align: column.align,

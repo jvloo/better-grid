@@ -647,7 +647,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         rowIndex: number,
         colIndex: number,
       ): string {
-        if (column.valueFormatter) return column.valueFormatter(value);
+        if (column.valueFormatter) return column.valueFormatter(value, row as never);
         if (column.cellType) {
           const typeRenderer = ctx.grid.getCellType(column.cellType);
           if (typeRenderer?.getStringValue) {
@@ -1569,7 +1569,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           // Determine display string for the editor
           // Use valueFormatter if available (e.g. date formatting)
           let rawStr = originalValue != null
-            ? (column.valueFormatter ? column.valueFormatter(originalValue) : String(originalValue))
+            ? (column.valueFormatter ? column.valueFormatter(originalValue, rowData as never) : String(originalValue))
             : '';
 
           if (column.cellType === 'bigint') {
@@ -3369,7 +3369,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // Custom valueParser takes priority over all built-in parsing
         if (column.valueParser) {
           try {
-            const parsed = column.valueParser(newValue);
+            const parsed = column.valueParser(newValue, row as never);
             return parsed !== undefined ? parsed : prevValue;
           } catch {
             return prevValue;

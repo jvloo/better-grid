@@ -46,7 +46,7 @@ type FormattingColumn = {
   hideZero?: boolean;
   dateFormat?: string;
   precision?: number | ((row: unknown) => number | undefined);
-  valueFormatter?: (value: unknown) => string;
+  valueFormatter?: (value: unknown, row: unknown) => string;
 };
 
 export function formatting(options?: FormattingOptions): GridPlugin<'formatting', FormattingApi> {
@@ -133,7 +133,7 @@ export function formatting(options?: FormattingOptions): GridPlugin<'formatting'
 
         // Custom valueFormatter takes priority over built-in formatting
         if (column?.valueFormatter) {
-          return column.valueFormatter(value);
+          return column.valueFormatter(value, row);
         }
 
         if (column?.hideZero && value === 0) return '';

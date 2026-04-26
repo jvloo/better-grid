@@ -279,11 +279,11 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
       // -------------------------------------------------------------------
 
       /** Parse a pasted string value into the column's expected data type */
-      function parsePasteValue(raw: string, column: ColumnDef, oldValue: unknown): unknown {
+      function parsePasteValue(raw: string, column: ColumnDef, oldValue: unknown, row?: unknown): unknown {
         // Custom valueParser takes priority
         if (column.valueParser) {
           try {
-            const parsed = column.valueParser(raw);
+            const parsed = column.valueParser(raw, row as never);
             if (parsed !== undefined) return parsed;
           } catch { /* fall through */ }
         }
@@ -559,7 +559,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
 
             const rawValue = cells[c]!;
             const oldValue = getCellValue(row, column);
-            const newValue = parsePasteValue(rawValue, column, oldValue);
+            const newValue = parsePasteValue(rawValue, column, oldValue, row);
 
             ctx.grid.updateCell(rowIndex, column.id, newValue);
             changes.push({ rowIndex, columnId: column.id, oldValue, newValue });

@@ -150,7 +150,7 @@ export function createPinnedRowRenderer<TData = unknown>(
         } else if (column.cellType && deps.rendering.getCellType(column.cellType)) {
           deps.rendering.getCellType(column.cellType)!.render(cell, context as CellRenderContext);
         } else if (column.valueFormatter) {
-          cell.textContent = column.valueFormatter(value);
+          cell.textContent = column.valueFormatter(value, rowData as never);
         } else {
           cell.textContent = value != null ? String(value) : '';
         }

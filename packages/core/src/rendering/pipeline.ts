@@ -294,7 +294,7 @@ export class RenderingPipeline<TData = unknown> {
         } else if (this.globalCellRenderer) {
           cleanup = this.globalCellRenderer(cell, context);
         } else if (column.valueFormatter) {
-          cell.textContent = column.valueFormatter(value);
+          cell.textContent = column.valueFormatter(value, rowData as never);
         } else {
           cell.textContent = value != null ? String(value) : '';
         }
