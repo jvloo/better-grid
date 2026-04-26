@@ -109,11 +109,8 @@ export function createGrid<
   let resizeObserver: ResizeObserver | null = null;
   let mounted = false;
 
-  const singleHeaderRowHeight =
-    (Array.isArray(options.headers) ? undefined : options.headers?.height) ??
-    options.headerHeight ??
-    DEFAULT_HEADER_HEIGHT;
-  const headerRows = Array.isArray(options.headers) ? options.headers : options.headers?.layout;
+  const singleHeaderRowHeight = options.headerHeight ?? DEFAULT_HEADER_HEIGHT;
+  const headerRows = options.headers;
   const headerHeight = headerRows
     ? headerRows.reduce((sum, row) => sum + (row.height ?? singleHeaderRowHeight), 0)
     : singleHeaderRowHeight;

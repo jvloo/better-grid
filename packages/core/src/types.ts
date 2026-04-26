@@ -350,13 +350,10 @@ export interface GridOptions<
   size?: { width?: number | string; height?: number | string };
   frozen?: { top?: number; left?: number; clip?: boolean | FreezeClipOptions };
   pinned?: { top?: TData[]; bottom?: TData[] };
-  headers?: HeaderRow[] | { layout: HeaderRow[]; height?: number };
-  footers?: FooterRow[] | { layout: FooterRow[]; height?: number };
+  headers?: HeaderRow[];
+  footers?: FooterRow[];
   rowHeight?: number | ((rowIndex: number) => number);
-  /**
-   * Default header row height when `headers` is not provided as an object form.
-   * Retained as a sibling for the single-header simple case.
-   */
+  /** Default header row height. Used when `headers` is omitted, or as the per-row default for any HeaderRow that doesn't set its own `height`. */
   headerHeight?: number;
   tableStyle?: 'bordered' | 'borderless' | 'striped';
 
