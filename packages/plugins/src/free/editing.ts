@@ -1517,7 +1517,24 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         suppressNextClickEdit(nextCell);
         cleanup();
         if (editingCell) commitEdit();
-        startEdit(nextCell, undefined, e);
+        // Honor editTrigger: with 'dblclick', a single click on another cell
+        // commits the current edit and just selects the new cell (it should
+        // NOT enter edit mode — that requires dblclick). With 'click' or
+        // 'type', preserve the spreadsheet-style handoff and immediately
+        // open the editor on the next cell.
+        if (config.editTrigger === 'dblclick') {
+          ctx.grid.setSelection({
+            active: { rowIndex: nextCell.rowIndex, colIndex: nextCell.colIndex },
+            ranges: [{
+              startRow: nextCell.rowIndex,
+              endRow: nextCell.rowIndex,
+              startCol: nextCell.colIndex,
+              endCol: nextCell.colIndex,
+            }],
+          });
+        } else {
+          startEdit(nextCell, undefined, e);
+        }
         return true;
       }
 
@@ -3771,8 +3788,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       }
 
       function handleEditorBlur(): void {
+        // Capture the cell that's blurring so the deferred commit only fires
+        // for THIS edit. Without this guard, a click-to-handoff (A → B) would
+        // open B before the 100ms timer fires, then the timer would commit B
+        // — making the user's click on B appear to do nothing.
+        const blurredCell = editingCell;
+        if (!blurredCell) return;
         setTimeout(() => {
-          if (editingCell) commitEdit();
+          if (editingCell && isSameCell(editingCell, blurredCell)) commitEdit();
         }, 100);
       }
 
