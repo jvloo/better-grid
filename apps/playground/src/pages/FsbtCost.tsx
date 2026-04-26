@@ -598,7 +598,7 @@ export function FsbtCost() {
     () => [
       // ── Col 0: Menu — the production reference's add/delete ⋮ (handled by rowActions plugin) ──
       {
-        id: 'actions', headerName: '', width: 50, editable: false,
+        id: 'actions', headerName: '', width: 40, editable: false, resizable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
@@ -740,7 +740,7 @@ export function FsbtCost() {
       },
       // ── Col 10: Variance status — valid/warning/empty circle icon ──
       {
-        id: 'varianceStatus', headerName: '', width: 44, editable: false,
+        id: 'varianceStatus', headerName: '', width: 44, editable: false, resizable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
@@ -749,7 +749,7 @@ export function FsbtCost() {
       },
       // ── Col 11: Collapse/expand chevron (at end of frozen row, matches FsbtProgram) ──
       {
-        id: 'collapse', headerName: '', width: 40, editable: false,
+        id: 'collapse', headerName: '', width: 40, editable: false, resizable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as CostRow;
           container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
@@ -811,6 +811,7 @@ export function FsbtCost() {
     columns,
     mode: null,
     plugins,
+    selection: false,
     // Freeze 12 columns (the production reference's 11 defaults + our trailing collapse column).
     // Monthly columns scroll horizontally. clip lets the user drag the clip
     // handle to hide some pinned columns when the viewport is narrow;

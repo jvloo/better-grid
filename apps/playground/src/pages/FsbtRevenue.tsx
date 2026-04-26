@@ -512,6 +512,7 @@ export function FsbtRevenue() {
     columns: btsColumns,
     mode: null,
     plugins: btsPlugins,
+    selection: false,
     pinned: { bottom: [btsTotalsRow] },
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
@@ -614,7 +615,7 @@ export function FsbtRevenue() {
       { id: 'variance', field: 'variance', headerName: 'Variance', width: 80, cellType: 'change' as const, align: 'center' as const, editable: false, cellStyle: parentRowCellStyle },
       // ── Variance status icon slot ──
       {
-        id: 'varianceStatus', headerName: '', width: 44, editable: false,
+        id: 'varianceStatus', headerName: '', width: 44, editable: false, resizable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as HoldingRow;
           container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
@@ -622,7 +623,7 @@ export function FsbtRevenue() {
       },
       // ── Collapse chevron — at end of frozen row (matches Cost's layout) ──
       {
-        id: 'collapse', headerName: '', width: 40, editable: false,
+        id: 'collapse', headerName: '', width: 40, editable: false, resizable: false,
         cellRenderer: (container, ctx) => {
           const row = ctx.row as HoldingRow;
           container.style.backgroundColor = row.parentId === null ? FSBT_STYLES.parentRowBg : '';
@@ -658,6 +659,7 @@ export function FsbtRevenue() {
     data: holdingData,
     columns: holdingColumns,
     mode: null,
+    selection: false,
     // Freeze through the collapse column so the user can scroll monthly data
     // horizontally without losing the category/amount context.
     frozen: { left: 9, clip: { minVisible: 2 } },
@@ -759,7 +761,7 @@ export function FsbtRevenue() {
       // reference's revenue-details-table-cell-variance-status renderer; shown on item
       // rows only (sections + totals leave the slot blank).
       {
-        id: 'varianceStatus', headerName: '', width: 44, editable: false,
+        id: 'varianceStatus', headerName: '', width: 44, editable: false, resizable: false,
         cellRenderer: (container) => {
           // Icon-only slot — variance icon is rendered downstream via the change/badge
           // cellType once a non-zero variance is present. For now we leave the slot
@@ -797,6 +799,7 @@ export function FsbtRevenue() {
     columns: btsDetailsColumns,
     mode: null,
     plugins: btsDetailsPlugins,
+    selection: false,
     frozen: { left: 8, clip: { minVisible: 2 } },
     striped: true,
     headerHeight: FSBT_STYLES.headerHeight,
@@ -948,6 +951,7 @@ export function FsbtRevenue() {
     columns: holdingGeneralColumns,
     mode: null,
     plugins: holdingGeneralPlugins,
+    selection: false,
     pinned: { bottom: [holdingGeneralTotalsRow] },
     headers: holdingGeneralHeaderLayout,
     // Freeze Type + Description so category context is visible while the
@@ -981,6 +985,7 @@ export function FsbtRevenue() {
     columns: holdingSaleColumns,
     mode: null,
     plugins: holdingSalePlugins,
+    selection: false,
     frozen: { left: 8, clip: { minVisible: 2 } },
     striped: true,
     headerHeight: FSBT_STYLES.headerHeight,

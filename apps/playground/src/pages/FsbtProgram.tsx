@@ -266,7 +266,7 @@ export function FsbtProgram() {
   const columns = useMemo<ColumnDef<ProgramRow>[]>(() => [
     // ── Col 0: Menu (handled by rowActions plugin) ──────────────────────
     {
-      id: 'actions', headerName: '', width: 50, editable: false,
+      id: 'actions', headerName: '', width: 40, editable: false, resizable: false,
       cellRenderer: (container, ctx) => {
         // Background only — rowActions plugin wraps this to add menu button
         const row = ctx.row as ProgramRow;
@@ -406,7 +406,7 @@ export function FsbtProgram() {
     },
     // ── Col 6: Collapse/expand chevron (handled by hierarchy plugin) ────
     {
-      id: 'collapse', headerName: '', width: 55, editable: false,
+      id: 'collapse', headerName: '', width: 55, editable: false, resizable: false,
       cellRenderer: (container, ctx) => {
         const row = ctx.row as ProgramRow;
         container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
@@ -477,6 +477,7 @@ export function FsbtProgram() {
     columns,
     mode: null,
     plugins,
+    selection: false,
     frozen: { left: 7, clip: { minVisible: 2 } },
     striped: true,
     headerHeight: 44,
