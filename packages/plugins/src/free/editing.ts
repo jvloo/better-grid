@@ -3713,11 +3713,15 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         // Defer refresh so any in-progress pointer events can still find
         // their target cells (synchronous refresh destroys DOM during mousedown).
-        // Guard: if a new edit has started by the time rAF fires, skip the
-        // refresh — otherwise it would destroy the freshly-opened editor.
+        // Refresh runs unconditionally so the just-closed cell repaints its
+        // formatted display (cellType renderer rewrites textContent that the
+        // editor wiped). The pipeline skips cells with bg-cell--editing
+        // (pipeline.ts), so a freshly-opened editor on a different cell
+        // survives the refresh — only the side-effects (focus + fill handle)
+        // are gated on no new edit being active.
         requestAnimationFrame(() => {
-          if (editingCell) return; // new edit already started, don't nuke it
           ctx.grid.refresh();
+          if (editingCell) return; // new edit started — keep its UI focused/active
           // Show fill handle again
           const gc = getGridContainer();
           const fh = gc.querySelector('.bg-fill-handle') as HTMLElement | null;
