@@ -78,7 +78,12 @@ export function pagination(options?: PaginationOptions): GridPlugin<'pagination'
 
       // Create pagination bar UI below the grid
       function createPaginationBar(): void {
-        const gridEl = document.querySelector('.bg-grid') as HTMLElement;
+        // Bind to THIS grid's container (not the first .bg-grid in the document).
+        // Using document.querySelector here previously caused two pagination bars
+        // to render under React StrictMode: each (mount, unmount, mount) cycle
+        // produced an init that scheduled a setTimeout — both timeouts fired
+        // and each appended to whichever .bg-grid the query happened to find.
+        const gridEl = ctx.grid.getContainer();
         if (!gridEl || !gridEl.parentElement) return;
 
         const bar = document.createElement('div');
@@ -195,14 +200,13 @@ export function pagination(options?: PaginationOptions): GridPlugin<'pagination'
         }
       }
 
-      // Initialize after a small delay to let the grid mount
-      // Guard against React StrictMode double-init
-      setTimeout(() => {
-        if (paginationBar) return; // already initialized
-        init();
-        createPaginationBar();
-        updatePaginationBar(); // populate info after bar is created
-      }, 0);
+      // Synchronous init: by the time plugin.init() runs, createGrid has already
+      // mounted the container, so getContainer() returns it. The previous
+      // setTimeout(0) wrap caused a StrictMode double-mount race where both
+      // mount cycles' deferred inits fired and each appended its own bar.
+      init();
+      createPaginationBar();
+      updatePaginationBar();
 
       const api: PaginationApi = {
         getPage: () => currentPage,
