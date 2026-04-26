@@ -8,4 +8,5 @@ export default defineConfig({
   clean: true,
   outDir: 'dist',
   external: ['jscodeshift'],
+  shims: true,
 });
