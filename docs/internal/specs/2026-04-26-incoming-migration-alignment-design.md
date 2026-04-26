@@ -63,6 +63,7 @@ Rationale: `cellStyle`/`cellClass` already get `(value, row)`; `rowIndex` rounds
 | d | **Drop the object form for `headers` / `footers`.** Accept `HeaderRow[]` / `FooterRow[]` only. | The `{ layout, height }` form duplicates top-level `headerHeight`. Single shape. |
 | e | **Replace `tableStyle` enum with two booleans.** `bordered?: boolean` (default `true`), `striped?: boolean` at top-level options. | Bordered + striped is a real combo; the enum forced single-pick. |
 | f | **`selection?: false \| { mode: 'cell' \| 'row' } \| { mode: 'range'; multiRange?; fillHandle? }`** — discriminated union. | `'none'` sentinel string is awkward; `false` disables. `multiRange`/`fillHandle` only appear when meaningful (range mode). Default = `{ mode: 'cell' }`. |
+| g | **Rename `configureBetterGrid` → `configure`** in `@better-grid/react`. | Shorter, idiomatic at the call site (matches MUI's `createTheme`/`createPalette`). Consumers can alias on import to dodge local collisions: `import { configure as configureBG } from '@better-grid/react'`. |
 
 ### 1.5 Bug / clarity fixes
 
