@@ -81,14 +81,14 @@ const columns = [
   col.badge('priority', {
     headerName: 'Priority',
     width: 90,
-    cellEditor: 'dropdown',
+    cellEditor: 'select',
     sortable: true,
     options: priorityOptions,
   }),
   col.badge('status', {
     headerName: 'Status',
     width: 120,
-    cellEditor: 'dropdown',
+    cellEditor: 'select',
     sortable: true,
     options: statusOptions,
   }),

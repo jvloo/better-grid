@@ -110,7 +110,6 @@ export type CellType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'bi
 /** Cell editor mode override */
 export type CellEditorType =
   | 'text'
-  | 'dropdown'
   | 'select'
   | 'selectWithInput'
   | 'number'
