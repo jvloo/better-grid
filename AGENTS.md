@@ -13,7 +13,7 @@ Monorepo with pnpm workspaces + Turborepo.
 | `@better-grid/core`      | Framework-agnostic grid engine                                                                                                                              | MIT        |
 | `@better-grid/react`     | React adapter (`useGrid`, `BetterGrid`, `defineColumn`, `configureBetterGrid`, mode/feature resolver). Sub-export `@better-grid/react/rhf` (`useGridForm`). | MIT        |
 | `@better-grid/plugins`   | Free plugins (editing, sorting, filtering, formatting, validation, hierarchy, clipboard, grouping, pagination, search, export, undoRedo, cellRenderers, autoDetect) + built-in cell renderers | MIT        |
-| `@better-grid/pro`       | Commercial plugins (gantt, aggregation, merge-cells, row-actions, pro-renderers)                                                                            | Commercial |
+| `@better-grid/pro`       | Source-available commercial plugins (gantt, aggregation, merge-cells, row-actions, pro-renderers)                                                           | Commercial |
 | `@better-grid/mcp`       | MCP server for developer tooling                                                                                                                            | MIT (future) |
 | `@better-grid/plugin-ai` | AI features: free NL filtering + pro data intelligence                                                                                                      | Tiered (future) |
 

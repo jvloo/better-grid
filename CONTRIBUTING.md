@@ -1,6 +1,6 @@
 # Contributing to Better Grid
 
-Thanks for considering a contribution. Better Grid is an OSS data-grid library backed by a small team and a single primary maintainer ([@jvloo](https://github.com/jvloo)). The bar is high but the door is open — bugfixes, plugins, docs, and tests are all welcome.
+Thanks for considering a contribution. Better Grid is an OSS-first data-grid library with source-available pro plugins, backed by a small team and a single primary maintainer ([@jvloo](https://github.com/jvloo)). The bar is high but the door is open — bugfixes, plugins, docs, and tests are all welcome.
 
 ## Code of conduct
 
@@ -21,7 +21,7 @@ Monorepo with pnpm workspaces + Turborepo. See [`AGENTS.md`](AGENTS.md) for the 
 packages/core      Framework-agnostic engine (MIT)
 packages/react     React adapter (MIT)
 packages/plugins   Free plugins (MIT)
-packages/pro       Source-available pro plugins
+packages/pro       Source-available commercial pro plugins
 apps/playground    Vite + React dev playground (~25 pages)
 docs               Migration guides, theme integration, PR summaries
 ```
@@ -97,7 +97,7 @@ If you want to ship a plugin externally, you don't need to land it in the monore
 
 ## Pro plugins (`@better-grid/pro`)
 
-`@better-grid/pro` is source-available, not OSS. We accept bug reports and small fixes against it, but feature-level contributions go through a different review path — open a feature request first so we can discuss licensing and roadmap fit before you write code.
+`@better-grid/pro` is source-available, not OSS. Commercial production use requires a Better Grid Pro license, even though v1 has no hard runtime DRM. We accept bug reports and small fixes against it, but feature-level contributions go through a different review path — open a feature request first so we can discuss licensing and roadmap fit before you write code.
 
 ## Security
 

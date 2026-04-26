@@ -1,6 +1,6 @@
 # Getting Support
 
-Better Grid is an OSS project maintained by a small team. We can't promise SLAs, but we read everything that comes through the channels below and respond as fast as we can.
+Better Grid is an OSS-first project with source-available pro plugins, maintained by a small team. We can't promise SLAs, but we read everything that comes through the channels below and respond as fast as we can.
 
 ## Where to ask
 
@@ -10,6 +10,7 @@ Better Grid is an OSS project maintained by a small team. We can't promise SLAs,
 | A feature idea                             | [Open a feature request](https://github.com/jvloo/better-grid/issues/new?template=feature_request.yml) |
 | A "how do I…?" question                    | [Start a Discussion](https://github.com/jvloo/better-grid/discussions)                       |
 | A migration question (from v0, AG Grid, TanStack) | Read the relevant guide in [`docs/`](docs/), then ask in Discussions if it doesn't cover you |
+| A Pro license / commercial-use question           | Email **ping@xavierloo.com** with the package, project, and intended use                      |
 | A security finding                         | See [`SECURITY.md`](SECURITY.md). **Do not open a public issue.**                            |
 | Something interesting you built            | Share it in the "Show & tell" Discussions category — we love seeing real apps.                |
 
@@ -28,9 +29,9 @@ There is no paid support tier. Realistic timing:
 - **Feature requests:** read promptly, queued against the [roadmap](ROADMAP.md). Some sit for months because the use case is rare; that's not a rejection.
 - **Discussions questions:** answered when a maintainer is around; the community can also help — please pay it forward when you find an answer.
 
-## Commercial support
+## Commercial use and support
 
-Not currently offered. If you're a company shipping Better Grid in production and want a faster-than-OSS feedback loop, guaranteed response times, or a custom-built plugin, reach out at **ping@xavierloo.com** and we can discuss options.
+Commercial production use of `@better-grid/pro` requires a Better Grid Pro license. If you're a company shipping Better Grid in production and want a license, faster-than-OSS feedback loop, guaranteed response times, or a custom-built plugin, reach out at **ping@xavierloo.com** and we can discuss options.
 
 ## Sponsorship
 
@@ -46,3 +47,4 @@ Better Grid is independent. If it saves your team time and you'd like to support
 - [`docs/migration-v0-to-v1.md`](docs/migration-v0-to-v1.md) — v0 → v1 breaking changes
 - [`docs/migration-from-ag-grid.md`](docs/migration-from-ag-grid.md), [`docs/migration-from-tanstack-table.md`](docs/migration-from-tanstack-table.md) — incoming-migration cheat sheets
 - [`docs/mui-theme-integration.md`](docs/mui-theme-integration.md) — MUI palette → CSS variables recipe
+- [`docs/v1-release-playbook.md`](docs/v1-release-playbook.md) — v1 publish checklist and pro licensing decision record

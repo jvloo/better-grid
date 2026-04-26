@@ -25,14 +25,35 @@ Thumbs.db
 
 # Test
 coverage/
+playwright-report/
+test-results/
 
 # Logs
 *.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Package/release artifacts
+*.tgz
+*.pack
+
+# Local npm auth
+# Do not commit tokens. Force-add a token-free .npmrc only if the repo ever needs one.
+.npmrc
 
 # Tmp
 .playwright-mcp/
 screenshots/
 .ref/
+tmp-*.png
+tmp-*.jpg
+tmp-*.jpeg
+tmp-*.webp
+tmp-*.gif
+tmp-*.mp4
+tmp-*.webm
 
 # Agents
 .claude/settings.local.json

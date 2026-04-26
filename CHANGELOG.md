@@ -10,6 +10,11 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 
 - Phase B — Wiseway feasibility tables (cost / program / revenue) migrated behind a feature flag in production.
 
+### Documentation
+
+- Added `docs/v1-release-playbook.md` to capture the v1 public/source-available Pro licensing decision and npm publish checklist.
+- Synced package-level license files so all npm tarballs include the correct MIT or Pro license text.
+
 ## [1.0.0] — 2026-04-26
 
 ### Added — Wiseway-shape foundation (Phase A)

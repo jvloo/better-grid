@@ -167,9 +167,10 @@ Inspired by [Better Auth](https://better-auth.com):
 ## Support
 
 Better Grid is an independent project. If it saves you time or helps your work,
-support development through sponsorship or commercial support:
+support development through sponsorship, Pro licensing, or commercial support:
 
 - **General questions / how-do-I-…?** — see [`SUPPORT.md`](SUPPORT.md)
+- **Pro license / commercial use** — `ping@xavierloo.com`
 - **Commercial support / custom plugins** — `ping@xavierloo.com`
 - **Sponsorship** — `sponsors@xavierloo.com` (or GitHub Sponsors when enabled)
 - **Project / library questions** — `projects@xavierloo.com`
