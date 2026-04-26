@@ -135,7 +135,8 @@ export interface BadgeOption extends ColumnOption {
 }
 
 export interface ColumnDef<TData = unknown> {
-  id: string;
+  /** Stable column identity. Optional — defaults to `field` when omitted. */
+  id?: string;
   field?: keyof TData & string;
   valueGetter?: (row: TData, rowIndex: number) => unknown;
   headerName: string;

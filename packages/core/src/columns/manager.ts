@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // Column Manager — Column definitions, widths, and value access
 // ============================================================================
 
@@ -12,16 +12,31 @@ declare const process: { env: { NODE_ENV?: string } };
 const DEFAULT_WIDTH = 100;
 const DEFAULT_MIN_WIDTH = 50;
 
+/**
+ * Resolve a column's stable id from `id` → `field` fallback.
+ * Throws at normalization time when neither is provided.
+ */
+function normalizeColumn<TData>(col: ColumnDef<TData>): ColumnDef<TData> & { id: string } {
+  const id = col.id ?? col.field;
+  if (!id) {
+    throw new Error('[better-grid] Column must have either id or field.');
+  }
+  return { ...col, id };
+}
+
 export class ColumnManager<TData = unknown> {
   private columns: ColumnDef<TData>[] = [];
   private widths: number[] = [];
   private readonlyCols = new Set<number>();
 
   setColumns(columns: ColumnDef<TData>[]): void {
-    // Dev-mode: detect duplicate column ids before normalization
+    // Normalize id: default to field when omitted; throw when both are absent.
+    const idResolved = columns.map((col) => normalizeColumn(col));
+
+    // Dev-mode: detect duplicate column ids after normalization
     if (process.env.NODE_ENV !== 'production') {
       const seen = new Set<string>();
-      for (const col of columns) {
+      for (const col of idResolved) {
         if (seen.has(col.id)) {
           throw new Error(`[better-grid] Duplicate column id: "${col.id}". Each column must have a unique id.`);
         }
@@ -30,17 +45,17 @@ export class ColumnManager<TData = unknown> {
     }
 
     // Normalize columns: default field, validate widths
-    this.columns = columns.map((col) => {
-      const normalized = !col.field && !col.valueGetter
+    this.columns = idResolved.map((col) => {
+      const withField = !col.field && !col.valueGetter
         ? { ...col, field: col.id as keyof TData & string }
         : col;
 
       // Validate width constraints
-      if (normalized.minWidth && normalized.maxWidth && normalized.minWidth > normalized.maxWidth) {
-        console.warn(`[better-grid] Column "${col.id}": minWidth (${normalized.minWidth}) > maxWidth (${normalized.maxWidth})`);
+      if (withField.minWidth && withField.maxWidth && withField.minWidth > withField.maxWidth) {
+        console.warn(`[better-grid] Column "${withField.id}": minWidth (${withField.minWidth}) > maxWidth (${withField.maxWidth})`);
       }
 
-      return normalized;
+      return withField;
     });
     this.widths = this.columns.map((col) => col.width ?? DEFAULT_WIDTH);
     this.readonlyCols.clear();
