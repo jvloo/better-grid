@@ -6,7 +6,19 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 
 ## [Unreleased]
 
-_(no changes yet)_
+### Phase 1 surface refresh (pre-publish, no back-compat)
+
+- ColumnDef renames: `accessorKey` → `field`, `accessorFn` → `valueGetter`, `header` → `headerName` (split with new `headerRenderer` for DOM custom headers).
+- ColumnDef new props: `hide` (AG + MUI X), `flex` (MUI X), `headerAlign` (MUI X).
+- ColumnDef DX: `id` is now optional (defaults to `field`); `cellEditor: 'dropdown'` dropped (use `'select'`).
+- ColumnDef signatures extended: `valueFormatter(value, row)`, `valueParser(value, row)`, `cellStyle(value, row, rowIndex)`, `cellClass(value, row, rowIndex)`, `comparator(a, b, rowA?, rowB?)`.
+- GridOptions: top-level `getRowId` (was nested under `hierarchy`); `bordered` + `striped` flags replace `tableStyle` enum; `headers`/`footers` accept `HeaderRow[]`/`FooterRow[]` only (object form dropped); `selection` is a discriminated union (`false` disables, no `'none'` sentinel).
+- GridState mirrors GridOptions shape: `state.frozen.{top,left}` / `state.pinned.{top,bottom}` (was flat `frozenTopRows` / `frozenLeftColumns` / `pinnedTopRows` / `pinnedBottomRows`).
+- New API: `grid.setColumnHidden(columnId, hide)` toggles column visibility at runtime. `grid.getSelectionMode()` returns the resolved selection mode.
+- Bug fix: `CellChange.oldValue` is the previous CELL value (was the previous row object).
+- Event renames: `'data:change'` → `'cell:change'`; `'freezeClip:change'` → `'frozen:clip'`.
+- React: `configureBetterGrid` renamed to `configure`.
+- `headerRenderer` mutates the header label area (`.bg-header-cell__text`) — filter button, resize handle, and ARIA wiring on the cell are preserved automatically.
 
 ## [1.0.0] — 2026-04-26
 
