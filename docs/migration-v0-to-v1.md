@@ -9,6 +9,15 @@ The v1 release reshapes the Better Grid init API for better DX. Pre-release, no 
 - Plugin instantiation: replace with `mode="spreadsheet"` or `features={['edit', 'clipboard']}` strings; full plugin instances still work via `plugins={[...]}`.
 - `<BetterGrid columns={} data={} />` flat: still works. New advanced path: `const grid = useGrid({...}); <BetterGrid grid={grid} />`.
 
+## What's new in v1 (additive)
+
+These features did not exist in v0. They aren't migration steps — adopt them when you're ready:
+
+- **`column.alwaysInput: boolean | (row, col) => boolean`** — render a real `<input>` permanently in every visible cell (Wiseway-shape finance sheets). Commits via the standard parser path on change/blur/Enter. Plugin warns when `alwaysInput cols × rows > editing.alwaysInputThreshold` (default 1000).
+- **`@better-grid/react/rhf` sub-export** — `useGridForm({ grid, baseName: 'rows' })` listens to `data:change` events from the grid and forwards each into `setValue('${baseName}.${rowIndex}.${columnId}', newValue)` so cells participate in a surrounding RHF `<FormProvider>`'s dirty/touched/validation state. `react-hook-form` is an optional peer dep.
+- **`column.validationMessageRenderer`** and **`ColumnValidationRule.messageRenderer`** — return any HTMLElement (e.g. an MUI Alert mounted via `createRoot`) to control the error tooltip body. Falls back to the default text bubble when omitted.
+- **MUI theme bridge** — see [`docs/mui-theme-integration.md`](mui-theme-integration.md) for the recipe wiring `palette` / `typography` / `mode` through Better Grid's CSS custom properties.
+
 ## Breaking changes
 
 ### 1. Column definitions

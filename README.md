@@ -13,8 +13,7 @@ npm install @better-grid/core @better-grid/react @better-grid/plugins
 **React:**
 
 ```tsx
-import { BetterGrid } from '@better-grid/react';
-import { formatting, editing, sorting } from '@better-grid/plugins';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import '@better-grid/core/styles.css';
 
 interface Row {
@@ -24,28 +23,27 @@ interface Row {
   active: boolean;
 }
 
+const columns = [
+  col.text('name', { header: 'Name', width: 200, editable: true }),
+  col.currency('amount', { header: 'Amount', width: 150, precision: 2 }),
+  col.boolean('active', { header: 'Active', width: 80 }),
+];
+
 function MyGrid({ data }: { data: Row[] }) {
   return (
     <BetterGrid<Row>
-      columns={[
-        { id: 'id', header: '#', width: 40 },
-        { id: 'name', header: 'Name', width: 200, editable: true },
-        { id: 'amount', header: 'Amount', width: 150, cellType: 'currency', align: 'right', sortable: true },
-        { id: 'active', header: 'Active', width: 80, align: 'center' },
-      ]}
+      columns={columns}
       data={data}
-      frozenLeftColumns={1}
+      mode="spreadsheet"            // sort + filter + edit + clipboard + undo
+      frozen={{ left: 1 }}
       selection={{ mode: 'range' }}
-      plugins={[
-        formatting({ locale: 'en-US', currencyCode: 'USD' }),
-        editing({ editTrigger: 'dblclick' }),
-        sorting(),
-      ]}
       height={400}
     />
   );
 }
 ```
+
+The `col.<type>(field, opts)` builder fills in `id`, `accessorKey`, `cellType`, and alignment for you. The `mode` preset opts you into a curated bundle of features; use `features={['edit', 'sort']}` for finer control or `features={{ edit: { editTrigger: 'click' } }}` to pass options. See [`docs/migration-v0-to-v1.md`](docs/migration-v0-to-v1.md) for every breaking change vs v0.
 
 **Vanilla TypeScript** (no framework):
 
@@ -56,8 +54,8 @@ import '@better-grid/core/styles.css';
 
 const grid = createGrid<Row>({
   columns: [
-    { id: 'name', header: 'Name', width: 200 },
-    { id: 'amount', header: 'Amount', cellType: 'currency', align: 'right' },
+    { id: 'name', accessorKey: 'name', header: 'Name', width: 200 },
+    { id: 'amount', accessorKey: 'amount', header: 'Amount', cellType: 'currency', align: 'right' },
   ],
   data,
   plugins: [formatting({ locale: 'en-US', currencyCode: 'USD' }), sorting()],
@@ -66,8 +64,11 @@ const grid = createGrid<Row>({
 grid.mount(document.getElementById('grid-host')!);
 ```
 
+The vanilla path takes plugin instances directly — no `mode`/`features` registry, by design (the registry lives in `@better-grid/react`).
+
 ## Migrating from another grid?
 
+- [From v0 to v1 (Better Grid)](docs/migration-v0-to-v1.md) — full breaking-change inventory for the new init API
 - [From AG Grid](docs/migration-from-ag-grid.md) — column-def + grid-options cheat sheet
 - [From TanStack Table](docs/migration-from-tanstack-table.md) — rendering-included vs headless cheat sheet
 
@@ -104,10 +105,14 @@ The data grid market has a gap — no library combines a rich free tier, type-sa
 ### Free Plugins (MIT)
 
 - **Formatting** — currency, percent, dates via Intl API
-- **Editing** — text input, dropdown, boolean toggle, date
+- **Editing** — text input, dropdown, boolean toggle, date, masked, autocomplete
+  - **`alwaysInput` per-column flag** — render a real `<input>` permanently in every cell (Wiseway-shape finance sheets)
+  - Floating or inline editor mode
+  - `inputStyle` cells with placeholder + prefix/suffix adornments
 - **Sorting** — single/multi-column, custom comparators, header click
 - **Filtering** — 9 operators, context menu, column filters
-- **Validation** — required fields, custom rules, error state UI
+- **Validation** — required fields, custom rules, error tooltip UI
+  - **`messageRenderer` callback** — return any HTMLElement (e.g. an MUI Alert) to control the error body
 
 ### Additional Free Plugins (MIT)
 
@@ -117,6 +122,14 @@ The data grid market has a gap — no library combines a rich free tier, type-sa
 - CSV/Excel export
 - Search & highlight
 - Hierarchy, pagination, cell renderers, and auto-detect helpers
+
+### React extras
+
+- **`useGrid`** hook — returns a `GridHandle` with `api`, `containerRef`, and ref-based `context`
+- **`defineColumn` builders** — `col.text` / `col.currency` / `col.percent` / `col.date` / `col.badge` / `col.boolean` / `col.progress` / `col.rating` / `col.change` / `col.link` / `col.timeline` / `col.tooltip` / `col.loading` / `col.custom`; extend with `registerColumn`
+- **`configureBetterGrid`** — app-wide feature option defaults
+- **Mode presets** — `view` / `interactive` / `spreadsheet` / `dashboard` / `null`; extend with `registerMode`
+- **`@better-grid/react/rhf`** sub-export — `useGridForm` bridges cell commits into a surrounding `<FormProvider>` (react-hook-form is an optional peer dep)
 
 ### Pro Plugins (source-available)
 
@@ -143,12 +156,13 @@ Inspired by [Better Auth](https://better-auth.com):
 
 ## Packages
 
-| Package                | Description                                             |
-| ---------------------- | ------------------------------------------------------- |
-| `@better-grid/core`    | Framework-agnostic grid engine                          |
-| `@better-grid/react`   | React adapter (`useGrid` hook + `BetterGrid` component) |
-| `@better-grid/plugins` | Official free plugins + built-in cell renderers         |
-| `@better-grid/pro`     | Source-available pro plugins                            |
+| Package                      | Description                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| `@better-grid/core`          | Framework-agnostic grid engine                                                       |
+| `@better-grid/react`         | React adapter (`useGrid` hook + `BetterGrid` component + `defineColumn` builders)    |
+| `@better-grid/react/rhf`     | Optional react-hook-form bridge (`useGridForm`)                                      |
+| `@better-grid/plugins`       | Official free plugins + built-in cell renderers                                      |
+| `@better-grid/pro`           | Source-available pro plugins                                                         |
 
 ## Support
 
@@ -173,6 +187,8 @@ Customize via CSS custom properties:
   --bg-frozen-col-border: 2px solid #6495ed;
 }
 ```
+
+For Material UI integration — palette, typography, density, dark mode wired through one `styled()` wrapper — see [`docs/mui-theme-integration.md`](docs/mui-theme-integration.md).
 
 ## Browser support
 

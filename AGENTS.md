@@ -8,14 +8,36 @@ Monorepo with pnpm workspaces + Turborepo.
 
 ### Packages
 
-| Package | Description | License |
-|---------|-------------|---------|
-| `@better-grid/core` | Framework-agnostic grid engine | MIT |
-| `@better-grid/react` | React adapter (hooks + component) | MIT |
-| `@better-grid/plugins` | Free plugins (editing, sorting, filtering, formatting, validation, hierarchy, clipboard, grouping, pagination, search, export, undoRedo, cellRenderers, autoDetect) + built-in cell renderers | MIT |
-| `@better-grid/pro` | Commercial plugins (gantt, aggregation, merge-cells, row-actions, pro-renderers) | Commercial |
-| `@better-grid/mcp` | MCP server for developer tooling | MIT (future) |
-| `@better-grid/plugin-ai` | AI features: free NL filtering + pro data intelligence | Tiered (future) |
+| Package                  | Description                                                                                                                                                 | License    |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `@better-grid/core`      | Framework-agnostic grid engine                                                                                                                              | MIT        |
+| `@better-grid/react`     | React adapter (`useGrid`, `BetterGrid`, `defineColumn`, `configureBetterGrid`, mode/feature resolver). Sub-export `@better-grid/react/rhf` (`useGridForm`). | MIT        |
+| `@better-grid/plugins`   | Free plugins (editing, sorting, filtering, formatting, validation, hierarchy, clipboard, grouping, pagination, search, export, undoRedo, cellRenderers, autoDetect) + built-in cell renderers | MIT        |
+| `@better-grid/pro`       | Commercial plugins (gantt, aggregation, merge-cells, row-actions, pro-renderers)                                                                            | Commercial |
+| `@better-grid/mcp`       | MCP server for developer tooling                                                                                                                            | MIT (future) |
+| `@better-grid/plugin-ai` | AI features: free NL filtering + pro data intelligence                                                                                                      | Tiered (future) |
+
+### Init API (v1)
+
+`@better-grid/react` ships a layered init API. Pick the layer that matches the consumer's complexity:
+
+- **Sugar** — `<BetterGrid columns data mode="spreadsheet" />`. Inline options, no `useGrid` needed.
+- **Handle** — `const grid = useGrid({...}); <BetterGrid grid={grid} />`. Required when callers need imperative access (`grid.api.scrollToCell(...)`, `grid.containerRef`), the `context` ref-pattern, or when wiring `useGridForm`.
+- **Vanilla** — `createGrid({...}).mount(el)` from `@better-grid/core`. Plugin instances directly; no mode/features registry.
+
+Mode presets opt the grid into bundles of features:
+
+| Mode          | Features included                              | Use case                       |
+| ------------- | ---------------------------------------------- | ------------------------------ |
+| `null`        | —                                              | Zero defaults                  |
+| `view`        | sort, filter, resize, select                   | Read-only browsing             |
+| `interactive` | view + reorder                                 | Lightly interactive            |
+| `spreadsheet` | interactive + edit + clipboard + undo          | Excel-like data entry          |
+| `dashboard`   | view + export                                  | Read-heavy with snapshot export |
+
+`features` is additive on top of the mode. Object form passes options: `features={{ edit: { editTrigger: 'click' } }}`. `plugins` is the escape hatch for plugins not in the registry.
+
+App-wide defaults: `configureBetterGrid({ features: { format: { locale: 'en-US' } } })` at app boot.
 
 ### Core Design
 
@@ -25,6 +47,7 @@ Monorepo with pnpm workspaces + Turborepo.
 - **Config-driven DX** — works out of the box with `createGrid()`, one function call
 - **Framework adapters** — thin reactivity wrappers (~50 lines each)
 - **cellType registry** — plugins register renderers via `registerCellType()`; core just dispatches
+- **Context ref** — `useGrid({ context })` stores the value on a ref; cell renderers read it as `ctx.context` and always see the latest closure without re-init.
 
 ### Typed plugins & error codes
 
@@ -69,7 +92,11 @@ Three interfaces in `@better-grid/core` are designed to be augmented by plugin
 packages via TypeScript's module-augmentation mechanism:
 
 - **`ColumnDef`** — add fields the plugin reads off each column. Example:
-  `editing` adds `precision`, `min`, `max`, `placeholder`, `mask`.
+  `editing` adds `precision`, `min`, `max`, `placeholder`, `mask`, `prefix`,
+  `suffix`, `unit`, `inputEllipsis`, `inputEditCursor`, `alwaysInput`,
+  `selectInput`, `selectValue`, `selectInputValue`, `parseSelectWithInputValue`.
+  `validation` adds `required`, `rules`, `validationMessageRenderer`.
+  `formatting` adds `dateFormat`.
 - **`PluginState`** — add a typed slice under `grid.getState().pluginState`.
   The base shape is an empty interface; each plugin fills its own slot.
 - **`PluginContext`** — add methods plugins can call on the context passed to
@@ -99,12 +126,13 @@ don't still see the unextended base interfaces.
 - **Rendering**: DOM-based cell pooling with recycling + `transform: translate3d()` for GPU compositing
 - **Scroll architecture**: fake scrollbar pattern — viewport (`overflow:hidden`) + sibling fakeScrollbar (`overflow:auto`). Container-level transform shifts cells. Old cells stay visible during JS update (no blank flash).
 - **Frozen vs Pinned**:
-  - `frozen` = lock first N items from the main array in place while scrolling. `frozenLeftColumns`, `frozenTopRows`.
-  - `pinned` = attach separate data outside the main array. `pinnedTopRows`, `pinnedBottomRows` (footer/totals).
+  - `frozen` = lock first N items from the main array in place while scrolling. `frozen.left`, `frozen.top`, `frozen.clip` (drag-to-clip frozen columns).
+  - `pinned` = attach separate data outside the main array. `pinned.top`, `pinned.bottom` (footer/totals).
   - Frozen columns: separate overlay outside scroll container, synced via same transform offset.
 - **Selection**: overlay layer (avoids re-rendering all cells on selection change)
-- **State**: fine-grained slice subscriptions + batching
+- **State**: fine-grained slice subscriptions + batching; `data:change` event fires per `updateCell`
 - **Alignment**: `align` and `verticalAlign` props on ColumnDef, applied before cellRenderer (renderer can override)
+- **State on data swap**: replacing the `data` reference clears selection, resets scroll to (0,0), and clears undo history (when the undo plugin is loaded). Edit-in-progress commit-or-cancels per the editing plugin's rules.
 
 ### ColumnDef Props
 
@@ -112,19 +140,25 @@ don't still see the unextended base interfaces.
 Identity:    id, accessorKey, accessorFn, header
 Layout:      width, minWidth, maxWidth, resizable
 Alignment:   align ('left'|'center'|'right'), verticalAlign ('top'|'middle'|'bottom')
-Rendering:   cellType ('number'|'currency'|'percent'|'date'|'bigint'|'select'|'boolean'), cellRenderer
-Editing:     editable, cellEditor ('text'|'dropdown'), options, valueParser
+Rendering:   cellType ('number'|'currency'|'percent'|'date'|'bigint'|'select'|'boolean'|'badge'|'progress'|'rating'|'change'|'changeIndicator'|'link'|'timeline'|'tooltip'|'loading'|'custom'),
+             cellRenderer, cellStyle, cellClass
+Editing:     editable, cellEditor ('text'|'dropdown'|'select'|'selectWithInput'|'number'|'date'|'autocomplete'|'masked'),
+             options, valueParser
 Sorting:     sortable, comparator
 Formatting:  hideZero, valueFormatter
-Extension:   meta, cellStyle, cellClass
+Extension:   meta
 ```
 
 Plugin-only fields (added via `declare module '@better-grid/core'` augmentation —
 they only exist when the relevant plugin is bundled):
 
-- `editing` → `precision`, `min`, `max`, `placeholder`, `mask`
+- `editing` → `precision`, `min`, `max`, `placeholder`, `mask`, `prefix`, `suffix`, `unit`, `inputEllipsis`, `inputEditCursor`, `alwaysInput`, `selectInput`, `selectValue`, `selectInputValue`, `parseSelectWithInputValue`
 - `formatting` → `dateFormat`
-- `validation` → `required`, `rules`
+- `validation` → `required`, `rules`, `validationMessageRenderer`
+
+The React `defineColumn` builders (`col.text`, `col.currency`, etc.) wrap these
+fields with type-aware factories that set `id`, `accessorKey`, `cellType`, and
+default alignment for you.
 
 ## Build
 
@@ -173,15 +207,22 @@ packages/core/src/
   styles/grid.css      # Base CSS with custom properties
 
 packages/react/src/
-  BetterGrid.tsx        # React component
-  hooks/useGrid.ts      # Main hook (useSyncExternalStore)
+  BetterGrid.tsx        # React component (dispatches handle path vs inline options)
+  useGrid.ts            # Main hook — resolves mode/features → returns GridHandle
+  defineColumn.ts       # col.* builders + registerColumn for custom types
+  configureBetterGrid.ts# App-wide feature option defaults
+  presets/features.ts   # Feature registry, dep expander
+  presets/modes.ts      # Built-in modes + registerMode
+  rhf.ts                # react-hook-form bridge (useGridForm) — sub-export at @better-grid/react/rhf
+  adapters/             # useSyncExternalStore adapter for the imperative core
 
 packages/plugins/src/free/
-  editing.ts            # Cell editing (text, dropdown, boolean)
+  editing.ts            # Cell editing (text, dropdown, boolean, masked, autocomplete)
+                        # — also: alwaysInput per-column flag, inputStyle adornments
   sorting.ts            # Column sorting (header click, indicators)
   filtering.ts          # Column filtering (9 operators, context menu)
   formatting.ts         # Number/currency/percent/date via Intl
-  validation.ts         # Cell validation (required, rules, error UI)
+  validation.ts         # Cell validation (required, rules, error tooltip UI, messageRenderer)
   hierarchy.ts, clipboard.ts, grouping.ts, pagination.ts, search.ts,
   export.ts, undo-redo.ts, cell-renderers.ts, auto-detect.ts
 
@@ -192,10 +233,17 @@ packages/pro/src/
   row-actions.ts        # Per-row action menu (⋮)
   pro-renderers.ts      # Sparklines, heatmaps, mini charts
 
-apps/playground/        # Vite + React dev playground (12 demo pages + landing)
+apps/playground/        # Vite + React dev playground (~25 demo pages — Better Grid showcase
+                        # under /demo/* and Wiseway-themed demos under /demo-wiseway/*)
 
 .ref/                   # Third-party reference material (gitignored, see .ref/CLAUDE.md)
-
 ```
 
 See `ROADMAP.md` for strategic tier analysis and feature roadmap.
+
+## Reference docs
+
+- [`docs/migration-v0-to-v1.md`](docs/migration-v0-to-v1.md) — every breaking change between the v0 and v1 init APIs
+- [`docs/migration-from-ag-grid.md`](docs/migration-from-ag-grid.md), [`docs/migration-from-tanstack-table.md`](docs/migration-from-tanstack-table.md) — cheat sheets for incoming migrations
+- [`docs/mui-theme-integration.md`](docs/mui-theme-integration.md) — drive Better Grid CSS variables from a Material UI theme
+- [`docs/superpowers/specs/`](docs/superpowers/specs/) and [`docs/superpowers/plans/`](docs/superpowers/plans/) — historical specs and plans (kept for context, not required reading)

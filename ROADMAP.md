@@ -3,6 +3,28 @@
 > Best-in-class UX & DX. Best performance. Most feature-rich free tier.
 > Simple as bare core, rich when plugins added (free + pro).
 
+## Phase status
+
+| Phase                                              | Status        | Notes                                                                                  |
+| -------------------------------------------------- | ------------- | -------------------------------------------------------------------------------------- |
+| Phase 0A — Row hierarchy                           | ✓ Shipped     | `hierarchy()` free plugin + core `getRowId`/`getParentId`/expanded state               |
+| Phase 0B — Pinned rows (footer/summary)            | ✓ Shipped     | `pinned: { top, bottom }` in `GridOptions`                                             |
+| Phase 0C — Additional editor types + editor mode   | ✓ Shipped     | `cellEditor: 'text' \| 'dropdown' \| 'select' \| 'selectWithInput' \| 'number' \| 'date' \| 'autocomplete' \| 'masked'`; `editing({ editorMode: 'float' \| 'inline' })`; `column.alwaysInput` for permanent live inputs |
+| Phase 0D — Clipboard (free)                        | ✓ Shipped     | `clipboard()` plugin + `'clipboard'` feature                                            |
+| Phase 0E — Filter UI overhaul                      | ✓ Shipped     | Floating filter panel replaces `prompt()`                                              |
+| Phase 0F — Row aggregation in hierarchy            | ✓ Shipped     | `aggregation()` in `@better-grid/pro`                                                  |
+| Phase 0G — Bug fixes & cleanup                     | ✓ Shipped     | Multi-range Ctrl+click, key binding dispatch, `precision` promotion, etc.              |
+| Phase 1 — Built-in cell renderers                  | ✓ Shipped     | `cellRenderers()` plugin registers `badge`, `progress`, `boolean`, `rating`, `change`, `link`, `timeline`, `tooltip`, `loading`, `custom`. React `defineColumn` (`col.<type>`) wraps them. |
+| v1 init API redesign                               | ✓ Shipped     | `mode` presets, `features` registry, `defineColumn`, `useGrid`, `configureBetterGrid`, `context` ref. See `docs/migration-v0-to-v1.md`. |
+| RHF bridge (`useGridForm`)                         | ✓ Shipped     | `@better-grid/react/rhf` sub-export                                                    |
+| Validation `messageRenderer`                       | ✓ Shipped     | Per-rule + per-column callback returning HTMLElement or string                         |
+| MUI theme integration                              | ✓ Shipped     | `docs/mui-theme-integration.md` wires palette/typography/density/dark mode             |
+| Phase 2 — Data type auto-detection                 | Planned       | `autoDetect()` plugin scaffolding exists; full inference engine TODO                   |
+| Phase 3 — Pro plugins (full catalog)               | In progress   | gantt, aggregation, merge-cells, row-actions, pro-renderers shipped; clipboard-pro, formulas, pivot pending |
+| Phase 4 — AI integration (`mcp` + `plugin-ai`)     | Planned       | See "Our Differentiation Angle" below                                                  |
+
+The detailed sections below are kept verbatim as historical planning context. Where they describe a feature now shipped, the implementation may have evolved — treat the API examples as illustrative, not authoritative.
+
 ## Architecture: 3-Layer Model
 
 ```

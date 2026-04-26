@@ -1,5 +1,7 @@
 # Grid Init API v1 redesign
 
+> Historical PR summary for the v1 init-API merge (commit `27feca6`). Kept for the migration trail; current authoritative docs are README.md, AGENTS.md, and `docs/migration-v0-to-v1.md`.
+
 Implements the spec at `docs/superpowers/specs/2026-04-25-grid-init-api-design.md`.
 Plan: `docs/superpowers/plans/2026-04-25-grid-init-api-redesign.md`.
 Migration guide: `docs/migration-v0-to-v1.md`.
@@ -101,7 +103,7 @@ Static routes (no dev server reachable from this agent):
 
 29 URLs total.
 
-## Pre-existing issues NOT addressed
+## Pre-existing issues NOT addressed at merge
 
 - 3 TS errors in `packages/core/src/rendering/{layers.ts:21, pipeline.ts:156, pipeline.ts:206}` (unrelated to this redesign).
-- `apps/playground/src/App.tsx` `Page` union is missing `'table-styles'` (used at line 215) — flagged by T16 cleanup agent; doesn't break runtime because the slug only appears in nav button comparisons that fall through, but should be added to the union.
+- `apps/playground/src/App.tsx` `Page` union was missing `'table-styles'` — added in a follow-up commit during the Phase A cycle.
