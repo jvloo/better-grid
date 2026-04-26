@@ -201,11 +201,17 @@ const timelineRenderer: CellTypeRenderer = {
       | undefined;
 
     if (Array.isArray(val) && val.length >= 2) {
-      start = new Date(val[0]);
-      end = new Date(val[1]);
-    } else if (val && typeof val === 'object' && 'start' in val) {
+      start = new Date(val[0]!);
+      end = new Date(val[1]!);
+    } else if (val != null && typeof val === 'object' && 'start' in val) {
       start = new Date(val.start);
       end = new Date(val.end);
+    }
+
+    // No value or malformed input — render nothing
+    if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) {
+      container.classList.add('bg-cell--timeline-empty');
+      return;
     }
 
     const bar = document.createElement('div');
@@ -221,20 +227,24 @@ const timelineRenderer: CellTypeRenderer = {
     const rangeStart = meta?.timelineStart ? new Date(meta.timelineStart as string | number) : null;
     const rangeEnd = meta?.timelineEnd ? new Date(meta.timelineEnd as string | number) : null;
 
-    if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime()) && rangeStart && rangeEnd && !isNaN(rangeStart.getTime()) && !isNaN(rangeEnd.getTime())) {
+    if (rangeStart && rangeEnd && !isNaN(rangeStart.getTime()) && !isNaN(rangeEnd.getTime())) {
       const totalRange = rangeEnd.getTime() - rangeStart.getTime();
       if (totalRange > 0) {
         const leftPct = ((start.getTime() - rangeStart.getTime()) / totalRange) * 100;
         const rightPct = ((end.getTime() - rangeStart.getTime()) / totalRange) * 100;
-        bar.style.left = `${Math.max(0, leftPct)}%`;
-        bar.style.width = `${Math.min(100, rightPct) - Math.max(0, leftPct)}%`;
+        const clampedLeft = Math.max(0, Math.min(100, leftPct));
+        const clampedRight = Math.max(0, Math.min(100, rightPct));
+        bar.style.left = `${clampedLeft}%`;
+        bar.style.width = `${Math.max(0, clampedRight - clampedLeft)}%`;
       } else {
+        // Degenerate range: centre the bar
         bar.style.left = '25%';
         bar.style.width = '50%';
       }
     } else {
-      bar.style.left = '25%';
-      bar.style.width = '50%';
+      // No range metadata: fill the bar proportionally across the cell
+      bar.style.left = '10%';
+      bar.style.width = '80%';
     }
 
     container.appendChild(bar);
@@ -443,10 +453,7 @@ const linkRenderer: CellTypeRenderer = {
     const value = context.value;
     if (value == null || value === '') return '';
     const opts = (context.column.meta?.link ?? context.column.options) as LinkOptions | undefined;
-    return opts?.label
-      ?? (context.column.valueFormatter
-        ? context.column.valueFormatter(value, context.row)
-        : String(value));
+    return opts?.label ?? String(value);
   },
 };
 
@@ -455,8 +462,11 @@ const linkRenderer: CellTypeRenderer = {
 // ---------------------------------------------------------------------------
 
 const loadingRenderer: CellTypeRenderer = {
-  render(container: HTMLElement): void {
+  render(container: HTMLElement, context: CellRenderContext): void {
     container.textContent = '';
+
+    // value === false (or null/undefined) means "already loaded" — render nothing
+    if (!context.value) return;
 
     // Inject shimmer keyframes once
     if (!document.getElementById('bg-shimmer-style')) {
@@ -467,17 +477,21 @@ const loadingRenderer: CellTypeRenderer = {
     }
 
     const shimmer = document.createElement('div');
+    shimmer.className = 'bg-cell-loading-skeleton';
     shimmer.style.height = '14px';
     shimmer.style.borderRadius = '4px';
     shimmer.style.background = 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)';
     shimmer.style.backgroundSize = '200% 100%';
     shimmer.style.animation = 'bg-shimmer 1.5s infinite';
     shimmer.style.width = '80%';
+    // Vertically center within the cell using flex on the container
+    container.style.display = 'flex';
+    container.style.alignItems = 'center';
 
     container.appendChild(shimmer);
   },
-  getStringValue(): string {
-    return 'Loading...';
+  getStringValue(context: CellRenderContext): string {
+    return context.value ? 'Loading...' : '';
   },
 };
 
@@ -554,8 +568,8 @@ export function cellRenderers(): GridPlugin<'cell-renderers'> {
       unregs.push(ctx.registerCellType('timeline', timelineRenderer));
       unregs.push(ctx.registerCellType('changeIndicator', changeIndicatorRenderer));
       unregs.push(ctx.registerCellType('tooltip', tooltipRenderer));
-      unregs.push(ctx.registerCellType('loading', loadingRenderer));
       unregs.push(ctx.registerCellType('link', linkRenderer));
+      unregs.push(ctx.registerCellType('loading', loadingRenderer));
 
       return () => {
         for (const u of unregs) u();
