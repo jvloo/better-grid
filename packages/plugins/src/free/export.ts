@@ -131,7 +131,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
         return null;
       }
 
-      function buildExportCell(row: unknown, column: Readonly<NormalizedColumnDef<unknown>>, colIdx: number, isPinned: boolean): ExportCell {
+      function buildExportCell(row: unknown, column: Readonly<NormalizedColumnDef<unknown>>, colIdx: number, isPinned: boolean, rowIdx = 0): ExportCell {
         const value = getCellValue(row, column);
         const state = ctx.grid.getState();
         const frozenCols = state.frozenLeftColumns;
@@ -151,7 +151,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
 
         // Compute conditional styles
         if (column.cellStyle) {
-          const s = column.cellStyle(value, row);
+          const s = column.cellStyle(value, row as never, rowIdx);
           if (s) cell.style = s;
         }
 
@@ -210,16 +210,16 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
         }));
 
         // Build data rows
-        const rows = data.map(row =>
-          columns.map((col, ci) => buildExportCell(row, col, ci, false))
+        const rows = data.map((row, rowIdx) =>
+          columns.map((col, ci) => buildExportCell(row, col, ci, false, rowIdx))
         );
 
-        const pinnedTopRows = (state.pinnedTopRows ?? []).map(row =>
-          columns.map((col, ci) => buildExportCell(row, col, ci, true))
+        const pinnedTopRows = (state.pinnedTopRows ?? []).map((row, rowIdx) =>
+          columns.map((col, ci) => buildExportCell(row, col, ci, true, rowIdx))
         );
 
-        const pinnedBottomRows = (state.pinnedBottomRows ?? []).map(row =>
-          columns.map((col, ci) => buildExportCell(row, col, ci, true))
+        const pinnedBottomRows = (state.pinnedBottomRows ?? []).map((row, rowIdx) =>
+          columns.map((col, ci) => buildExportCell(row, col, ci, true, rowIdx))
         );
 
         // Read merges from mergeCells plugin if active

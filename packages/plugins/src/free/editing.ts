@@ -445,8 +445,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const origCellClass = col.cellClass;
           const placeholder = col.placeholder;
 
-          col.cellClass = (value: unknown, row: unknown) => {
-            let cls = origCellClass ? origCellClass(value, row) ?? '' : '';
+          col.cellClass = (value: unknown, row: unknown, rowIndex: number) => {
+            let cls = origCellClass ? origCellClass(value, row as never, rowIndex) ?? '' : '';
             const classes = new Set(cls.split(/\s+/).filter(Boolean));
             let isEditable = true;
             if (typeof col.editable === 'function') {

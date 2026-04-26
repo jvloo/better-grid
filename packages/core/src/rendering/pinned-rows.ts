@@ -157,11 +157,11 @@ export function createPinnedRowRenderer<TData = unknown>(
 
         // Apply conditional cellStyle / cellClass
         if (column.cellStyle) {
-          const styles = column.cellStyle(value, rowData);
+          const styles = column.cellStyle(value, rowData as never, rowIdx);
           if (styles) Object.assign(cell.style, styles);
         }
         if (column.cellClass) {
-          const cls = column.cellClass(value, rowData);
+          const cls = column.cellClass(value, rowData as never, rowIdx);
           if (cls) cell.className += ' ' + cls;
         }
 

@@ -308,11 +308,11 @@ export class RenderingPipeline<TData = unknown> {
         // logic still runs so stale styles from a previous data row (after
         // hierarchy collapse/expand or scroll reuse) get wiped before new
         // ones land.
-        const combinedStyles = column.cellStyle?.(value, rowData) ?? null;
+        const combinedStyles = column.cellStyle?.(value, rowData as never, row) ?? null;
         applyCellStyles(cell, combinedStyles ?? {});
 
         if (column.cellClass) {
-          const cls = column.cellClass(value, rowData);
+          const cls = column.cellClass(value, rowData as never, row);
           if (cls) cell.className += ' ' + cls;
         }
 

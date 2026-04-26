@@ -174,7 +174,7 @@ export interface ColumnDef<TData = unknown> {
 
   // Sorting
   sortable?: boolean;
-  comparator?: (a: unknown, b: unknown) => number;
+  comparator?: (a: unknown, b: unknown, rowA?: TData, rowB?: TData) => number;
 
   // Formatting
   hideZero?: boolean;
@@ -185,8 +185,8 @@ export interface ColumnDef<TData = unknown> {
   valueParser?: (value: string, row: TData) => unknown;
 
   // Conditional styling
-  cellStyle?: (value: unknown, row: unknown) => Record<string, string> | undefined;
-  cellClass?: (value: unknown, row: unknown) => string | undefined;
+  cellStyle?: (value: unknown, row: TData, rowIndex: number) => Record<string, string> | undefined;
+  cellClass?: (value: unknown, row: TData, rowIndex: number) => string | undefined;
 
   // Visibility
   /** When true, column is excluded from the rendered layout but stays in `columns`. Toggle via `grid.setColumnHidden(id, hide)`. */

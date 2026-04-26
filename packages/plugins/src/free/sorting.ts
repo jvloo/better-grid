@@ -108,7 +108,7 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting', Sorting
         type ResolvedSort = {
           direction: SortDirection;
           getValue: (row: unknown) => unknown;
-          compare: (a: unknown, b: unknown) => number;
+          compare: (a: unknown, b: unknown, rowA?: unknown, rowB?: unknown) => number;
         };
         const resolved: ResolvedSort[] = [];
         for (const { columnId, direction } of sortState) {
@@ -134,7 +134,7 @@ export function sorting(options?: SortingOptions): GridPlugin<'sorting', Sorting
           for (const { direction, getValue, compare } of resolved) {
             const valA = getValue(a);
             const valB = getValue(b);
-            const cmp = compare(valA, valB);
+            const cmp = compare(valA, valB, a as never, b as never);
             if (cmp !== 0) {
               return direction === 'desc' ? -cmp : cmp;
             }
