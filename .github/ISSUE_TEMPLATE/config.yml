@@ -6,6 +6,6 @@ contact_links:
   - name: Security disclosure
     url: https://github.com/jvloo/better-grid/security/advisories/new
     about: Privately report a vulnerability. Do NOT open a public issue.
-  - name: Migration question (v0 → v1)
-    url: https://github.com/jvloo/better-grid/blob/main/docs/migration-v0-to-v1.md
-    about: Inventory of every breaking change between the v0 and v1 init APIs.
+  - name: Migrating from another grid?
+    url: https://github.com/jvloo/better-grid/tree/main/docs/migrations
+    about: Cheat sheets for AG Grid, MUI X Data Grid, Handsontable, RevoGrid, react-data-grid, and TanStack Table.

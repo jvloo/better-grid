@@ -43,7 +43,7 @@ const ThemedGridShell = styled('div')(({ theme }) => ({
   '--bg-error-border': theme.palette.error.main,
 }));
 
-export function CostsTable() {
+export function MyTable() {
   return (
     <ThemedGridShell>
       <BetterGrid columns={cols} data={rows} mode="view" />
@@ -129,7 +129,7 @@ Use `alpha` from `@mui/material/styles` for the rgba mixes.
 | `--bg-error-bg` | (rule-driven) | `palette.error.light` |
 | `--bg-error-border` | `#FFAAAA` | `palette.error.main` |
 
-For richer error UI (icons, text formatting), use the per-rule `messageRenderer` callback — see [`docs/superpowers/specs/2026-04-25-grid-init-api-design.md`](./superpowers/specs/2026-04-25-grid-init-api-design.md). The renderer can mount any MUI component into the tooltip body:
+For richer error UI (icons, text formatting), use the per-rule `messageRenderer` callback exposed by the validation plugin (`ColumnValidationRule.messageRenderer` / `ColumnDef.validationMessageRenderer`). The renderer can mount any MUI component into the tooltip body:
 
 ```tsx
 import { Alert } from '@mui/material';

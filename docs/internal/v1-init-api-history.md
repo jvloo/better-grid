@@ -16,7 +16,7 @@ If you're a new consumer, you don't need this. Read the [README](../README.md) q
 - **`column.alwaysInput: boolean | (row, col) => boolean`** — render a real `<input>` permanently in every visible cell (always-on finance-sheet inputs). Commits via the standard parser path on change/blur/Enter. Plugin warns when `alwaysInput cols × rows > editing.alwaysInputThreshold` (default 1000).
 - **`@better-grid/react/rhf` sub-export** — `useGridForm({ grid, baseName: 'rows' })` listens to `data:change` events from the grid and forwards each into `setValue('${baseName}.${rowIndex}.${columnId}', newValue)` so cells participate in a surrounding RHF `<FormProvider>`'s dirty/touched/validation state. `react-hook-form` is an optional peer dep.
 - **`column.validationMessageRenderer`** and **`ColumnValidationRule.messageRenderer`** — return any HTMLElement (e.g. an MUI Alert mounted via `createRoot`) to control the error tooltip body. Falls back to the default text bubble when omitted.
-- **MUI theme bridge** — see [`mui-theme-integration.md`](mui-theme-integration.md) for the recipe wiring `palette` / `typography` / `mode` through Better Grid's CSS custom properties.
+- **MUI theme bridge** — see [`../guides/theming-with-mui.md`](../guides/theming-with-mui.md) for the recipe wiring `palette` / `typography` / `mode` through Better Grid's CSS custom properties.
 
 ## Pre-release shape changes (historical)
 

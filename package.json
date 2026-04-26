@@ -17,5 +17,15 @@
     "prettier": "^3.4.0",
     "turbo": "^2.3.0",
     "typescript": "^5.7.0"
+  },
+  "pnpm": {
+    "//": "Force-resolve transitive deps with known CVEs (dev-only — none ship to consumers).",
+    "overrides": {
+      "picomatch@<4.0.4": ">=4.0.4",
+      "picomatch@>=2 <2.3.2": ">=2.3.2",
+      "postcss@<8.5.10": ">=8.5.10",
+      "esbuild@<0.25.0": ">=0.25.0",
+      "vite@>=6.0.0 <6.4.2": ">=6.4.2"
+    }
   }
 }

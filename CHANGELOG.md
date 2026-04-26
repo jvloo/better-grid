@@ -22,7 +22,7 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 - **`editing({ alwaysInputThreshold })`** — perf gate that warns once per init when `alwaysInput cols × visible rows` exceeds the threshold (default 1000).
 - **`@better-grid/react/rhf`** sub-export with `useGridForm({ grid, baseName, getFieldPath?, transform?, shouldDirty?, shouldTouch?, shouldValidate? })`. Listens to `data:change` events on a grid handle and forwards each commit into a surrounding RHF `<FormProvider>`'s `setValue`. `react-hook-form` is an optional peer dep.
 - **Validation `messageRenderer`** — per-rule (`ColumnValidationRule.messageRenderer`) and per-column (`ColumnDef.validationMessageRenderer`) callback that returns an `HTMLElement` or string. Lets the error tooltip body be rendered as an MUI Alert (or any other rich UI) while the wrapper still owns positioning.
-- **`docs/mui-theme-integration.md`** — recipe wiring `theme.palette` / `theme.typography` / `theme.spacing` / dark mode through Better Grid's CSS custom properties via a single `styled()` wrapper.
+- **`docs/guides/theming-with-mui.md`** — recipe wiring `theme.palette` / `theme.typography` / `theme.spacing` / dark mode through Better Grid's CSS custom properties via a single `styled()` wrapper.
 - New playground demos: `/demo/always-input` (live inputs + validation rendering) and `/demo/rhf-bridge` (cell commits flowing into a FormProvider with live total/dirty state).
 
 ### Added — v1 init API redesign
