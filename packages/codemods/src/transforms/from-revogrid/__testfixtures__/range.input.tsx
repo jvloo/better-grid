@@ -1,0 +1,1 @@
+const opts = { range: true };
