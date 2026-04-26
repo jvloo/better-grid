@@ -26,41 +26,67 @@ export function autoDetect(options?: AutoDetectOptions): GridPlugin<'auto-detect
     init(ctx: PluginContext) {
       const state = ctx.grid.getState();
       const data = state.data;
-      const columns = state.columns;
 
       if (data.length === 0) return;
 
       const sample = data.slice(0, Math.min(sampleSize, data.length));
-      let changed = false;
 
-      for (const col of columns) {
-        // Skip columns that already have explicit cellType
-        if (col.cellType) continue;
+      // applyAutoDetect() is called once at init time and again from the
+      // 'columns:set' subscriber below, which re-applies detection whenever
+      // grid.setColumns() is called (e.g. the React adapter's useEffect on first
+      // render). setColumns() creates fresh spread-copies of every ColumnDef via
+      // normalizeColumn(), discarding the mutations applied here — the subscriber
+      // ensures they are re-applied to the new column references.
+      //
+      // The __autoDetected sentinel prevents double-applying on the same reference.
+      const applyAutoDetect = (cols: (ColumnDef & { id: string })[]): void => {
+        let changed = false;
 
-        // Collect non-null values from the sample
-        const values = sample
-          .map((row) => getCellValue(row, col))
-          .filter((v) => v != null);
+        for (const col of cols) {
+          // Skip columns already processed (sentinel guards against double-apply)
+          if ((col as { __autoDetected?: boolean }).__autoDetected) continue;
 
-        if (values.length === 0) continue;
+          // Skip columns that already have an explicit cellType
+          if (col.cellType) continue;
 
-        const detected = detectType(values);
-        if (detected) {
-          if (detected.cellType && !col.cellType) {
-            (col as ColumnDef & { cellType: string }).cellType = detected.cellType;
-            changed = true;
-          }
-          if (detected.align && !col.align && autoAlign) {
-            (col as ColumnDef & { align: 'left' | 'center' | 'right' }).align = detected.align;
-            changed = true;
+          // Collect non-null values from the sample
+          const values = sample
+            .map((row) => getCellValue(row, col))
+            .filter((v) => v != null);
+
+          if (values.length === 0) continue;
+
+          const detected = detectType(values);
+          if (detected) {
+            if (detected.cellType && !col.cellType) {
+              (col as ColumnDef & { cellType: string }).cellType = detected.cellType;
+              changed = true;
+            }
+            if (detected.align && !col.align && autoAlign) {
+              (col as ColumnDef & { align: 'left' | 'center' | 'right' }).align = detected.align;
+              changed = true;
+            }
+            // Mark this column as processed so subsequent setColumns() calls
+            // that pass the same object reference skip it.
+            (col as { __autoDetected?: boolean }).__autoDetected = true;
           }
         }
-      }
 
-      if (changed) {
-        // Force column update to trigger re-render
-        ctx.store.update('columns', () => ({ columns: [...columns] }));
-      }
+        if (changed) {
+          // Force column update to trigger re-render
+          ctx.store.update('columns', () => ({ columns: [...cols] }));
+        }
+      };
+
+      applyAutoDetect(ctx.store.getState().columns);
+
+      // Re-apply detection whenever grid.setColumns() is called. The React
+      // adapter (and any other caller) calls setColumns() after createGrid —
+      // normalizeColumn() creates fresh ColumnDef spread-copies for every column,
+      // discarding the cellType/align mutations applied above. Subscribing here
+      // re-applies them to the new column references so inferred types survive
+      // the React useEffect mount call.
+      ctx.on('columns:set', applyAutoDetect);
     },
   };
 }
