@@ -192,10 +192,17 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions',
       }
 
       // ─── Wrap column renderer ─────────────────────────────────────
-      const columns = store.getState().columns;
-      const col = columns.find(c => c.id === options.column);
+      // applyColumnWrap is extracted so it can be re-applied on every
+      // setColumns() call (e.g. React's useEffect on first render).
+      // normalizeColumn() inside setColumns() creates fresh ColumnDef
+      // spread-copies, discarding any mutations applied during init.
+      // A sentinel flag (__rowActionsWrapped) prevents double-wrap.
+      const applyColumnWrap = (cols: (import('@better-grid/core').ColumnDef & { id: string })[]): void => {
+        const col = cols.find(c => c.id === options.column);
+        if (!col) return;
+        if ((col as { __rowActionsWrapped?: boolean }).__rowActionsWrapped) return;
+        (col as { __rowActionsWrapped?: boolean }).__rowActionsWrapped = true;
 
-      if (col) {
         const originalRenderer = col.cellRenderer;
 
         col.cellRenderer = (container: HTMLElement, context: CellRenderContext) => {
@@ -250,8 +257,14 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions',
           container.appendChild(btn);
         };
 
-        store.update('columns', () => ({ columns: [...columns] }));
-      }
+        store.update('columns', () => ({ columns: [...cols] }));
+      };
+
+      applyColumnWrap(store.getState().columns);
+
+      // Re-apply wrapping whenever setColumns() is called so the action
+      // trigger survives the fresh column copies React's useEffect emits.
+      ctx.on('columns:set', applyColumnWrap);
 
       // Expose API
       ctx.expose({ closeMenu } satisfies RowActionsApi);
