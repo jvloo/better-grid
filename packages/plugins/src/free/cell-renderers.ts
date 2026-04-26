@@ -404,6 +404,53 @@ const tooltipRenderer: CellTypeRenderer = {
 };
 
 // ---------------------------------------------------------------------------
+// Link — Clickable anchor element
+// ---------------------------------------------------------------------------
+
+interface LinkOptions {
+  target?: string;
+  rel?: string;
+  label?: string;
+}
+
+const linkRenderer: CellTypeRenderer = {
+  render(container: HTMLElement, context: CellRenderContext): void {
+    container.textContent = '';
+
+    const value = context.value;
+    if (value == null || value === '') return;
+
+    const href = String(value);
+
+    const opts = (context.column.meta?.link ?? context.column.options) as LinkOptions | undefined;
+    const target = opts?.target ?? '_blank';
+    const rel = opts?.rel ?? 'noopener noreferrer';
+    const label = opts?.label
+      ?? (context.column.valueFormatter
+        ? context.column.valueFormatter(value, context.row)
+        : href);
+
+    const a = document.createElement('a');
+    a.href = href;
+    a.target = target;
+    a.rel = rel;
+    a.textContent = label;
+    a.className = 'bg-cell-link';
+
+    container.appendChild(a);
+  },
+  getStringValue(context: CellRenderContext): string {
+    const value = context.value;
+    if (value == null || value === '') return '';
+    const opts = (context.column.meta?.link ?? context.column.options) as LinkOptions | undefined;
+    return opts?.label
+      ?? (context.column.valueFormatter
+        ? context.column.valueFormatter(value, context.row)
+        : String(value));
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Loading — Shimmer skeleton state
 // ---------------------------------------------------------------------------
 
@@ -508,6 +555,7 @@ export function cellRenderers(): GridPlugin<'cell-renderers'> {
       unregs.push(ctx.registerCellType('changeIndicator', changeIndicatorRenderer));
       unregs.push(ctx.registerCellType('tooltip', tooltipRenderer));
       unregs.push(ctx.registerCellType('loading', loadingRenderer));
+      unregs.push(ctx.registerCellType('link', linkRenderer));
 
       return () => {
         for (const u of unregs) u();
