@@ -149,6 +149,8 @@ A full prop reference (`<BetterGrid />` and `useGrid()` together with every opti
 
 ## Migrating from another grid?
 
+> **Tip:** `npx @better-grid/codemods from-<lib> src/` runs a one-shot codemod that auto-converts the mechanical renames and flags the rest for review.
+
 [AG Grid](docs/migrations/from-ag-grid.md) · [MUI X Data Grid](docs/migrations/from-mui-x-data-grid.md) · [Handsontable](docs/migrations/from-handsontable.md) · [RevoGrid](docs/migrations/from-revogrid.md) · [react-data-grid](docs/migrations/from-react-data-grid.md) · [TanStack Table](docs/migrations/from-tanstack-table.md)
 
 ## Comparison

@@ -20,6 +20,10 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 - React: `configureBetterGrid` renamed to `configure`.
 - `headerRenderer` mutates the header label area (`.bg-header-cell__text`) — filter button, resize handle, and ARIA wiring on the cell are preserved automatically.
 
+### Added — codemods package
+
+- `@better-grid/codemods` — six jscodeshift transforms (`from-ag-grid`, `from-mui-x-data-grid`, `from-tanstack-table`, `from-handsontable`, `from-revogrid`, `from-react-data-grid`). CLI: `npx @better-grid/codemods from-<lib> src/`. Auto-converts the mechanical renames; flags renderer-signature, plugin-instance, and structural changes for manual review with a `// @better-grid/migrate: review` marker. Flags: `--dry-run`, `--report=<path>`, `--ext=ts,tsx,js,jsx`.
+
 ## [1.0.0] — 2026-04-26
 
 First public release.
