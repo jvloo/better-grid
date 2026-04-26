@@ -251,7 +251,7 @@ export function MyGrid({ data, currentUser }: { data: Row[]; currentUser: string
     data,
 
     // Mode + feature opt-in (resolved by the react adapter)
-    mode: 'spreadsheet',                                 // null | view | interactive | spreadsheet | dashboard
+    mode: 'spreadsheet',                                 // null | view | interactive | spreadsheet | dashboard. Default if omitted: null (no preset features).
     features: {
       edit:       { editTrigger: 'dblclick', editorMode: 'float', alwaysInputThreshold: 1000 },
       sort:       true,

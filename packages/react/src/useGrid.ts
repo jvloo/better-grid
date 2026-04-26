@@ -11,12 +11,16 @@ import {
 import { resolveMode } from './presets/modes';
 import { getGlobalFeatureOptions } from './configure';
 
-const DEFAULT_MODE = 'view';
+const DEFAULT_MODE: string | null = null;
 
 function resolvePlugins<TData, TContext>(
   options: ReactGridOptions<TData, TContext>,
 ): GridPlugin[] {
   // Step A: mode → baseline features
+  // Default is `null` (no plugins): omitting `mode` opts you into the most
+  // minimal, predictable behavior — only the cellRenderers plugin is wired in
+  // so built-in cell types still resolve. Pass `mode="view"` (or higher) to
+  // opt into curated feature bundles.
   const modeName = options.mode === undefined ? DEFAULT_MODE : options.mode;
   const modeDef = resolveMode(modeName);
 

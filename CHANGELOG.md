@@ -6,6 +6,10 @@ The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`,
 
 ## [Unreleased]
 
+### Breaking changes
+
+- React adapter: the default `mode` for `useGrid` / `<BetterGrid>` is now `null` (no preset features) when `mode` is omitted. Previously omitting `mode` resolved to `'view'` (sort + filter + resize + select). Rationale: omitting the prop should be the most minimal, predictable behavior — users opt into curated bundles explicitly. To restore the previous default, pass `mode="view"`. The cellRenderers plugin remains always-loaded.
+
 ### Phase 1 surface refresh (pre-publish, no back-compat)
 
 - ColumnDef renames: `accessorKey` → `field`, `accessorFn` → `valueGetter`, `header` → `headerName` (split with new `headerRenderer` for DOM custom headers).

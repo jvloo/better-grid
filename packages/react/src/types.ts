@@ -4,7 +4,9 @@ import type { FeatureName } from './presets/features';
 export interface ReactGridOptions<TData = unknown, TContext = unknown>
   extends Omit<GridOptions<TData, TContext>, 'plugins'> {
   /**
-   * Mode preset. `null` = no defaults. Default if omitted: 'view'.
+   * Mode preset. `null` = no defaults (the default if omitted).
+   * Pass `'view'` / `'interactive'` / `'spreadsheet'` / `'dashboard'` to opt
+   * into a curated feature bundle. `features` layers on top of `mode`.
    */
   mode?: 'view' | 'interactive' | 'spreadsheet' | 'dashboard' | (string & {}) | null;
 

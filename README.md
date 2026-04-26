@@ -36,7 +36,7 @@ export function MyGrid({ data }: { data: Row[] }) {
 }
 ```
 
-`col.<type>(field, opts)` fills `id`, `field`, `cellType`, alignment. `mode` opts you into a curated bundle of features; use `features={['edit', 'sort']}` for finer control or `features={{ edit: { editTrigger: 'click' } }}` for options.
+`col.<type>(field, opts)` fills `id`, `field`, `cellType`, alignment. `mode` opts you into a curated bundle of features; use `features={['edit', 'sort']}` for finer control or `features={{ edit: { editTrigger: 'click' } }}` for options. Omitting `mode` is equivalent to `mode={null}` — no preset features are loaded; opt in explicitly.
 
 **Vanilla TS** (no framework):
 
