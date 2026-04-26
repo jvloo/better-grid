@@ -44,10 +44,15 @@ export function pagination(options?: PaginationOptions): GridPlugin<'pagination'
       let pageSize = config.pageSize;
       let fullData: unknown[] = [];
       let paginationBar: HTMLElement | null = null;
+      // Guard: pagination's own setData calls re-emit 'data:set'; we ignore those
+      // so we don't recursively reset fullData to our slice.
+      let applyingPage = false;
 
-      // Save the full dataset and show only the current page
-      function init(): void {
+      // Capture the full dataset and show only the current page.
+      // Called on mount and again whenever the consumer swaps in new data.
+      function captureAndApply(): void {
         fullData = [...ctx.grid.getData()];
+        currentPage = 0;
         applyPage();
       }
 
@@ -59,7 +64,12 @@ export function pagination(options?: PaginationOptions): GridPlugin<'pagination'
         const start = currentPage * pageSize;
         const end = start + pageSize;
         const pageData = fullData.slice(start, end);
-        ctx.grid.setData(pageData as typeof fullData);
+        applyingPage = true;
+        try {
+          ctx.grid.setData(pageData as typeof fullData);
+        } finally {
+          applyingPage = false;
+        }
         updatePaginationBar();
         config.onPageChange?.(currentPage, pageSize);
       }
@@ -79,10 +89,7 @@ export function pagination(options?: PaginationOptions): GridPlugin<'pagination'
       // Create pagination bar UI below the grid
       function createPaginationBar(): void {
         // Bind to THIS grid's container (not the first .bg-grid in the document).
-        // Using document.querySelector here previously caused two pagination bars
-        // to render under React StrictMode: each (mount, unmount, mount) cycle
-        // produced an init that scheduled a setTimeout — both timeouts fired
-        // and each appended to whichever .bg-grid the query happened to find.
+        // We're called from the 'mount' handler so getContainer() is non-null.
         const gridEl = ctx.grid.getContainer();
         if (!gridEl || !gridEl.parentElement) return;
 
@@ -200,13 +207,31 @@ export function pagination(options?: PaginationOptions): GridPlugin<'pagination'
         }
       }
 
-      // Synchronous init: by the time plugin.init() runs, createGrid has already
-      // mounted the container, so getContainer() returns it. The previous
-      // setTimeout(0) wrap caused a StrictMode double-mount race where both
-      // mount cycles' deferred inits fired and each appended its own bar.
-      init();
-      createPaginationBar();
-      updatePaginationBar();
+      // Defer DOM work until the grid has a container. plugin.init() runs at
+      // createGrid time — before the container exists in the React adapter
+      // (where the ref callback mounts the grid post-render) and in vanilla
+      // usage (where mount() is called separately). Subscribing to 'mount'
+      // also handles re-mount cycles (StrictMode unmount/remount).
+      const offMount = ctx.on('mount', () => {
+        captureAndApply();
+        if (!paginationBar) createPaginationBar();
+        updatePaginationBar();
+      });
+
+      // When the consumer swaps in fresh data (e.g. React's useEffect calling
+      // grid.setData(options.data) after mount), recapture as the new full
+      // dataset and reset to page 0. Skip our own slicing setData.
+      const offDataSet = ctx.on('data:set', () => {
+        if (applyingPage) return;
+        if (!ctx.grid.getContainer()) return; // not mounted yet — skip
+        captureAndApply();
+        updatePaginationBar();
+      });
+
+      const offUnmount = ctx.on('unmount', () => {
+        paginationBar?.remove();
+        paginationBar = null;
+      });
 
       const api: PaginationApi = {
         getPage: () => currentPage,
@@ -224,7 +249,11 @@ export function pagination(options?: PaginationOptions): GridPlugin<'pagination'
       ctx.expose(api);
 
       return () => {
+        offMount();
+        offDataSet();
+        offUnmount();
         paginationBar?.remove();
+        paginationBar = null;
       };
     },
   };
