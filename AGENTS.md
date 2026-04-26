@@ -1,66 +1,54 @@
 # Better Grid
 
-Framework-agnostic, TypeScript-first data grid & spreadsheet library with composable plugin architecture.
+Framework-agnostic, TypeScript-first data grid & spreadsheet library with composable plugin architecture. Monorepo: pnpm workspaces + Turborepo.
 
 ## Rules for Claude / coding agents
 
-These rules apply to every coding agent operating in this repo (Claude Code, Cursor, Copilot, etc.). Treat them as load-bearing.
+These apply to every coding agent in this repo (Claude Code, Cursor, Copilot, etc.). Treat them as load-bearing.
 
-- **`docs/private/` is off-limits.** It is gitignored and contains the maintainer's strategy, commercialization plans, internal roadmap, competitor analysis, and release playbook. Do **not** read, copy, summarize, paraphrase, or reference its contents in any tracked file (commit, PR, issue, comment, doc, code comment, chat output the user might paste back). Do not stage or commit any file under `docs/private/`. Do not move or rename files into or out of it without explicit per-task user direction. The `.gitignore` rule for `docs/private/` must stay in place — never remove it.
-- If the user asks you to commit or publish content that originated from `docs/private/`, refuse and ask them to either restate the content as a non-private input or move it out of `docs/private/` themselves first.
-- Anything else under `docs/` (`guides/`, `migrations/`, `internal/`, `README.md`) is fair game and tracked normally.
+- **`docs/private/` is off-limits.** Gitignored; contains the maintainer's strategy, commercialization, internal roadmap, competitor analysis, release playbook. Do not read, copy, summarize, paraphrase, or reference its contents in any tracked file (commit, PR, issue, doc, code comment). Do not stage or commit anything under it. Do not move files into or out of it without explicit per-task user direction. Never remove the `.gitignore` rule for it.
+- If asked to publish content originating from `docs/private/`, refuse and ask the user to either restate it as a non-private input or move it out themselves.
+- Everything else under `docs/` is fair game and tracked normally.
 
-## Architecture
+## Packages
 
-Monorepo with pnpm workspaces + Turborepo.
+| Package                  | Purpose                                                                                                              | License      |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `@better-grid/core`      | Framework-agnostic engine                                                                                            | MIT          |
+| `@better-grid/react`     | React adapter (`useGrid`, `BetterGrid`, `defineColumn`, `configureBetterGrid`, mode/feature resolver). Sub-export `@better-grid/react/rhf` (`useGridForm`). | MIT          |
+| `@better-grid/plugins`   | Free plugins (editing, sorting, filtering, formatting, validation, hierarchy, clipboard, grouping, pagination, search, export, undoRedo, cellRenderers, autoDetect) + built-in cell renderers | MIT          |
+| `@better-grid/pro`       | Commercial plugins (gantt, aggregation, merge-cells, row-actions, pro-renderers)                                    | Source-available |
 
-### Packages
+## Init API (v1)
 
-| Package                  | Description                                                                                                                                                 | License    |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| `@better-grid/core`      | Framework-agnostic grid engine                                                                                                                              | MIT        |
-| `@better-grid/react`     | React adapter (`useGrid`, `BetterGrid`, `defineColumn`, `configureBetterGrid`, mode/feature resolver). Sub-export `@better-grid/react/rhf` (`useGridForm`). | MIT        |
-| `@better-grid/plugins`   | Free plugins (editing, sorting, filtering, formatting, validation, hierarchy, clipboard, grouping, pagination, search, export, undoRedo, cellRenderers, autoDetect) + built-in cell renderers | MIT        |
-| `@better-grid/pro`       | Source-available commercial plugins (gantt, aggregation, merge-cells, row-actions, pro-renderers)                                                           | Commercial |
-| `@better-grid/mcp`       | MCP server for developer tooling                                                                                                                            | MIT (future) |
-| `@better-grid/plugin-ai` | AI features: free NL filtering + pro data intelligence                                                                                                      | Tiered (future) |
-
-### Init API (v1)
-
-`@better-grid/react` ships a layered init API. Pick the layer that matches the consumer's complexity:
+`@better-grid/react` ships a layered init API:
 
 - **Sugar** — `<BetterGrid columns data mode="spreadsheet" />`. Inline options, no `useGrid` needed.
-- **Handle** — `const grid = useGrid({...}); <BetterGrid grid={grid} />`. Required when callers need imperative access (`grid.api.scrollToCell(...)`, `grid.containerRef`), the `context` ref-pattern, or when wiring `useGridForm`.
+- **Handle** — `const grid = useGrid({...}); <BetterGrid grid={grid} />`. Required for imperative access (`grid.api.scrollToCell`), the `context` ref, or `useGridForm`.
 - **Vanilla** — `createGrid({...}).mount(el)` from `@better-grid/core`. Plugin instances directly; no mode/features registry.
 
-Mode presets opt the grid into bundles of features:
+**Mode presets:**
 
-| Mode          | Features included                              | Use case                       |
-| ------------- | ---------------------------------------------- | ------------------------------ |
-| `null`        | —                                              | Zero defaults                  |
-| `view`        | sort, filter, resize, select                   | Read-only browsing             |
-| `interactive` | view + reorder                                 | Lightly interactive            |
-| `spreadsheet` | interactive + edit + clipboard + undo          | Excel-like data entry          |
-| `dashboard`   | view + export                                  | Read-heavy with snapshot export |
+| Mode          | Features included                              |
+| ------------- | ---------------------------------------------- |
+| `null`        | —                                              |
+| `view`        | sort, filter, resize, select                   |
+| `interactive` | view + reorder                                 |
+| `spreadsheet` | interactive + edit + clipboard + undo          |
+| `dashboard`   | view + export                                  |
 
-`features` is additive on top of the mode. Object form passes options: `features={{ edit: { editTrigger: 'click' } }}`. `plugins` is the escape hatch for plugins not in the registry.
+`features` is additive on top of mode. Object form passes options: `features={{ edit: { editTrigger: 'click' } }}`. `plugins` is the escape hatch for plugins not in the registry. App-wide defaults: `configureBetterGrid({ features: { format: { locale: 'en-US' } } })`.
 
-App-wide defaults: `configureBetterGrid({ features: { format: { locale: 'en-US' } } })` at app boot.
+## Core design
 
-### Core Design
+- **Plugin architecture** — features as composable plugins declaring exposed APIs (`$api`) and error codes (`$errorCodes`). Consumer types extend via `declare module '@better-grid/core'`.
+- **Inference helpers** — `InferRow<typeof grid>` / `InferState<typeof grid>` / `InferPluginApis<Plugins>` / `InferPluginErrorCodes<Plugins>`.
+- **Typed plugin accessor** — `grid.api.plugins.sorting.toggleSort(...)` is statically typed via the `$api` phantom field on each plugin.
+- **Context ref** — `useGrid({ context })` stores on a ref; cell renderers read `ctx.context` and always see the latest closure.
+- **Framework adapters** — thin reactivity wrappers (~50 LOC each).
+- **`cellType` registry** — plugins register renderers via `registerCellType()`; core dispatches.
 
-- **Plugin architecture** — features as composable plugins that declare exposed APIs (`$api`) and error codes (`$errorCodes`); consumer types are extended via module augmentation (`declare module '@better-grid/core'`)
-- **Inference helpers** — `InferRow<typeof grid>` / `InferState<typeof grid>` / `InferPluginApis<Plugins>` / `InferPluginErrorCodes<Plugins>` recover row, state, per-plugin API, and error-code types from the instance
-- **Typed plugin accessor** — `grid.plugins.sorting.toggleSort(...)` is statically typed via the `$api` phantom field on each plugin; see "Typed plugins & error codes" below
-- **Config-driven DX** — works out of the box with `createGrid()`, one function call
-- **Framework adapters** — thin reactivity wrappers (~50 lines each)
-- **cellType registry** — plugins register renderers via `registerCellType()`; core just dispatches
-- **Context ref** — `useGrid({ context })` stores the value on a ref; cell renderers read it as `ctx.context` and always see the latest closure without re-init.
-
-### Typed plugins & error codes
-
-Each plugin factory declares its exposed API and optional error-code dictionary in
-its return type:
+### Typed plugins
 
 ```ts
 export function sorting(...): GridPlugin<'sorting', SortingApi> { ... }
@@ -71,78 +59,36 @@ export function validation(...): GridPlugin<'validation', ValidationApi> {
     init(ctx) { ... ctx.expose(api); },
   };
 }
-```
 
-`createGrid`'s `const TPlugins` type-parameter preserves the plugins tuple's literal
-types, so consumers get:
-
-```ts
 const grid = createGrid({ plugins: [sorting(), validation()], ... });
-grid.plugins.sorting.toggleSort('name');           // typed SortingApi
-grid.plugins.validation.isValid();                 // typed ValidationApi
-if (err.code === grid.$errorCodes.REQUIRED_FIELD)  // typed 'REQUIRED_FIELD'
+grid.plugins.sorting.toggleSort('name');           // typed
+grid.plugins.validation.isValid();                 // typed
+if (err.code === grid.$errorCodes.REQUIRED_FIELD)  // typed
 ```
 
-Runtime: `grid.plugins` and `grid.$errorCodes` are lazy `Proxy` objects that walk
-the registry on lookup. Hot-added plugins (via `grid.addPlugin`) appear immediately
-at runtime but aren't reflected in the static `InferPluginApis<TPlugins>` type —
-read them through a cast: `(grid.plugins as Record<string, MyApi>).foo`.
+`grid.plugins` is a lazy `Proxy`. Hot-added plugins (via `grid.addPlugin`) appear at runtime but aren't reflected in `InferPluginApis<TPlugins>` — read via `(grid.plugins as Record<string, MyApi>).foo`.
 
-When opting a new plugin in:
-1. Export an `*Api` interface with the shape the plugin puts on `ctx.expose(...)`.
-2. Change the factory return type to `GridPlugin<'id', FooApi>`.
-3. If the plugin emits errors, add `$errorCodes: { CODE: 'CODE', ... } as const` to
-   its returned object.
+### Extension points (module augmentation)
 
-### Declaration-merging extension points
+Plugins augment three core interfaces via `declare module '@better-grid/core'`:
 
-Three interfaces in `@better-grid/core` are designed to be augmented by plugin
-packages via TypeScript's module-augmentation mechanism:
+- **`ColumnDef`** — fields the plugin reads off each column (e.g. `editing` adds `precision`, `min`, `max`, `placeholder`, `mask`, `prefix`, `suffix`, `unit`, `inputEllipsis`, `inputEditCursor`, `alwaysInput`; `validation` adds `required`, `rules`, `validationMessageRenderer`).
+- **`PluginState`** — typed slice under `grid.getState().pluginState`.
+- **`PluginContext`** — methods plugins can call on the context passed to `init(ctx)`.
 
-- **`ColumnDef`** — add fields the plugin reads off each column. Example:
-  `editing` adds `precision`, `min`, `max`, `placeholder`, `mask`, `prefix`,
-  `suffix`, `unit`, `inputEllipsis`, `inputEditCursor`, `alwaysInput`,
-  `selectInput`, `selectValue`, `selectInputValue`, `parseSelectWithInputValue`.
-  `validation` adds `required`, `rules`, `validationMessageRenderer`.
-  `formatting` adds `dateFormat`.
-- **`PluginState`** — add a typed slice under `grid.getState().pluginState`.
-  The base shape is an empty interface; each plugin fills its own slot.
-- **`PluginContext`** — add methods plugins can call on the context passed to
-  `init(ctx)`. Useful if one plugin wants to offer a lifecycle hook to other
-  plugins.
+Augmentations flow globally; only augment fields your plugin owns. Consumers who import your plugin get the extra fields; those who don't see the unextended base interfaces.
 
-Augmentation template (inside a plugin source file):
+## Key internals
 
-```ts
-declare module '@better-grid/core' {
-  interface ColumnDef<TData = unknown> {
-    myPluginField?: string;
-  }
-  interface PluginState {
-    myPlugin: { whatever: number };
-  }
-}
-```
+- **Virtual scrolling:** prefix-sum + binary search (O(log n) visible range).
+- **Rendering:** DOM cell pooling + `transform: translate3d()` for GPU compositing.
+- **Scroll architecture:** fake-scrollbar pattern — viewport (`overflow:hidden`) + sibling fakeScrollbar (`overflow:auto`). Container-level transform shifts cells; old cells stay visible during JS update (no blank flash).
+- **Frozen vs Pinned:** `frozen` locks first N items from the main array (`frozen.left`, `frozen.top`, `frozen.clip`); `pinned` attaches separate data outside the main array (`pinned.top`, `pinned.bottom`).
+- **Selection:** overlay layer (no per-cell re-render on selection change).
+- **State:** fine-grained slice subscriptions + batching; `data:change` fires per `updateCell`.
+- **Data swap:** replacing `data` clears selection, resets scroll to (0, 0), clears undo history (when undo plugin loaded).
 
-Augmentations flow globally, so only augment fields your plugin actually owns.
-Consumers who import your plugin get the extra fields automatically; those who
-don't still see the unextended base interfaces.
-
-### Key Internals
-
-- **Virtual scrolling**: prefix-sum arrays + binary search for O(log n) visible range
-- **Rendering**: DOM-based cell pooling with recycling + `transform: translate3d()` for GPU compositing
-- **Scroll architecture**: fake scrollbar pattern — viewport (`overflow:hidden`) + sibling fakeScrollbar (`overflow:auto`). Container-level transform shifts cells. Old cells stay visible during JS update (no blank flash).
-- **Frozen vs Pinned**:
-  - `frozen` = lock first N items from the main array in place while scrolling. `frozen.left`, `frozen.top`, `frozen.clip` (drag-to-clip frozen columns).
-  - `pinned` = attach separate data outside the main array. `pinned.top`, `pinned.bottom` (footer/totals).
-  - Frozen columns: separate overlay outside scroll container, synced via same transform offset.
-- **Selection**: overlay layer (avoids re-rendering all cells on selection change)
-- **State**: fine-grained slice subscriptions + batching; `data:change` event fires per `updateCell`
-- **Alignment**: `align` and `verticalAlign` props on ColumnDef, applied before cellRenderer (renderer can override)
-- **State on data swap**: replacing the `data` reference clears selection, resets scroll to (0,0), and clears undo history (when the undo plugin is loaded). Edit-in-progress commit-or-cancels per the editing plugin's rules.
-
-### ColumnDef Props
+## ColumnDef
 
 ```
 Identity:    id, accessorKey, accessorFn, header
@@ -157,101 +103,55 @@ Formatting:  hideZero, valueFormatter
 Extension:   meta
 ```
 
-Plugin-only fields (added via `declare module '@better-grid/core'` augmentation —
-they only exist when the relevant plugin is bundled):
+Plugin-only fields (added via module augmentation; only present when the plugin is bundled):
 
 - `editing` → `precision`, `min`, `max`, `placeholder`, `mask`, `prefix`, `suffix`, `unit`, `inputEllipsis`, `inputEditCursor`, `alwaysInput`, `selectInput`, `selectValue`, `selectInputValue`, `parseSelectWithInputValue`
 - `formatting` → `dateFormat`
 - `validation` → `required`, `rules`, `validationMessageRenderer`
 
-The React `defineColumn` builders (`col.text`, `col.currency`, etc.) wrap these
-fields with type-aware factories that set `id`, `accessorKey`, `cellType`, and
-default alignment for you.
+The React `defineColumn` builders (`col.text`, `col.currency`, etc.) wrap these with type-aware factories that set `id`, `accessorKey`, `cellType`, and default alignment.
 
-## Build
+## Build & dev
 
-Windows env has a null-bytes-in-env-var bug. Use the helper scripts:
+Windows env has a null-bytes-in-env-var bug — use the helpers, not raw `pnpm run build` / `turbo run build`:
 
 ```bash
-node scripts/build.js          # Build all packages
-node scripts/build.js core     # Build core only
-node scripts/playground-build.js dev   # Start playground dev server
+node scripts/build.js          # all packages
+node scripts/build.js core     # one package
+node scripts/playground-build.js dev   # http://localhost:8686
 ```
 
-Do NOT use `pnpm run build` or `turbo run build` directly — they fail due to the env var issue.
-
-## Dev Server
-
-```bash
-node scripts/playground-build.js dev
-# Opens at http://localhost:8686
-```
-
-**Note:** The script uses `execSync` so when launched via background task, the wrapper
-shell exits immediately while Vite keeps running as an orphan process. The task will
-report "completed" even though the server is still up. Check `netstat -ano | grep 8686`
-to verify. Kill orphan processes before restarting to avoid port conflicts (Vite
-auto-increments to 8687, 8688, etc.).
+The dev-server script uses `execSync`; when launched as a background task, the wrapper exits while Vite keeps running as an orphan. The task reports "completed" while the server is still up — `netstat -ano | grep 8686` to verify; kill orphans before restarting.
 
 ## TypeScript
 
-- `strict: true` required (type inference depends on it)
-- Typecheck: `node node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/bin/tsc --noEmit --project packages/core/tsconfig.json`
+`strict: true` required (inference helpers depend on it). Per-package: `pnpm --filter @better-grid/core typecheck`.
 
-## Project Structure
+## Project structure
 
 ```
 packages/core/src/
-  grid.ts              # createGrid() factory — main entry point
-  types.ts             # All type definitions (ColumnDef, Selection, etc.)
-  state/store.ts       # Reactive state store with batching
-  virtualization/      # Virtual scrolling engine + 9-zone layout
-  rendering/           # Cell rendering pipeline + selection overlay
-  selection/           # Selection model (cell/range/multi-range)
-  keyboard/            # Arrow/tab/enter/escape navigation
-  columns/             # Column manager (widths, value access)
-  events/              # Typed event emitter
-  plugin/              # Plugin registry + lifecycle
-  styles/grid.css      # Base CSS with custom properties
+  grid.ts, types.ts, state/, virtualization/, rendering/, selection/,
+  keyboard/, columns/, events/, plugin/, styles/grid.css
 
 packages/react/src/
-  BetterGrid.tsx        # React component (dispatches handle path vs inline options)
-  useGrid.ts            # Main hook — resolves mode/features → returns GridHandle
-  defineColumn.ts       # col.* builders + registerColumn for custom types
-  configureBetterGrid.ts# App-wide feature option defaults
-  presets/features.ts   # Feature registry, dep expander
-  presets/modes.ts      # Built-in modes + registerMode
-  rhf.ts                # react-hook-form bridge (useGridForm) — sub-export at @better-grid/react/rhf
-  adapters/             # useSyncExternalStore adapter for the imperative core
+  BetterGrid.tsx, useGrid.ts, defineColumn.ts, configureBetterGrid.ts,
+  presets/{features,modes}.ts, rhf.ts (sub-export at @better-grid/react/rhf),
+  adapters/
 
 packages/plugins/src/free/
-  editing.ts            # Cell editing (text, dropdown, boolean, masked, autocomplete)
-                        # — also: alwaysInput per-column flag, inputStyle adornments
-  sorting.ts            # Column sorting (header click, indicators)
-  filtering.ts          # Column filtering (9 operators, context menu)
-  formatting.ts         # Number/currency/percent/date via Intl
-  validation.ts         # Cell validation (required, rules, error tooltip UI, messageRenderer)
-  hierarchy.ts, clipboard.ts, grouping.ts, pagination.ts, search.ts,
-  export.ts, undo-redo.ts, cell-renderers.ts, auto-detect.ts
+  editing.ts (incl. alwaysInput + inputStyle), sorting.ts, filtering.ts,
+  formatting.ts, validation.ts (incl. messageRenderer), hierarchy.ts,
+  clipboard.ts, grouping.ts, pagination.ts, search.ts, export.ts,
+  undo-redo.ts, cell-renderers.ts, auto-detect.ts
 
 packages/pro/src/
-  gantt.ts              # Timeline/Gantt chart cellType
-  aggregation.ts        # Pinned totals/averages with rules
-  merge-cells.ts        # Row/column cell spanning
-  row-actions.ts        # Per-row action menu (⋮)
-  pro-renderers.ts      # Sparklines, heatmaps, mini charts
+  gantt.ts, aggregation.ts, merge-cells.ts, row-actions.ts, pro-renderers.ts
 
-apps/playground/        # Vite + React dev playground (~25 demo pages — Better Grid showcase
-                        # under /demo/* and finance/real-world demos under /demo-realworld/*)
-
-.ref/                   # Third-party reference material (gitignored, see .ref/CLAUDE.md)
+apps/playground/        # ~25 demo pages — /demo/* and /demo-realworld/*
+.ref/                   # third-party reference material (gitignored)
 ```
 
 ## Reference docs
 
-See [`docs/README.md`](docs/README.md) for the index. Highlights:
-
-- Roadmap — [`ROADMAP.md`](ROADMAP.md)
-- Migration cheat sheets — [`docs/migrations/`](docs/migrations/)
-- Theming guide (CSS variables + MUI bridge) — [`docs/guides/theming-with-mui.md`](docs/guides/theming-with-mui.md)
-- Internal contributor reference (init-API design history, PR summaries, specs, plans) — [`docs/internal/`](docs/internal/)
+See [`docs/README.md`](docs/README.md) for the index. Highlights: [`ROADMAP.md`](ROADMAP.md), [`docs/migrations/`](docs/migrations/), [`docs/guides/theming-with-mui.md`](docs/guides/theming-with-mui.md), [`docs/internal/`](docs/internal/) (contributor reference).
