@@ -408,10 +408,8 @@ export interface GridState<TData = unknown> {
   scrollLeft: number;
   visibleRange: VirtualRange;
   selection: Selection;
-  frozenTopRows: number;
-  frozenLeftColumns: number;
-  pinnedTopRows: TData[];
-  pinnedBottomRows: TData[];
+  frozen: { top: number; left: number };
+  pinned: { top: TData[]; bottom: TData[] };
   hierarchyState: HierarchyState | null;
   /**
    * Plugin-owned state slices. Plugins contribute typed fields here via

@@ -159,10 +159,8 @@ export function createGrid<
     scrollLeft: 0,
     visibleRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
     selection: createEmptySelection(),
-    frozenTopRows: options.frozen?.top ?? 0,
-    frozenLeftColumns: options.frozen?.left ?? 0,
-    pinnedTopRows: options.pinned?.top ?? [],
-    pinnedBottomRows: options.pinned?.bottom ?? [],
+    frozen: { top: options.frozen?.top ?? 0, left: options.frozen?.left ?? 0 },
+    pinned: { top: options.pinned?.top ?? [], bottom: options.pinned?.bottom ?? [] },
     hierarchyState: null,
     pluginState: {} as GridState<TData>['pluginState'],
   };
@@ -318,9 +316,9 @@ export function createGrid<
     // Compute frozen dimensions
     const zoneDims = computeZoneDimensions(
       {
-        frozenTopRows: state.frozenTopRows,
+        frozenTopRows: state.frozen.top,
         frozenBottomRows: 0,
-        frozenLeftColumns: state.frozenLeftColumns,
+        frozenLeftColumns: state.frozen.left,
         frozenRightColumns: 0,
       },
       (i) => state.rowHeights.length > 0 ? (state.rowHeights[i] ?? DEFAULT_ROW_HEIGHT) : getRowHeight(i),
@@ -363,7 +361,7 @@ export function createGrid<
     }
 
     // Render non-frozen cells into main cell container
-    const frozenCols = state.frozenLeftColumns;
+    const frozenCols = state.frozen.left;
     const mainStartCol = Math.max(visibleRange.startCol, frozenCols);
 
     rendering.renderCells(
@@ -378,7 +376,7 @@ export function createGrid<
       state.selection,
       0, // no frozen col handling in main pipeline
       0,
-      state.frozenTopRows,
+      state.frozen.top,
     );
 
     // Render frozen columns into separate overlay (outside scroll container)
@@ -396,7 +394,7 @@ export function createGrid<
         state.selection,
         frozenCols, // apply last-frozen-col class
         0,
-        state.frozenTopRows,
+        state.frozen.top,
       );
 
       // Update frozen overlay width and clip scroll container
@@ -461,7 +459,7 @@ export function createGrid<
     if (pinnedTopContainer) {
       const wrapper = pinnedTopContainer.parentElement;
       if (pinnedTopH > 0) {
-        renderPinnedRows(pinnedTopContainer, state.pinnedTopRows, state.columns, measurements, frozenCols);
+        renderPinnedRows(pinnedTopContainer, state.pinned.top, state.columns, measurements, frozenCols);
         pinnedTopContainer.style.height = `${pinnedTopH}px`;
         pinnedTopContainer.style.width = `${measurements.totalWidth}px`;
         pinnedTopContainer.style.transform = `translate3d(${-state.scrollLeft - clipOffset}px, 0, 0)`;
@@ -473,7 +471,7 @@ export function createGrid<
     if (pinnedBottomContainer) {
       const wrapper = pinnedBottomContainer.parentElement;
       if (pinnedBottomH > 0) {
-        renderPinnedRows(pinnedBottomContainer, state.pinnedBottomRows, state.columns, measurements, frozenCols);
+        renderPinnedRows(pinnedBottomContainer, state.pinned.bottom, state.columns, measurements, frozenCols);
         pinnedBottomContainer.style.height = `${pinnedBottomH}px`;
         pinnedBottomContainer.style.width = `${measurements.totalWidth}px`;
         pinnedBottomContainer.style.transform = `translate3d(${-state.scrollLeft - clipOffset}px, 0, 0)`;
@@ -497,12 +495,12 @@ export function createGrid<
     }
     // Render frozen pinned rows (frozen columns only, no horizontal scroll)
     if (frozenPinnedTopContainer && frozenCols > 0) {
-      renderPinnedRows(frozenPinnedTopContainer, state.pinnedTopRows, state.columns, measurements, 0, frozenCols);
+      renderPinnedRows(frozenPinnedTopContainer, state.pinned.top, state.columns, measurements, 0, frozenCols);
       frozenPinnedTopContainer.style.height = `${pinnedTopH}px`;
       frozenPinnedTopContainer.style.display = pinnedTopH > 0 ? '' : 'none';
     }
     if (frozenPinnedBottomContainer && frozenCols > 0) {
-      renderPinnedRows(frozenPinnedBottomContainer, state.pinnedBottomRows, state.columns, measurements, 0, frozenCols);
+      renderPinnedRows(frozenPinnedBottomContainer, state.pinned.bottom, state.columns, measurements, 0, frozenCols);
       frozenPinnedBottomContainer.style.height = `${pinnedBottomH}px`;
       frozenPinnedBottomContainer.style.display = pinnedBottomH > 0 ? '' : 'none';
       // Match main pinned bottom position
@@ -554,11 +552,11 @@ export function createGrid<
   }
 
   function getPinnedTopHeight(): number {
-    return getPinnedRowsHeight(store.getState().pinnedTopRows.length, options.rowHeight);
+    return getPinnedRowsHeight(store.getState().pinned.top.length, options.rowHeight);
   }
 
   function getPinnedBottomHeight(): number {
-    return getPinnedRowsHeight(store.getState().pinnedBottomRows.length, options.rowHeight);
+    return getPinnedRowsHeight(store.getState().pinned.bottom.length, options.rowHeight);
   }
 
   // ---------------------------------------------------------------------------
@@ -587,7 +585,7 @@ export function createGrid<
     if (freezeClipWidth === null) return 0;
     const measurements = virtualization.getMeasurements();
     const state = store.getState();
-    const fullFrozenWidth = measurements.colOffsets[state.frozenLeftColumns]!;
+    const fullFrozenWidth = measurements.colOffsets[state.frozen.left]!;
     return Math.max(0, fullFrozenWidth - clamp(freezeClipWidth, 0, fullFrozenWidth));
   }
 
@@ -721,8 +719,8 @@ export function createGrid<
     const bounds = {
       rowCount: getEffectiveRowCount(),
       colCount: state.columns.length,
-      frozenTopRows: state.frozenTopRows,
-      frozenLeftColumns: state.frozenLeftColumns,
+      frozenTopRows: state.frozen.top,
+      frozenLeftColumns: state.frozen.left,
     };
 
     // Arrow key navigation
@@ -803,7 +801,7 @@ export function createGrid<
       colOffsets: measurements.colOffsets,
       rowOffsets: measurements.rowOffsets,
       headerHeight,
-      frozenLeftColumns: store.getState().frozenLeftColumns,
+      frozenLeftColumns: store.getState().frozen.left,
     });
   }
 
@@ -832,7 +830,7 @@ export function createGrid<
       startEvent,
       containerRect: container!.getBoundingClientRect(),
       colOffsets: measurements.colOffsets,
-      frozenLeftColumns: state.frozenLeftColumns,
+      frozenLeftColumns: state.frozen.left,
       minVisibleColumns: freezeClipConfig.minVisible,
       setClipWidth: (width) => {
         freezeClipWidth = width;
@@ -850,7 +848,7 @@ export function createGrid<
       scheduleRender();
       const measurements = virtualization.getMeasurements();
       const state = store.getState();
-      const fullFrozenWidth = measurements.colOffsets[state.frozenLeftColumns]!;
+      const fullFrozenWidth = measurements.colOffsets[state.frozen.left]!;
       emitter.emit('freezeClip:change', fullFrozenWidth, fullFrozenWidth);
     }
   }
@@ -1508,10 +1506,10 @@ export function createGrid<
       scheduleRender();
     },
 
-    getPinnedTopRows: () => store.getState().pinnedTopRows,
+    getPinnedTopRows: () => store.getState().pinned.top,
 
     setPinnedTopRows(rows: TData[]): void {
-      store.update('pinnedRows', () => ({ pinnedTopRows: rows }));
+      store.update('pinned', () => ({ pinned: { ...store.getState().pinned, top: rows } }));
       // Update pinned top wrapper height and cell container top
       if (pinnedTopContainer?.parentElement) {
         const rowH = typeof options.rowHeight === 'number' ? options.rowHeight : DEFAULT_ROW_HEIGHT;
@@ -1525,10 +1523,10 @@ export function createGrid<
       scheduleRender();
     },
 
-    getPinnedBottomRows: () => store.getState().pinnedBottomRows,
+    getPinnedBottomRows: () => store.getState().pinned.bottom,
 
     setPinnedBottomRows(rows: TData[]): void {
-      store.update('pinnedRows', () => ({ pinnedBottomRows: rows }));
+      store.update('pinned', () => ({ pinned: { ...store.getState().pinned, bottom: rows } }));
       // Update pinned bottom wrapper height
       if (pinnedBottomContainer?.parentElement) {
         const rowH = typeof options.rowHeight === 'number' ? options.rowHeight : DEFAULT_ROW_HEIGHT;
@@ -1608,7 +1606,7 @@ export function createGrid<
       } else {
         const measurements = virtualization.getMeasurements();
         const state = store.getState();
-        const fullWidth = measurements.colOffsets[state.frozenLeftColumns]!;
+        const fullWidth = measurements.colOffsets[state.frozen.left]!;
         freezeClipWidth = clamp(width, 0, fullWidth);
       }
       scheduleRender();

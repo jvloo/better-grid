@@ -134,7 +134,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
       function buildExportCell(row: unknown, column: Readonly<NormalizedColumnDef<unknown>>, colIdx: number, isPinned: boolean, rowIdx = 0): ExportCell {
         const value = getCellValue(row, column);
         const state = ctx.grid.getState();
-        const frozenCols = state.frozenLeftColumns;
+        const frozenCols = state.frozen.left;
 
         // For badge/select types, use the option label as formatted value
         const optLabel = resolveOptionLabel(value, column);
@@ -171,7 +171,7 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
         const columns = state.columns;
         const data = state.data;
         const includeH = opts?.includeHeaders ?? config.includeHeaders;
-        const frozenCols = state.frozenLeftColumns;
+        const frozenCols = state.frozen.left;
 
         // Build header rows
         const headerRows: ExportHeaderCell[][] = [];
@@ -214,11 +214,11 @@ export function exportPlugin(options?: ExportOptions): GridPlugin<'export', Expo
           columns.map((col, ci) => buildExportCell(row, col, ci, false, rowIdx))
         );
 
-        const pinnedTopRows = (state.pinnedTopRows ?? []).map((row, rowIdx) =>
+        const pinnedTopRows = (state.pinned.top ?? []).map((row, rowIdx) =>
           columns.map((col, ci) => buildExportCell(row, col, ci, true, rowIdx))
         );
 
-        const pinnedBottomRows = (state.pinnedBottomRows ?? []).map((row, rowIdx) =>
+        const pinnedBottomRows = (state.pinned.bottom ?? []).map((row, rowIdx) =>
           columns.map((col, ci) => buildExportCell(row, col, ci, true, rowIdx))
         );
 

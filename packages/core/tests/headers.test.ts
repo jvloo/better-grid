@@ -6,11 +6,9 @@ import type { LayoutMeasurements } from '../src/virtualization/engine';
 function makeState(columns: ColumnDef[], frozenLeftColumns = 0): GridState {
   return {
     columns,
-    frozenLeftColumns,
-    frozenTopRows: 0,
+    frozen: { top: 0, left: frozenLeftColumns },
+    pinned: { top: [], bottom: [] },
     rows: [],
-    pinnedTopRows: [],
-    pinnedBottomRows: [],
     selection: { ranges: [] },
     scroll: { scrollTop: 0, scrollLeft: 0 },
     hierarchy: null,

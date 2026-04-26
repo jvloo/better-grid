@@ -136,8 +136,8 @@ export function createHeaderRenderer<TData = unknown>(
       const column = state.columns[col]! as ColumnDef<TData>;
       const left = measurements.colOffsets[col]!;
       const width = measurements.colOffsets[col + 1]! - left;
-      const isFrozen = col < state.frozenLeftColumns;
-      const isLastFrozenCol = col === state.frozenLeftColumns - 1;
+      const isFrozen = col < state.frozen.left;
+      const isLastFrozenCol = col === state.frozen.left - 1;
 
       const cell = createHeaderCell({
         left,
@@ -175,7 +175,7 @@ export function createHeaderRenderer<TData = unknown>(
     // Track column indices at the right edge of a group span.
     // These columns get resize handles that extend upward to cover the group row.
     const groupSpanEndCols = new Set<number>();
-    const frozenCols = state.frozenLeftColumns;
+    const frozenCols = state.frozen.left;
 
     // Pre-scan all non-last header rows to find group span boundaries
     for (let ri = 0; ri < totalRows - 1; ri++) {

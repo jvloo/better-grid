@@ -14,10 +14,8 @@ function makeState(): GridState<unknown> {
     scrollLeft: 0,
     visibleRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
     selection: { ranges: [], active: null },
-    frozenTopRows: 0,
-    frozenLeftColumns: 0,
-    pinnedTopRows: [],
-    pinnedBottomRows: [],
+    frozen: { top: 0, left: 0 },
+    pinned: { top: [], bottom: [] },
     hierarchyState: null,
     pluginState: {},
   };
