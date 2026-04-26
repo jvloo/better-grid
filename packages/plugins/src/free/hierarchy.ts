@@ -61,8 +61,6 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
       const grid = ctx.grid;
       const store = ctx.store;
 
-      const columns = store.getState().columns;
-
       // Resolve column IDs
       const indentColId = options?.indentColumn;
       const toggleColId = options?.toggleColumn;
@@ -133,128 +131,152 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
         }
       }
 
-      // ─── Wrap indent column (indent + optionally toggle) ────────────
-      const indentCol = indentColId ? columns.find(c => c.id === indentColId) : undefined;
-      if (indentCol) {
-        const existing = indentCol.cellRenderer;
-        const originalRenderer = existing && indentRendererOriginals.has(existing)
-          ? indentRendererOriginals.get(existing)
-          : existing;
+      // ─── applyColumnWrap — re-applicable on every setColumns() call ─
+      // Wraps cellRenderer on the indent/toggle columns so hierarchy
+      // indentation and toggles survive setColumns() (e.g. React's useEffect).
+      // A sentinel flag (__hierarchyWrapped) prevents double-wrapping on HMR
+      // or repeated 'columns:set' emissions with the same column references.
+      const applyColumnWrap = (cols: (import('@better-grid/core').ColumnDef & { id: string })[]): void => {
+        let changed = false;
 
-        const wrappedRenderer: CellRenderer = (container: HTMLElement, context: CellRenderContext) => {
-          const info = getHierarchyInfo(context);
+        // ─── Wrap indent column ─────────────────────────────────────
+        if (indentColId) {
+          const indentCol = cols.find(c => c.id === indentColId);
+          if (indentCol && !(indentCol as { __hierarchyWrapped?: boolean }).__hierarchyWrapped) {
+            (indentCol as { __hierarchyWrapped?: boolean }).__hierarchyWrapped = true;
 
-          if (!info || container.classList.contains('bg-cell--pinned')) {
-            if (originalRenderer) return originalRenderer(container, context);
-            container.textContent = context.value != null ? String(context.value) : '';
-            return;
-          }
+            const existing = indentCol.cellRenderer;
+            const originalRenderer = existing && indentRendererOriginals.has(existing)
+              ? indentRendererOriginals.get(existing)
+              : existing;
 
-          const { depth, isParent, isExpanded, rowId } = info;
+            const wrappedRenderer: CellRenderer = (container: HTMLElement, context: CellRenderContext) => {
+              const info = getHierarchyInfo(context);
 
-          container.textContent = '';
+              if (!info || container.classList.contains('bg-cell--pinned')) {
+                if (originalRenderer) return originalRenderer(container, context);
+                container.textContent = context.value != null ? String(context.value) : '';
+                return;
+              }
 
-          // ARIA: expose depth + expand/collapse state on the cell
-          container.setAttribute('aria-level', String(depth + 1));
-          if (isParent) {
-            container.setAttribute('aria-expanded', String(isExpanded));
-          } else {
-            container.removeAttribute('aria-expanded');
-          }
+              const { depth, isParent, isExpanded, rowId } = info;
 
-          // Apply indent
-          const basePadding = 8;
-          container.style.paddingLeft = `${basePadding + depth * indentSize}px`;
-
-          // CSS classes for styling hooks
-          container.classList.toggle('bg-cell--parent', isParent);
-          container.classList.toggle('bg-cell--leaf', !isParent);
-          container.classList.toggle('bg-cell--expanded', isParent && isExpanded);
-          container.classList.toggle('bg-cell--collapsed', isParent && !isExpanded);
-          for (let d = 0; d <= 10; d++) {
-            container.classList.toggle(`bg-cell--depth-${d}`, d === depth);
-          }
-
-          // Embed toggle if no separate toggle column
-          if (!hasSeparateToggle) {
-            if (isParent) {
-              renderToggle(container, isExpanded, rowId);
-            } else {
-              const spacer = document.createElement('span');
-              spacer.style.display = 'inline-block';
-              spacer.style.width = '18px';
-              container.appendChild(spacer);
-            }
-          }
-
-          // Render value content
-          if (originalRenderer) {
-            const contentWrapper = document.createElement('span');
-            contentWrapper.className = 'bg-hierarchy-content';
-            container.appendChild(contentWrapper);
-            return originalRenderer(contentWrapper, context);
-          } else {
-            container.appendChild(
-              document.createTextNode(context.value != null ? String(context.value) : ''),
-            );
-          }
-        };
-
-        indentCol.cellRenderer = wrappedRenderer;
-        indentRendererOriginals.set(wrappedRenderer, originalRenderer);
-      }
-
-      // ─── Wrap toggle column (toggle icon only, no indent) ───────────
-      if (hasSeparateToggle) {
-        const toggleCol = columns.find(c => c.id === toggleColId);
-        if (toggleCol) {
-          const existingToggle = toggleCol.cellRenderer;
-          const originalToggleRenderer = existingToggle && toggleRendererOriginals.has(existingToggle)
-            ? toggleRendererOriginals.get(existingToggle)
-            : existingToggle;
-
-          const wrappedToggleRenderer: CellRenderer = (container: HTMLElement, context: CellRenderContext) => {
-            const info = getHierarchyInfo(context);
-
-            // Always clear container first — cells are recycled and may have stale content
-            container.textContent = '';
-            container.style.display = '';
-            container.style.cursor = '';
-
-            if (!info || container.classList.contains('bg-cell--pinned')) {
-              if (originalToggleRenderer) return originalToggleRenderer(container, context);
-              container.textContent = context.value != null ? String(context.value) : '';
-              return;
-            }
-
-            const { isParent, isExpanded, rowId } = info;
-
-            // Run original renderer (for background color, etc.)
-            if (originalToggleRenderer) {
-              originalToggleRenderer(container, context);
-            }
-
-            if (isParent) {
-              // Clear any text/children from original renderer, keep styles (e.g. backgroundColor)
               container.textContent = '';
-              container.style.display = 'flex';
-              container.style.alignItems = 'center';
-              container.style.justifyContent = 'center';
-              container.style.cursor = 'pointer';
-              renderToggle(container, isExpanded, rowId);
-            }
-          };
 
-          toggleCol.cellRenderer = wrappedToggleRenderer;
-          toggleRendererOriginals.set(wrappedToggleRenderer, originalToggleRenderer);
+              // ARIA: expose depth + expand/collapse state on the cell
+              container.setAttribute('aria-level', String(depth + 1));
+              if (isParent) {
+                container.setAttribute('aria-expanded', String(isExpanded));
+              } else {
+                container.removeAttribute('aria-expanded');
+              }
+
+              // Apply indent
+              const basePadding = 8;
+              container.style.paddingLeft = `${basePadding + depth * indentSize}px`;
+
+              // CSS classes for styling hooks
+              container.classList.toggle('bg-cell--parent', isParent);
+              container.classList.toggle('bg-cell--leaf', !isParent);
+              container.classList.toggle('bg-cell--expanded', isParent && isExpanded);
+              container.classList.toggle('bg-cell--collapsed', isParent && !isExpanded);
+              for (let d = 0; d <= 10; d++) {
+                container.classList.toggle(`bg-cell--depth-${d}`, d === depth);
+              }
+
+              // Embed toggle if no separate toggle column
+              if (!hasSeparateToggle) {
+                if (isParent) {
+                  renderToggle(container, isExpanded, rowId);
+                } else {
+                  const spacer = document.createElement('span');
+                  spacer.style.display = 'inline-block';
+                  spacer.style.width = '18px';
+                  container.appendChild(spacer);
+                }
+              }
+
+              // Render value content
+              if (originalRenderer) {
+                const contentWrapper = document.createElement('span');
+                contentWrapper.className = 'bg-hierarchy-content';
+                container.appendChild(contentWrapper);
+                return originalRenderer(contentWrapper, context);
+              } else {
+                container.appendChild(
+                  document.createTextNode(context.value != null ? String(context.value) : ''),
+                );
+              }
+            };
+
+            indentCol.cellRenderer = wrappedRenderer;
+            indentRendererOriginals.set(wrappedRenderer, originalRenderer);
+            changed = true;
+          }
         }
-      }
 
-      // Force column update so renderer changes take effect
-      const needsUpdate = indentCol || (hasSeparateToggle && columns.find(c => c.id === toggleColId));
-      if (needsUpdate) {
-        store.update('columns', () => ({ columns: [...columns] }));
-      }
+        // ─── Wrap toggle column ─────────────────────────────────────
+        if (hasSeparateToggle && toggleColId) {
+          const toggleCol = cols.find(c => c.id === toggleColId);
+          if (toggleCol && !(toggleCol as { __hierarchyToggleWrapped?: boolean }).__hierarchyToggleWrapped) {
+            (toggleCol as { __hierarchyToggleWrapped?: boolean }).__hierarchyToggleWrapped = true;
+
+            const existingToggle = toggleCol.cellRenderer;
+            const originalToggleRenderer = existingToggle && toggleRendererOriginals.has(existingToggle)
+              ? toggleRendererOriginals.get(existingToggle)
+              : existingToggle;
+
+            const wrappedToggleRenderer: CellRenderer = (container: HTMLElement, context: CellRenderContext) => {
+              const info = getHierarchyInfo(context);
+
+              // Always clear container first — cells are recycled and may have stale content
+              container.textContent = '';
+              container.style.display = '';
+              container.style.cursor = '';
+
+              if (!info || container.classList.contains('bg-cell--pinned')) {
+                if (originalToggleRenderer) return originalToggleRenderer(container, context);
+                container.textContent = context.value != null ? String(context.value) : '';
+                return;
+              }
+
+              const { isParent, isExpanded, rowId } = info;
+
+              // Run original renderer (for background color, etc.)
+              if (originalToggleRenderer) {
+                originalToggleRenderer(container, context);
+              }
+
+              if (isParent) {
+                // Clear any text/children from original renderer, keep styles (e.g. backgroundColor)
+                container.textContent = '';
+                container.style.display = 'flex';
+                container.style.alignItems = 'center';
+                container.style.justifyContent = 'center';
+                container.style.cursor = 'pointer';
+                renderToggle(container, isExpanded, rowId);
+              }
+            };
+
+            toggleCol.cellRenderer = wrappedToggleRenderer;
+            toggleRendererOriginals.set(wrappedToggleRenderer, originalToggleRenderer);
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          store.update('columns', () => ({ columns: [...cols] }));
+        }
+      };
+
+      // Apply wrapping at init time
+      applyColumnWrap(store.getState().columns);
+
+      // Re-apply whenever setColumns() is called (e.g. React useEffect on first
+      // render). normalizeColumn() inside setColumns() creates fresh ColumnDef
+      // spread-copies, discarding all mutations applied above — subscribing here
+      // re-wraps the new column references so hierarchy rendering is preserved.
+      ctx.on('columns:set', applyColumnWrap);
 
       // Key bindings for expand/collapse
       const unregArrowRight = ctx.registerKeyBinding({
