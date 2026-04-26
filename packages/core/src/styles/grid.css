@@ -76,6 +76,12 @@
   max-width: 100%;
 }
 
+/* Filterable header cells reserve right-side space for the absolute-positioned
+   filter button (16px) + resize handle (6px) so header text doesn't run behind them. */
+.bg-header-cell--filterable {
+  padding-right: 34px; /* 12px base + 16px filter + 6px resize */
+}
+
 /* Group row header cells (not the last row) */
 .bg-header-cell--group {
   border-bottom: 1px solid var(--bg-header-border-color, #e0e0e0);
@@ -91,7 +97,8 @@
 /* Filter icon button in header — absolutely positioned so it never
    participates in flex layout. This prevents the button appearing on hover
    from pushing the header text sideways (the right-aligned header reflow bug).
-   Sits at the right edge, inset by the resize-handle width (6 px). */
+   Sits at the right edge, inset by the resize-handle width (6 px). Fixed width
+   so the sort indicator can be placed deterministically just to its left. */
 .bg-header-cell__filter-btn {
   position: absolute;
   right: 6px; /* leave room for the 6 px resize handle */
@@ -99,6 +106,7 @@
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
+  width: 16px;
   padding: 0 2px;
   opacity: 0.4;
   cursor: pointer;
@@ -118,6 +126,23 @@
   visibility: visible;
   opacity: 0.8;
   color: var(--bg-active-border, #1a73e8);
+}
+
+/* Sort indicator — absolutely positioned to the left of the filter button.
+   Stack from right: resize (0–6px) → filter (6–22px) → sort (22–34px).
+   On headers without a filter button, sort sits at right:6px instead. */
+.bg-sort-indicator {
+  position: absolute;
+  right: 22px; /* filter-width(16) + resize-width(6) */
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.bg-header-cell:not(.bg-header-cell--filterable) .bg-sort-indicator {
+  right: 6px; /* no filter button: sit next to resize handle */
 }
 
 /* Column resize handle */

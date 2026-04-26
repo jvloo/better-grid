@@ -400,6 +400,7 @@ export function createHeaderRenderer<TData = unknown>(
       });
 
       if (deps.hasFilterPlugin()) {
+        cell.classList.add('bg-header-cell--filterable');
         const filterBtn = document.createElement('span');
         filterBtn.className = 'bg-header-cell__filter-btn';
         // position:absolute keeps the button out of flex flow so it never
