@@ -27,6 +27,7 @@ const packages = [
   { name: 'plugins', dir: 'packages/plugins' },
   { name: 'pro', dir: 'packages/pro' },
   { name: 'react', dir: 'packages/react' },
+  { name: 'codemods', dir: 'packages/codemods' },
 ];
 
 const toBuild = target ? packages.filter((p) => p.name === target) : packages;
