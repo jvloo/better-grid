@@ -56,4 +56,31 @@ describe('defineColumn (col.*)', () => {
   test('accessing a non-registered column type throws a helpful error', () => {
     expect(() => (col as unknown as Record<string, () => unknown>).bogus()).toThrow(/not a registered column type/);
   });
+
+  test('col.text forwards hide / flex / headerAlign / headerRenderer', () => {
+    const fn = (container: HTMLElement) => container.append('x');
+    const c = col.text<{ name: string }>('name', {
+      headerName: 'Name',
+      hide: true,
+      flex: 2,
+      headerAlign: 'right',
+      headerRenderer: fn,
+    });
+    expect(c.field).toBe('name');
+    expect(c.headerName).toBe('Name');
+    expect(c.hide).toBe(true);
+    expect(c.flex).toBe(2);
+    expect(c.headerAlign).toBe('right');
+    expect(c.headerRenderer).toBe(fn);
+  });
+
+  test('col.text auto-derives id from field', () => {
+    const c = col.text('amount', { headerName: 'Amount' });
+    expect(c.id).toBe('amount');
+  });
+
+  test('col.text explicit id wins over field', () => {
+    const c = col.text('amount', { id: 'amountUSD', headerName: 'Amount' });
+    expect(c.id).toBe('amountUSD');
+  });
 });
