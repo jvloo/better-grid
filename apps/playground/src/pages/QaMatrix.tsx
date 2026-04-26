@@ -1225,7 +1225,7 @@ const clipSeedRows: ClipRow[] = [
 const clipColumns: ColumnDef<ClipRow>[] = [
   col.text('label', { headerName: 'Label', width: 120, editable: true }),
   col.number('amount', { headerName: 'Amount', width: 110, precision: 0, editable: true }),
-  col.currency('currency', { headerName: 'Currency', width: 110, editable: true }),
+  col.text('currency', { headerName: 'Currency', width: 110, editable: true, cellEditor: 'select', options: [{ label: 'USD', value: 'USD' }, { label: 'AUD', value: 'AUD' }, { label: 'GBP', value: 'GBP' }] }),
   col.date('date', { headerName: 'Date', width: 120, editable: true }),
   col.text('status', { headerName: 'Status', width: 110, cellEditor: 'select', options: [{ label: 'Open', value: 'Open' }, { label: 'Closed', value: 'Closed' }, { label: 'Pending', value: 'Pending' }], editable: true }),
 ] as ColumnDef<ClipRow>[];
@@ -1242,7 +1242,7 @@ function ClipboardUndoGrid() {
       format: { locale: 'en-US', currencyCode: 'USD' },
       edit: { editTrigger: 'dblclick' },
       clipboard: true,
-      undo: { historySize: 50 },
+      undo: { maxHistory: 50 },
     },
     selection: { mode: 'range', fillHandle: true },
     rowHeight: 36,

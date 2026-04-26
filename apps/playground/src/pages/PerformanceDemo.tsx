@@ -42,6 +42,8 @@ function generateData(rowCount: number): { data: PerfRow[]; genTime: number } {
 }
 
 const PRESETS = [
+  { label: 'Generate 1K rows', rows: 1_000 },
+  { label: 'Generate 10K rows', rows: 10_000 },
   { label: 'Generate 100K rows', rows: 100_000 },
   { label: 'Generate 500K rows', rows: 500_000 },
   { label: 'Generate 1M rows', rows: 1_000_000 },
@@ -95,7 +97,6 @@ export function PerformanceDemo() {
     const result = generateData(100_000);
     return result.data;
   });
-  const [gridKey, setGridKey] = useState(0);
 
   const colCount = 8;
   const totalCells = rowCount * colCount;
@@ -110,7 +111,6 @@ export function PerformanceDemo() {
 
       const renderStart = performance.now();
       setData(result.data);
-      setGridKey((k) => k + 1);
       setGenerating(false);
 
       requestAnimationFrame(() => {
@@ -213,8 +213,10 @@ export function PerformanceDemo() {
       </div>
 
       {/* Grid — view mode = sort + filter + resize + select */}
+      {/* No `key` here: data swap is handled by useGrid's setData effect, which
+          keeps the grid mounted and only reruns virtualization. Forcing remount
+          would defeat the stable-handle contract verified by useGrid-stable-handle.test.ts. */}
       <BetterGrid<PerfRow>
-        key={gridKey}
         columns={columns}
         data={data}
         mode="view"
