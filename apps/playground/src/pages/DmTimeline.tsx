@@ -126,7 +126,7 @@ export function DmTimeline() {
       gantt({ dateColumnPrefix: 'm_', startColumnField: 'startColumn', endColumnField: 'endColumn', varianceField: 'variance' }),
     ],
     frozen: { left: 6, clip: { minVisible: 2 } },
-    tableStyle: 'striped',
+    striped: true,
     hierarchy: {
       getRowId: (row: TimelineRow) => row.id,
       getParentId: (row: TimelineRow) => row.parentId,

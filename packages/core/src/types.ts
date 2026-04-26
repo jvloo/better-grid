@@ -363,7 +363,10 @@ export interface GridOptions<
   rowHeight?: number | ((rowIndex: number) => number);
   /** Default header row height. Used when `headers` is omitted, or as the per-row default for any HeaderRow that doesn't set its own `height`. */
   headerHeight?: number;
-  tableStyle?: 'bordered' | 'borderless' | 'striped';
+  /** Show vertical/horizontal cell borders. Default: true. */
+  bordered?: boolean;
+  /** Alternate-row striping. Default: false. */
+  striped?: boolean;
 
   // Behavior
   selection?: SelectionOptions;

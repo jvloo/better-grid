@@ -144,7 +144,7 @@ export function DmActuals() {
     headers: multiHeaders,
     frozen: { left: 8, clip: { minVisible: 2 } },
     pinned: { bottom: pinnedBottomRows },
-    tableStyle: 'striped',
+    striped: true,
     selection: { mode: 'range', fillHandle: true },
     headerHeight: 44,
     rowHeight: 44,

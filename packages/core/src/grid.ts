@@ -1002,9 +1002,8 @@ export function createGrid<
 
       container = el;
       container.classList.add('bg-grid');
-      if (options.tableStyle && options.tableStyle !== 'bordered') {
-        container.classList.add(`bg-table--${options.tableStyle}`);
-      }
+      container.classList.toggle('bg-grid--bordered', options.bordered ?? true);
+      container.classList.toggle('bg-grid--striped', options.striped ?? false);
       container.tabIndex = 0;
       container.setAttribute('role', 'grid');
       updateAriaCounts();

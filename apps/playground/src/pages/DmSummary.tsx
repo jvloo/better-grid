@@ -106,7 +106,7 @@ export function DmSummary() {
     // clipboard via escape hatch — read-only cells, no editing dep needed.
     plugins: [clipboard()],
     frozen: { left: 4, clip: { minVisible: 2 } },
-    tableStyle: 'striped',
+    striped: true,
     selection: { mode: 'range' },
     headerHeight: 44,
     rowHeight: 44,

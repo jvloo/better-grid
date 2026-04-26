@@ -122,7 +122,7 @@ export function FsbtProgramSummary() {
     mode: null,
     plugins,
     frozen: { left: 6, clip: { minVisible: 2 } },
-    tableStyle: 'striped',
+    striped: true,
     hierarchy: {
       getRowId: (row: FsbtProgramRow) => row.id,
       getParentId: (row: FsbtProgramRow) => row.parentId,

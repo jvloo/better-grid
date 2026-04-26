@@ -260,7 +260,7 @@ export function DmForecast() {
     },
     frozen: { left: 10, clip: { minVisible: 2 } },
     pinned: { bottom: pinnedBottomRows },
-    tableStyle: 'striped',
+    striped: true,
     hierarchy: {
       getRowId: (row: ForecastRow) => row.id,
       getParentId: (row: ForecastRow) => row.parentId,

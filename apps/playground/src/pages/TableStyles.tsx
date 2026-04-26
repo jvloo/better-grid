@@ -1,4 +1,5 @@
-﻿import { BetterGrid, defineColumn as col } from '@better-grid/react';
+import type React from 'react';
+import { BetterGrid, defineColumn as col } from '@better-grid/react';
 import type { ColumnDef } from '@better-grid/core';
 import '@better-grid/core/styles.css';
 
@@ -26,14 +27,22 @@ const columns = [
   col.text('status', { headerName: 'Status', width: 100 }),
 ] as ColumnDef<SampleRow>[];
 
-type TableStyle = 'bordered' | 'borderless' | 'striped';
-
 const SHARED_FEATURES = {
   format: { locale: 'en-AU', currencyCode: 'AUD' },
   edit: { editTrigger: 'dblclick' as const },
 };
 
-function StyleGrid({ style, label }: { style?: TableStyle; label: string }) {
+function StyleGrid({
+  bordered,
+  striped,
+  label,
+  stripeBg,
+}: {
+  bordered?: boolean;
+  striped?: boolean;
+  label: string;
+  stripeBg?: string;
+}) {
   return (
     <div>
       <h3 style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 600 }}>{label}</h3>
@@ -44,35 +53,13 @@ function StyleGrid({ style, label }: { style?: TableStyle; label: string }) {
         features={SHARED_FEATURES}
         frozen={{ left: 1 }}
         rowHeight={36}
-        tableStyle={style}
-        selection={{ mode: 'cell' }}
-        height={280}
-        style={{ borderRadius: 8 }}
-      />
-    </div>
-  );
-}
-
-function StripedNoBg() {
-  return (
-    <div>
-      <h3 style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 600 }}>
-        Striped (no bg) <code style={{ fontSize: 11, color: '#888' }}>--bg-stripe-bg: #fff</code>
-      </h3>
-      <BetterGrid<SampleRow>
-        columns={columns}
-        data={data}
-        mode="view"
-        features={SHARED_FEATURES}
-        frozen={{ left: 1 }}
-        rowHeight={36}
-        tableStyle="striped"
+        bordered={bordered}
+        striped={striped}
         selection={{ mode: 'cell' }}
         height={280}
         style={{
           borderRadius: 8,
-          // @ts-expect-error CSS custom property
-          '--bg-stripe-bg': '#fff',
+          ...(stripeBg ? { '--bg-stripe-bg': stripeBg } as React.CSSProperties : {}),
         }}
       />
     </div>
@@ -84,15 +71,15 @@ export function TableStyles() {
     <div>
       <h1 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 600 }}>Table Styles</h1>
       <p style={{ margin: '0 0 24px', color: '#666', fontSize: 13 }}>
-        Four table style variants via the <code>tableStyle</code> prop. Stripe color customizable with <code>--bg-stripe-bg</code>.
+        Table style variants via <code>bordered</code> and <code>striped</code> boolean props.
+        Combine them freely. Stripe color customizable with <code>--bg-stripe-bg</code>.
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
         <StyleGrid label="Bordered (default)" />
-        <StyleGrid style="borderless" label="Borderless" />
-        <StyleGrid style="striped" label="Striped" />
-        <StripedNoBg />
+        <StyleGrid bordered={false} label="Borderless (bordered=false)" />
+        <StyleGrid striped label="Striped (bordered + striped)" />
+        <StyleGrid striped stripeBg="#fff" label="Striped, no bg (--bg-stripe-bg: #fff)" />
       </div>
     </div>
   );
 }
-

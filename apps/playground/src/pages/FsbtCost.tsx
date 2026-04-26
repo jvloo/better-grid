@@ -356,9 +356,8 @@ const monthValueFormatter = (v: unknown): string => {
   return v.toLocaleString('en-AU', { maximumFractionDigits: 0 });
 };
 
-// tableStyle 'striped' strips every cell's right border — monthly cells
-// should still have vertical dividers to separate each month's value, so
-// add borderRight explicitly via cellStyle on the generated columns.
+// striped:true alternates row background. Borders stay on (bordered=true default).
+// Monthly cells add borderRight via cellStyle to reinforce the month dividers.
 const monthlyCellStyle = (v: unknown, row: unknown): Record<string, string> => ({
   ...(parentRowCellStyle(v, row) ?? {}),
   borderRight: '1px solid #E4E7EC',
@@ -818,7 +817,7 @@ export function FsbtCost() {
     // minVisible: 2 keeps at least Menu + Code visible at all times.
     frozen: { left: 12, clip: { minVisible: 2 } },
     pinned: { bottom: pinnedBottomRows },
-    tableStyle: 'striped',
+    striped: true,
     hierarchy: {
       getRowId: (row: CostRow) => row.id,
       getParentId: (row: CostRow) => row.parentId,

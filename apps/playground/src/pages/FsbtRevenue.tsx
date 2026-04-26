@@ -515,7 +515,7 @@ export function FsbtRevenue() {
     pinned: { bottom: [btsTotalsRow] },
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
-    tableStyle: 'striped',
+    striped: true,
     rowStyle: parentRowStyle,
     onCellChange: handleBtsDataChange,
   });
@@ -662,7 +662,7 @@ export function FsbtRevenue() {
     // horizontally without losing the category/amount context.
     frozen: { left: 9, clip: { minVisible: 2 } },
     plugins: holdingPlugins,
-    tableStyle: 'striped',
+    striped: true,
     hierarchy: {
       getRowId: (row: HoldingRow) => row.id,
       getParentId: (row: HoldingRow) => row.parentId,
@@ -785,7 +785,7 @@ export function FsbtRevenue() {
     mode: null,
     plugins: btsDetailsPlugins,
     frozen: { left: 7, clip: { minVisible: 2 } },
-    tableStyle: 'striped',
+    striped: true,
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
     rowStyle: btsDetailRowStyle,
@@ -942,7 +942,7 @@ export function FsbtRevenue() {
     frozen: { left: 2, clip: { minVisible: 1 } },
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
-    tableStyle: 'striped',
+    striped: true,
     rowStyle: parentRowStyle,
   });
 
@@ -969,7 +969,7 @@ export function FsbtRevenue() {
     mode: null,
     plugins: holdingSalePlugins,
     frozen: { left: 7, clip: { minVisible: 2 } },
-    tableStyle: 'striped',
+    striped: true,
     headerHeight: FSBT_STYLES.headerHeight,
     rowHeight: FSBT_STYLES.rowHeight,
     rowStyle: btsDetailRowStyle,

@@ -478,7 +478,7 @@ export function FsbtProgram() {
     mode: null,
     plugins,
     frozen: { left: 7, clip: { minVisible: 2 } },
-    tableStyle: 'striped',
+    striped: true,
     headerHeight: 44,
     hierarchy: {
       getRowId: (row: ProgramRow) => row.id,
