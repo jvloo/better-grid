@@ -1246,6 +1246,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         const closeOnOutside = (event: MouseEvent) => {
           const target = event.target as Node;
           if (panel.contains(target) || anchorEl.contains(target)) return;
+          // Defensive: if the click is inside the cell that owns the panel, don't
+          // close — catches the race where the panel just opened and the trigger's
+          // containing cell hasn't yet been marked .bg-cell--editing.
+          if ((target as Element).closest?.('.bg-cell--editing, .bg-select-trigger, .bg-dropdown-panel')) return;
           closeDisplaySelectPanel();
         };
         const closeOnScroll = () => closeDisplaySelectPanel();
