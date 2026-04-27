@@ -13,7 +13,7 @@
     "@better-grid/react": "workspace:*",
     "@better-grid/plugins": "workspace:*",
     "@better-grid/pro": "workspace:*",
-    "react": "^19.0.0",
+    "react": "^19.2.5",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.0.0"
   },
