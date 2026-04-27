@@ -1,6 +1,6 @@
 {
   "name": "@better-grid/react",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "React adapter for Better Grid",
   "license": "MIT",
   "type": "module",
@@ -29,7 +29,9 @@
       }
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -48,7 +50,9 @@
     "react-hook-form": ">=7.0.0"
   },
   "peerDependenciesMeta": {
-    "react-hook-form": { "optional": true }
+    "react-hook-form": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

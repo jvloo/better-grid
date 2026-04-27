@@ -1,6 +1,6 @@
 {
   "name": "@better-grid/plugins",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Official plugins for Better Grid",
   "license": "MIT",
   "type": "module",
@@ -19,7 +19,9 @@
       }
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",

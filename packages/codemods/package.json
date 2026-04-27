@@ -1,6 +1,6 @@
 {
   "name": "@better-grid/codemods",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "One-shot codemods to migrate to Better Grid from AG Grid, MUI X Data Grid, TanStack Table, Handsontable, RevoGrid, and react-data-grid",
   "license": "MIT",
   "type": "module",
@@ -10,7 +10,9 @@
   "bin": {
     "better-grid-migrate": "./dist/bin/migrate.cjs"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

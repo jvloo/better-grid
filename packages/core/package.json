@@ -1,6 +1,6 @@
 {
   "name": "@better-grid/core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Framework-agnostic data grid & spreadsheet engine",
   "license": "MIT",
   "type": "module",
