@@ -4,6 +4,13 @@ All notable changes to Better Grid are documented here. Format follows [Keep a C
 
 The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`, `@better-grid/plugins`, and `@better-grid/pro` until the packages diverge.
 
+## [1.0.2] — 2026-04-28
+
+### Pro plugins (`@better-grid/pro`)
+
+- **Row actions** — action trigger cells now remove inherited grid cell padding so kebab buttons stay centered in compact columns.
+- **Row actions** — added `triggerSize` to tune the menu trigger button size for dense table layouts.
+
 ## [1.0.0] — 2026-04-27
 
 First public release. The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`, `@better-grid/plugins`, `@better-grid/codemods`, and `@better-grid/pro` until the packages diverge.
