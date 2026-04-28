@@ -4,6 +4,12 @@ All notable changes to Better Grid are documented here. Format follows [Keep a C
 
 The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`, `@better-grid/plugins`, and `@better-grid/pro` until the packages diverge.
 
+## [1.0.5] — 2026-04-29
+
+### Free plugins (`@better-grid/plugins`)
+
+- **Editing** — masked editor section clicks now preserve the intended selected section instead of collapsing the native input selection.
+
 ## [1.0.4] — 2026-04-29
 
 ### Free plugins (`@better-grid/plugins`)

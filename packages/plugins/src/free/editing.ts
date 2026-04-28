@@ -2629,11 +2629,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // All input goes through keydown — prevent browser from mutating the value
         input.addEventListener('beforeinput', (e) => { e.preventDefault(); });
 
-        // Click on MM or YY → select that section
-        input.addEventListener('mouseup', (e) => {
+        // Click on MM or YY -> select that section. Prevent the browser's
+        // native input selection from collapsing our section range afterward.
+        input.addEventListener('mousedown', (e) => {
+          e.preventDefault();
           activeSectionIdx = getSectionAtClientX(e.clientX);
-          const range = getSectionRange(activeSectionIdx);
-          input.setSelectionRange(range.start, range.end);
+          input.focus();
+          syncInputDisplay();
         });
 
         input.addEventListener('keydown', (e) => {
