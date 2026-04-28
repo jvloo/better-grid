@@ -2075,18 +2075,28 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             autoSize();
             syncPosition();
           });
-          ed.focus();
-
+          let floatActive = true;
           const edText = ed.textContent ?? '';
-          if (selectionRange) {
-            setContentEditableSelection(ed, selectionRange.start, selectionRange.end);
-          } else if (clickEvent && !cursorAtEnd) {
-            const offset = getTextOffsetFromClientX(edText, ed.getBoundingClientRect(), getComputedStyle(ed), clickEvent.clientX);
-            setContentEditableCaret(ed, offset);
-          } else if (cursorAtEnd) {
-            setContentEditableCaret(ed, edText.length);
-          } else {
-            setContentEditableSelection(ed, 0, edText.length);
+          const focusEditor = (): void => {
+            if (!floatActive || !document.body.contains(ed)) return;
+            ed.focus();
+            if (selectionRange) {
+              setContentEditableSelection(ed, selectionRange.start, selectionRange.end);
+            } else if (clickEvent && !cursorAtEnd) {
+              const offset = getTextOffsetFromClientX(edText, ed.getBoundingClientRect(), getComputedStyle(ed), clickEvent.clientX);
+              setContentEditableCaret(ed, offset);
+            } else if (cursorAtEnd) {
+              setContentEditableCaret(ed, edText.length);
+            } else {
+              setContentEditableSelection(ed, 0, edText.length);
+            }
+          };
+          focusEditor();
+          // The grid may receive focus later in the originating click sequence.
+          // Re-focus once the browser finishes that click so single-click edit
+          // leaves the caret live and typing works immediately.
+          if (clickEvent) {
+            requestAnimationFrame(focusEditor);
           }
 
           ed.addEventListener('keydown', (e) => {
@@ -2102,8 +2112,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           ed.addEventListener('dblclick', () => {
             requestAnimationFrame(() => setContentEditableSelection(ed, 0, (ed.textContent ?? '').length));
           });
-          let floatActive = true;
-
           function cleanupFloat(): void {
             if (!floatActive) return;
             floatActive = false;
