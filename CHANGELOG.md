@@ -4,6 +4,13 @@ All notable changes to Better Grid are documented here. Format follows [Keep a C
 
 The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`, `@better-grid/plugins`, and `@better-grid/pro` until the packages diverge.
 
+## [1.0.4] — 2026-04-29
+
+### Free plugins (`@better-grid/plugins`)
+
+- **Editing** — masked editors now use input-style transparent focus treatment when opened from input-style cells.
+- **Editing** — empty masked placeholders no longer duplicate their `MM` or `YY` labels while a section is selected.
+
 ## [1.0.3] — 2026-04-29
 
 ### Free plugins (`@better-grid/plugins`)

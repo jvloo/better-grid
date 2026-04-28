@@ -2455,17 +2455,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         }
         let activeSectionIdx = 0;
 
-        // Build the display string: filled sections show digits, empty show label
-        function buildDisplayValue(): string {
+        function buildInputValue(): string {
           let result = '';
           for (let i = 0; i < sectionLengths.length; i += 1) {
-            // Insert separators that come before this section
             for (const sep of separators) {
               if (sep.pos === i) result += sep.char;
             }
-            result += sectionValues[i] || sectionLabels[i] || ''.padEnd(sectionLengths[i]!, '_');
+            result += sectionValues[i] || ''.padEnd(sectionLabels[i]?.length ?? sectionLengths[i]!, ' ');
           }
-          // Trailing separators
           for (const sep of separators) {
             if (sep.pos === sectionLengths.length) result += sep.char;
           }
@@ -2497,7 +2494,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         }
 
         function syncInputDisplay(): void {
-          input.value = buildDisplayValue();
+          input.value = buildInputValue();
           const range = getSectionRange(activeSectionIdx);
           input.setSelectionRange(range.start, range.end);
           syncDisplayLayer();
@@ -2512,6 +2509,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         // Capture cell's computed font so editor matches cell rendering
         const anchorComputed = getComputedStyle(anchorEl);
+        const useInputStyleFloat = !!inputBox;
 
         // Create float box
         const floatBox = document.createElement('div');
@@ -2520,10 +2518,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           position: fixed; z-index: 200; box-sizing: border-box;
           top: ${cellRect.top}px; left: ${cellRect.left}px;
           min-width: ${cellRect.width}px;
-          background: ${edBg};
-          border: ${edBorderW}px solid ${edBorder};
-          border-radius: ${edRadius};
-          box-shadow: ${edShadow};
+          background: ${useInputStyleFloat ? 'transparent' : edBg};
+          border: ${useInputStyleFloat ? '0' : `${edBorderW}px solid ${edBorder}`};
+          border-radius: ${useInputStyleFloat ? anchorComputed.borderRadius : edRadius};
+          box-shadow: ${useInputStyleFloat ? 'none' : edShadow};
           height: ${cellRect.height}px;
           font-size: ${anchorComputed.fontSize};
           font-family: ${anchorComputed.fontFamily};
@@ -2609,11 +2607,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'bg-cell-editor bg-cell-editor--masked';
-        input.value = buildDisplayValue();
+        input.value = buildInputValue();
         input.style.cssText = `
           position: relative; z-index: 1;
           width: 100%;
-          height: ${cellRect.height - edBorderW * 2}px;
+          height: ${cellRect.height - (useInputStyleFloat ? 0 : edBorderW * 2)}px;
           border: none;
           outline: none;
           background: transparent;
