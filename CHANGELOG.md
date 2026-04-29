@@ -4,6 +4,12 @@ All notable changes to Better Grid are documented here. Format follows [Keep a C
 
 The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`, `@better-grid/plugins`, and `@better-grid/pro` until the packages diverge.
 
+## [1.0.8] — 2026-04-29
+
+### Free plugins (`@better-grid/plugins`)
+
+- **Editing** — masked editors now use placeholder labels in the hidden input value so browser selection aligns with the visible `MM/YY` display.
+
 ## [1.0.7] — 2026-04-29
 
 ### Free plugins (`@better-grid/plugins`)

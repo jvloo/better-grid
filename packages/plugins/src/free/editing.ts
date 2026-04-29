@@ -2462,7 +2462,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             for (const sep of separators) {
               if (sep.pos === i) result += sep.char;
             }
-            result += sectionValues[i] || ''.padEnd(sectionLabels[i]?.length ?? sectionLengths[i]!, ' ');
+            result += sectionValues[i] || sectionLabels[i] || ''.padEnd(sectionLengths[i]!, ' ');
           }
           for (const sep of separators) {
             if (sep.pos === sectionLengths.length) result += sep.char;
