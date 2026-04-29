@@ -4,6 +4,12 @@ All notable changes to Better Grid are documented here. Format follows [Keep a C
 
 The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`, `@better-grid/plugins`, and `@better-grid/pro` until the packages diverge.
 
+## [1.0.7] — 2026-04-29
+
+### Free plugins (`@better-grid/plugins`)
+
+- **Editing** — input-style floating editors now inherit the input box background, radius, and shadow so focused cells can match host app input styling.
+
 ## [1.0.6] — 2026-04-29
 
 ### Free plugins (`@better-grid/plugins`)

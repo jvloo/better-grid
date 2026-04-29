@@ -1853,10 +1853,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             position: fixed; z-index: 200; box-sizing: border-box;
             top: ${cellRect.top}px; left: ${cellRect.left}px;
             min-width: ${cellRect.width}px; max-width: ${fullWidth}px;
-            background: ${useInputStyleFloat ? 'transparent' : edBg};
+            background: ${useInputStyleFloat ? anchorComputed.backgroundColor : edBg};
             border: ${useInputStyleFloat ? '0' : `${edBorderW}px solid ${edBorder}`};
             border-radius: ${useInputStyleFloat ? anchorComputed.borderRadius : edRadius};
-            box-shadow: ${useInputStyleFloat ? 'none' : edShadow};
+            box-shadow: ${useInputStyleFloat ? anchorComputed.boxShadow : edShadow};
             overflow: hidden;
           `;
 
@@ -2519,10 +2519,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           position: fixed; z-index: 200; box-sizing: border-box;
           top: ${cellRect.top}px; left: ${cellRect.left}px;
           min-width: ${cellRect.width}px;
-          background: ${useInputStyleFloat ? 'transparent' : edBg};
+          background: ${useInputStyleFloat ? anchorComputed.backgroundColor : edBg};
           border: ${useInputStyleFloat ? '0' : `${edBorderW}px solid ${edBorder}`};
           border-radius: ${useInputStyleFloat ? anchorComputed.borderRadius : edRadius};
-          box-shadow: ${useInputStyleFloat ? 'none' : edShadow};
+          box-shadow: ${useInputStyleFloat ? anchorComputed.boxShadow : edShadow};
           height: ${cellRect.height}px;
           font-size: ${anchorComputed.fontSize};
           font-family: ${anchorComputed.fontFamily};
