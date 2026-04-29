@@ -1812,6 +1812,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           // Use input box rect if present (inputStyle mode), otherwise cell rect
           const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
           const anchorEl = inputBox ?? cellEl;
+          const useInputStyleFloat = !!inputBox;
           const cellRect = anchorEl.getBoundingClientRect();
           const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
           const gridRect = gridEl?.getBoundingClientRect();
@@ -1852,10 +1853,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             position: fixed; z-index: 200; box-sizing: border-box;
             top: ${cellRect.top}px; left: ${cellRect.left}px;
             min-width: ${cellRect.width}px; max-width: ${fullWidth}px;
-            background: ${edBg};
-            border: ${edBorderW}px solid ${edBorder};
-            border-radius: ${edRadius};
-            box-shadow: ${edShadow};
+            background: ${useInputStyleFloat ? 'transparent' : edBg};
+            border: ${useInputStyleFloat ? '0' : `${edBorderW}px solid ${edBorder}`};
+            border-radius: ${useInputStyleFloat ? anchorComputed.borderRadius : edRadius};
+            box-shadow: ${useInputStyleFloat ? 'none' : edShadow};
             overflow: hidden;
           `;
 
@@ -1870,7 +1871,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           // for centering, so text selection highlight doesn't span full cell height.
           const fontSize = parseFloat(anchorComputed.fontSize) || 14;
           const contentLineHeight = Math.round(fontSize * 1.4);
-          const editorHeight = cellRect.height - edBorderW * 2;
+          const editorHeight = cellRect.height - (useInputStyleFloat ? 0 : edBorderW * 2);
           const vertPad = Math.max(0, Math.floor((editorHeight - contentLineHeight) / 2));
           const basePadLeft = parseFloat(anchorComputed.paddingLeft) || 12;
           const basePadRight = parseFloat(anchorComputed.paddingRight) || basePadLeft;

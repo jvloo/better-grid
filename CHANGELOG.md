@@ -4,6 +4,12 @@ All notable changes to Better Grid are documented here. Format follows [Keep a C
 
 The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`, `@better-grid/plugins`, and `@better-grid/pro` until the packages diverge.
 
+## [1.0.6] — 2026-04-29
+
+### Free plugins (`@better-grid/plugins`)
+
+- **Editing** — floating text editors opened from input-style cells now use the same transparent, borderless focus treatment as masked editors.
+
 ## [1.0.5] — 2026-04-29
 
 ### Free plugins (`@better-grid/plugins`)
