@@ -1825,10 +1825,17 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           // Use input box rect if present (inputStyle mode), otherwise cell rect
           const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
           const anchorEl = inputBox ?? cellEl;
-          // Mirroring the input-box surface is opt-in — many host inputs carry
-          // box-shadow / radius rules that don't compose cleanly when leaked
-          // onto the floating editor. See EditingOptions.matchAnchorStyle.
+          // Full surface mirroring (background + box-shadow + radius) is
+          // opt-in — host inputs carry shadow/radius rules that compose
+          // poorly when leaked onto a floating editor. See
+          // EditingOptions.matchAnchorStyle.
           const useInputStyleFloat = !!inputBox && config.matchAnchorStyle;
+          // Border-color mirroring is *always* on for input-style cells —
+          // the editor sitting above an input wrapper looks wrong if its
+          // border is the grid theme's color while the wrapper's border is
+          // the host theme's color. Just the color and radius (cheap to
+          // mirror, no box-shadow leak).
+          const mirrorBorder = !!inputBox;
           const cellRect = anchorEl.getBoundingClientRect();
           const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
           const gridRect = gridEl?.getBoundingClientRect();
@@ -1865,13 +1872,23 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const edBorder = gridStyles.getPropertyValue('--bg-editor-border').trim() || gridStyles.getPropertyValue('--bg-active-border').trim() || '#1a73e8';
           const edRadius = gridStyles.getPropertyValue('--bg-editor-radius').trim() || '2px';
           const edShadow = gridStyles.getPropertyValue('--bg-editor-shadow').trim() || '0 2px 8px rgba(0,0,0,0.15)';
+          // Border resolution priority (most → least specific):
+          //   1) full anchor mirror (matchAnchorStyle on)
+          //   2) anchor border color/radius only (input-style cell)
+          //   3) editor's own theme variables
+          const borderColor = mirrorBorder
+            ? (anchorComputed.borderColor || edBorder)
+            : edBorder;
+          const borderRadius = mirrorBorder
+            ? (anchorComputed.borderRadius || edRadius)
+            : edRadius;
           floatBox.style.cssText = `
             position: fixed; z-index: 200; box-sizing: border-box;
             top: ${cellRect.top}px; left: ${cellRect.left}px;
             min-width: ${cellRect.width}px; max-width: ${fullWidth}px;
             background: ${useInputStyleFloat ? anchorComputed.backgroundColor : edBg};
-            border: ${useInputStyleFloat ? '0' : `${edBorderW}px solid ${edBorder}`};
-            border-radius: ${useInputStyleFloat ? anchorComputed.borderRadius : edRadius};
+            border: ${useInputStyleFloat ? '0' : `${edBorderW}px solid ${borderColor}`};
+            border-radius: ${borderRadius};
             box-shadow: ${useInputStyleFloat ? anchorComputed.boxShadow : edShadow};
             overflow: hidden;
           `;
@@ -2529,9 +2546,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         // Capture cell's computed font so editor matches cell rendering
         const anchorComputed = getComputedStyle(anchorEl);
-        // See EditingOptions.matchAnchorStyle — opt-in mirror of the host
-        // input surface onto the floating editor.
+        // Full surface mirror is opt-in (matchAnchorStyle), but border
+        // color + radius always mirror for input-style cells so the
+        // open editor's edge matches the closed input's edge.
         const useInputStyleFloat = !!inputBox && config.matchAnchorStyle;
+        const mirrorBorder = !!inputBox;
+        const maskedBorderColor = mirrorBorder ? (anchorComputed.borderColor || edBorder) : edBorder;
+        const maskedBorderRadius = mirrorBorder ? (anchorComputed.borderRadius || edRadius) : edRadius;
 
         // Create float box
         const floatBox = document.createElement('div');
@@ -2541,8 +2562,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           top: ${cellRect.top}px; left: ${cellRect.left}px;
           min-width: ${cellRect.width}px;
           background: ${useInputStyleFloat ? anchorComputed.backgroundColor : edBg};
-          border: ${useInputStyleFloat ? '0' : `${edBorderW}px solid ${edBorder}`};
-          border-radius: ${useInputStyleFloat ? anchorComputed.borderRadius : edRadius};
+          border: ${useInputStyleFloat ? '0' : `${edBorderW}px solid ${maskedBorderColor}`};
+          border-radius: ${maskedBorderRadius};
           box-shadow: ${useInputStyleFloat ? anchorComputed.boxShadow : edShadow};
           height: ${cellRect.height}px;
           font-size: ${anchorComputed.fontSize};
@@ -3661,10 +3682,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           if (isNaN(num)) return prevValue;
           // Apply precision rounding if configured
           const prec = getPrecision(column, row);
-          if (prec != null) {
-            return Number(num.toFixed(prec));
-          }
-          return num;
+          let result = prec != null ? Number(num.toFixed(prec)) : num;
+          // Clamp to declared min/max so out-of-range typed values resolve
+          // to the bound rather than committing as-is. Validation rules
+          // continue to fire against the clamped value (effectively a
+          // no-op for the bound itself).
+          const minV = getMin(column, row);
+          const maxV = getMax(column, row);
+          if (minV != null && result < minV) result = minV;
+          if (maxV != null && result > maxV) result = maxV;
+          return result;
         }
         if (cellType === 'percent') {
           const cleaned = newValue.replace(/[^0-9.\-]/g, '');
