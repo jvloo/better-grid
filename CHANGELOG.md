@@ -4,6 +4,41 @@ All notable changes to Better Grid are documented here. Format follows [Keep a C
 
 The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`, `@better-grid/plugins`, and `@better-grid/pro` until the packages diverge.
 
+## [1.0.14] — 2026-04-30
+
+Bug-fix follow-up to 1.0.13 — three issues surfaced during in-app
+verification of the new tooltip / scrollbar features:
+
+### Free plugins (`@better-grid/plugins`) / Core
+
+- **Cell tooltip — utility cells now hard-skipped.** The `text.trim()`
+  empty-content check in `handleCellMouseOver` was a soft filter:
+  cells whose content is purely an icon button (kebab, hierarchy
+  toggle, selection checkbox) could still end up triggering a tooltip
+  if the icon rendered a glyph that survived as text content. The
+  handler now early-returns when the cell contains
+  `.bg-row-actions-trigger`, `.bg-hierarchy-toggle`, or
+  `.bg-selection-checkbox`, regardless of textContent. Gantt cells
+  also short-circuit — the gantt plugin owns its own bar tooltip.
+
+### Core (`@better-grid/core`)
+
+- **Floating scrollbar honors its offset rectangle.** The base
+  `.bg-grid__scroll { width: 100%; height: 100% }` cascade was beating
+  the inline `left` / `right` (and `top` / `bottom`) offsets in
+  floating mode, so a scrollbar configured to span only the
+  time-series area was instead stretched across the full grid width.
+  `.bg-grid__scroll--floating` now sets `width: auto` and
+  `height: auto` so the four offset properties resolve to the
+  intended sub-region.
+
+### Pro plugins (`@better-grid/pro`)
+
+- **Gantt resize handle copy** updated from "Drag to change start
+  date" / "Drag to change end date" to "Drag left/right to adjust
+  Start" / "Drag left/right to adjust End" — clearer about the
+  direction of the gesture.
+
 ## [1.0.13] — 2026-04-30
 
 Versions 1.0.9–1.0.12 were published in rapid succession from a working
