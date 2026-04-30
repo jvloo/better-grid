@@ -31,9 +31,17 @@
    the native scrollbar tracks remain clickable (via the WebKit pseudo-rule
    below). On Firefox, where ::-webkit-scrollbar isn't available, native
    scrollbar tracks still receive pointer events on overlay-mode scrollbars
-   on most platforms — acceptable degradation, see CHANGELOG 1.0.13. */
+   on most platforms — acceptable degradation, see CHANGELOG 1.0.13.
+
+   `width/height: auto` is critical: the base `.bg-grid__scroll` rule sets
+   `width: 100%`, which would override the inline left/right offsets and
+   stretch the floating scrollbar over the full grid width — defeating the
+   point of the offsets. Letting auto resolve against left+right (and
+   top+bottom) gives the offset rect its intended dimensions. */
 .bg-grid__scroll--floating {
   pointer-events: none;
+  width: auto;
+  height: auto;
 }
 
 .bg-grid__scroll--floating > .bg-grid__sizer {
