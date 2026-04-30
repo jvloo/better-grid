@@ -26,6 +26,32 @@
   overflow: auto;
 }
 
+/* Floating scrollbar mode — overlays cells, doesn't reserve gutter space.
+   The host element is non-interactive so cell clicks pass through; only
+   the native scrollbar tracks remain clickable (via the WebKit pseudo-rule
+   below). On Firefox, where ::-webkit-scrollbar isn't available, native
+   scrollbar tracks still receive pointer events on overlay-mode scrollbars
+   on most platforms — acceptable degradation, see CHANGELOG 1.0.13. */
+.bg-grid__scroll--floating {
+  pointer-events: none;
+}
+
+.bg-grid__scroll--floating > .bg-grid__sizer {
+  pointer-events: none;
+}
+
+.bg-grid__scroll--floating::-webkit-scrollbar {
+  pointer-events: auto;
+}
+
+.bg-grid__scroll--floating::-webkit-scrollbar-track {
+  pointer-events: auto;
+}
+
+.bg-grid__scroll--floating::-webkit-scrollbar-thumb {
+  pointer-events: auto;
+}
+
 /* Content sizer — sets scroll dimensions */
 .bg-grid__sizer {
   position: relative;

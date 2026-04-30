@@ -683,9 +683,21 @@ export function createGrid<
   }
 
   function handleCellMouseOver(event: MouseEvent): void {
+    if (!tooltipConfig.enabled || !tooltipConfig.clippedText) return;
     const cell = (event.target as HTMLElement).closest('.bg-cell') as HTMLElement | null;
-    if (cell && cell.scrollWidth > cell.clientWidth) {
-      showTooltip(cell, cell.textContent ?? '');
+    if (!cell) return;
+    // Prefer the input-style value span when present — its overflow / text
+    // content reflects what the user actually sees inside the input.
+    // Otherwise fall back to the cell box itself.
+    const valueEl = cell.querySelector<HTMLElement>('.bg-input-box__value');
+    const probe = valueEl ?? cell;
+    const text = probe.textContent ?? '';
+    // Skip empty / whitespace cells — utility cells (chevron, action menu,
+    // selection checkbox) all reach this handler and would otherwise emit
+    // empty-content tooltips on hover.
+    if (!text.trim()) return;
+    if (probe.scrollWidth > probe.clientWidth) {
+      showTooltip(cell, text);
     }
   }
 
@@ -811,11 +823,27 @@ export function createGrid<
 
   function startColumnResize(colIndex: number, startEvent: PointerEvent): void {
     const column = columnManager.getColumns()[colIndex]!;
+    const showResizeTooltip = tooltipConfig.enabled && tooltipConfig.columnResize;
     startColumnResizeDrag({
       startEvent,
       startWidth: columnManager.getWidth(colIndex),
       minWidth: column.minWidth,
       onUpdate: (width) => instance.setColumnWidth(column.id, width),
+      onCursorMove: showResizeTooltip
+        ? (width, clientX, clientY) => {
+            // Immediate-show is idempotent — reuses the existing tooltip
+            // element when called repeatedly, so the readout follows the
+            // cursor without recreating DOM each pointermove.
+            tooltip.show(
+              headerContainer ?? document.body,
+              `${Math.round(width)}px`,
+              clientX,
+              clientY,
+              { immediate: true },
+            );
+          }
+        : undefined,
+      onComplete: showResizeTooltip ? () => tooltip.dismiss() : undefined,
     });
   }
 
@@ -897,9 +925,72 @@ export function createGrid<
   // Cell tooltip (delegated to ui/tooltip.ts)
   // ---------------------------------------------------------------------------
 
-  const tooltip = createTooltip();
+  const tooltipConfig = {
+    enabled: options.tooltip?.enabled ?? true,
+    delay: options.tooltip?.delay ?? 500,
+    clippedText: options.tooltip?.clippedText ?? true,
+    columnResize: options.tooltip?.columnResize ?? true,
+  };
+  const tooltip = createTooltip({
+    enabled: tooltipConfig.enabled,
+    delay: tooltipConfig.delay,
+  });
   const showTooltip = tooltip.show;
   const dismissTooltip = tooltip.dismiss;
+
+  // ---------------------------------------------------------------------------
+  // Scrollbar layout config
+  //
+  // `fixed` (default) reserves a gutter strip and matches all prior versions.
+  // `floating` overlays the scrollbar on top of cells with optional offsets so
+  // the track aligns to a sub-region (e.g. only the time-series area to the
+  // right of frozen columns). Symbolic offsets — `'after-frozen-left'`,
+  // `'header'` — are resolved at layout time so they react to runtime changes
+  // (frozen-clip, resize, header height).
+  // ---------------------------------------------------------------------------
+  const scrollbarConfig = {
+    mode: options.scrollbar?.mode ?? 'fixed',
+    horizontalOffsetLeft: options.scrollbar?.horizontalOffsetLeft ?? 0,
+    horizontalOffsetRight: options.scrollbar?.horizontalOffsetRight ?? 0,
+    verticalOffsetTop: options.scrollbar?.verticalOffsetTop ?? 0,
+    verticalOffsetBottom: options.scrollbar?.verticalOffsetBottom ?? 0,
+  };
+  const isFloatingScrollbar = scrollbarConfig.mode === 'floating';
+
+  /** Resolve a (possibly symbolic) offset to a px value for current state. */
+  function resolveScrollbarOffset(
+    side: 'horizontalOffsetLeft' | 'horizontalOffsetRight' | 'verticalOffsetTop' | 'verticalOffsetBottom',
+  ): number {
+    const value = scrollbarConfig[side];
+    if (typeof value === 'number') return value;
+    if (value === 'after-frozen-left') {
+      // Width of the currently-visible frozen-left columns. Recomputed on
+      // every layout pass so freeze:clip, column resize, and column hide
+      // all flow into this naturally.
+      const measurements = virtualization.getMeasurements();
+      const state = store.getState();
+      const fullFrozenWidth = measurements.colOffsets[state.frozen.left] ?? 0;
+      const clip = freezeClipWidth;
+      return clip != null ? Math.min(clip, fullFrozenWidth) : fullFrozenWidth;
+    }
+    if (value === 'header') {
+      return headerHeight;
+    }
+    return 0;
+  }
+
+  /** Re-apply resolved offsets to the floating scrollbar element. No-op for fixed mode. */
+  function applyFloatingScrollbarOffsets(): void {
+    if (!isFloatingScrollbar || !fakeScrollbar) return;
+    const top = resolveScrollbarOffset('verticalOffsetTop');
+    const right = resolveScrollbarOffset('horizontalOffsetRight');
+    const bottom = resolveScrollbarOffset('verticalOffsetBottom');
+    const left = resolveScrollbarOffset('horizontalOffsetLeft');
+    fakeScrollbar.style.top = `${top}px`;
+    fakeScrollbar.style.right = `${right}px`;
+    fakeScrollbar.style.bottom = `${bottom}px`;
+    fakeScrollbar.style.left = `${left}px`;
+  }
 
   function invalidateHeaders(): void {
     headerRenderer?.invalidate();
@@ -1032,8 +1123,11 @@ export function createGrid<
       viewport.style.position = 'absolute';
       viewport.style.top = '0';
       viewport.style.left = '0';
-      viewport.style.right = 'var(--bg-scrollbar-size, 10px)';
-      viewport.style.bottom = 'var(--bg-scrollbar-size, 10px)';
+      // Fixed mode reserves a gutter strip on the right/bottom for the
+      // scrollbar tracks; floating mode lets cells fill the entire grid area
+      // and overlays the scrollbar on top via fakeScrollbar's higher z-index.
+      viewport.style.right = isFloatingScrollbar ? '0' : 'var(--bg-scrollbar-size, 10px)';
+      viewport.style.bottom = isFloatingScrollbar ? '0' : 'var(--bg-scrollbar-size, 10px)';
       viewport.style.overflow = 'hidden';
       viewport.style.zIndex = '2';
 
@@ -1094,23 +1188,43 @@ export function createGrid<
       viewport.appendChild(pinnedBottomWrapper);
 
       // Fake scrollbar — provides native scrollbar UI via an oversized sizer.
-      // Sits behind viewport; scrollbar tracks are exposed at the right/bottom
-      // edges where the viewport is sized smaller to leave room.
+      //
+      // Fixed mode: sits behind viewport (zIndex 1); scrollbar tracks are
+      // exposed at the right/bottom strips that viewport's gutter inset
+      // doesn't cover.
+      //
+      // Floating mode: sits in front of viewport (zIndex 10) and is positioned
+      // to the configured offset rect. The host element gets pointer-events:
+      // none so cell clicks pass through, while a scoped CSS rule keeps
+      // ::-webkit-scrollbar interactive. Cross-browser caveat documented in
+      // CHANGELOG — works on WebKit/Chromium/Edge; Firefox falls back to
+      // overlay scrollbars rendered by the OS where applicable.
       fakeScrollbar = document.createElement('div');
       // Stable selector — editing, gantt, row-actions plugins all query `.bg-grid__scroll`.
       fakeScrollbar.className = 'bg-grid__scroll';
+      if (isFloatingScrollbar) fakeScrollbar.classList.add('bg-grid__scroll--floating');
       fakeScrollbar.style.position = 'absolute';
-      // Inset the scrollbar-bearing element from the right/bottom so the
-      // scrollbar track doesn't get clipped by a rounded-corner container.
-      // Controlled via --bg-scrollbar-inset (default 0). Set e.g. 12px on
-      // a grid whose wrapper has border-radius: 12px so the scrollbar sits
-      // inside the rounded area.
-      fakeScrollbar.style.top = '0';
-      fakeScrollbar.style.left = '0';
-      fakeScrollbar.style.right = 'var(--bg-scrollbar-inset, 0)';
-      fakeScrollbar.style.bottom = 'var(--bg-scrollbar-inset, 0)';
+      if (isFloatingScrollbar) {
+        // Resolved at every layout pass — see applyFloatingScrollbarOffsets().
+        fakeScrollbar.style.top = `${resolveScrollbarOffset('verticalOffsetTop')}px`;
+        fakeScrollbar.style.left = `${resolveScrollbarOffset('horizontalOffsetLeft')}px`;
+        fakeScrollbar.style.right = `${resolveScrollbarOffset('horizontalOffsetRight')}px`;
+        fakeScrollbar.style.bottom = `${resolveScrollbarOffset('verticalOffsetBottom')}px`;
+        fakeScrollbar.style.zIndex = '10';
+        fakeScrollbar.style.pointerEvents = 'none';
+      } else {
+        // Inset the scrollbar-bearing element from the right/bottom so the
+        // scrollbar track doesn't get clipped by a rounded-corner container.
+        // Controlled via --bg-scrollbar-inset (default 0). Set e.g. 12px on
+        // a grid whose wrapper has border-radius: 12px so the scrollbar sits
+        // inside the rounded area.
+        fakeScrollbar.style.top = '0';
+        fakeScrollbar.style.left = '0';
+        fakeScrollbar.style.right = 'var(--bg-scrollbar-inset, 0)';
+        fakeScrollbar.style.bottom = 'var(--bg-scrollbar-inset, 0)';
+        fakeScrollbar.style.zIndex = '1';
+      }
       fakeScrollbar.style.overflow = 'auto';
-      fakeScrollbar.style.zIndex = '1';
 
       scrollSizer = document.createElement('div');
       scrollSizer.className = 'bg-grid__sizer';
@@ -1341,8 +1455,17 @@ export function createGrid<
         selectionLayer?.invalidateLayout();
         recomputeMeasurements();
         scheduleRender();
+        // Floating-scrollbar offsets may depend on header height /
+        // frozen-clip width, both of which can shift on resize. Cheap to
+        // recompute (4 number resolves + 4 style assignments) so we run
+        // unconditionally inside the floating branch.
+        applyFloatingScrollbarOffsets();
       });
       resizeObserver.observe(container);
+
+      // Frozen-clip drag changes the resolved value of `'after-frozen-left'`
+      // — rebind the floating scrollbar so its left edge tracks the clip.
+      emitter.on('frozen:clip', () => applyFloatingScrollbarOffsets());
 
       mounted = true;
       recomputeMeasurements();

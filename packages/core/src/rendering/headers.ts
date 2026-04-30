@@ -83,8 +83,12 @@ export function createHeaderRenderer<TData = unknown>(
     if (related && cell.contains(related)) return;
     const textSpan = cell.querySelector('.bg-header-cell__text') as HTMLElement | null;
     if (!textSpan) return;
-    if (textSpan.scrollWidth > textSpan.clientWidth) {
-      deps.tooltip.show(cell, textSpan.textContent ?? '');
+    // Skip empty / whitespace-only header text — common for utility columns
+    // (selection checkbox, action menu, expand chevron) where a clipped check
+    // would still trigger a meaningless empty tooltip.
+    const text = textSpan.textContent ?? '';
+    if (text.trim() && textSpan.scrollWidth > textSpan.clientWidth) {
+      deps.tooltip.show(cell, text);
     }
   }
 

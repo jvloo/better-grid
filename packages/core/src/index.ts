@@ -36,6 +36,9 @@ export type {
   ScrollState,
   VirtualRange,
   VirtualizationOptions,
+  ScrollbarOptions,
+  // Tooltip
+  TooltipOptions,
   // Plugins
   GridPlugin,
   PluginContext,

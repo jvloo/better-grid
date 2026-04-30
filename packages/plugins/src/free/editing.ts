@@ -122,6 +122,18 @@ export interface EditingOptions {
    * Set to 0 to disable.
    */
   alwaysInputThreshold?: number;
+  /**
+   * When opening a floating editor over an input-style cell, mirror the
+   * cell's input-box surface (background, border-radius, box-shadow) on the
+   * editor so the transition is invisible. Default: false.
+   *
+   * Off by default because real-world host inputs (MUI, Antd, etc.) often
+   * carry box-shadow / border-radius rules that don't compose cleanly with
+   * the floating editor — the mirror leaks those rules onto the editor and
+   * looks wrong. Opt in only after verifying the host input surface matches
+   * what you want the editor to look like.
+   */
+  matchAnchorStyle?: boolean;
 }
 
 /** Dropdown option for columns with meta.options */
@@ -195,6 +207,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
     inputEllipsis: options?.inputEllipsis ?? true,
     inputEditCursor: options?.inputEditCursor ?? true,
     alwaysInputThreshold: options?.alwaysInputThreshold ?? 1000,
+    matchAnchorStyle: options?.matchAnchorStyle ?? false,
   };
 
   return {
@@ -1812,7 +1825,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           // Use input box rect if present (inputStyle mode), otherwise cell rect
           const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
           const anchorEl = inputBox ?? cellEl;
-          const useInputStyleFloat = !!inputBox;
+          // Mirroring the input-box surface is opt-in — many host inputs carry
+          // box-shadow / radius rules that don't compose cleanly when leaked
+          // onto the floating editor. See EditingOptions.matchAnchorStyle.
+          const useInputStyleFloat = !!inputBox && config.matchAnchorStyle;
           const cellRect = anchorEl.getBoundingClientRect();
           const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
           const gridRect = gridEl?.getBoundingClientRect();
@@ -2092,12 +2108,15 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               setContentEditableSelection(ed, 0, edText.length);
             }
           };
-          focusEditor();
-          // The grid may receive focus later in the originating click sequence.
-          // Re-focus once the browser finishes that click so single-click edit
-          // leaves the caret live and typing works immediately.
+          // The grid may receive focus later in the originating click sequence,
+          // so we always defer the focus by one frame. Earlier versions called
+          // focusEditor() synchronously *and* via RAF, which caused a visible
+          // double-focus flicker on click-to-edit. One RAF is sufficient: the
+          // selection/caret arrives in the same paint as the floating editor.
           if (clickEvent) {
             requestAnimationFrame(focusEditor);
+          } else {
+            focusEditor();
           }
 
           ed.addEventListener('keydown', (e) => {
@@ -2510,7 +2529,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         // Capture cell's computed font so editor matches cell rendering
         const anchorComputed = getComputedStyle(anchorEl);
-        const useInputStyleFloat = !!inputBox;
+        // See EditingOptions.matchAnchorStyle — opt-in mirror of the host
+        // input surface onto the floating editor.
+        const useInputStyleFloat = !!inputBox && config.matchAnchorStyle;
 
         // Create float box
         const floatBox = document.createElement('div');
@@ -2630,13 +2651,26 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // All input goes through keydown — prevent browser from mutating the value
         input.addEventListener('beforeinput', (e) => { e.preventDefault(); });
 
-        // Click on MM or YY -> select that section. Prevent the browser's
-        // native input selection from collapsing our section range afterward.
-        input.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          activeSectionIdx = getSectionAtClientX(e.clientX);
-          input.focus();
-          syncInputDisplay();
+        // Click on MM or YY -> select that section. We listen on mouseup
+        // (after the browser has placed the caret) and explicitly restore
+        // the section selection. Earlier versions used mousedown +
+        // preventDefault to "lock in" the section before the native click,
+        // but that combination caused stale-value commits when an outside
+        // mousedown also tried to commit the editor — the preventDefault
+        // suppressed the focus handoff that the commit path expected.
+        input.addEventListener('mouseup', (e) => {
+          const newSectionIdx = getSectionAtClientX(e.clientX);
+          if (newSectionIdx !== activeSectionIdx) {
+            activeSectionIdx = newSectionIdx;
+            // Active section moved — re-render labels / digits styling.
+            syncInputDisplay();
+          } else {
+            // Same section — the native click collapsed the selection to a
+            // caret; just restore the section range so the next keystroke
+            // overwrites the section.
+            const range = getSectionRange(activeSectionIdx);
+            input.setSelectionRange(range.start, range.end);
+          }
         });
 
         input.addEventListener('keydown', (e) => {

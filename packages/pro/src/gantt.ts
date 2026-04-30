@@ -546,14 +546,18 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
             handle.style.zIndex = '3';
             handle.style.borderRadius = `${radius}px 0 0 ${radius}px`;
 
-            handle.addEventListener('mouseenter', () => {
+            handle.addEventListener('mouseenter', (e) => {
               handle.style.backgroundColor = 'rgba(255,255,255,0.8)';
+              if (document.body.classList.contains('bg-gantt-dragging')) return;
+              ctx.showTooltip(handle, 'Drag to change start date', e.clientX, e.clientY);
             });
             handle.addEventListener('mouseleave', () => {
               handle.style.backgroundColor = '';
+              ctx.dismissTooltip();
             });
 
             const onStartResize = (e: MouseEvent) => {
+              ctx.dismissTooltip();
               startDrag(e, context.rowIndex, dateColIndex, 'resize-start', container, row, variance);
             };
             handle.addEventListener('mousedown', onStartResize);
@@ -576,14 +580,18 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
             handle.style.zIndex = '3';
             handle.style.borderRadius = `0 ${radius}px ${radius}px 0`;
 
-            handle.addEventListener('mouseenter', () => {
+            handle.addEventListener('mouseenter', (e) => {
               handle.style.backgroundColor = 'rgba(255,255,255,0.8)';
+              if (document.body.classList.contains('bg-gantt-dragging')) return;
+              ctx.showTooltip(handle, 'Drag to change end date', e.clientX, e.clientY);
             });
             handle.addEventListener('mouseleave', () => {
               handle.style.backgroundColor = '';
+              ctx.dismissTooltip();
             });
 
             const onEndResize = (e: MouseEvent) => {
+              ctx.dismissTooltip();
               startDrag(e, context.rowIndex, dateColIndex, 'resize-end', container, row, variance);
             };
             handle.addEventListener('mousedown', onEndResize);

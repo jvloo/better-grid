@@ -265,6 +265,67 @@ export interface FreezeClipOptions {
 }
 
 // ---------------------------------------------------------------------------
+// Tooltip Options
+// ---------------------------------------------------------------------------
+
+/**
+ * Configures the grid's hover-tooltip behavior. Tooltips only show for
+ * meaningful, non-empty content — hovering an empty cell or a decorative
+ * affordance (like a collapse handle without text) never produces a tooltip.
+ */
+export interface TooltipOptions {
+  /** Master switch. Default: true. Set false to disable all built-in tooltips. */
+  enabled?: boolean;
+  /** Delay in ms before showing the tooltip on hover. Default: 500. */
+  delay?: number;
+  /**
+   * Show a tooltip for cells / headers / inputStyle inputs when their text
+   * is clipped (truncated by overflow). Default: true.
+   */
+  clippedText?: boolean;
+  /**
+   * Show a "{n}px" tooltip while the user is dragging a column-resize grip,
+   * anchored to the cursor. Default: true. Disable for very dense grids
+   * where the moving label distracts from the column-edge alignment cue.
+   */
+  columnResize?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Scrollbar Options
+// ---------------------------------------------------------------------------
+
+/**
+ * Controls how the grid's scrollbar is positioned relative to the cell area.
+ *
+ * - `'fixed'` (default) — the scrollbar reserves a gutter strip along the
+ *   right/bottom edge, the same way a normal `overflow: auto` element does.
+ *   Cells never sit underneath the scrollbar.
+ *
+ * - `'floating'` — the scrollbar overlays the cell area and does not reserve
+ *   gutter space. Useful for compact grids and for grids where the scrollbar
+ *   should align to a sub-region (e.g. only the time-series area to the right
+ *   of frozen columns). The four `*Offset*` fields shrink the floating-track
+ *   rectangle. Each field accepts a px number, or one of:
+ *     - `'after-frozen-left'` — resolved at runtime from the current
+ *       frozen-left column width (also recomputed on freeze:clip changes).
+ *     - `'header'` (verticalOffsetTop only) — resolved from the current
+ *       header height.
+ */
+export interface ScrollbarOptions {
+  /** Default: `'fixed'`. */
+  mode?: 'fixed' | 'floating';
+  /** Floating only. Default: 0. */
+  horizontalOffsetLeft?: number | 'after-frozen-left';
+  /** Floating only. Default: 0. */
+  horizontalOffsetRight?: number;
+  /** Floating only. Default: 0. Pass `'header'` to start the vertical track below the header. */
+  verticalOffsetTop?: number | 'header';
+  /** Floating only. Default: 0. */
+  verticalOffsetBottom?: number;
+}
+
+// ---------------------------------------------------------------------------
 // Grid Events
 // ---------------------------------------------------------------------------
 
@@ -382,6 +443,10 @@ export interface GridOptions<
   getRowId?: (row: TData) => string | number;
   hierarchy?: HierarchyConfig<TData>;
   virtualization?: VirtualizationOptions;
+  /** Hover-tooltip behavior (clipped text, column resize px). See {@link TooltipOptions}. */
+  tooltip?: TooltipOptions;
+  /** Scrollbar layout — fixed gutter (default) vs. floating overlay. See {@link ScrollbarOptions}. */
+  scrollbar?: ScrollbarOptions;
 
   // Styling — single function form (replaces rowStyles + getRowStyle dual)
   rowStyle?: (row: TData, rowIndex: number) => Record<string, string> | undefined;
