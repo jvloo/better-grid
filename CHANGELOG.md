@@ -4,6 +4,86 @@ All notable changes to Better Grid are documented here. Format follows [Keep a C
 
 The same `1.x` version applies across `@better-grid/core`, `@better-grid/react`, `@better-grid/plugins`, and `@better-grid/pro` until the packages diverge.
 
+## [1.0.15] — 2026-04-30
+
+Feature + bug-fix release. Three substantial new behaviors (text
+selection across cells, real two-track floating scrollbar, page-up/down
+keyboard navigation), plus a batch of polish items uncovered in
+in-app verification of 1.0.14.
+
+### Core (`@better-grid/core`)
+
+- **Floating scrollbar — real thumb drag.** 1.0.13's floating mode
+  used `pointer-events: none` on the scroll host plus a
+  `::-webkit-scrollbar { pointer-events: auto }` rule, which kept the
+  visual scrollbar but didn't reliably accept thumb drags (the
+  pointer-down hits the host first). 1.0.15 replaces that with two
+  thin overlay tracks — `.bg-grid__float-h-track` and
+  `.bg-grid__float-v-track` — each its own scroll container with a
+  sizer matching the corresponding axis. `fakeScrollbar` remains as
+  the hidden state-holder so plugin code that queries
+  `.bg-grid__scroll` continues to work; the tracks sync into it
+  bidirectionally with a re-entrancy guard. Real thumb drag works
+  on Chromium / WebKit / Edge / Firefox.
+- **Page Up / Page Down keyboard.** Without a modifier, scrolls the
+  vertical scrollbar by one viewport height. Independent of the
+  active-cell selection so it works on selection-disabled grids.
+  Ctrl / Cmd + Page Up/Down is left to the browser for tab nav.
+- **Cell text selection across cells.** When `selection: false`, the
+  grid container adds `.bg-grid--text-selectable` and cells switch
+  to `user-select: text`, letting the browser's native selection
+  span across cell boundaries. Useful for read-only / report-style
+  grids where the user wants to copy multi-cell ranges with the
+  keyboard. With range selection on, text selection stays disabled
+  to avoid conflicting with shift-click range extension.
+- **Double-click resize handle resets column width.** Mirrors the
+  spreadsheet idiom — drag to adjust, dblclick to revert to the
+  declared `column.width`. Backed by a new
+  `ColumnManager.getInitialWidth(idx)` and a new
+  `HeaderRendererDeps.onColumnResizeReset` callback.
+- **Resize handle hover tooltip.** "Drag to resize" appears on
+  mouseenter, the same affordance that the px-readout tooltip
+  shows during the drag.
+
+### Free plugins (`@better-grid/plugins`)
+
+- **Hierarchy toggle hover tooltip.** Chevron / triangle now shows
+  "Click to expand" / "Click to collapse" on hover, with the label
+  flipping after each toggle so a sticky-hover after a click
+  reflects the new state.
+- **Floating editor — anchor border mirror is always on for
+  input-style cells.** The editor used to inherit the grid theme's
+  border color while the closed input used the host theme's color,
+  so opening an input-style cell visibly changed the edge. Border
+  color and radius are now mirrored from the anchor whenever an
+  `inputBox` is present — no longer behind `matchAnchorStyle`. The
+  full surface mirror (background + box-shadow) stays opt-in
+  because those still leak host-theme rules.
+- **Number / currency cells clamp to declared min/max on commit.**
+  `parseTextValue` now resolves `column.min` / `column.max` (or the
+  per-row functions) and clamps the typed value before it commits.
+  Typing 1500 in a column with `max: 999` commits 999 instead of
+  passing through and relying on validation to flag it. ArrowUp /
+  ArrowDown were already clamped — typed-then-Enter now matches.
+- **Validation tooltip — visible on frozen columns.** The tooltip
+  layer used to clip its left edge at the frozen-col overlay's
+  right edge, which hid any error tooltip whose cell was inside
+  the frozen-left strip. The layer now spans the full grid body
+  width (below the header, above the pinned-bottom), with
+  `z-index: 21` so it paints above the frozen overlay (`z-index: 8`)
+  rather than underneath it.
+
+### Pro plugins (`@better-grid/pro`)
+
+- **Gantt — bars rebuild on `frozen:clip`.** Subscribed the gantt
+  plugin to the freeze-clip event so the visible-column overscan
+  re-derives when the user drags the freeze-clip handle. Without
+  this, bars at the leading edge clipped or shifted one column off
+  after a clip-drag.
+- **Gantt resize handle copy** simplified from "Drag left/right to
+  adjust Start/End" to "Drag to adjust Start/End" — the cursor's
+  ew-resize already announces the direction.
+
 ## [1.0.14] — 2026-04-30
 
 Bug-fix follow-up to 1.0.13 — three issues surfaced during in-app
