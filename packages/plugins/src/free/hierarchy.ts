@@ -113,7 +113,15 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
             grid.toggleRow(rowId);
             currentExpanded = !currentExpanded;
             arrow.style.transform = currentExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+            // Update the tooltip text in case the user keeps hovering after
+            // toggling — otherwise the label stays stale until the next
+            // mouseenter cycle.
+            arrow.setAttribute('aria-label', currentExpanded ? 'Collapse row' : 'Expand row');
           });
+          arrow.addEventListener('mouseenter', (e) => {
+            ctx.showTooltip(arrow, currentExpanded ? 'Click to collapse' : 'Click to expand', e.clientX, e.clientY);
+          });
+          arrow.addEventListener('mouseleave', () => ctx.dismissTooltip());
           container.appendChild(arrow);
         } else {
           const toggle = document.createElement('span');
@@ -127,11 +135,17 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
           toggle.style.display = 'inline-block';
           toggle.style.width = '12px';
           toggle.style.textAlign = 'center';
+          let currentExpanded = isExpanded;
           toggle.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             e.preventDefault();
             grid.toggleRow(rowId);
+            currentExpanded = !currentExpanded;
           });
+          toggle.addEventListener('mouseenter', (e) => {
+            ctx.showTooltip(toggle, currentExpanded ? 'Click to collapse' : 'Click to expand', e.clientX, e.clientY);
+          });
+          toggle.addEventListener('mouseleave', () => ctx.dismissTooltip());
           container.appendChild(toggle);
         }
       }
