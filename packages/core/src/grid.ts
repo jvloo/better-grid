@@ -106,6 +106,20 @@ export function createGrid<
   let viewport: HTMLElement | null = null;
   let fakeScrollbar: HTMLElement | null = null;
   let scrollSizer: HTMLElement | null = null;
+  // Floating-mode visible scrollbar tracks. Thin overlay elements that
+  // ride on top of the cell area and sync with `fakeScrollbar` (the
+  // hidden state holder). Existing plugin code that queries
+  // `.bg-grid__scroll` continues to talk to fakeScrollbar — these
+  // tracks are layout-only.
+  let floatingHTrack: HTMLElement | null = null;
+  let floatingHSizer: HTMLElement | null = null;
+  let floatingVTrack: HTMLElement | null = null;
+  let floatingVSizer: HTMLElement | null = null;
+  // Re-entrancy guard for the bidirectional scroll sync between
+  // fakeScrollbar and the floating tracks. Without this, a programmatic
+  // setScrollLeft on fakeScrollbar that propagates to hTrack would
+  // immediately re-fire on hTrack's scroll event and try to write back.
+  let isSyncingFloatingTracks = false;
   let headerContainer: HTMLElement | null = null;
   let cellContainer: HTMLElement | null = null;
   let frozenColOverlay: HTMLElement | null = null;
@@ -299,6 +313,16 @@ export function createGrid<
     const clipOffset = getFreezeClipOffset();
     scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth - clipOffset}px`;
     scrollSizer.style.height = `${measurements.totalHeight + sbClientHeight - vpHeight + headerHeight + pinnedTopH + pinnedBottomH}px`;
+
+    // Mirror the sizer dimensions onto the visible floating tracks so their
+    // thumbs are sized proportional to the scroll range. Each track only
+    // scrolls one axis, so we only set the relevant dimension.
+    if (floatingHSizer) {
+      floatingHSizer.style.width = scrollSizer.style.width;
+    }
+    if (floatingVSizer) {
+      floatingVSizer.style.height = scrollSizer.style.height;
+    }
 
     // Cell container sized to full data dimensions (cells at data-space positions).
     // Container-level transform shifts them into the viewport.
@@ -595,6 +619,20 @@ export function createGrid<
     const scrollLeft = fakeScrollbar.scrollLeft;
     store.setScroll(scrollTop, scrollLeft);
 
+    // Push state to the floating tracks so their visible thumbs stay in
+    // sync — without this, programmatic scrolls (scrollTo, page up/down,
+    // wheel events) move the data but leave the thumb where it was.
+    if (isFloatingScrollbar && !isSyncingFloatingTracks) {
+      isSyncingFloatingTracks = true;
+      if (floatingHTrack && floatingHTrack.scrollLeft !== scrollLeft) {
+        floatingHTrack.scrollLeft = scrollLeft;
+      }
+      if (floatingVTrack && floatingVTrack.scrollTop !== scrollTop) {
+        floatingVTrack.scrollTop = scrollTop;
+      }
+      isSyncingFloatingTracks = false;
+    }
+
     // Translate cell container to match scroll position.
     // Cells stay at data-space positions; the container transform shifts
     // them into the viewport. scrollTop maps directly to data offset
@@ -737,6 +775,23 @@ export function createGrid<
     }
 
     emitter.emit('key:down', event, state.selection.active);
+
+    // Page Up / Page Down — scroll the vertical scrollbar by one viewport
+    // height. Independent of selection state so a user can scroll a
+    // selection-disabled grid via keyboard. Ctrl+PageUp/Down is reserved
+    // for tab navigation in some browsers; we don't handle it here.
+    if ((event.key === 'PageDown' || event.key === 'PageUp') && !event.ctrlKey && !event.metaKey) {
+      if (fakeScrollbar) {
+        event.preventDefault();
+        const page = fakeScrollbar.clientHeight || viewport?.clientHeight || 0;
+        const dir = event.key === 'PageDown' ? 1 : -1;
+        fakeScrollbar.scrollTop = Math.max(
+          0,
+          Math.min(fakeScrollbar.scrollHeight - page, fakeScrollbar.scrollTop + dir * page),
+        );
+      }
+      return;
+    }
 
     if (!state.selection.active) return;
 
@@ -1002,6 +1057,20 @@ export function createGrid<
     fakeScrollbar.style.right = `${right}px`;
     fakeScrollbar.style.bottom = `${bottom}px`;
     fakeScrollbar.style.left = `${left}px`;
+
+    // Position the visible tracks to span the offset rect's edges. The
+    // horizontal track sits at the bottom strip (height set in JS via
+    // --bg-scrollbar-size); the vertical track sits at the right strip.
+    if (floatingHTrack) {
+      floatingHTrack.style.left = `${left}px`;
+      floatingHTrack.style.right = `${right}px`;
+      floatingHTrack.style.bottom = `${bottom}px`;
+    }
+    if (floatingVTrack) {
+      floatingVTrack.style.top = `${top}px`;
+      floatingVTrack.style.bottom = `${bottom}px`;
+      floatingVTrack.style.right = `${right}px`;
+    }
   }
 
   function invalidateHeaders(): void {
@@ -1118,6 +1187,15 @@ export function createGrid<
       container.classList.add('bg-grid');
       container.classList.toggle('bg-grid--bordered', options.bordered ?? true);
       container.classList.toggle('bg-grid--striped', options.striped ?? false);
+      // When the grid's range-selection model is off, the cell's `user-select`
+      // can be `text` so the browser's native selection picks up multi-cell
+      // ranges — useful for read-only / report-style grids. With range
+      // selection on, native text selection conflicts with shift-click range
+      // extension, so we keep `user-select: none`.
+      container.classList.toggle(
+        'bg-grid--text-selectable',
+        normalizedSelection.mode === 'off',
+      );
       container.tabIndex = 0;
       container.setAttribute('role', 'grid');
       updateAriaCounts();
@@ -1311,6 +1389,48 @@ export function createGrid<
       container.appendChild(viewport);
       container.appendChild(fakeScrollbar);
 
+      // Floating-mode visible tracks. fakeScrollbar's native scrollbar is
+      // CSS-hidden in floating mode; these two thin overlays render the
+      // actual scrollbar UI and forward their scroll into fakeScrollbar.
+      if (isFloatingScrollbar) {
+        const trackSize = 'var(--bg-scrollbar-size, 10px)';
+        floatingHTrack = document.createElement('div');
+        floatingHTrack.className = 'bg-grid__float-h-track';
+        floatingHTrack.style.height = trackSize;
+        floatingHSizer = document.createElement('div');
+        floatingHSizer.className = 'bg-grid__sizer';
+        floatingHSizer.style.height = '1px';
+        floatingHTrack.appendChild(floatingHSizer);
+        container.appendChild(floatingHTrack);
+
+        floatingVTrack = document.createElement('div');
+        floatingVTrack.className = 'bg-grid__float-v-track';
+        floatingVTrack.style.width = trackSize;
+        floatingVSizer = document.createElement('div');
+        floatingVSizer.className = 'bg-grid__sizer';
+        floatingVSizer.style.width = '1px';
+        floatingVTrack.appendChild(floatingVSizer);
+        container.appendChild(floatingVTrack);
+
+        applyFloatingScrollbarOffsets();
+
+        // Track → fakeScrollbar sync: user-driven scroll on the visible
+        // track propagates into the state holder, which fires its own
+        // scroll event to drive cell positioning.
+        floatingHTrack.addEventListener('scroll', () => {
+          if (isSyncingFloatingTracks) return;
+          isSyncingFloatingTracks = true;
+          if (fakeScrollbar) fakeScrollbar.scrollLeft = floatingHTrack!.scrollLeft;
+          isSyncingFloatingTracks = false;
+        });
+        floatingVTrack.addEventListener('scroll', () => {
+          if (isSyncingFloatingTracks) return;
+          isSyncingFloatingTracks = true;
+          if (fakeScrollbar) fakeScrollbar.scrollTop = floatingVTrack!.scrollTop;
+          isSyncingFloatingTracks = false;
+        });
+      }
+
       // Append frozen overlay AFTER viewport so it renders on top
       if (frozenColOverlay) {
         container.appendChild(frozenColOverlay);
@@ -1342,6 +1462,11 @@ export function createGrid<
         onHeaderContextMenu: (event, columnId) => showHeaderContextMenu(event, columnId),
         onFilterButtonClick: (event, columnId) => showFilterPanel(event, columnId),
         onColumnResize: (colIndex, event) => startColumnResize(colIndex, event),
+        onColumnResizeReset: (colIndex) => {
+          const column = columnManager.getColumns()[colIndex];
+          if (!column) return;
+          instance.setColumnWidth(column.id, columnManager.getInitialWidth(colIndex));
+        },
       });
 
       // Freeze clip handle
@@ -1515,6 +1640,10 @@ export function createGrid<
       viewport = null;
       fakeScrollbar = null;
       scrollSizer = null;
+      floatingHTrack = null;
+      floatingHSizer = null;
+      floatingVTrack = null;
+      floatingVSizer = null;
       headerContainer = null;
       cellContainer = null;
       frozenColOverlay = null;

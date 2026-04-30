@@ -26,38 +26,54 @@
   overflow: auto;
 }
 
-/* Floating scrollbar mode — overlays cells, doesn't reserve gutter space.
-   The host element is non-interactive so cell clicks pass through; only
-   the native scrollbar tracks remain clickable (via the WebKit pseudo-rule
-   below). On Firefox, where ::-webkit-scrollbar isn't available, native
-   scrollbar tracks still receive pointer events on overlay-mode scrollbars
-   on most platforms — acceptable degradation, see CHANGELOG 1.0.13.
+/* Floating scrollbar mode — the visible scrollbars are rendered by two
+   thin overlay tracks (`.bg-grid__float-h-track` and
+   `.bg-grid__float-v-track`); the host `.bg-grid__scroll` becomes a
+   hidden state-holder so the existing scroll-handler pipeline doesn't
+   need to know about the new layer. Hiding fakeScrollbar's native
+   scrollbar UI is essential — otherwise the user sees double scrollbars.
 
-   `width/height: auto` is critical: the base `.bg-grid__scroll` rule sets
-   `width: 100%`, which would override the inline left/right offsets and
-   stretch the floating scrollbar over the full grid width — defeating the
-   point of the offsets. Letting auto resolve against left+right (and
-   top+bottom) gives the offset rect its intended dimensions. */
+   `width/height: auto` lets the inline left/right (and top/bottom)
+   offsets resolve into the offset-rect dimensions instead of the base
+   rule's `width: 100%` overriding them. */
 .bg-grid__scroll--floating {
   pointer-events: none;
   width: auto;
   height: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.bg-grid__scroll--floating::-webkit-scrollbar {
+  display: none; /* Chromium / WebKit */
 }
 
 .bg-grid__scroll--floating > .bg-grid__sizer {
   pointer-events: none;
 }
 
-.bg-grid__scroll--floating::-webkit-scrollbar {
+/* The visible floating tracks. Each is its own scroll container with
+   a sizer matching the corresponding axis of the data area. Pointer
+   events are auto so the user can drag the thumb directly. */
+.bg-grid__float-h-track,
+.bg-grid__float-v-track {
+  position: absolute;
+  z-index: 11;
   pointer-events: auto;
 }
 
-.bg-grid__scroll--floating::-webkit-scrollbar-track {
-  pointer-events: auto;
+.bg-grid__float-h-track {
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
-.bg-grid__scroll--floating::-webkit-scrollbar-thumb {
-  pointer-events: auto;
+.bg-grid__float-v-track {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.bg-grid__float-h-track > .bg-grid__sizer,
+.bg-grid__float-v-track > .bg-grid__sizer {
+  pointer-events: none;
 }
 
 /* Content sizer — sets scroll dimensions */
@@ -235,6 +251,15 @@
 
 .bg-cell--selected {
   background: var(--bg-selection-bg, rgba(33, 133, 208, 0.08));
+}
+
+/* When range selection is disabled, let the browser's native text selection
+   span across cell boundaries — useful for read-only report grids where the
+   user wants to copy a multi-cell value with the keyboard. */
+.bg-grid--text-selectable .bg-cell {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
 }
 
 .bg-cell--merged {
