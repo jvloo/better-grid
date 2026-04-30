@@ -686,15 +686,27 @@ export function createGrid<
     if (!tooltipConfig.enabled || !tooltipConfig.clippedText) return;
     const cell = (event.target as HTMLElement).closest('.bg-cell') as HTMLElement | null;
     if (!cell) return;
+    // Hard skip for utility cells. Even if a kebab button or hierarchy
+    // chevron has non-empty textContent (icon glyph, accessible-name leak
+    // through child text nodes), there's nothing meaningful to tooltip —
+    // these cells are pure affordance, not data.
+    if (cell.querySelector(
+      '.bg-row-actions-trigger, .bg-hierarchy-toggle, .bg-selection-checkbox',
+    )) {
+      return;
+    }
+    // Gantt cells render bars, not text — never tooltip the cell box itself.
+    // The gantt plugin owns its own hover tooltip on the bar element.
+    if (cell.querySelector('.bg-gantt-bar, .bg-gantt-interactive, .bg-gantt-handle')) {
+      return;
+    }
     // Prefer the input-style value span when present — its overflow / text
     // content reflects what the user actually sees inside the input.
     // Otherwise fall back to the cell box itself.
     const valueEl = cell.querySelector<HTMLElement>('.bg-input-box__value');
     const probe = valueEl ?? cell;
     const text = probe.textContent ?? '';
-    // Skip empty / whitespace cells — utility cells (chevron, action menu,
-    // selection checkbox) all reach this handler and would otherwise emit
-    // empty-content tooltips on hover.
+    // Skip empty / whitespace cells.
     if (!text.trim()) return;
     if (probe.scrollWidth > probe.clientWidth) {
       showTooltip(cell, text);

@@ -549,7 +549,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
             handle.addEventListener('mouseenter', (e) => {
               handle.style.backgroundColor = 'rgba(255,255,255,0.8)';
               if (document.body.classList.contains('bg-gantt-dragging')) return;
-              ctx.showTooltip(handle, 'Drag to change start date', e.clientX, e.clientY);
+              ctx.showTooltip(handle, 'Drag left/right to adjust Start', e.clientX, e.clientY);
             });
             handle.addEventListener('mouseleave', () => {
               handle.style.backgroundColor = '';
@@ -583,7 +583,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
             handle.addEventListener('mouseenter', (e) => {
               handle.style.backgroundColor = 'rgba(255,255,255,0.8)';
               if (document.body.classList.contains('bg-gantt-dragging')) return;
-              ctx.showTooltip(handle, 'Drag to change end date', e.clientX, e.clientY);
+              ctx.showTooltip(handle, 'Drag left/right to adjust End', e.clientX, e.clientY);
             });
             handle.addEventListener('mouseleave', () => {
               handle.style.backgroundColor = '';
