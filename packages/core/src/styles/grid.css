@@ -53,12 +53,61 @@
 
 /* The visible floating tracks. Each is its own scroll container with
    a sizer matching the corresponding axis of the data area. Pointer
-   events are auto so the user can drag the thumb directly. */
+   events are auto so the user can drag the thumb directly.
+
+   The track itself is fully transparent so cell content shows through;
+   only the thumb has a visible color. Scrollbar buttons (arrow up/
+   down on V, left/right on H) are hidden so the track is the thumb
+   plus empty space, with no extra chrome. The thumb uses a
+   transparent border + background-clip: padding-box trick so it
+   visually appears thinner than the 10px track — a "halfly clipped"
+   thumb that hovers in the middle of the track strip. */
 .bg-grid__float-h-track,
 .bg-grid__float-v-track {
   position: absolute;
   z-index: 11;
   pointer-events: auto;
+  background: transparent;
+}
+
+.bg-grid__float-h-track::-webkit-scrollbar,
+.bg-grid__float-v-track::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background: transparent;
+}
+
+.bg-grid__float-h-track::-webkit-scrollbar-track,
+.bg-grid__float-v-track::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bg-grid__float-h-track::-webkit-scrollbar-thumb,
+.bg-grid__float-v-track::-webkit-scrollbar-thumb {
+  background-color: var(--bg-scrollbar-thumb, rgba(0, 0, 0, 0.35));
+  border-radius: 5px;
+  /* Transparent border + padding-box clip leaves a 2px gap between
+     the thumb and the track edges, so the thumb appears as a 6px
+     stripe centered in the 10px track. */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.bg-grid__float-h-track::-webkit-scrollbar-thumb:hover,
+.bg-grid__float-v-track::-webkit-scrollbar-thumb:hover {
+  background-color: var(--bg-scrollbar-thumb-hover, rgba(0, 0, 0, 0.55));
+}
+
+.bg-grid__float-h-track::-webkit-scrollbar-button,
+.bg-grid__float-v-track::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* Firefox: thin scrollbar with the same transparent track. */
+.bg-grid__float-h-track,
+.bg-grid__float-v-track {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-scrollbar-thumb, rgba(0, 0, 0, 0.35)) transparent;
 }
 
 .bg-grid__float-h-track {
@@ -254,12 +303,33 @@
 }
 
 /* When range selection is disabled, let the browser's native text selection
-   span across cell boundaries — useful for read-only report grids where the
-   user wants to copy a multi-cell value with the keyboard. */
+   span across cell boundaries (and into / out of the header) — useful for
+   read-only report grids where the user wants to copy a multi-cell value
+   with the keyboard. Header cells get text but stay default-cursor since
+   they're chrome, not data. */
 .bg-grid--text-selectable .bg-cell {
   user-select: text;
   -webkit-user-select: text;
   cursor: text;
+}
+
+.bg-grid--text-selectable .bg-header-cell {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* During a column resize drag, suppress text selection grid-wide.
+   The body-level userSelect = 'none' set by startColumnResize() isn't
+   specific enough to override .bg-grid--text-selectable .bg-cell, so
+   without this rule a user dragging the resize handle would also
+   start a stray text selection in any cell the cursor crossed. */
+body.bg-grid-resizing,
+body.bg-grid-resizing *,
+body.bg-grid-resizing .bg-cell,
+body.bg-grid-resizing .bg-header-cell {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  cursor: col-resize !important;
 }
 
 .bg-cell--merged {
