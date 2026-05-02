@@ -1871,23 +1871,40 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const edBg = gridStyles.getPropertyValue('--bg-editor-bg').trim() || '#fff';
           const edBorder = gridStyles.getPropertyValue('--bg-editor-border').trim() || gridStyles.getPropertyValue('--bg-active-border').trim() || '#1a73e8';
           const edRadius = gridStyles.getPropertyValue('--bg-editor-radius').trim() || '2px';
-          const edShadow = gridStyles.getPropertyValue('--bg-editor-shadow').trim() || '0 2px 8px rgba(0,0,0,0.15)';
+          // Smaller default shadow than 1.0.15 — the previous 8px blur
+          // looked over-prominent over an input-style cell whose anchor
+          // input typically has no shadow at all.
+          const edShadow = gridStyles.getPropertyValue('--bg-editor-shadow').trim() || '0 1px 3px rgba(0,0,0,0.10)';
           // Border resolution priority (most → least specific):
-          //   1) full anchor mirror (matchAnchorStyle on)
-          //   2) anchor border color/radius only (input-style cell)
+          //   1) full anchor mirror (matchAnchorStyle on) — drop editor border
+          //   2) anchor border color/radius/width/style mirror (input-style cell)
+          //      — including the no-border case where anchor has border:0 or
+          //      border-style: none. Earlier we forced ${edBorderW}px solid
+          //      regardless, so a borderless host input opened with a 2px
+          //      blue editor frame.
           //   3) editor's own theme variables
-          const borderColor = mirrorBorder
-            ? (anchorComputed.borderColor || edBorder)
-            : edBorder;
           const borderRadius = mirrorBorder
             ? (anchorComputed.borderRadius || edRadius)
             : edRadius;
+          const borderShorthand = useInputStyleFloat
+            ? '0'
+            : mirrorBorder
+              ? (anchorComputed.borderTopWidth === '0px' || anchorComputed.borderTopStyle === 'none'
+                ? '0'
+                : `${anchorComputed.borderTopWidth} ${anchorComputed.borderTopStyle} ${anchorComputed.borderTopColor}`)
+              : `${edBorderW}px solid ${edBorder}`;
+          // Pin height to the anchor's exact rendered height. cellRect.height
+          // already reflects that (the anchor IS cellRect when an inputBox
+          // is present), but we set height explicitly so a content overflow
+          // never grows the editor and breaks visual alignment with the
+          // closed cell beneath it.
           floatBox.style.cssText = `
             position: fixed; z-index: 200; box-sizing: border-box;
             top: ${cellRect.top}px; left: ${cellRect.left}px;
             min-width: ${cellRect.width}px; max-width: ${fullWidth}px;
+            height: ${cellRect.height}px;
             background: ${useInputStyleFloat ? anchorComputed.backgroundColor : edBg};
-            border: ${useInputStyleFloat ? '0' : `${edBorderW}px solid ${borderColor}`};
+            border: ${borderShorthand};
             border-radius: ${borderRadius};
             box-shadow: ${useInputStyleFloat ? anchorComputed.boxShadow : edShadow};
             overflow: hidden;
@@ -2018,6 +2035,40 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                     const cursorOffset = selection?.anchorOffset ?? text.length;
                     if (cursorOffset > dotIndex && decimals >= numberPrecision) {
                       e.preventDefault();
+                      return;
+                    }
+                  }
+                }
+                // Live min/max clamp on typing. Compute the value that
+                // would result from accepting this keystroke; if it's
+                // outside [numberMin, numberMax], snap the editor to the
+                // bound and swallow the keystroke. Skip during selection
+                // replacement (where the bounds can be re-evaluated on
+                // the next keystroke) and skip when the typed char is a
+                // sign / decimal that doesn't change the magnitude in a
+                // numerically meaningful way until completed.
+                if (
+                  /^[0-9]$/.test(e.key) &&
+                  !hasSelection &&
+                  (numberMin != null || numberMax != null)
+                ) {
+                  const cursorOffset = selection?.anchorOffset ?? text.length;
+                  const projected =
+                    text.slice(0, cursorOffset) + e.key + text.slice(cursorOffset);
+                  // Bare cleanup so parseFloat doesn't choke on stray
+                  // grouping commas etc.
+                  const projectedNum = Number(projected.replace(/,/g, ''));
+                  if (!Number.isNaN(projectedNum)) {
+                    if (numberMin != null && projectedNum < numberMin) {
+                      e.preventDefault();
+                      ed.textContent = String(numberMin);
+                      setContentEditableSelection(ed, 0, ed.textContent.length);
+                      return;
+                    }
+                    if (numberMax != null && projectedNum > numberMax) {
+                      e.preventDefault();
+                      ed.textContent = String(numberMax);
+                      setContentEditableSelection(ed, 0, ed.textContent.length);
                       return;
                     }
                   }
@@ -2551,8 +2602,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // open editor's edge matches the closed input's edge.
         const useInputStyleFloat = !!inputBox && config.matchAnchorStyle;
         const mirrorBorder = !!inputBox;
-        const maskedBorderColor = mirrorBorder ? (anchorComputed.borderColor || edBorder) : edBorder;
         const maskedBorderRadius = mirrorBorder ? (anchorComputed.borderRadius || edRadius) : edRadius;
+        const maskedBorder = useInputStyleFloat
+          ? '0'
+          : mirrorBorder
+            ? (anchorComputed.borderTopWidth === '0px' || anchorComputed.borderTopStyle === 'none'
+              ? '0'
+              : `${anchorComputed.borderTopWidth} ${anchorComputed.borderTopStyle} ${anchorComputed.borderTopColor}`)
+            : `${edBorderW}px solid ${edBorder}`;
 
         // Create float box
         const floatBox = document.createElement('div');
@@ -2562,7 +2619,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           top: ${cellRect.top}px; left: ${cellRect.left}px;
           min-width: ${cellRect.width}px;
           background: ${useInputStyleFloat ? anchorComputed.backgroundColor : edBg};
-          border: ${useInputStyleFloat ? '0' : `${edBorderW}px solid ${maskedBorderColor}`};
+          border: ${maskedBorder};
           border-radius: ${maskedBorderRadius};
           box-shadow: ${useInputStyleFloat ? anchorComputed.boxShadow : edShadow};
           height: ${cellRect.height}px;
