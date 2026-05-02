@@ -455,6 +455,10 @@ export function createHeaderRenderer<TData = unknown>(
       handle.className = 'bg-resize-handle';
       handle.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
+        // Dismiss the static "Drag to resize" hover tooltip before the
+        // px-readout drag tooltip takes over — otherwise the two paint
+        // back-to-back and you see the static text flash for a frame.
+        deps.tooltip.dismiss();
         deps.onColumnResize(resizeCol, e);
       });
       // Double-click to reset to the column's initial width — matches the
@@ -476,6 +480,19 @@ export function createHeaderRenderer<TData = unknown>(
         cell.style.overflow = 'visible';
       }
       cell.appendChild(handle);
+
+      // Dblclick anywhere on the header cell (not just the 6px-wide handle)
+      // also resets the column — easier target for users who didn't realize
+      // the resize affordance is the right edge.
+      cell.addEventListener('dblclick', (e) => {
+        // Skip when the user dblclicked on a child like the filter button
+        // or the resize handle itself (handled above with stopPropagation).
+        if (e.defaultPrevented) return;
+        const target = e.target as HTMLElement;
+        if (target.closest('.bg-resize-handle, .bg-header-cell__filter-btn')) return;
+        e.preventDefault();
+        deps.onColumnResizeReset?.(resizeCol);
+      });
     }
 
     return cell;

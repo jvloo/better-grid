@@ -37,19 +37,41 @@ export function startColumnResize({
 }: StartColumnResizeOptions): void {
   const startX = startEvent.clientX;
   let lastWidth = startWidth;
+  // Throttle width writes to one per animation frame. setColumnWidth is
+  // expensive (invalidates headers, recomputes measurements, schedules a
+  // render); firing it on every pointermove caused visible drag lag,
+  // especially on grids with many columns. The cursor tooltip update
+  // remains synchronous because it's a cheap textContent + style swap.
+  let pendingWidth: number | null = null;
+  let rafId: number | null = null;
+  const flushWidth = () => {
+    if (pendingWidth !== null) {
+      onUpdate(pendingWidth);
+      pendingWidth = null;
+    }
+    rafId = null;
+  };
 
   const onPointerMove = (e: PointerEvent) => {
     const delta = e.clientX - startX;
     lastWidth = Math.max(minWidth, startWidth + delta);
-    onUpdate(lastWidth);
+    pendingWidth = lastWidth;
     onCursorMove?.(lastWidth, e.clientX, e.clientY);
+    if (rafId === null) {
+      rafId = requestAnimationFrame(flushWidth);
+    }
   };
 
   const onPointerUp = () => {
     document.removeEventListener('pointermove', onPointerMove);
     document.removeEventListener('pointerup', onPointerUp);
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      flushWidth();
+    }
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
+    document.body.classList.remove('bg-grid-resizing');
     onComplete?.(lastWidth);
   };
 
@@ -57,6 +79,10 @@ export function startColumnResize({
   document.addEventListener('pointerup', onPointerUp);
   document.body.style.cursor = 'col-resize';
   document.body.style.userSelect = 'none';
+  // Add a body class so a CSS rule can disable user-select on cells / headers
+  // that opted into user-select: text via .bg-grid--text-selectable. The
+  // body-level inline style alone doesn't override more-specific rules.
+  document.body.classList.add('bg-grid-resizing');
 
   // Emit an initial cursor-move so the readout appears at drag-start without
   // waiting for the first pointermove (matters for trackpads where the user
