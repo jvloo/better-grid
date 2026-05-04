@@ -7,6 +7,14 @@ function col(id: string, def: Partial<ColumnDef> = {}): ColumnDef {
 }
 
 describe('ColumnManager sizing defaults', () => {
+  it('uses 50px min and 300px max when grid-level defaults are omitted', () => {
+    const manager = new ColumnManager();
+    manager.setColumns([col('a', { width: 20 }), col('b', { width: 360 })]);
+
+    expect(manager.getWidth(0)).toBe(50);
+    expect(manager.getWidth(1)).toBe(300);
+  });
+
   it('applies grid-level min/max defaults when column values are omitted', () => {
     const manager = new ColumnManager({
       defaultMinWidth: 80,

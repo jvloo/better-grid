@@ -112,7 +112,16 @@ export interface CellTypeRenderer<TData = unknown, TContext = unknown> {
 // ---------------------------------------------------------------------------
 
 /** Built-in cell types for formatting and editing */
-export type CellType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'bigint' | 'select' | 'boolean' | (string & {});
+export type CellType =
+  | 'text'
+  | 'number'
+  | 'currency'
+  | 'percent'
+  | 'date'
+  | 'bigint'
+  | 'select'
+  | 'boolean'
+  | (string & {});
 
 /** Cell editor mode override */
 export type CellEditorType =
@@ -154,7 +163,10 @@ export interface ColumnDef<TData = unknown> {
    * cell-level ARIA wiring are preserved. Use `container.replaceChildren(...)`
    * to swap the label freely.
    */
-  headerRenderer?: (container: HTMLElement, ctx: { column: ColumnDef<TData>; columnIndex: number }) => void;
+  headerRenderer?: (
+    container: HTMLElement,
+    ctx: { column: ColumnDef<TData>; columnIndex: number },
+  ) => void;
 
   // Layout
   width?: number;
@@ -206,7 +218,7 @@ export interface ColumnDef<TData = unknown> {
 export interface ColumnDefaults {
   /** Default minimum width for resizable columns. ColumnDef.minWidth overrides this. Default: 50. */
   minWidth?: number;
-  /** Default maximum width for resizable columns. ColumnDef.maxWidth overrides this. Default: unlimited. */
+  /** Default maximum width for resizable columns. ColumnDef.maxWidth overrides this. Default: 300. */
   maxWidth?: number;
 }
 
@@ -269,6 +281,12 @@ export interface VirtualizationOptions {
 export interface FreezeClipOptions {
   /** Minimum number of frozen columns that remain visible when clipping. Default: 1. Set 0 to allow hiding all. */
   minVisible?: number;
+  /**
+   * Number of frozen columns to show on initial render. Omit to start fully
+   * expanded. Values below `minVisible` are clamped up; values at or above the
+   * frozen column count start fully expanded.
+   */
+  initialVisible?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -538,7 +556,10 @@ export interface PluginContext<TData = unknown> {
   grid: PluginGridApi<TData>;
   store: import('./state/store').StateStore<TData>;
   on<E extends keyof GridEvents<TData>>(event: E, handler: GridEvents<TData>[E]): () => void;
-  emit<E extends keyof GridEvents<TData>>(event: E, ...args: Parameters<GridEvents<TData>[E]>): void;
+  emit<E extends keyof GridEvents<TData>>(
+    event: E,
+    ...args: Parameters<GridEvents<TData>[E]>
+  ): void;
   registerKeyBinding(binding: KeyBinding): () => void;
   registerCellType(type: string, renderer: CellTypeRenderer): () => void;
   registerCommand(command: Command): void;
@@ -572,10 +593,18 @@ export interface GridPlugin<TId extends string = string, TApi = unknown> {
   $errorCodes?: Readonly<Record<string, string>>;
   init?(ctx: PluginContext): (() => void) | void;
   hooks?: {
-    beforeCellCommit?(event: { rowIndex: number; colIndex: number; oldValue: unknown; newValue: unknown }):
-      | { rowIndex: number; colIndex: number; oldValue: unknown; newValue: unknown }
-      | false;
-    afterCellCommit?(event: { rowIndex: number; colIndex: number; oldValue: unknown; newValue: unknown }): void;
+    beforeCellCommit?(event: {
+      rowIndex: number;
+      colIndex: number;
+      oldValue: unknown;
+      newValue: unknown;
+    }): { rowIndex: number; colIndex: number; oldValue: unknown; newValue: unknown } | false;
+    afterCellCommit?(event: {
+      rowIndex: number;
+      colIndex: number;
+      oldValue: unknown;
+      newValue: unknown;
+    }): void;
     beforeRender?(rows: unknown[]): unknown[];
     onKeyDown?(event: KeyboardEvent, cell: CellPosition | null): boolean | void;
     onHeaderClick?(columnId: string): void;
@@ -760,7 +789,11 @@ export type InferState<G> =
  */
 export type InferPluginApis<TPlugins extends readonly GridPlugin[] | undefined> =
   TPlugins extends readonly GridPlugin[]
-    ? { readonly [P in TPlugins[number] as P['id']]: P extends GridPlugin<string, infer TApi> ? TApi : never }
+    ? {
+        readonly [P in TPlugins[number] as P['id']]: P extends GridPlugin<string, infer TApi>
+          ? TApi
+          : never;
+      }
     : Record<string, unknown>;
 
 /**

@@ -12,7 +12,7 @@ declare const process: { env: { NODE_ENV?: string } };
 
 const DEFAULT_WIDTH = 100;
 const DEFAULT_MIN_WIDTH = 50;
-const DEFAULT_MAX_WIDTH = Number.POSITIVE_INFINITY;
+const DEFAULT_MAX_WIDTH = 300;
 
 export interface ColumnManagerOptions {
   defaultMinWidth?: number;
@@ -80,7 +80,9 @@ export class ColumnManager<TData = unknown> {
       const seen = new Set<string>();
       for (const col of idResolved) {
         if (seen.has(col.id)) {
-          throw new Error(`[better-grid] Duplicate column id: "${col.id}". Each column must have a unique id.`);
+          throw new Error(
+            `[better-grid] Duplicate column id: "${col.id}". Each column must have a unique id.`,
+          );
         }
         seen.add(col.id);
       }
@@ -88,15 +90,16 @@ export class ColumnManager<TData = unknown> {
 
     // Normalize columns: default field, validate widths
     this.allColumns = idResolved.map((col) => {
-      const withField = !col.field && !col.valueGetter
-        ? { ...col, field: col.id as keyof TData & string }
-        : col;
+      const withField =
+        !col.field && !col.valueGetter ? { ...col, field: col.id as keyof TData & string } : col;
 
       // Validate width constraints
       const min = withField.minWidth ?? this.getDefaultMinWidth();
       const max = withField.maxWidth ?? this.getDefaultMaxWidth();
       if (Number.isFinite(max) && min > max) {
-        console.warn(`[better-grid] Column "${withField.id}": minWidth (${min}) > maxWidth (${max})`);
+        console.warn(
+          `[better-grid] Column "${withField.id}": minWidth (${min}) > maxWidth (${max})`,
+        );
       }
 
       return withField;
@@ -106,7 +109,9 @@ export class ColumnManager<TData = unknown> {
 
   private recomputeVisible(): void {
     this.visibleColumns = this.allColumns.filter((c) => c.hide !== true);
-    this.widths = this.visibleColumns.map((col) => this.clampWidth(col, col.width ?? DEFAULT_WIDTH));
+    this.widths = this.visibleColumns.map((col) =>
+      this.clampWidth(col, col.width ?? DEFAULT_WIDTH),
+    );
     this.readonlyCols.clear();
     for (let i = 0; i < this.visibleColumns.length; i++) {
       if (this.visibleColumns[i]?.editable === false) this.readonlyCols.add(i);
@@ -147,10 +152,7 @@ export class ColumnManager<TData = unknown> {
    * Pass the user's original column defs so we can tell which fields were user-provided
    * vs auto-filled. The sample row is typically `options.data[0]`.
    */
-  validateAgainstSample(
-    originalColumns: ColumnDef<TData>[],
-    sampleRow: TData,
-  ): void {
+  validateAgainstSample(originalColumns: ColumnDef<TData>[], sampleRow: TData): void {
     if (process.env.NODE_ENV === 'production') return;
     if (sampleRow == null || typeof sampleRow !== 'object') return;
 

@@ -26,7 +26,13 @@ import { VirtualizationEngine } from './virtualization/engine';
 import type { LayoutMeasurements } from './virtualization/engine';
 import { RenderingPipeline } from './rendering/pipeline';
 import { SelectionLayer } from './rendering/layers';
-import { createEmptySelection, createCellSelection, extendSelection, addRangeToSelection, normalizeSelection } from './selection/model';
+import {
+  createEmptySelection,
+  createCellSelection,
+  extendSelection,
+  addRangeToSelection,
+  normalizeSelection,
+} from './selection/model';
 import { navigateCell, navigateTab, getNavigationDirection } from './keyboard/navigation';
 import { computeZoneDimensions } from './virtualization/layout';
 import { createFilterPanel, type FilterApi } from './ui/filter-panel';
@@ -88,9 +94,7 @@ export function createGrid<
   // state (unchanged). This resolver is only used for selection-stability on
   // setData and any future identity-sensitive paths in core.
   const resolveRowId: (row: TData, idx: number) => string | number =
-    options.getRowId ??
-    options.hierarchy?.getRowId ??
-    ((_row: TData, idx: number) => idx);
+    options.getRowId ?? options.hierarchy?.getRowId ?? ((_row: TData, idx: number) => idx);
 
   // Closure-over-scope: store on a ref so option swaps don't invalidate column
   // identity. Read at render time so handler swaps are picked up without re-init.
@@ -130,6 +134,7 @@ export function createGrid<
   let freezeClipIndicator: HTMLElement | null = null;
   /** Current clip width in pixels. null = no clip active (full frozen width). */
   let freezeClipWidth: number | null = null;
+  let freezeClipInitialApplied = false;
   let pendingScrollRestore: ScrollState | null = null;
   let resizeObserver: ResizeObserver | null = null;
   let mounted = false;
@@ -144,7 +149,7 @@ export function createGrid<
   const getRowHeight =
     typeof options.rowHeight === 'function'
       ? options.rowHeight
-      : () => options.rowHeight as number ?? DEFAULT_ROW_HEIGHT;
+      : () => (options.rowHeight as number) ?? DEFAULT_ROW_HEIGHT;
 
   // Initialize columns
   columnManager.setColumns(options.columns);
@@ -163,9 +168,8 @@ export function createGrid<
     data: options.data,
     columns: columnManager.getColumns(),
     columnWidths: columnManager.getWidths(),
-    rowHeights: typeof options.rowHeight === 'function'
-      ? options.data.map((_, i) => getRowHeight(i))
-      : [], // uniform height — no per-row array needed
+    rowHeights:
+      typeof options.rowHeight === 'function' ? options.data.map((_, i) => getRowHeight(i)) : [], // uniform height — no per-row array needed
     scrollTop: 0,
     scrollLeft: 0,
     visibleRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
@@ -204,9 +208,10 @@ export function createGrid<
   // Resolve freeze clip config
   const freezeClipConfig = (() => {
     const opt = options.frozen?.clip;
-    if (opt === false || opt === undefined) return { enabled: false, minVisible: 1 };
-    if (opt === true) return { enabled: true, minVisible: 1 };
-    return { enabled: true, minVisible: opt.minVisible ?? 1 };
+    if (opt === false || opt === undefined)
+      return { enabled: false, minVisible: 1, initialVisible: undefined };
+    if (opt === true) return { enabled: true, minVisible: 1, initialVisible: undefined };
+    return { enabled: true, minVisible: opt.minVisible ?? 1, initialVisible: opt.initialVisible };
   })();
 
   // Forward store changes to user callbacks
@@ -231,7 +236,7 @@ export function createGrid<
   function getVisibleData(): TData[] {
     const state = store.getState();
     if (!state.hierarchyState) return state.data;
-    return state.hierarchyState.visibleRows.map(i => state.data[i]!);
+    return state.hierarchyState.visibleRows.map((i) => state.data[i]!);
   }
 
   /** Map a visible row index to the original data index */
@@ -265,7 +270,9 @@ export function createGrid<
       (i) => {
         // When hierarchy is active, map visible position to data index for height lookup
         const dataIdx = hs ? (hs.visibleRows[i] ?? i) : i;
-        return state.rowHeights.length > 0 ? (state.rowHeights[dataIdx] ?? DEFAULT_ROW_HEIGHT) : getRowHeight(dataIdx);
+        return state.rowHeights.length > 0
+          ? (state.rowHeights[dataIdx] ?? DEFAULT_ROW_HEIGHT)
+          : getRowHeight(dataIdx);
       },
       (i) => columnManager.getWidth(i),
     );
@@ -292,6 +299,7 @@ export function createGrid<
 
     let state = store.getState();
     const measurements = virtualization.getMeasurements();
+    applyInitialFreezeClip(state, measurements);
     const visibleData = getVisibleData();
 
     // Update scroll sizer (inside fakeScrollbar) for scrollbar dimensions.
@@ -345,7 +353,8 @@ export function createGrid<
         frozenLeftColumns: state.frozen.left,
         frozenRightColumns: 0,
       },
-      (i) => state.rowHeights.length > 0 ? (state.rowHeights[i] ?? DEFAULT_ROW_HEIGHT) : getRowHeight(i),
+      (i) =>
+        state.rowHeights.length > 0 ? (state.rowHeights[i] ?? DEFAULT_ROW_HEIGHT) : getRowHeight(i),
       (i) => columnManager.getWidth(i),
     );
 
@@ -358,9 +367,10 @@ export function createGrid<
 
     // When freeze clip is active, the effective frozen width is smaller,
     // so more scrollable columns are visible in the viewport.
-    const effectiveFrozenLeftWidth = freezeClipWidth !== null
-      ? clamp(freezeClipWidth, 0, zoneDims.frozenLeftWidth)
-      : zoneDims.frozenLeftWidth;
+    const effectiveFrozenLeftWidth =
+      freezeClipWidth !== null
+        ? clamp(freezeClipWidth, 0, zoneDims.frozenLeftWidth)
+        : zoneDims.frozenLeftWidth;
 
     // The main scrollable layer is translated by both scrollLeft and the
     // frozen-clip offset. Use that same data-space offset for virtualization;
@@ -481,26 +491,41 @@ export function createGrid<
           freezeClipIndicator.style.display = 'none';
         }
       }
-
     }
 
     // Render pinned rows (always re-render — cheap since typically 1-3 rows)
     if (pinnedTopContainer) {
       const wrapper = pinnedTopContainer.parentElement;
       if (pinnedTopH > 0) {
-        renderPinnedRows(pinnedTopContainer, state.pinned.top, state.columns, measurements, frozenCols);
+        renderPinnedRows(
+          pinnedTopContainer,
+          state.pinned.top,
+          state.columns,
+          measurements,
+          frozenCols,
+        );
         pinnedTopContainer.style.height = `${pinnedTopH}px`;
         pinnedTopContainer.style.width = `${measurements.totalWidth}px`;
         pinnedTopContainer.style.transform = `translate3d(${-state.scrollLeft - clipOffset}px, 0, 0)`;
-        if (wrapper) { wrapper.style.display = ''; wrapper.style.height = `${pinnedTopH}px`; }
+        if (wrapper) {
+          wrapper.style.display = '';
+          wrapper.style.height = `${pinnedTopH}px`;
+        }
       } else if (wrapper) {
-        wrapper.style.display = 'none'; wrapper.style.height = '0';
+        wrapper.style.display = 'none';
+        wrapper.style.height = '0';
       }
     }
     if (pinnedBottomContainer) {
       const wrapper = pinnedBottomContainer.parentElement;
       if (pinnedBottomH > 0) {
-        renderPinnedRows(pinnedBottomContainer, state.pinned.bottom, state.columns, measurements, frozenCols);
+        renderPinnedRows(
+          pinnedBottomContainer,
+          state.pinned.bottom,
+          state.columns,
+          measurements,
+          frozenCols,
+        );
         pinnedBottomContainer.style.height = `${pinnedBottomH}px`;
         pinnedBottomContainer.style.width = `${measurements.totalWidth}px`;
         pinnedBottomContainer.style.transform = `translate3d(${-state.scrollLeft - clipOffset}px, 0, 0)`;
@@ -519,17 +544,32 @@ export function createGrid<
           }
         }
       } else if (wrapper) {
-        wrapper.style.display = 'none'; wrapper.style.height = '0';
+        wrapper.style.display = 'none';
+        wrapper.style.height = '0';
       }
     }
     // Render frozen pinned rows (frozen columns only, no horizontal scroll)
     if (frozenPinnedTopContainer && frozenCols > 0) {
-      renderPinnedRows(frozenPinnedTopContainer, state.pinned.top, state.columns, measurements, 0, frozenCols);
+      renderPinnedRows(
+        frozenPinnedTopContainer,
+        state.pinned.top,
+        state.columns,
+        measurements,
+        0,
+        frozenCols,
+      );
       frozenPinnedTopContainer.style.height = `${pinnedTopH}px`;
       frozenPinnedTopContainer.style.display = pinnedTopH > 0 ? '' : 'none';
     }
     if (frozenPinnedBottomContainer && frozenCols > 0) {
-      renderPinnedRows(frozenPinnedBottomContainer, state.pinned.bottom, state.columns, measurements, 0, frozenCols);
+      renderPinnedRows(
+        frozenPinnedBottomContainer,
+        state.pinned.bottom,
+        state.columns,
+        measurements,
+        0,
+        frozenCols,
+      );
       frozenPinnedBottomContainer.style.height = `${pinnedBottomH}px`;
       frozenPinnedBottomContainer.style.display = pinnedBottomH > 0 ? '' : 'none';
       // Match main pinned bottom position
@@ -732,9 +772,9 @@ export function createGrid<
     // chevron has non-empty textContent (icon glyph, accessible-name leak
     // through child text nodes), there's nothing meaningful to tooltip —
     // these cells are pure affordance, not data.
-    if (cell.querySelector(
-      '.bg-row-actions-trigger, .bg-hierarchy-toggle, .bg-selection-checkbox',
-    )) {
+    if (
+      cell.querySelector('.bg-row-actions-trigger, .bg-hierarchy-toggle, .bg-selection-checkbox')
+    ) {
       return;
     }
     // Gantt cells render bars, not text — never tooltip the cell box itself.
@@ -863,13 +903,9 @@ export function createGrid<
 
   let headerRenderer: HeaderRenderer<TData> | null = null;
 
-  function renderHeaders(
-    state: GridState<TData>,
-    measurements: LayoutMeasurements,
-  ): void {
+  function renderHeaders(state: GridState<TData>, measurements: LayoutMeasurements): void {
     headerRenderer?.render(state, measurements);
   }
-
 
   // ---------------------------------------------------------------------------
   // Scroll cell into view
@@ -901,11 +937,12 @@ export function createGrid<
     const boundaryMaxWidth = containerRect
       ? startWidth + Math.max(0, containerRect.right - 4 - startEvent.clientX)
       : undefined;
-    const effectiveMaxWidth = boundaryMaxWidth == null
-      ? maxWidth
-      : maxWidth == null
-        ? boundaryMaxWidth
-        : Math.min(maxWidth, boundaryMaxWidth);
+    const effectiveMaxWidth =
+      boundaryMaxWidth == null
+        ? maxWidth
+        : maxWidth == null
+          ? boundaryMaxWidth
+          : Math.min(maxWidth, boundaryMaxWidth);
     const resizePreview = container ? document.createElement('div') : null;
     if (resizePreview && container) {
       resizePreview.className = 'bg-column-resize-preview';
@@ -915,7 +952,11 @@ export function createGrid<
     const updateResizePreview = (width: number) => {
       if (!resizePreview || !container) return;
       const rect = container.getBoundingClientRect();
-      const clientX = clamp(startEvent.clientX + (width - startWidth), rect.left + 4, rect.right - 4);
+      const clientX = clamp(
+        startEvent.clientX + (width - startWidth),
+        rect.left + 4,
+        rect.right - 4,
+      );
       resizePreview.style.transform = `translate3d(${snapToDevicePixel(clientX - rect.left - 4)}px, 0, 0)`;
     };
     startColumnResizeDrag({
@@ -950,6 +991,40 @@ export function createGrid<
   // ---------------------------------------------------------------------------
   // Freeze clip
   // ---------------------------------------------------------------------------
+
+  function applyInitialFreezeClip(state: GridState<TData>, measurements: LayoutMeasurements): void {
+    if (
+      freezeClipInitialApplied ||
+      !freezeClipConfig.enabled ||
+      freezeClipConfig.initialVisible == null
+    )
+      return;
+    freezeClipInitialApplied = true;
+
+    const frozenLeft = state.frozen.left;
+    const fullFrozenWidth = measurements.colOffsets[frozenLeft] ?? 0;
+    if (frozenLeft <= 0 || fullFrozenWidth <= 0) return;
+
+    const minVisibleColumns = Math.min(
+      frozenLeft,
+      Math.max(0, Math.floor(freezeClipConfig.minVisible)),
+    );
+    const initialVisibleColumns = Math.min(
+      frozenLeft,
+      Math.max(minVisibleColumns, Math.floor(freezeClipConfig.initialVisible)),
+    );
+
+    freezeClipWidth =
+      initialVisibleColumns >= frozenLeft
+        ? null
+        : clamp(
+            measurements.colOffsets[initialVisibleColumns] ?? fullFrozenWidth,
+            0,
+            fullFrozenWidth,
+          );
+
+    applyFloatingScrollbarOffsets();
+  }
 
   function startFreezeClipDrag(startEvent: PointerEvent): void {
     const measurements = virtualization.getMeasurements();
@@ -1059,7 +1134,11 @@ export function createGrid<
 
   /** Resolve a (possibly symbolic) offset to a px value for current state. */
   function resolveScrollbarOffset(
-    side: 'horizontalOffsetLeft' | 'horizontalOffsetRight' | 'verticalOffsetTop' | 'verticalOffsetBottom',
+    side:
+      | 'horizontalOffsetLeft'
+      | 'horizontalOffsetRight'
+      | 'verticalOffsetTop'
+      | 'verticalOffsetBottom',
   ): number {
     const value = scrollbarConfig[side];
     if (typeof value === 'number') return value;
@@ -1130,13 +1209,13 @@ export function createGrid<
       const scrollWidth = fakeScrollbar.scrollWidth;
       const clientWidth = fakeScrollbar.clientWidth;
       const maxScroll = Math.max(0, scrollWidth - clientWidth);
-      const thumbWidth = maxScroll > 0 && trackWidth > 0
-        ? clamp(Math.round((clientWidth / scrollWidth) * trackWidth), 20, trackWidth)
-        : trackWidth;
+      const thumbWidth =
+        maxScroll > 0 && trackWidth > 0
+          ? clamp(Math.round((clientWidth / scrollWidth) * trackWidth), 20, trackWidth)
+          : trackWidth;
       const maxTravel = Math.max(0, trackWidth - thumbWidth);
-      const offset = maxScroll > 0 && maxTravel > 0
-        ? (fakeScrollbar.scrollLeft / maxScroll) * maxTravel
-        : 0;
+      const offset =
+        maxScroll > 0 && maxTravel > 0 ? (fakeScrollbar.scrollLeft / maxScroll) * maxTravel : 0;
       floatingHTrack.style.visibility = maxScroll > 0 && trackWidth > 0 ? 'visible' : 'hidden';
       floatingHThumb.style.width = `${thumbWidth}px`;
       floatingHThumb.style.transform = `translate3d(${snapToDevicePixel(offset)}px, 0, 0)`;
@@ -1146,13 +1225,13 @@ export function createGrid<
       const scrollHeight = fakeScrollbar.scrollHeight;
       const clientHeight = fakeScrollbar.clientHeight;
       const maxScroll = Math.max(0, scrollHeight - clientHeight);
-      const thumbHeight = maxScroll > 0 && trackHeight > 0
-        ? clamp(Math.round((clientHeight / scrollHeight) * trackHeight), 20, trackHeight)
-        : trackHeight;
+      const thumbHeight =
+        maxScroll > 0 && trackHeight > 0
+          ? clamp(Math.round((clientHeight / scrollHeight) * trackHeight), 20, trackHeight)
+          : trackHeight;
       const maxTravel = Math.max(0, trackHeight - thumbHeight);
-      const offset = maxScroll > 0 && maxTravel > 0
-        ? (fakeScrollbar.scrollTop / maxScroll) * maxTravel
-        : 0;
+      const offset =
+        maxScroll > 0 && maxTravel > 0 ? (fakeScrollbar.scrollTop / maxScroll) * maxTravel : 0;
       floatingVTrack.style.visibility = maxScroll > 0 && trackHeight > 0 ? 'visible' : 'hidden';
       floatingVThumb.style.height = `${thumbHeight}px`;
       floatingVThumb.style.transform = `translate3d(0, ${snapToDevicePixel(offset)}px, 0)`;
@@ -1185,7 +1264,7 @@ export function createGrid<
 
       if (event.target !== thumb) {
         const trackStart = isHorizontal ? trackRect.left : trackRect.top;
-        const nextThumbOffset = clamp(clientStart - trackStart - (thumbLength / 2), 0, maxTravel);
+        const nextThumbOffset = clamp(clientStart - trackStart - thumbLength / 2, 0, maxTravel);
         scrollStart = (nextThumbOffset / maxTravel) * maxScroll;
         if (isHorizontal) fakeScrollbar.scrollLeft = scrollStart;
         else fakeScrollbar.scrollTop = scrollStart;
@@ -1306,7 +1385,14 @@ export function createGrid<
       // This is only a warning — a cellType might still be registered later via addPlugin.
       if (process.env.NODE_ENV !== 'production') {
         const BUILTIN_CELL_TYPES = new Set([
-          'text', 'number', 'currency', 'percent', 'date', 'bigint', 'select', 'boolean',
+          'text',
+          'number',
+          'currency',
+          'percent',
+          'date',
+          'bigint',
+          'select',
+          'boolean',
         ]);
         const warned = new Set<string>();
         for (const col of columnManager.getColumns()) {
@@ -1331,10 +1417,7 @@ export function createGrid<
       // ranges — useful for read-only / report-style grids. With range
       // selection on, native text selection conflicts with shift-click range
       // extension, so we keep `user-select: none`.
-      container.classList.toggle(
-        'bg-grid--text-selectable',
-        normalizedSelection.mode === 'off',
-      );
+      container.classList.toggle('bg-grid--text-selectable', normalizedSelection.mode === 'off');
       container.tabIndex = 0;
       container.setAttribute('role', 'grid');
       updateAriaCounts();
@@ -1573,9 +1656,7 @@ export function createGrid<
             getSortState: () => readonly { columnId: string; direction: 'asc' | 'desc' }[];
           }>('sorting');
           const sorted = sortApi?.getSortState().find((s) => s.columnId === columnId);
-          return sorted
-            ? (sorted.direction === 'asc' ? 'ascending' : 'descending')
-            : 'none';
+          return sorted ? (sorted.direction === 'asc' ? 'ascending' : 'descending') : 'none';
         },
         onHeaderClick: (columnId) => {
           for (const plugin of pluginRegistry.getAllPlugins()) {
@@ -1601,9 +1682,7 @@ export function createGrid<
         freezeClipHandle.addEventListener('pointerdown', startFreezeClipDrag);
         freezeClipHandle.addEventListener('dblclick', restoreAllFrozenColumns);
         freezeClipHandle.addEventListener('mouseenter', (e: MouseEvent) => {
-          const text = freezeClipWidth !== null
-            ? 'Double-click to expand'
-            : 'Drag to clip';
+          const text = freezeClipWidth !== null ? 'Double-click to expand' : 'Drag to clip';
           showTooltip(freezeClipHandle!, text, e.clientX, e.clientY);
         });
         freezeClipHandle.addEventListener('mouseleave', dismissTooltip);
@@ -1616,7 +1695,9 @@ export function createGrid<
 
       // Selection layer (inside cell container so offsets align with cells)
       selectionLayer = new SelectionLayer(cellContainer, container!);
-      selectionLayer.setFillHandleEnabled(normalizedSelection.mode !== 'off' && normalizedSelection.fillHandle);
+      selectionLayer.setFillHandleEnabled(
+        normalizedSelection.mode !== 'off' && normalizedSelection.fillHandle,
+      );
 
       // Fill handle drag → emit event for plugins, fallback to basic copy
       selectionLayer.setFillDragHandler(({ sourceRange, targetRange }) => {
@@ -1632,8 +1713,12 @@ export function createGrid<
           const columns = state.columns;
           const sourceRowCount = sourceRange.endRow - sourceRange.startRow + 1;
           const sourceColCount = sourceRange.endCol - sourceRange.startCol + 1;
-          const isVertical = targetRange.startCol === sourceRange.startCol && targetRange.endCol === sourceRange.endCol;
-          const isHorizontal = targetRange.startRow === sourceRange.startRow && targetRange.endRow === sourceRange.endRow;
+          const isVertical =
+            targetRange.startCol === sourceRange.startCol &&
+            targetRange.endCol === sourceRange.endCol;
+          const isHorizontal =
+            targetRange.startRow === sourceRange.startRow &&
+            targetRange.endRow === sourceRange.endRow;
 
           function getSourceValues(colIdx: number): unknown[] {
             const col = columns[colIdx];
@@ -1665,7 +1750,8 @@ export function createGrid<
                 const column = columns[col];
                 if (!column || column.editable === false) continue;
 
-                const srcColIdx = sourceRange.startCol + ((col - targetRange.startCol) % sourceColCount);
+                const srcColIdx =
+                  sourceRange.startCol + ((col - targetRange.startCol) % sourceColCount);
                 const srcCol = columns[srcColIdx];
                 if (!srcCol?.field) continue;
 
@@ -1681,12 +1767,14 @@ export function createGrid<
         // Extend selection to include filled area
         store.setSelection({
           active: store.getState().selection.active,
-          ranges: [{
-            startRow: Math.min(sourceRange.startRow, targetRange.startRow),
-            endRow: Math.max(sourceRange.endRow, targetRange.endRow),
-            startCol: Math.min(sourceRange.startCol, targetRange.startCol),
-            endCol: Math.max(sourceRange.endCol, targetRange.endCol),
-          }],
+          ranges: [
+            {
+              startRow: Math.min(sourceRange.startRow, targetRange.startRow),
+              endRow: Math.max(sourceRange.endRow, targetRange.endRow),
+              startCol: Math.min(sourceRange.startCol, targetRange.startCol),
+              endCol: Math.max(sourceRange.endCol, targetRange.endCol),
+            },
+          ],
         });
         scheduleRender();
       });
@@ -1906,7 +1994,13 @@ export function createGrid<
       const newRow = store.getState().data[dataIndex];
       if (newRow === undefined) return;
 
-      const change: CellChange<TData> = { rowIndex, columnId, oldValue, newValue: value, row: newRow };
+      const change: CellChange<TData> = {
+        rowIndex,
+        columnId,
+        oldValue,
+        newValue: value,
+        row: newRow,
+      };
       emitter.emit('cell:change', [change]);
       options.onCellChange?.([change]);
       scheduleRender();
@@ -1959,6 +2053,7 @@ export function createGrid<
       if (freezeClipWidth !== null) {
         freezeClipWidth = null;
       }
+      freezeClipInitialApplied = false;
       invalidateHeaders();
       recomputeMeasurements();
       updateAriaCounts();
@@ -1987,6 +2082,7 @@ export function createGrid<
       if (freezeClipWidth !== null) {
         freezeClipWidth = null;
       }
+      freezeClipInitialApplied = false;
       invalidateHeaders();
       recomputeMeasurements();
       updateAriaCounts();
@@ -2131,7 +2227,10 @@ export function createGrid<
       registerCellType: (type, renderer) => {
         const unreg1 = rendering.registerCellType(type, renderer);
         const unreg2 = frozenRendering.registerCellType(type, renderer);
-        return () => { unreg1(); unreg2(); };
+        return () => {
+          unreg1();
+          unreg2();
+        };
       },
       registerCommand: (command) => {
         commands.set(command.id, command);
