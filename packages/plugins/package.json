@@ -1,6 +1,6 @@
 {
   "name": "@better-grid/plugins",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "Official plugins for Better Grid",
   "license": "MIT",
   "type": "module",

@@ -1,4 +1,4 @@
-import type { GridInstance, GridOptions, GridPlugin } from '@better-grid/core';
+import type { GridInstance, GridOptions, GridPlugin, SetDataOptions } from '@better-grid/core';
 import type { FeatureName } from './presets/features';
 
 export interface ReactGridOptions<TData = unknown, TContext = unknown>
@@ -21,6 +21,15 @@ export interface ReactGridOptions<TData = unknown, TContext = unknown>
    * resolution for these plugins.
    */
   plugins?: GridPlugin[];
+
+  /**
+   * Options used when React syncs a new `data` prop into the existing grid.
+   *
+   * Defaults to core `setData` behavior, which resets scroll for true dataset
+   * swaps. Pass `{ preserveScroll: true }` when the prop change represents a
+   * row-level mutation of the same table, such as add/delete/reorder.
+   */
+  setDataOptions?: SetDataOptions;
 }
 
 export interface GridHandle<TData = unknown, TContext = unknown> {

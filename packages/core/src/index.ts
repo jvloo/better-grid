@@ -11,6 +11,7 @@ export type {
   GridInstance,
   GridState,
   GridEvents,
+  SetDataOptions,
   // Columns
   ColumnDef,
   ColumnDefaults,

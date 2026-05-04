@@ -91,8 +91,8 @@ export function useGrid<TData = unknown, TContext = unknown>(
 
   // Sync data + columns when their identity changes.
   useEffect(() => {
-    grid.setData(options.data);
-  }, [grid, options.data]);
+    grid.setData(options.data, options.setDataOptions);
+  }, [grid, options.data, options.setDataOptions]);
 
   useEffect(() => {
     grid.setColumns(options.columns);
