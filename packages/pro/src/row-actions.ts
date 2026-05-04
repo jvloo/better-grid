@@ -36,6 +36,11 @@ export interface RowActionsOptions {
   /** Icon for the menu trigger button. Default: vertical 3-dot (⋮) */
   menuIcon?: string;
   /**
+   * Width/height for the trigger button in pixels.
+   * Default: 32. Use a smaller value (e.g. 24) for compact action columns.
+   */
+  triggerSize?: number;
+  /**
    * Returns the accessible label for the trigger button.
    * Default: `'Row actions'`.
    * Example: `(row) => \`Actions for ${row.name}\``
@@ -74,6 +79,11 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions',
       let menuIdCounter = 0;
 
       const menuIcon = options.menuIcon ?? DOT_VERTICAL_SVG;
+      const requestedTriggerSize = options.triggerSize ?? 32;
+      const triggerSize = Number.isFinite(requestedTriggerSize)
+        ? Math.max(20, requestedTriggerSize)
+        : 32;
+      const triggerSizePx = `${triggerSize}px`;
 
       // Inject CSS to reset button defaults and suppress browser interaction states
       if (!document.getElementById('bg-row-actions-style')) {
@@ -88,6 +98,10 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions',
             padding: 0;
             margin: 0;
             font: inherit;
+            box-sizing: border-box;
+          }
+          .bg-row-actions-trigger > svg {
+            flex: 0 0 auto;
           }
           .bg-row-actions-trigger:focus,
           .bg-row-actions-trigger:focus-visible,
@@ -350,6 +364,8 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions',
           container.style.display = 'flex';
           container.style.alignItems = 'center';
           container.style.justifyContent = 'center';
+          container.style.padding = '0';
+          container.style.boxSizing = 'border-box';
 
           // Create menu trigger as a real <button> for accessibility
           const btn = document.createElement('button');
@@ -366,8 +382,11 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions',
           btn.style.alignItems = 'center';
           btn.style.justifyContent = 'center';
           btn.style.color = '#667085';
-          btn.style.width = '32px';
-          btn.style.height = '32px';
+          btn.style.width = triggerSizePx;
+          btn.style.height = triggerSizePx;
+          btn.style.minWidth = triggerSizePx;
+          btn.style.lineHeight = '0';
+          btn.style.boxSizing = 'border-box';
           btn.style.borderRadius = '4px';
           btn.innerHTML = menuIcon;
 

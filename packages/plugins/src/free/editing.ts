@@ -122,6 +122,18 @@ export interface EditingOptions {
    * Set to 0 to disable.
    */
   alwaysInputThreshold?: number;
+  /**
+   * When opening a floating editor over an input-style cell, mirror the
+   * cell's input-box surface (background, border-radius, box-shadow) on the
+   * editor so the transition is invisible. Default: false.
+   *
+   * Off by default because real-world host inputs (MUI, Antd, etc.) often
+   * carry box-shadow / border-radius rules that don't compose cleanly with
+   * the floating editor — the mirror leaks those rules onto the editor and
+   * looks wrong. Opt in only after verifying the host input surface matches
+   * what you want the editor to look like.
+   */
+  matchAnchorStyle?: boolean;
 }
 
 /** Dropdown option for columns with meta.options */
@@ -195,6 +207,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
     inputEllipsis: options?.inputEllipsis ?? true,
     inputEditCursor: options?.inputEditCursor ?? true,
     alwaysInputThreshold: options?.alwaysInputThreshold ?? 1000,
+    matchAnchorStyle: options?.matchAnchorStyle ?? false,
   };
 
   return {
@@ -1812,6 +1825,17 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           // Use input box rect if present (inputStyle mode), otherwise cell rect
           const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
           const anchorEl = inputBox ?? cellEl;
+          // Full surface mirroring (background + box-shadow + radius) is
+          // opt-in — host inputs carry shadow/radius rules that compose
+          // poorly when leaked onto a floating editor. See
+          // EditingOptions.matchAnchorStyle.
+          const useInputStyleFloat = !!inputBox && config.matchAnchorStyle;
+          // Border-color mirroring is *always* on for input-style cells —
+          // the editor sitting above an input wrapper looks wrong if its
+          // border is the grid theme's color while the wrapper's border is
+          // the host theme's color. Just the color and radius (cheap to
+          // mirror, no box-shadow leak).
+          const mirrorBorder = !!inputBox;
           const cellRect = anchorEl.getBoundingClientRect();
           const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
           const gridRect = gridEl?.getBoundingClientRect();
@@ -1848,14 +1872,24 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const edBorder = gridStyles.getPropertyValue('--bg-editor-border').trim() || gridStyles.getPropertyValue('--bg-active-border').trim() || '#1a73e8';
           const edRadius = gridStyles.getPropertyValue('--bg-editor-radius').trim() || '2px';
           const edShadow = gridStyles.getPropertyValue('--bg-editor-shadow').trim() || '0 2px 8px rgba(0,0,0,0.15)';
+          // Border resolution priority (most → least specific):
+          //   1) full anchor mirror (matchAnchorStyle on)
+          //   2) anchor border color/radius only (input-style cell)
+          //   3) editor's own theme variables
+          const borderColor = mirrorBorder
+            ? (anchorComputed.borderColor || edBorder)
+            : edBorder;
+          const borderRadius = mirrorBorder
+            ? (anchorComputed.borderRadius || edRadius)
+            : edRadius;
           floatBox.style.cssText = `
             position: fixed; z-index: 200; box-sizing: border-box;
             top: ${cellRect.top}px; left: ${cellRect.left}px;
             min-width: ${cellRect.width}px; max-width: ${fullWidth}px;
-            background: ${edBg};
-            border: ${edBorderW}px solid ${edBorder};
-            border-radius: ${edRadius};
-            box-shadow: ${edShadow};
+            background: ${useInputStyleFloat ? anchorComputed.backgroundColor : edBg};
+            border: ${useInputStyleFloat ? '0' : `${edBorderW}px solid ${borderColor}`};
+            border-radius: ${borderRadius};
+            box-shadow: ${useInputStyleFloat ? anchorComputed.boxShadow : edShadow};
             overflow: hidden;
           `;
 
@@ -1870,7 +1904,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           // for centering, so text selection highlight doesn't span full cell height.
           const fontSize = parseFloat(anchorComputed.fontSize) || 14;
           const contentLineHeight = Math.round(fontSize * 1.4);
-          const editorHeight = cellRect.height - edBorderW * 2;
+          const editorHeight = cellRect.height - (useInputStyleFloat ? 0 : edBorderW * 2);
           const vertPad = Math.max(0, Math.floor((editorHeight - contentLineHeight) / 2));
           const basePadLeft = parseFloat(anchorComputed.paddingLeft) || 12;
           const basePadRight = parseFloat(anchorComputed.paddingRight) || basePadLeft;
@@ -2075,18 +2109,31 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             autoSize();
             syncPosition();
           });
-          ed.focus();
-
+          let floatActive = true;
           const edText = ed.textContent ?? '';
-          if (selectionRange) {
-            setContentEditableSelection(ed, selectionRange.start, selectionRange.end);
-          } else if (clickEvent && !cursorAtEnd) {
-            const offset = getTextOffsetFromClientX(edText, ed.getBoundingClientRect(), getComputedStyle(ed), clickEvent.clientX);
-            setContentEditableCaret(ed, offset);
-          } else if (cursorAtEnd) {
-            setContentEditableCaret(ed, edText.length);
+          const focusEditor = (): void => {
+            if (!floatActive || !document.body.contains(ed)) return;
+            ed.focus();
+            if (selectionRange) {
+              setContentEditableSelection(ed, selectionRange.start, selectionRange.end);
+            } else if (clickEvent && !cursorAtEnd) {
+              const offset = getTextOffsetFromClientX(edText, ed.getBoundingClientRect(), getComputedStyle(ed), clickEvent.clientX);
+              setContentEditableCaret(ed, offset);
+            } else if (cursorAtEnd) {
+              setContentEditableCaret(ed, edText.length);
+            } else {
+              setContentEditableSelection(ed, 0, edText.length);
+            }
+          };
+          // The grid may receive focus later in the originating click sequence,
+          // so we always defer the focus by one frame. Earlier versions called
+          // focusEditor() synchronously *and* via RAF, which caused a visible
+          // double-focus flicker on click-to-edit. One RAF is sufficient: the
+          // selection/caret arrives in the same paint as the floating editor.
+          if (clickEvent) {
+            requestAnimationFrame(focusEditor);
           } else {
-            setContentEditableSelection(ed, 0, edText.length);
+            focusEditor();
           }
 
           ed.addEventListener('keydown', (e) => {
@@ -2102,8 +2149,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           ed.addEventListener('dblclick', () => {
             requestAnimationFrame(() => setContentEditableSelection(ed, 0, (ed.textContent ?? '').length));
           });
-          let floatActive = true;
-
           function cleanupFloat(): void {
             if (!floatActive) return;
             floatActive = false;
@@ -2447,17 +2492,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         }
         let activeSectionIdx = 0;
 
-        // Build the display string: filled sections show digits, empty show label
-        function buildDisplayValue(): string {
+        function buildInputValue(): string {
           let result = '';
           for (let i = 0; i < sectionLengths.length; i += 1) {
-            // Insert separators that come before this section
             for (const sep of separators) {
               if (sep.pos === i) result += sep.char;
             }
-            result += sectionValues[i] || sectionLabels[i] || ''.padEnd(sectionLengths[i]!, '_');
+            result += sectionValues[i] || sectionLabels[i] || ''.padEnd(sectionLengths[i]!, ' ');
           }
-          // Trailing separators
           for (const sep of separators) {
             if (sep.pos === sectionLengths.length) result += sep.char;
           }
@@ -2489,7 +2531,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         }
 
         function syncInputDisplay(): void {
-          input.value = buildDisplayValue();
+          input.value = buildInputValue();
           const range = getSectionRange(activeSectionIdx);
           input.setSelectionRange(range.start, range.end);
           syncDisplayLayer();
@@ -2504,6 +2546,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         // Capture cell's computed font so editor matches cell rendering
         const anchorComputed = getComputedStyle(anchorEl);
+        // Full surface mirror is opt-in (matchAnchorStyle), but border
+        // color + radius always mirror for input-style cells so the
+        // open editor's edge matches the closed input's edge.
+        const useInputStyleFloat = !!inputBox && config.matchAnchorStyle;
+        const mirrorBorder = !!inputBox;
+        const maskedBorderColor = mirrorBorder ? (anchorComputed.borderColor || edBorder) : edBorder;
+        const maskedBorderRadius = mirrorBorder ? (anchorComputed.borderRadius || edRadius) : edRadius;
 
         // Create float box
         const floatBox = document.createElement('div');
@@ -2512,10 +2561,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           position: fixed; z-index: 200; box-sizing: border-box;
           top: ${cellRect.top}px; left: ${cellRect.left}px;
           min-width: ${cellRect.width}px;
-          background: ${edBg};
-          border: ${edBorderW}px solid ${edBorder};
-          border-radius: ${edRadius};
-          box-shadow: ${edShadow};
+          background: ${useInputStyleFloat ? anchorComputed.backgroundColor : edBg};
+          border: ${useInputStyleFloat ? '0' : `${edBorderW}px solid ${maskedBorderColor}`};
+          border-radius: ${maskedBorderRadius};
+          box-shadow: ${useInputStyleFloat ? anchorComputed.boxShadow : edShadow};
           height: ${cellRect.height}px;
           font-size: ${anchorComputed.fontSize};
           font-family: ${anchorComputed.fontFamily};
@@ -2601,11 +2650,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'bg-cell-editor bg-cell-editor--masked';
-        input.value = buildDisplayValue();
+        input.value = buildInputValue();
         input.style.cssText = `
           position: relative; z-index: 1;
           width: 100%;
-          height: ${cellRect.height - edBorderW * 2}px;
+          height: ${cellRect.height - (useInputStyleFloat ? 0 : edBorderW * 2)}px;
           border: none;
           outline: none;
           background: transparent;
@@ -2623,11 +2672,26 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // All input goes through keydown — prevent browser from mutating the value
         input.addEventListener('beforeinput', (e) => { e.preventDefault(); });
 
-        // Click on MM or YY → select that section
+        // Click on MM or YY -> select that section. We listen on mouseup
+        // (after the browser has placed the caret) and explicitly restore
+        // the section selection. Earlier versions used mousedown +
+        // preventDefault to "lock in" the section before the native click,
+        // but that combination caused stale-value commits when an outside
+        // mousedown also tried to commit the editor — the preventDefault
+        // suppressed the focus handoff that the commit path expected.
         input.addEventListener('mouseup', (e) => {
-          activeSectionIdx = getSectionAtClientX(e.clientX);
-          const range = getSectionRange(activeSectionIdx);
-          input.setSelectionRange(range.start, range.end);
+          const newSectionIdx = getSectionAtClientX(e.clientX);
+          if (newSectionIdx !== activeSectionIdx) {
+            activeSectionIdx = newSectionIdx;
+            // Active section moved — re-render labels / digits styling.
+            syncInputDisplay();
+          } else {
+            // Same section — the native click collapsed the selection to a
+            // caret; just restore the section range so the next keystroke
+            // overwrites the section.
+            const range = getSectionRange(activeSectionIdx);
+            input.setSelectionRange(range.start, range.end);
+          }
         });
 
         input.addEventListener('keydown', (e) => {
@@ -3618,10 +3682,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           if (isNaN(num)) return prevValue;
           // Apply precision rounding if configured
           const prec = getPrecision(column, row);
-          if (prec != null) {
-            return Number(num.toFixed(prec));
-          }
-          return num;
+          let result = prec != null ? Number(num.toFixed(prec)) : num;
+          // Clamp to declared min/max so out-of-range typed values resolve
+          // to the bound rather than committing as-is. Validation rules
+          // continue to fire against the clamped value (effectively a
+          // no-op for the bound itself).
+          const minV = getMin(column, row);
+          const maxV = getMax(column, row);
+          if (minV != null && result < minV) result = minV;
+          if (maxV != null && result > maxV) result = maxV;
+          return result;
         }
         if (cellType === 'percent') {
           const cleaned = newValue.replace(/[^0-9.\-]/g, '');

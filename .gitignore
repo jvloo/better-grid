@@ -42,6 +42,7 @@ yarn-error.log*
 # Local npm auth
 # Do not commit tokens. Force-add a token-free .npmrc only if the repo ever needs one.
 .npmrc
+.credentials/
 
 # Tmp
 .playwright-mcp/

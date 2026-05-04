@@ -229,7 +229,10 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
           tooltipLayer.style.position = 'absolute';
           tooltipLayer.style.overflow = 'hidden';
           tooltipLayer.style.pointerEvents = 'none';
-          tooltipLayer.style.zIndex = '20';
+          // zIndex 21 sits above the frozen-col overlay (zIndex 8 — see
+          // grid.ts mount). Without this lift, tooltips on frozen cells
+          // were painted under the duplicate frozen overlay and invisible.
+          tooltipLayer.style.zIndex = '21';
           gridEl.appendChild(tooltipLayer);
         }
 
@@ -253,12 +256,6 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
           ? headerEl.getBoundingClientRect().bottom - gridRect.top
           : 0;
 
-        // Left boundary: right edge of the frozen column overlay (if present)
-        const frozenEl = gridEl.querySelector('.bg-grid__frozen-overlay') as HTMLElement | null;
-        const frozenRight = frozenEl
-          ? frozenEl.getBoundingClientRect().right - gridRect.left
-          : 0;
-
         // Bottom boundary: top of the pinned-bottom wrapper (if non-zero height)
         const pinnedBottomEl = gridEl.querySelector('.bg-grid__pinned-bottom') as HTMLElement | null;
         let bottomOffset = 0;
@@ -269,8 +266,14 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
           }
         }
 
+        // Layer spans the full grid body width — earlier we left-bounded
+        // the layer at the right edge of the frozen-col overlay, but that
+        // clipped tooltips for validation errors on frozen columns
+        // (Phase / Code / Duration in the FSBT Program table). Tooltips
+        // get z-index 21 (one above the frozen overlay's 8) so they render
+        // on top of frozen cells correctly.
         tooltipLayer.style.top = `${headerBottom}px`;
-        tooltipLayer.style.left = `${frozenRight}px`;
+        tooltipLayer.style.left = '0';
         tooltipLayer.style.right = '0';
         tooltipLayer.style.bottom = `${bottomOffset}px`;
       }

@@ -35,6 +35,12 @@ export interface HeaderRendererDeps {
   onHeaderContextMenu: (event: MouseEvent, columnId: string) => void;
   onFilterButtonClick: (event: MouseEvent, columnId: string) => void;
   onColumnResize: (colIndex: number, event: PointerEvent) => void;
+  /**
+   * Reset the column's width to its initial / default. Called on a
+   * dblclick of the resize handle. Caller decides what "reset" means —
+   * typically restoring `column.width` from the original ColumnDef.
+   */
+  onColumnResizeReset?: (colIndex: number) => void;
 }
 
 export interface HeaderRenderer<TData = unknown> {
@@ -83,8 +89,12 @@ export function createHeaderRenderer<TData = unknown>(
     if (related && cell.contains(related)) return;
     const textSpan = cell.querySelector('.bg-header-cell__text') as HTMLElement | null;
     if (!textSpan) return;
-    if (textSpan.scrollWidth > textSpan.clientWidth) {
-      deps.tooltip.show(cell, textSpan.textContent ?? '');
+    // Skip empty / whitespace-only header text — common for utility columns
+    // (selection checkbox, action menu, expand chevron) where a clipped check
+    // would still trigger a meaningless empty tooltip.
+    const text = textSpan.textContent ?? '';
+    if (text.trim() && textSpan.scrollWidth > textSpan.clientWidth) {
+      deps.tooltip.show(cell, text);
     }
   }
 
@@ -447,6 +457,19 @@ export function createHeaderRenderer<TData = unknown>(
         e.stopPropagation();
         deps.onColumnResize(resizeCol, e);
       });
+      // Double-click to reset to the column's initial width — matches the
+      // common spreadsheet idiom where dragging adjusts and dblclick reverts.
+      handle.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        deps.onColumnResizeReset?.(resizeCol);
+      });
+      // Hover tooltip — same affordance that column-edge drag has during the
+      // drag itself, but shown before the user commits to dragging.
+      handle.addEventListener('mouseenter', (e) => {
+        deps.tooltip.show(handle, 'Drag to resize', e.clientX, e.clientY);
+      });
+      handle.addEventListener('mouseleave', () => deps.tooltip.dismiss());
 
       if (opts.resizeHandleTop != null && opts.resizeHandleTop < 0) {
         handle.style.top = `${opts.resizeHandleTop}px`;

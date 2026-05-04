@@ -546,14 +546,18 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
             handle.style.zIndex = '3';
             handle.style.borderRadius = `${radius}px 0 0 ${radius}px`;
 
-            handle.addEventListener('mouseenter', () => {
+            handle.addEventListener('mouseenter', (e) => {
               handle.style.backgroundColor = 'rgba(255,255,255,0.8)';
+              if (document.body.classList.contains('bg-gantt-dragging')) return;
+              ctx.showTooltip(handle, 'Drag to adjust Start', e.clientX, e.clientY);
             });
             handle.addEventListener('mouseleave', () => {
               handle.style.backgroundColor = '';
+              ctx.dismissTooltip();
             });
 
             const onStartResize = (e: MouseEvent) => {
+              ctx.dismissTooltip();
               startDrag(e, context.rowIndex, dateColIndex, 'resize-start', container, row, variance);
             };
             handle.addEventListener('mousedown', onStartResize);
@@ -576,14 +580,18 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
             handle.style.zIndex = '3';
             handle.style.borderRadius = `0 ${radius}px ${radius}px 0`;
 
-            handle.addEventListener('mouseenter', () => {
+            handle.addEventListener('mouseenter', (e) => {
               handle.style.backgroundColor = 'rgba(255,255,255,0.8)';
+              if (document.body.classList.contains('bg-gantt-dragging')) return;
+              ctx.showTooltip(handle, 'Drag to adjust End', e.clientX, e.clientY);
             });
             handle.addEventListener('mouseleave', () => {
               handle.style.backgroundColor = '';
+              ctx.dismissTooltip();
             });
 
             const onEndResize = (e: MouseEvent) => {
+              ctx.dismissTooltip();
               startDrag(e, context.rowIndex, dateColIndex, 'resize-end', container, row, variance);
             };
             handle.addEventListener('mousedown', onEndResize);
@@ -617,6 +625,16 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
 
       const unreg = ctx.registerCellType('gantt', ganttRenderer);
 
+      // Freeze-clip drag changes which date columns are visible (the
+      // frozen-left strip narrows or widens), so the gantt bar's
+      // visible-range overscan must rebuild — without this, bars at
+      // the leading edge get clipped or shift one column off after a
+      // freeze-clip drag. `refresh()` re-renders cells with the new
+      // measurements and is cheap on the frozen:clip cadence.
+      const unbindFrozenClip = ctx.on('frozen:clip', () => {
+        ctx.grid.refresh();
+      });
+
       // Expose API
       ctx.expose({
         getDragState: () => dragState,
@@ -637,6 +655,7 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
 
       return () => {
         unreg();
+        unbindFrozenClip();
         cachedDateColMap = null;
         stopAutoScroll();
         removeOverlay();

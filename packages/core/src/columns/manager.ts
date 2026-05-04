@@ -165,6 +165,20 @@ export class ColumnManager<TData = unknown> {
     return this.widths[index] ?? DEFAULT_WIDTH;
   }
 
+  /**
+   * Initial width as declared in the original `ColumnDef.width`. Used by
+   * the resize-handle dblclick reset path so the column can revert to the
+   * value the consumer asked for, rather than to DEFAULT_WIDTH or the
+   * flex-distributed value computed at mount.
+   */
+  getInitialWidth(index: number): number {
+    const col = this.visibleColumns[index];
+    if (!col) return DEFAULT_WIDTH;
+    const declared = col.width ?? DEFAULT_WIDTH;
+    const min = col.minWidth ?? 0;
+    return Math.max(min, declared);
+  }
+
   getWidths(): number[] {
     return this.widths;
   }
