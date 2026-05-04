@@ -130,6 +130,7 @@ export function createGrid<
   let freezeClipIndicator: HTMLElement | null = null;
   /** Current clip width in pixels. null = no clip active (full frozen width). */
   let freezeClipWidth: number | null = null;
+  let pendingScrollRestore: ScrollState | null = null;
   let resizeObserver: ResizeObserver | null = null;
   let mounted = false;
 
@@ -289,7 +290,7 @@ export function createGrid<
   function render(): void {
     if (!viewport || !scrollSizer || !cellContainer) return;
 
-    const state = store.getState();
+    let state = store.getState();
     const measurements = virtualization.getMeasurements();
     const visibleData = getVisibleData();
 
@@ -309,6 +310,17 @@ export function createGrid<
     const clipOffset = getFreezeClipOffset();
     scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth - clipOffset}px`;
     scrollSizer.style.height = `${measurements.totalHeight + sbClientHeight - vpHeight + headerHeight + pinnedTopH + pinnedBottomH}px`;
+
+    if (pendingScrollRestore) {
+      const nextScroll = pendingScrollRestore;
+      pendingScrollRestore = null;
+      setScrollPosition(nextScroll.scrollTop, nextScroll.scrollLeft, {
+        emit: false,
+        schedule: false,
+        updateScrollbar: true,
+      });
+      state = store.getState();
+    }
 
     updateFloatingScrollbarThumbs();
 
@@ -606,45 +618,56 @@ export function createGrid<
     return Math.max(0, fullFrozenWidth - clamp(freezeClipWidth, 0, fullFrozenWidth));
   }
 
-  function handleScroll(): void {
-    if (!fakeScrollbar) return;
-    const scrollTop = fakeScrollbar.scrollTop;
-    const scrollLeft = fakeScrollbar.scrollLeft;
-    store.setScroll(scrollTop, scrollLeft);
-
-    updateFloatingScrollbarThumbs();
-
-    // Translate cell container to match scroll position.
-    // Cells stay at data-space positions; the container transform shifts
-    // them into the viewport. scrollTop maps directly to data offset
-    // since the scroll sizer only covers data height (headers are fixed).
-    // When freeze clip is active, shift content left by clipOffset so
-    // scrollable cells fill the space freed by the clipped frozen area.
+  function applyScrollTransforms(scrollTop: number, scrollLeft: number): void {
     const clipOffset = getFreezeClipOffset();
     if (cellContainer) {
       cellContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, ${-scrollTop}px, 0)`;
     }
-    // Translate headers horizontally
     if (headerContainer) {
       headerContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
     }
-    // Sync frozen cell overlay vertical position (same offset as main cellContainer)
     if (frozenCellOverlay) {
       frozenCellOverlay.style.transform = `translate3d(0, ${-snapToDevicePixel(scrollTop)}px, 0)`;
     }
-    // Sync pinned row horizontal scroll in the fast path (before rAF render)
     if (pinnedTopContainer) {
       pinnedTopContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
     }
     if (pinnedBottomContainer) {
       pinnedBottomContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
     }
+  }
 
-    emitter.emit('scroll', { scrollTop, scrollLeft });
+  function setScrollPosition(
+    scrollTop: number,
+    scrollLeft: number,
+    opts: { updateScrollbar?: boolean; emit?: boolean; schedule?: boolean } = {},
+  ): void {
+    if (fakeScrollbar && opts.updateScrollbar !== false) {
+      fakeScrollbar.scrollTop = scrollTop;
+      fakeScrollbar.scrollLeft = scrollLeft;
+      scrollTop = fakeScrollbar.scrollTop;
+      scrollLeft = fakeScrollbar.scrollLeft;
+    }
 
-    // Render via rAF — safe because cells stay visible via container transform.
-    // No blank flash since old cells remain in place until new ones are created.
-    scheduleRender();
+    store.setScroll(scrollTop, scrollLeft);
+    updateFloatingScrollbarThumbs();
+    applyScrollTransforms(scrollTop, scrollLeft);
+
+    if (opts.emit) {
+      emitter.emit('scroll', { scrollTop, scrollLeft });
+    }
+    if (opts.schedule) {
+      scheduleRender();
+    }
+  }
+
+  function handleScroll(): void {
+    if (!fakeScrollbar) return;
+    setScrollPosition(fakeScrollbar.scrollTop, fakeScrollbar.scrollLeft, {
+      emit: true,
+      schedule: true,
+      updateScrollbar: false,
+    });
   }
 
   function handlePointerDown(event: PointerEvent): void {
@@ -1786,6 +1809,12 @@ export function createGrid<
       // can relocate it in the new array after the swap.
       const hasRowId = options.getRowId != null || options.hierarchy?.getRowId != null;
       const oldState = store.getState();
+      const preservedScroll = setDataOptions?.preserveScroll
+        ? {
+            scrollTop: fakeScrollbar?.scrollTop ?? oldState.scrollTop,
+            scrollLeft: fakeScrollbar?.scrollLeft ?? oldState.scrollLeft,
+          }
+        : null;
       const oldActiveRow = oldState.selection.active;
       let preservedId: string | number | null = null;
       if (hasRowId && oldActiveRow != null) {
@@ -1836,12 +1865,20 @@ export function createGrid<
       // Skip the scroll reset when the caller is doing an in-place reorder
       // or refinement (sort, filter, search, …) of the *same* logical dataset.
       // True data swaps (loading a new dataset) keep the original behavior.
-      if (!setDataOptions?.preserveScroll) {
-        store.setScroll(0, 0);
-        if (fakeScrollbar) {
-          fakeScrollbar.scrollTop = 0;
-          fakeScrollbar.scrollLeft = 0;
-        }
+      if (preservedScroll) {
+        pendingScrollRestore = preservedScroll;
+        setScrollPosition(preservedScroll.scrollTop, preservedScroll.scrollLeft, {
+          emit: false,
+          schedule: false,
+          updateScrollbar: false,
+        });
+      } else {
+        pendingScrollRestore = null;
+        setScrollPosition(0, 0, {
+          emit: false,
+          schedule: false,
+          updateScrollbar: true,
+        });
       }
       emitter.emit('data:set', data);
       scheduleRender();

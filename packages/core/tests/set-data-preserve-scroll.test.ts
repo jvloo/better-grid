@@ -147,7 +147,7 @@ describe('setData({ preserveScroll }) — Bug B regression', () => {
     grid.unmount();
   });
 
-  test('store scroll state matches DOM scrollbar after preserveScroll setData', () => {
+  test('preserveScroll snapshots the DOM scrollbar before the scroll event reaches the store', () => {
     const host = makeHost();
     const grid = createGrid<Row>({
       columns: [
@@ -160,12 +160,20 @@ describe('setData({ preserveScroll }) — Bug B regression', () => {
 
     const fakeScrollbar = host.querySelector('.bg-grid__scroll') as HTMLElement;
     fakeScrollbar.scrollLeft = 75;
+    fakeScrollbar.scrollTop = 42;
 
-    const beforeStore = grid.getState().scrollLeft;
+    expect(grid.getScrollState()).toEqual({ scrollTop: 0, scrollLeft: 0 });
+
     grid.setData([{ id: 1, name: 'X' }], { preserveScroll: true });
 
-    // Internal scroll state isn't clobbered to 0 either.
-    expect(grid.getState().scrollLeft).toBe(beforeStore);
+    // A row add/delete can happen immediately after native scrollbar movement.
+    // In that gap the DOM element has the latest position while the internal
+    // store may still have the previous scroll event's value.
+    expect(grid.getScrollState()).toEqual({ scrollTop: 42, scrollLeft: 75 });
+    expect(fakeScrollbar.scrollLeft).toBe(75);
+    expect(fakeScrollbar.scrollTop).toBe(42);
+    expect((host.querySelector('.bg-grid__cells') as HTMLElement).style.transform)
+      .toBe('translate3d(-75px, -42px, 0)');
 
     grid.unmount();
   });
