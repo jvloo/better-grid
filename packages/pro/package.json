@@ -1,6 +1,6 @@
 {
   "name": "@better-grid/pro",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "Commercial plugins for Better Grid (gantt, aggregation, merge-cells, row-actions, advanced renderers)",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",

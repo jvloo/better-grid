@@ -460,6 +460,40 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         return result;
       }
 
+      function revalidateCurrentErrors(): void {
+        if (config.validateOn === 'all') {
+          validateAndRender();
+          return;
+        }
+
+        if (errors.size === 0) {
+          applyErrorStyles();
+          return;
+        }
+
+        const positions = [...errors.values()].map((entry) => entry.position);
+        errors.clear();
+
+        const state = ctx.grid.getState();
+        for (const position of positions) {
+          if (
+            position.rowIndex < 0 ||
+            position.rowIndex >= state.data.length ||
+            position.colIndex < 0 ||
+            position.colIndex >= state.columns.length
+          ) {
+            continue;
+          }
+
+          const failure = validateCell(position);
+          if (failure) {
+            errors.set(positionKey(position), { position, ...failure });
+          }
+        }
+
+        applyErrorStyles();
+      }
+
       function publicError(entry: InternalEntry): ValidationError {
         return { position: entry.position, message: entry.message, code: entry.code };
       }
@@ -517,6 +551,13 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         }
       });
 
+      // External data updates can insert/delete/reorder rows. Since validation
+      // errors are position-keyed, re-check current errors against the new data
+      // before reapplying styles so stale errors do not move to another row.
+      const unsubDataSet = ctx.on('data:set', () => {
+        revalidateCurrentErrors();
+      });
+
       // Re-apply error styles after render (cells get recreated by virtualization)
       // Also update layer geometry and reposition tooltips so they track scroll.
       const unsubRender = ctx.on('render', () => {
@@ -553,6 +594,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
       return () => {
         unsubFirstRender?.();
         unsubData();
+        unsubDataSet();
         unsubRender();
         unsubScroll();
         errors.clear();
