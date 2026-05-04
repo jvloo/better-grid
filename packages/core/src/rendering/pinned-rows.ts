@@ -7,7 +7,8 @@
 // renderers (badge, progress, currency, etc.) work in pinned rows too.
 // ============================================================================
 
-import type { CellRenderContext, ColumnDef } from '../types';
+import type { CellRenderContext } from '../types';
+import type { NormalizedColumnDef } from '../columns/manager';
 import type { LayoutMeasurements } from '../virtualization/engine';
 import type { RenderingPipeline } from './pipeline';
 import { getCellValue, snapToDevicePixel } from '../utils';
@@ -34,7 +35,7 @@ export interface PinnedRowRenderer<TData = unknown> {
   render(
     pinnedContainer: HTMLElement,
     rows: readonly TData[],
-    columns: readonly ColumnDef<TData>[],
+    columns: readonly NormalizedColumnDef<TData>[],
     measurements: LayoutMeasurements,
     startCol?: number,
     endCol?: number,
@@ -60,7 +61,7 @@ export function createPinnedRowRenderer<TData = unknown>(
   // scroll tick is wasteful when only the main pipeline actually moved.
   let lastContainer: HTMLElement | null = null;
   let lastRows: readonly TData[] | null = null;
-  let lastColumns: readonly ColumnDef<TData>[] | null = null;
+  let lastColumns: readonly NormalizedColumnDef<TData>[] | null = null;
   let lastMeasurements: LayoutMeasurements | null = null;
   let lastTotalWidth = -1;
   let lastColStart = -1;
@@ -69,7 +70,7 @@ export function createPinnedRowRenderer<TData = unknown>(
   function render(
     pinnedContainer: HTMLElement,
     rows: readonly TData[],
-    columns: readonly ColumnDef<TData>[],
+    columns: readonly NormalizedColumnDef<TData>[],
     measurements: LayoutMeasurements,
     startCol?: number,
     endCol?: number,

@@ -7,6 +7,10 @@ const cssSource = readFileSync(
   path.resolve(__dirname, '../src/styles/grid.css'),
   'utf8',
 );
+const gridSource = readFileSync(
+  path.resolve(__dirname, '../src/grid.ts'),
+  'utf8',
+);
 
 let originalRaf: typeof requestAnimationFrame;
 
@@ -94,5 +98,123 @@ describe('table-style CSS rules', () => {
     const ruleMatch = cssSource.match(/\.bg-cell--merge-hidden\s*\{([^}]*)\}/);
     expect(ruleMatch).not.toBeNull();
     expect(ruleMatch![1]).toMatch(/border-width:\s*0\s*(!important)?\s*;/);
+  });
+
+  test('floating scrollbars use custom fixed-style thumbs with no native arrow buttons', () => {
+    expect(cssSource).not.toMatch(/\.bg-grid__float-h-track::-webkit-scrollbar-button/);
+    expect(cssSource).not.toMatch(/\.bg-grid__float-v-track::-webkit-scrollbar-button/);
+
+    const floatingThumbRule = cssSource.match(
+      /\.bg-grid__float-h-thumb,\s*\.bg-grid__float-v-thumb\s*\{([^}]*)\}/,
+    );
+    expect(floatingThumbRule?.[1]).toMatch(/background:\s*var\(--bg-scrollbar-thumb,\s*#c1c1c1\)/);
+    expect(floatingThumbRule?.[1]).toMatch(/border-radius:\s*4px/);
+
+    expect(cssSource).toMatch(/\.bg-grid__float-h-thumb\s*\{\s*height:\s*8px/);
+    expect(cssSource).toMatch(/\.bg-grid__float-v-thumb\s*\{\s*width:\s*8px/);
+
+    const floatingTrackRule = cssSource.match(
+      /\.bg-grid__float-h-track,\s*\.bg-grid__float-v-track\s*\{([^}]*)\}/,
+    );
+    expect(floatingTrackRule?.[1]).toMatch(/overflow:\s*hidden/);
+
+    expect(gridSource).toContain("const trackSize = 'var(--bg-scrollbar-size, 8px)'");
+    expect(gridSource).toContain("floatingHTrack.style.setProperty('right', `calc(${right}px + var(--bg-scrollbar-size, 8px))`)");
+    expect(gridSource).toContain('getFloatingScrollbarBottomInset()');
+    expect(gridSource).toContain('getFloatingScrollbarSize()');
+    expect(gridSource).toContain("floatingHThumb.className = 'bg-grid__float-h-thumb'");
+    expect(gridSource).toContain("floatingVThumb.className = 'bg-grid__float-v-thumb'");
+  });
+});
+
+describe('floating scrollbar layout', () => {
+  test('horizontal floating track starts after frozen-left columns', () => {
+    const host = makeHost();
+    const grid = createGrid({
+      columns: [
+        { id: 'a', field: 'a' as never, width: 40 },
+        { id: 'b', field: 'b' as never, width: 60 },
+        { id: 'm_0', field: 'm0' as never, width: 200 },
+        { id: 'm_1', field: 'm1' as never, width: 200 },
+      ],
+      data: [{ a: 'A', b: 'B', m0: '0', m1: '1' }],
+      frozen: { left: 2 },
+      scrollbar: {
+        mode: 'floating',
+        horizontalOffsetLeft: 'after-frozen-left',
+        verticalOffsetTop: 'header',
+      },
+      headerHeight: 32,
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const hTrack = host.querySelector<HTMLElement>('.bg-grid__float-h-track');
+    const vTrack = host.querySelector<HTMLElement>('.bg-grid__float-v-track');
+    expect(hTrack).not.toBeNull();
+    expect(vTrack).not.toBeNull();
+    expect(hTrack!.style.left).toBe('110px');
+    expect(hTrack!.style.bottom).toBe('1px');
+    expect(vTrack!.style.bottom).toBe('9px');
+
+    grid.unmount();
+  });
+
+  test('borderless floating scrollbar keeps the configured bottom edge', () => {
+    const host = makeHost();
+    const grid = createGrid({
+      columns: [
+        { id: 'a', field: 'a' as never, width: 120 },
+        { id: 'm_0', field: 'm0' as never, width: 300 },
+        { id: 'm_1', field: 'm1' as never, width: 300 },
+      ],
+      data: [{ a: 'A', m0: '0', m1: '1' }],
+      bordered: false,
+      scrollbar: { mode: 'floating' },
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const hTrack = host.querySelector<HTMLElement>('.bg-grid__float-h-track');
+    const vTrack = host.querySelector<HTMLElement>('.bg-grid__float-v-track');
+    expect(hTrack).not.toBeNull();
+    expect(vTrack).not.toBeNull();
+    expect(hTrack!.style.bottom).toBe('0px');
+    expect(vTrack!.style.bottom).toBe('8px');
+
+    grid.unmount();
+  });
+
+  test('floating scrollbar does not reserve horizontal-scrollbar gutter in frozen overlay', () => {
+    const host = makeHost();
+    const grid = createGrid({
+      columns: [
+        { id: 'a', field: 'a' as never, width: 80 },
+        { id: 'm_0', field: 'm0' as never, width: 300 },
+        { id: 'm_1', field: 'm1' as never, width: 300 },
+      ],
+      data: Array.from({ length: 20 }, (_, i) => ({ a: `A${i}`, m0: '0', m1: '1' })),
+      frozen: { left: 1 },
+      scrollbar: {
+        mode: 'floating',
+        horizontalOffsetLeft: 'after-frozen-left',
+      },
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const frozenOverlay = host.querySelector<HTMLElement>('.bg-grid__frozen-overlay');
+    expect(frozenOverlay).not.toBeNull();
+    expect(frozenOverlay!.style.bottom).toBe('0px');
+
+    grid.unmount();
+  });
+
+  test('fixed scrollbar keeps the frozen overlay gutter branch', () => {
+    expect(gridSource).toContain("frozenColOverlay!.style.bottom = isFloatingScrollbar ? '0' : 'var(--bg-scrollbar-size, 10px)'");
+    expect(gridSource).toContain("frozenColOverlay.style.bottom = isFloatingScrollbar ? '0' : 'var(--bg-scrollbar-size, 10px)'");
   });
 });

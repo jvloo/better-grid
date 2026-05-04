@@ -424,10 +424,10 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
             isParentRow = hierarchyState.parentIds.has(rowId);
           }
 
-          // Apply parent row background to all gantt cells (including empty ones outside bar range)
-          if (isParentRow && parentRowBackground) {
-            container.style.backgroundColor = parentRowBackground;
-          }
+          // Apply parent row background to all gantt cells (including empty ones outside bar range).
+          // Cells are recycled by row/column key, so clear this inline style for child rows on every
+          // render; otherwise a newly inserted child can inherit the previous parent row's tint.
+          container.style.backgroundColor = isParentRow && parentRowBackground ? parentRowBackground : '';
 
           // Is this cell within the bar range?
           if (dateColIndex < startCol || dateColIndex > endCol) return;

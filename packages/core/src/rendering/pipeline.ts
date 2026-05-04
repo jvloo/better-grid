@@ -5,7 +5,8 @@
 // element to mark with role="row". aria-rowindex on each gridcell is the
 // documented substitute when row grouping is omitted.
 
-import type { CellRenderContext, CellRenderer, CellTypeRenderer, ColumnDef, Selection } from '../types';
+import type { CellRenderContext, CellRenderer, CellTypeRenderer, Selection } from '../types';
+import type { NormalizedColumnDef } from '../columns/manager';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCellRenderContext = CellRenderContext<any>;
 import type { LayoutMeasurements } from '../virtualization/engine';
@@ -114,7 +115,7 @@ export class RenderingPipeline<TData = unknown> {
     startCol: number,
     endCol: number,
     data: TData[],
-    columns: ColumnDef<TData>[],
+    columns: NormalizedColumnDef<TData>[],
     measurements: LayoutMeasurements,
     selection: Selection,
     frozenLeftColumns = 0,
@@ -153,7 +154,7 @@ export class RenderingPipeline<TData = unknown> {
       for (let row = startRow; row < endRow; row++) {
         let strip = this.rowBgPool.get(row);
         if (!strip) {
-          strip = this.rowBgRecyclePool.pop() ?? null;
+          strip = this.rowBgRecyclePool.pop();
           if (strip) {
             strip.className = 'bg-row-bg';
             strip.style.cssText = 'position: absolute';
@@ -203,7 +204,7 @@ export class RenderingPipeline<TData = unknown> {
         let cell = this.cellPool.get(key);
         if (!cell) {
           // Reuse a recycled element (already in DOM) or create new
-          cell = this.recyclePool.pop() ?? null;
+          cell = this.recyclePool.pop();
           if (cell) {
             // Reset recycled element — clear stale inline styles from plugins
             cell.className = 'bg-cell';

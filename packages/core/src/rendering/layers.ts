@@ -14,18 +14,12 @@ export interface FillDragResult {
 
 export class SelectionLayer {
   private container: HTMLElement;
-  private gridRoot: HTMLElement;
   private overlay: HTMLElement;
   private rangeBorders: HTMLElement[] = [];
   private fillHandle: HTMLElement | null = null;
-  private fillPreview: HTMLElement | null = null;
   private onFillDrag: ((result: FillDragResult) => void) | null = null;
   private isEditing = false;
   private fillHandleEnabled = true;
-  /** Cached fill-handle offset — avoids getBoundingClientRect() reflow per frame */
-  private fillHandleOffsetX = 0;
-  private fillHandleOffsetY = 0;
-  private fillHandleOffsetValid = false;
   /**
    * Hash of the inputs to the previous render() call. When unchanged we skip
    * the rebuild — render() previously tore down and recreated every range
@@ -33,9 +27,8 @@ export class SelectionLayer {
    */
   private lastRenderHash: string | null = null;
 
-  constructor(container: HTMLElement, gridRoot?: HTMLElement) {
+  constructor(container: HTMLElement, _gridRoot?: HTMLElement) {
     this.container = container;
-    this.gridRoot = gridRoot ?? container;
     this.overlay = document.createElement('div');
     this.overlay.className = 'bg-selection-overlay';
     this.overlay.style.position = 'absolute';
@@ -64,9 +57,8 @@ export class SelectionLayer {
     this.onFillDrag = handler;
   }
 
-  /** Invalidate the cached fill-handle offset — call when the container moves/resizes. */
+  /** Invalidate cached render geometry when the container moves/resizes. */
   invalidateLayout(): void {
-    this.fillHandleOffsetValid = false;
     this.lastRenderHash = null;
   }
 
@@ -219,7 +211,6 @@ export class SelectionLayer {
     preview.style.zIndex = '4';
     preview.style.display = 'none';
     this.overlay.appendChild(preview);
-    this.fillPreview = preview;
 
     const overlayRect = this.overlay.getBoundingClientRect();
 
@@ -303,7 +294,6 @@ export class SelectionLayer {
       document.removeEventListener('pointermove', onPointerMove);
       document.removeEventListener('pointerup', onPointerUp);
       preview.remove();
-      this.fillPreview = null;
 
       if (!this.onFillDrag) return;
 

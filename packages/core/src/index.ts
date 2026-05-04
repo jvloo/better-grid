@@ -13,6 +13,7 @@ export type {
   GridEvents,
   // Columns
   ColumnDef,
+  ColumnDefaults,
   CellType,
   CellEditorType,
   ColumnOption,

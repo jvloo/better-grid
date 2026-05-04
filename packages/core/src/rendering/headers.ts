@@ -79,6 +79,7 @@ export function createHeaderRenderer<TData = unknown>(
   // For a 60-column, 2-row header that's 240 fewer listeners.
   // Uses mouseover/mouseout (bubble) since mouseenter/mouseleave don't bubble.
   function onHeaderOver(event: MouseEvent): void {
+    if (document.body.classList.contains('bg-grid-resizing')) return;
     const target = event.target as Element | null;
     if (!target) return;
     const cell = target.closest('.bg-header-cell') as HTMLElement | null;
@@ -99,6 +100,7 @@ export function createHeaderRenderer<TData = unknown>(
   }
 
   function onHeaderOut(event: MouseEvent): void {
+    if (document.body.classList.contains('bg-grid-resizing')) return;
     const target = event.target as Element | null;
     if (!target) return;
     const cell = target.closest('.bg-header-cell') as HTMLElement | null;
@@ -324,7 +326,9 @@ export function createHeaderRenderer<TData = unknown>(
           let align: 'left' | 'center' | 'right' | undefined;
           if (reachesLastRow && colIndex < state.columns.length) {
             const leafColumn = state.columns[colIndex];
-            align = leafColumn.headerAlign ?? leafColumn.align;
+            if (leafColumn) {
+              align = leafColumn.headerAlign ?? leafColumn.align;
+            }
           }
 
           const headerEl = createHeaderCell({
@@ -471,9 +475,14 @@ export function createHeaderRenderer<TData = unknown>(
       // Hover tooltip — same affordance that column-edge drag has during the
       // drag itself, but shown before the user commits to dragging.
       handle.addEventListener('mouseenter', (e) => {
+        if (document.body.classList.contains('bg-grid-resizing')) return;
         deps.tooltip.show(handle, 'Drag to resize', e.clientX, e.clientY);
       });
-      handle.addEventListener('mouseleave', () => deps.tooltip.dismiss());
+      handle.addEventListener('mouseleave', () => {
+        if (!document.body.classList.contains('bg-grid-resizing')) {
+          deps.tooltip.dismiss();
+        }
+      });
 
       if (opts.resizeHandleTop != null && opts.resizeHandleTop < 0) {
         handle.style.top = `${opts.resizeHandleTop}px`;

@@ -165,10 +165,41 @@ const INPUT_CSS = `
 
 // Chevron SVG for dropdown trigger
 const CHEVRON_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E")`;
+const EDITOR_HIGHLIGHT_INSET_Y = 8;
 
 // Module-level canvas reused across caret-from-x measurements (avoids
 // allocating a canvas on every cell click).
 let caretMeasureCanvas: HTMLCanvasElement | null = null;
+
+function parseCssPixel(value: string | null | undefined): number {
+  const parsed = parseFloat(value ?? '');
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getVerticalBorderPixels(styles: CSSStyleDeclaration, fallbackWidth = 0): number {
+  const top = styles.borderTopStyle === 'none' ? 0 : parseCssPixel(styles.borderTopWidth);
+  const bottom = styles.borderBottomStyle === 'none' ? 0 : parseCssPixel(styles.borderBottomWidth);
+  const total = top + bottom;
+  return total > 0 ? total : fallbackWidth * 2;
+}
+
+function getInsetLineBoxMetrics(
+  containerHeight: number,
+  naturalLineHeight: number,
+  fontSize: number,
+): { lineHeight: number; padY: number } {
+  const height = Math.max(1, containerHeight);
+  const minLineHeight = Math.min(height, Math.max(1, Math.ceil(fontSize)));
+  const preferredLineHeight = Math.max(1, height - EDITOR_HIGHLIGHT_INSET_Y * 2);
+  const lineHeight = Math.min(
+    height,
+    Math.max(minLineHeight, Math.min(naturalLineHeight, preferredLineHeight)),
+  );
+  return {
+    lineHeight,
+    padY: Math.max(0, Math.floor((height - lineHeight) / 2)),
+  };
+}
 
 // Cell types whose value is structurally complex (chart data, image refs,
 // indicator objects, etc.) — String(value) on these produces "[object Object]"
@@ -1839,13 +1870,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const cellRect = anchorEl.getBoundingClientRect();
           const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
           const gridRect = gridEl?.getBoundingClientRect();
+          const initialMaxWidth = gridRect?.width ?? cellRect.width;
           const anchorComputed = getComputedStyle(anchorEl);
           const cellFont = anchorComputed.font;
           const cellTextAlign = anchorComputed.textAlign;
           const cellLetterSpacing = anchorComputed.letterSpacing;
-          const maxRightWidth = gridRect ? gridRect.right - cellRect.left : cellRect.width;
-          const fullWidth = gridRect?.width ?? cellRect.width;
-          const gridLeft = gridRect?.left ?? cellRect.left;
           const prefixSource = inputBox?.querySelector('.bg-input-box__prefix') as HTMLElement | null;
           const suffixSource = inputBox?.querySelector('.bg-input-box__suffix, .bg-input-box__unit') as HTMLElement | null;
           const prefixText = prefixSource?.textContent ?? '';
@@ -1893,6 +1922,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                 ? '0'
                 : `${anchorComputed.borderTopWidth} ${anchorComputed.borderTopStyle} ${anchorComputed.borderTopColor}`)
               : `${edBorderW}px solid ${edBorder}`;
+          const floatBorderY = borderShorthand === '0'
+            ? 0
+            : mirrorBorder
+              ? getVerticalBorderPixels(anchorComputed, edBorderW)
+              : edBorderW * 2;
           // Pin height to the anchor's exact rendered height. cellRect.height
           // already reflects that (the anchor IS cellRect when an inputBox
           // is present), but we set height explicitly so a content overflow
@@ -1901,7 +1935,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           floatBox.style.cssText = `
             position: fixed; z-index: 200; box-sizing: border-box;
             top: ${cellRect.top}px; left: ${cellRect.left}px;
-            min-width: ${cellRect.width}px; max-width: ${fullWidth}px;
+            min-width: ${cellRect.width}px; max-width: ${initialMaxWidth}px;
             height: ${cellRect.height}px;
             background: ${useInputStyleFloat ? anchorComputed.backgroundColor : edBg};
             border: ${borderShorthand};
@@ -1920,9 +1954,21 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           // Match cell position exactly. Use normal line-height + vertical padding
           // for centering, so text selection highlight doesn't span full cell height.
           const fontSize = parseFloat(anchorComputed.fontSize) || 14;
-          const contentLineHeight = Math.round(fontSize * 1.4);
-          const editorHeight = cellRect.height - (useInputStyleFloat ? 0 : edBorderW * 2);
-          const vertPad = Math.max(0, Math.floor((editorHeight - contentLineHeight) / 2));
+          const editorHeight = cellRect.height - floatBorderY;
+          const anchorLineHeight = parseCssPixel(anchorComputed.lineHeight);
+          const useAnchorLineHeight =
+            anchorLineHeight > 0 &&
+            anchorLineHeight <= editorHeight &&
+            !!inputBox;
+          const naturalContentLineHeight = useAnchorLineHeight
+            ? anchorLineHeight
+            : Math.round(fontSize * 1.4);
+          const { lineHeight: contentLineHeight, padY: vertPad } = getInsetLineBoxMetrics(
+            editorHeight,
+            naturalContentLineHeight,
+            fontSize,
+          );
+          const maxEditorHeight = editorHeight * 4;
           const basePadLeft = parseFloat(anchorComputed.paddingLeft) || 12;
           const basePadRight = parseFloat(anchorComputed.paddingRight) || basePadLeft;
           const valuePadLeft = Math.max(basePadLeft, prefixSpace);
@@ -1960,8 +2006,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             color:inherit; letter-spacing:${cellLetterSpacing};
             background:transparent; box-sizing:border-box;
             padding:${vertPad}px ${valuePadRight}px ${vertPad}px ${valuePadLeft}px; text-align:${cellTextAlign};
+            height:${editorHeight}px;
             min-height:${editorHeight}px;
-            max-height:${editorHeight * 4}px;
+            max-height:${maxEditorHeight}px;
             overflow:hidden;
             white-space:nowrap;
           `;
@@ -2083,30 +2130,45 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           document.body.appendChild(floatBox);
           activeFloatBox = floatBox;
 
-          function autoSize(): void {
+          function applyFloatingEditorLayout(anchorRect: DOMRect, hostRect?: DOMRect): void {
             measureSpan.textContent = ed.textContent || ' ';
             const textWidth = measureSpan.offsetWidth + 16;
+            const hostLeft = hostRect?.left ?? anchorRect.left;
+            const hostRight = hostRect?.right ?? anchorRect.right;
+            const hostWidth = hostRect?.width ?? anchorRect.width;
+            const maxWidthToRight = hostRight - anchorRect.left;
+            const useFullWidth = textWidth > maxWidthToRight;
+            const shouldWrap = textWidth > hostWidth;
 
-            if (textWidth <= maxRightWidth) {
-              floatBox.style.left = `${cellRect.left}px`;
-              floatBox.style.width = `${Math.max(cellRect.width, textWidth)}px`;
+            floatBox.style.top = `${anchorRect.top}px`;
+            if (useFullWidth) {
+              floatBox.style.left = `${hostLeft}px`;
+              floatBox.style.width = `${hostWidth}px`;
             } else {
-              floatBox.style.left = `${gridLeft}px`;
-              floatBox.style.width = `${fullWidth}px`;
+              floatBox.style.left = `${anchorRect.left}px`;
+              floatBox.style.width = `${Math.max(anchorRect.width, textWidth)}px`;
             }
 
-            // When content overflows, switch to wrap mode
-            if (ed.scrollHeight > editorHeight) {
+            if (shouldWrap) {
+              // Once the editor has expanded to the whole grid width, let
+              // long text wrap downward instead of clipping horizontally.
               ed.style.whiteSpace = 'pre-wrap';
               ed.style.wordBreak = 'break-word';
               ed.style.lineHeight = '1.5';
               ed.style.overflow = 'auto';
-              ed.style.padding = `${basePadLeft}px ${valuePadRight}px ${basePadLeft}px ${valuePadLeft}px`;
+              ed.style.padding = `${EDITOR_HIGHLIGHT_INSET_Y}px ${valuePadRight}px ${EDITOR_HIGHLIGHT_INSET_Y}px ${valuePadLeft}px`;
+              ed.style.height = 'auto';
+              floatBox.style.height = 'auto';
+              floatBox.style.minHeight = `${anchorRect.height}px`;
             } else {
               ed.style.whiteSpace = 'nowrap';
+              ed.style.wordBreak = '';
               ed.style.lineHeight = `${contentLineHeight}px`;
               ed.style.overflow = 'hidden';
               ed.style.padding = `${vertPad}px ${valuePadRight}px ${vertPad}px ${valuePadLeft}px`;
+              ed.style.height = `${editorHeight}px`;
+              floatBox.style.height = `${anchorRect.height}px`;
+              floatBox.style.minHeight = '';
             }
           }
 
@@ -2136,28 +2198,17 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             floatBox.style.visibility = cellVisible ? 'visible' : 'hidden';
             if (!cellVisible) return;
 
-            // Update position
-            measureSpan.textContent = ed.textContent || ' ';
-            const textWidth = measureSpan.offsetWidth + 16;
-            const curMaxRight = gr.right - cr.left;
-            const curFullWidth = gr.width;
-            const curGridLeft = gr.left;
-
-            floatBox.style.top = `${cr.top}px`;
-            if (textWidth <= curMaxRight) {
-              floatBox.style.left = `${cr.left}px`;
-              floatBox.style.width = `${Math.max(cr.width, textWidth)}px`;
-            } else {
-              floatBox.style.left = `${curGridLeft}px`;
-              floatBox.style.width = `${curFullWidth}px`;
-            }
+            applyFloatingEditorLayout(cr, gr);
           }
 
-          autoSize();
+          applyFloatingEditorLayout(cellRect, gridRect);
           const unbindPositionSync = bindFloatingPositionSync(cellEl, syncPosition);
           syncPosition();
           ed.addEventListener('input', () => {
-            autoSize();
+            const currentAnchor = (gridEl?.querySelector(`.bg-cell[data-row="${editRow}"][data-col="${editCol}"] .bg-input-box`) as HTMLElement | null) ??
+              (gridEl?.querySelector(`.bg-cell[data-row="${editRow}"][data-col="${editCol}"]`) as HTMLElement | null) ??
+              anchorEl;
+            applyFloatingEditorLayout(currentAnchor.getBoundingClientRect(), gridEl?.getBoundingClientRect());
             syncPosition();
           });
           let floatActive = true;
@@ -2257,9 +2308,19 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         const cellFont = computed.font;
         const cellTextAlign = computed.textAlign;
         const cellLetterSpacing = computed.letterSpacing;
+        const inlineInputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
+        const inlineAnchorRect = (inlineInputBox ?? cellEl).getBoundingClientRect();
+        const inlineFontSize = parseFloat(computed.fontSize) || 14;
+        const inlineNaturalLineHeight = parseCssPixel(computed.lineHeight) || Math.round(inlineFontSize * 1.4);
+        const { lineHeight: inlineLineHeight, padY: inlinePadY } = getInsetLineBoxMetrics(
+          inlineAnchorRect.height,
+          inlineNaturalLineHeight,
+          inlineFontSize,
+        );
 
         // Create a simple input inside the cell
-        // The cell already has padding, so the input uses padding: 0 to avoid double padding
+        // Use a compact line box plus vertical padding so native selection
+        // highlight matches the floating editor inset.
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'bg-cell-editor bg-cell-editor--inline';
@@ -2267,7 +2328,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         input.style.cssText = `
           width: 100%; height: 100%;
           border: none; outline: none;
-          font: ${cellFont}; padding: 0;
+          font: ${cellFont}; line-height: ${inlineLineHeight}px; padding: ${inlinePadY}px 0;
           text-align: ${cellTextAlign}; letter-spacing: ${cellLetterSpacing};
           margin: 0; box-sizing: border-box;
           background: transparent; color: inherit;
@@ -2372,7 +2433,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         // If the cell has a structured value/adornment input-box, anchor the
         // editor inside the value span so edge adornments stay visible.
-        const inlineInputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
         const valueAnchor = inlineInputBox?.querySelector('.bg-input-box__value') as HTMLElement | null;
         if (valueAnchor) {
           const adornedBox = valueAnchor.closest('.bg-input-box--has-adornment') as HTMLElement | null;
@@ -2610,6 +2670,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               ? '0'
               : `${anchorComputed.borderTopWidth} ${anchorComputed.borderTopStyle} ${anchorComputed.borderTopColor}`)
             : `${edBorderW}px solid ${edBorder}`;
+        const maskedBorderY = maskedBorder === '0'
+          ? 0
+          : mirrorBorder
+            ? getVerticalBorderPixels(anchorComputed, edBorderW)
+            : edBorderW * 2;
 
         // Create float box
         const floatBox = document.createElement('div');
@@ -2618,6 +2683,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           position: fixed; z-index: 200; box-sizing: border-box;
           top: ${cellRect.top}px; left: ${cellRect.left}px;
           min-width: ${cellRect.width}px;
+          width: ${cellRect.width}px;
           background: ${useInputStyleFloat ? anchorComputed.backgroundColor : edBg};
           border: ${maskedBorder};
           border-radius: ${maskedBorderRadius};
@@ -2633,12 +2699,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           : (anchorComputed.textAlign === 'right' || anchorComputed.textAlign === 'end') ? 'flex-end' : 'flex-start';
         const displayLayer = document.createElement('div');
         displayLayer.style.cssText = `
-          position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+          position: absolute; z-index: 2; top: 0; left: 0; right: 0; bottom: 0;
           display: flex; align-items: center;
           justify-content: ${displayJustify};
           font-family: ${anchorComputed.fontFamily};
           font-size: ${anchorComputed.fontSize};
           font-weight: ${anchorComputed.fontWeight};
+          line-height: ${anchorComputed.lineHeight};
           letter-spacing: ${anchorComputed.letterSpacing};
           padding: ${anchorComputed.padding};
           pointer-events: none;
@@ -2689,7 +2756,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             const span = document.createElement('span');
             const filled = sectionValues[i];
             span.textContent = filled || sectionLabels[i] || '';
-            span.style.color = filled ? 'inherit' : placeholderColor;
+            if (i === activeSectionIdx) {
+              span.style.backgroundImage =
+                `linear-gradient(to bottom, transparent ${EDITOR_HIGHLIGHT_INSET_Y}px, Highlight ${EDITOR_HIGHLIGHT_INSET_Y}px, Highlight calc(100% - ${EDITOR_HIGHLIGHT_INSET_Y}px), transparent calc(100% - ${EDITOR_HIGHLIGHT_INSET_Y}px))`;
+              span.style.color = 'HighlightText';
+            } else {
+              span.style.color = filled ? 'inherit' : placeholderColor;
+            }
             sectionSpans[i] = span;
             displayLayer.appendChild(span);
           }
@@ -2711,7 +2784,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         input.style.cssText = `
           position: relative; z-index: 1;
           width: 100%;
-          height: ${cellRect.height - (useInputStyleFloat ? 0 : edBorderW * 2)}px;
+          height: ${cellRect.height - maskedBorderY}px;
           border: none;
           outline: none;
           background: transparent;
@@ -2719,11 +2792,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           font-family: ${anchorComputed.fontFamily};
           font-size: ${anchorComputed.fontSize};
           font-weight: ${anchorComputed.fontWeight};
+          line-height: ${anchorComputed.lineHeight};
           letter-spacing: ${anchorComputed.letterSpacing};
           color: transparent;
           text-align: ${anchorComputed.textAlign};
           padding: ${anchorComputed.padding};
           caret-color: transparent;
+          user-select: none;
         `;
 
         // All input goes through keydown — prevent browser from mutating the value
@@ -2831,6 +2906,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             if (activeSectionIdx > 0) activeSectionIdx -= 1;
             const range = getSectionRange(activeSectionIdx);
             input.setSelectionRange(range.start, range.end);
+            syncDisplayLayer();
             return;
           }
           if (e.key === 'ArrowRight') {
@@ -2838,6 +2914,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             if (activeSectionIdx < sectionLengths.length - 1) activeSectionIdx += 1;
             const range = getSectionRange(activeSectionIdx);
             input.setSelectionRange(range.start, range.end);
+            syncDisplayLayer();
             return;
           }
 
@@ -2919,6 +2996,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           activeSectionIdx = initialSection;
           const range = getSectionRange(initialSection);
           input.setSelectionRange(range.start, range.end);
+          syncDisplayLayer();
         });
 
         let maskedActive = true;
@@ -2968,19 +3046,29 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
         const anchorEl = inputBox ?? cellEl;
         const cellRect = anchorEl.getBoundingClientRect();
-        const cellFont = getComputedStyle(anchorEl).font;
-        const cellPadding = getComputedStyle(anchorEl).padding;
+        const anchorComputed = getComputedStyle(anchorEl);
+        const cellFont = anchorComputed.font;
+        const cellPadding = anchorComputed.padding;
+        const useInputStyleFloat = !!inputBox && config.matchAnchorStyle;
 
         // Create floating container (same pattern as text editor)
         const floatBox = document.createElement('div');
         floatBox.className = 'bg-cell-editor-float';
         const borderW = 2;
+        const dateBorder = useInputStyleFloat
+          ? '0'
+          : `${borderW}px solid var(--bg-active-border, #1a73e8)`;
+        const dateBorderY = dateBorder === '0' ? 0 : borderW * 2;
         floatBox.style.cssText = `
           position: fixed; z-index: 200; box-sizing: border-box;
           top: ${cellRect.top}px; left: ${cellRect.left}px;
           min-width: ${cellRect.width}px;
-          background: #fff; border: ${borderW}px solid var(--bg-active-border, #1a73e8);
-          border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+          height: ${cellRect.height}px;
+          background: ${useInputStyleFloat ? anchorComputed.backgroundColor : '#fff'};
+          border: ${dateBorder};
+          border-radius: ${useInputStyleFloat ? anchorComputed.borderRadius : '2px'};
+          box-shadow: ${useInputStyleFloat ? anchorComputed.boxShadow : '0 2px 8px rgba(0,0,0,0.15)'};
+          overflow: hidden;
         `;
 
         // Native date input
@@ -2990,7 +3078,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         input.style.cssText = `
           width: 100%; border: none; outline: none;
           font: ${cellFont}; padding: ${cellPadding};
-          min-height: ${cellRect.height - borderW * 2}px;
+          height: ${cellRect.height - dateBorderY}px;
           box-sizing: border-box; background: transparent;
           color: inherit;
         `;

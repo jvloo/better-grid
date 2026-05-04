@@ -51,78 +51,52 @@
   pointer-events: none;
 }
 
-/* The visible floating tracks. Each is its own scroll container with
-   a sizer matching the corresponding axis of the data area. Pointer
-   events are auto so the user can drag the thumb directly.
-
-   The track itself is fully transparent so cell content shows through;
-   only the thumb has a visible color. Scrollbar buttons (arrow up/
-   down on V, left/right on H) are hidden so the track is the thumb
-   plus empty space, with no extra chrome. The thumb uses a
-   transparent border + background-clip: padding-box trick so it
-   visually appears thinner than the 10px track — a "halfly clipped"
-   thumb that hovers in the middle of the track strip. */
+/* The visible floating tracks are custom thumb overlays, not native
+   scroll containers. Native WebKit/Windows scrollbar buttons are therefore
+   never rendered in floating mode. */
 .bg-grid__float-h-track,
 .bg-grid__float-v-track {
   position: absolute;
   z-index: 11;
   pointer-events: auto;
   background: transparent;
-}
-
-.bg-grid__float-h-track::-webkit-scrollbar,
-.bg-grid__float-v-track::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-  background: transparent;
-}
-
-.bg-grid__float-h-track::-webkit-scrollbar-track,
-.bg-grid__float-v-track::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.bg-grid__float-h-track::-webkit-scrollbar-thumb,
-.bg-grid__float-v-track::-webkit-scrollbar-thumb {
-  background-color: var(--bg-scrollbar-thumb, rgba(0, 0, 0, 0.35));
-  border-radius: 5px;
-  /* Transparent border + padding-box clip leaves a 2px gap between
-     the thumb and the track edges, so the thumb appears as a 6px
-     stripe centered in the 10px track. */
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-.bg-grid__float-h-track::-webkit-scrollbar-thumb:hover,
-.bg-grid__float-v-track::-webkit-scrollbar-thumb:hover {
-  background-color: var(--bg-scrollbar-thumb-hover, rgba(0, 0, 0, 0.55));
-}
-
-.bg-grid__float-h-track::-webkit-scrollbar-button,
-.bg-grid__float-v-track::-webkit-scrollbar-button {
-  display: none;
-}
-
-/* Firefox: thin scrollbar with the same transparent track. */
-.bg-grid__float-h-track,
-.bg-grid__float-v-track {
-  scrollbar-width: thin;
-  scrollbar-color: var(--bg-scrollbar-thumb, rgba(0, 0, 0, 0.35)) transparent;
+  overflow: hidden;
+  user-select: none;
+  touch-action: none;
 }
 
 .bg-grid__float-h-track {
-  overflow-x: auto;
-  overflow-y: hidden;
+  cursor: default;
 }
 
 .bg-grid__float-v-track {
-  overflow-x: hidden;
-  overflow-y: auto;
+  cursor: default;
 }
 
-.bg-grid__float-h-track > .bg-grid__sizer,
-.bg-grid__float-v-track > .bg-grid__sizer {
-  pointer-events: none;
+.bg-grid__float-h-thumb,
+.bg-grid__float-v-thumb {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: var(--bg-scrollbar-thumb, #c1c1c1);
+  border-radius: 4px;
+  pointer-events: auto;
+  will-change: transform;
+}
+
+.bg-grid__float-h-thumb {
+  height: 8px;
+  cursor: default;
+}
+
+.bg-grid__float-v-thumb {
+  width: 8px;
+  cursor: default;
+}
+
+.bg-grid__float-h-thumb:hover,
+.bg-grid__float-v-thumb:hover {
+  background: var(--bg-scrollbar-thumb-hover, #a0a0a0);
 }
 
 /* Content sizer — sets scroll dimensions */
@@ -247,14 +221,35 @@
   right: 0;
   top: 0;
   bottom: 0;
-  width: 6px;
+  width: 8px;
   cursor: col-resize;
   z-index: 1;
+  transition: background 0.15s ease;
 }
 
-.bg-resize-handle:hover,
+.bg-resize-handle:hover {
+  background: var(--bg-freeze-clip-handle-hover, rgba(33, 133, 208, 0.2));
+}
+
 .bg-resize-handle:active {
-  background: var(--bg-resize-handle-active, rgba(33, 133, 208, 0.3));
+  background: var(--bg-freeze-clip-handle-active, rgba(33, 133, 208, 0.35));
+}
+
+body.bg-grid-resizing .bg-resize-handle,
+body.bg-grid-resizing .bg-resize-handle:hover,
+body.bg-grid-resizing .bg-resize-handle:active {
+  background: transparent;
+}
+
+.bg-column-resize-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  z-index: 30;
+  pointer-events: none;
+  background: var(--bg-freeze-clip-handle-active, rgba(33, 133, 208, 0.35));
+  will-change: transform;
 }
 
 /* ---------------------------------------------------------------------------
@@ -462,21 +457,34 @@ body.bg-grid-resizing .bg-header-cell {
    --------------------------------------------------------------------------- */
 
 .bg-grid__scroll::-webkit-scrollbar {
+  -webkit-appearance: none;
   width: 8px;
   height: 8px;
 }
 
 .bg-grid__scroll::-webkit-scrollbar-track {
+  -webkit-appearance: none;
   background: transparent;
 }
 
 .bg-grid__scroll::-webkit-scrollbar-thumb {
+  -webkit-appearance: none;
   background: var(--bg-scrollbar-thumb, #c1c1c1);
   border-radius: 4px;
 }
 
 .bg-grid__scroll::-webkit-scrollbar-thumb:hover {
   background: var(--bg-scrollbar-thumb-hover, #a0a0a0);
+}
+
+.bg-grid__scroll::-webkit-scrollbar-button,
+.bg-grid__scroll::-webkit-scrollbar-corner {
+  display: none;
+  width: 0;
+  height: 0;
+  min-width: 0;
+  min-height: 0;
+  -webkit-appearance: none;
 }
 
 /* ---------------------------------------------------------------------------

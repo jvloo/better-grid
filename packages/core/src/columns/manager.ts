@@ -12,6 +12,12 @@ declare const process: { env: { NODE_ENV?: string } };
 
 const DEFAULT_WIDTH = 100;
 const DEFAULT_MIN_WIDTH = 50;
+const DEFAULT_MAX_WIDTH = Number.POSITIVE_INFINITY;
+
+export interface ColumnManagerOptions {
+  defaultMinWidth?: number;
+  defaultMaxWidth?: number;
+}
 
 /**
  * Narrowed column type with `id` guaranteed to be a string.
@@ -39,6 +45,32 @@ export class ColumnManager<TData = unknown> {
   private widths: number[] = [];
   private readonlyCols = new Set<number>();
 
+  constructor(private readonly options: ColumnManagerOptions = {}) {}
+
+  private getDefaultMinWidth(): number {
+    return this.options.defaultMinWidth ?? DEFAULT_MIN_WIDTH;
+  }
+
+  private getDefaultMaxWidth(): number {
+    return this.options.defaultMaxWidth ?? DEFAULT_MAX_WIDTH;
+  }
+
+  private getMinWidth(col: NormalizedColumnDef<TData>): number {
+    if (col.minWidth != null) return col.minWidth;
+    if (col.resizable === false && col.width != null) return col.width;
+    return this.getDefaultMinWidth();
+  }
+
+  private getMaxWidth(col: NormalizedColumnDef<TData>): number {
+    return col.maxWidth ?? this.getDefaultMaxWidth();
+  }
+
+  private clampWidth(col: NormalizedColumnDef<TData>, width: number): number {
+    const min = Math.max(0, this.getMinWidth(col));
+    const max = Math.max(min, this.getMaxWidth(col));
+    return Math.max(min, Math.min(max, width));
+  }
+
   setColumns(columns: ColumnDef<TData>[]): void {
     // Normalize id: default to field when omitted; throw when both are absent.
     const idResolved = columns.map((col) => normalizeColumn(col));
@@ -61,8 +93,10 @@ export class ColumnManager<TData = unknown> {
         : col;
 
       // Validate width constraints
-      if (withField.minWidth && withField.maxWidth && withField.minWidth > withField.maxWidth) {
-        console.warn(`[better-grid] Column "${withField.id}": minWidth (${withField.minWidth}) > maxWidth (${withField.maxWidth})`);
+      const min = withField.minWidth ?? this.getDefaultMinWidth();
+      const max = withField.maxWidth ?? this.getDefaultMaxWidth();
+      if (Number.isFinite(max) && min > max) {
+        console.warn(`[better-grid] Column "${withField.id}": minWidth (${min}) > maxWidth (${max})`);
       }
 
       return withField;
@@ -72,7 +106,7 @@ export class ColumnManager<TData = unknown> {
 
   private recomputeVisible(): void {
     this.visibleColumns = this.allColumns.filter((c) => c.hide !== true);
-    this.widths = this.visibleColumns.map((col) => Math.max(col.minWidth ?? 0, col.width ?? DEFAULT_WIDTH));
+    this.widths = this.visibleColumns.map((col) => this.clampWidth(col, col.width ?? DEFAULT_WIDTH));
     this.readonlyCols.clear();
     for (let i = 0; i < this.visibleColumns.length; i++) {
       if (this.visibleColumns[i]?.editable === false) this.readonlyCols.add(i);
@@ -87,7 +121,14 @@ export class ColumnManager<TData = unknown> {
   recomputeFlexWidths(viewportWidth: number): void {
     const hasFlex = this.visibleColumns.some((c) => (c.flex ?? 0) > 0);
     if (!hasFlex) return;
-    this.widths = computeColumnWidths({ columns: this.visibleColumns, viewportWidth });
+    this.widths = computeColumnWidths({
+      columns: this.visibleColumns.map((col) => ({
+        ...col,
+        minWidth: this.getMinWidth(col),
+        maxWidth: this.getMaxWidth(col),
+      })),
+      viewportWidth,
+    });
   }
 
   setColumnHidden(columnId: string, hide: boolean): void {
@@ -175,8 +216,7 @@ export class ColumnManager<TData = unknown> {
     const col = this.visibleColumns[index];
     if (!col) return DEFAULT_WIDTH;
     const declared = col.width ?? DEFAULT_WIDTH;
-    const min = col.minWidth ?? 0;
-    return Math.max(min, declared);
+    return this.clampWidth(col, declared);
   }
 
   getWidths(): number[] {
@@ -186,9 +226,7 @@ export class ColumnManager<TData = unknown> {
   setWidth(index: number, width: number): void {
     const col = this.visibleColumns[index];
     if (!col) return;
-    const min = col.minWidth ?? DEFAULT_MIN_WIDTH;
-    const max = col.maxWidth ?? Infinity;
-    this.widths[index] = Math.max(min, Math.min(max, width));
+    this.widths[index] = this.clampWidth(col, width);
   }
 
   /** Extract a cell value from a row using the column's accessor (colIndex is visible-indexed). */

@@ -203,6 +203,13 @@ export interface ColumnDef<TData = unknown> {
   meta?: Record<string, unknown>;
 }
 
+export interface ColumnDefaults {
+  /** Default minimum width for resizable columns. ColumnDef.minWidth overrides this. Default: 50. */
+  minWidth?: number;
+  /** Default maximum width for resizable columns. ColumnDef.maxWidth overrides this. Default: unlimited. */
+  maxWidth?: number;
+}
+
 // ---------------------------------------------------------------------------
 // Header & Footer Rows (multi-level)
 // ---------------------------------------------------------------------------
@@ -431,6 +438,8 @@ export interface GridOptions<
   rowHeight?: number | ((rowIndex: number) => number);
   /** Default header row height. Used when `headers` is omitted, or as the per-row default for any HeaderRow that doesn't set its own `height`. */
   headerHeight?: number;
+  /** Grid-level column sizing defaults. Per-column minWidth/maxWidth override these values. */
+  columnDefaults?: ColumnDefaults;
   /** Show vertical/horizontal cell borders. Default: true. */
   bordered?: boolean;
   /** Alternate-row striping. Default: false. */

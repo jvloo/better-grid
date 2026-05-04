@@ -17,6 +17,7 @@ export type {
   GridInstance,
   GridPlugin,
   ColumnDef,
+  ColumnDefaults,
   CellPosition,
   CellRange,
   Selection,

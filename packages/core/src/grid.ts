@@ -21,7 +21,7 @@ import type {
 import { EventEmitter } from './events/emitter';
 import { StateStore } from './state/store';
 import { PluginRegistry } from './plugin/registry';
-import { ColumnManager } from './columns/manager';
+import { ColumnManager, type NormalizedColumnDef } from './columns/manager';
 import { VirtualizationEngine } from './virtualization/engine';
 import type { LayoutMeasurements } from './virtualization/engine';
 import { RenderingPipeline } from './rendering/pipeline';
@@ -63,7 +63,10 @@ export function createGrid<
   // Internal state
   // ---------------------------------------------------------------------------
   const emitter = new EventEmitter<GridEvents<TData>>();
-  const columnManager = new ColumnManager<TData>();
+  const columnManager = new ColumnManager<TData>({
+    defaultMinWidth: options.columnDefaults?.minWidth,
+    defaultMaxWidth: options.columnDefaults?.maxWidth,
+  });
   const virtualization = new VirtualizationEngine(
     options.virtualization?.overscanRows ?? 20,
     options.virtualization?.overscanColumns ?? 5,
@@ -107,19 +110,12 @@ export function createGrid<
   let fakeScrollbar: HTMLElement | null = null;
   let scrollSizer: HTMLElement | null = null;
   // Floating-mode visible scrollbar tracks. Thin overlay elements that
-  // ride on top of the cell area and sync with `fakeScrollbar` (the
-  // hidden state holder). Existing plugin code that queries
-  // `.bg-grid__scroll` continues to talk to fakeScrollbar — these
-  // tracks are layout-only.
+  // ride on top of the cell area while `fakeScrollbar` remains the hidden
+  // state holder queried by existing plugins.
   let floatingHTrack: HTMLElement | null = null;
-  let floatingHSizer: HTMLElement | null = null;
+  let floatingHThumb: HTMLElement | null = null;
   let floatingVTrack: HTMLElement | null = null;
-  let floatingVSizer: HTMLElement | null = null;
-  // Re-entrancy guard for the bidirectional scroll sync between
-  // fakeScrollbar and the floating tracks. Without this, a programmatic
-  // setScrollLeft on fakeScrollbar that propagates to hTrack would
-  // immediately re-fire on hTrack's scroll event and try to write back.
-  let isSyncingFloatingTracks = false;
+  let floatingVThumb: HTMLElement | null = null;
   let headerContainer: HTMLElement | null = null;
   let cellContainer: HTMLElement | null = null;
   let frozenColOverlay: HTMLElement | null = null;
@@ -314,15 +310,7 @@ export function createGrid<
     scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth - clipOffset}px`;
     scrollSizer.style.height = `${measurements.totalHeight + sbClientHeight - vpHeight + headerHeight + pinnedTopH + pinnedBottomH}px`;
 
-    // Mirror the sizer dimensions onto the visible floating tracks so their
-    // thumbs are sized proportional to the scroll range. Each track only
-    // scrolls one axis, so we only set the relevant dimension.
-    if (floatingHSizer) {
-      floatingHSizer.style.width = scrollSizer.style.width;
-    }
-    if (floatingVSizer) {
-      floatingVSizer.style.height = scrollSizer.style.height;
-    }
+    updateFloatingScrollbarThumbs();
 
     // Cell container sized to full data dimensions (cells at data-space positions).
     // Container-level transform shifts them into the viewport.
@@ -362,9 +350,14 @@ export function createGrid<
       ? clamp(freezeClipWidth, 0, zoneDims.frozenLeftWidth)
       : zoneDims.frozenLeftWidth;
 
+    // The main scrollable layer is translated by both scrollLeft and the
+    // frozen-clip offset. Use that same data-space offset for virtualization;
+    // otherwise clipped frozen columns expose extra right-edge viewport area
+    // without rendering the matching far-right cells.
+    const dataScrollLeft = state.scrollLeft + clipOffset;
     const visibleRange = virtualization.computeVisibleRange(
       dataScrollTop,
-      state.scrollLeft,
+      dataScrollLeft,
       viewportWidth,
       viewportHeight - headerHeight - pinnedTopH - pinnedBottomH,
       zoneDims.frozenTopHeight,
@@ -432,7 +425,7 @@ export function createGrid<
         frozenColOverlay!.style.bottom = 'auto';
       } else {
         frozenColOverlay!.style.height = '';
-        frozenColOverlay!.style.bottom = 'var(--bg-scrollbar-size, 10px)';
+        frozenColOverlay!.style.bottom = isFloatingScrollbar ? '0' : 'var(--bg-scrollbar-size, 10px)';
       }
     }
 
@@ -567,7 +560,7 @@ export function createGrid<
   function renderPinnedRows(
     pinnedContainer: HTMLElement,
     rows: TData[],
-    columns: ColumnDef<TData>[],
+    columns: NormalizedColumnDef<TData>[],
     measurements: LayoutMeasurements,
     startCol?: number,
     endCol?: number,
@@ -619,19 +612,7 @@ export function createGrid<
     const scrollLeft = fakeScrollbar.scrollLeft;
     store.setScroll(scrollTop, scrollLeft);
 
-    // Push state to the floating tracks so their visible thumbs stay in
-    // sync — without this, programmatic scrolls (scrollTo, page up/down,
-    // wheel events) move the data but leave the thumb where it was.
-    if (isFloatingScrollbar && !isSyncingFloatingTracks) {
-      isSyncingFloatingTracks = true;
-      if (floatingHTrack && floatingHTrack.scrollLeft !== scrollLeft) {
-        floatingHTrack.scrollLeft = scrollLeft;
-      }
-      if (floatingVTrack && floatingVTrack.scrollTop !== scrollTop) {
-        floatingVTrack.scrollTop = scrollTop;
-      }
-      isSyncingFloatingTracks = false;
-    }
+    updateFloatingScrollbarThumbs();
 
     // Translate cell container to match scroll position.
     // Cells stay at data-space positions; the container transform shifts
@@ -891,11 +872,37 @@ export function createGrid<
   function startColumnResize(colIndex: number, startEvent: PointerEvent): void {
     const column = columnManager.getColumns()[colIndex]!;
     const showResizeTooltip = tooltipConfig.enabled && tooltipConfig.columnResize;
+    const startWidth = columnManager.getWidth(colIndex);
+    const containerRect = container?.getBoundingClientRect();
+    const maxWidth = column.maxWidth ?? options.columnDefaults?.maxWidth;
+    const boundaryMaxWidth = containerRect
+      ? startWidth + Math.max(0, containerRect.right - 4 - startEvent.clientX)
+      : undefined;
+    const effectiveMaxWidth = boundaryMaxWidth == null
+      ? maxWidth
+      : maxWidth == null
+        ? boundaryMaxWidth
+        : Math.min(maxWidth, boundaryMaxWidth);
+    const resizePreview = container ? document.createElement('div') : null;
+    if (resizePreview && container) {
+      resizePreview.className = 'bg-column-resize-preview';
+      resizePreview.style.height = `${headerHeight}px`;
+      container.appendChild(resizePreview);
+    }
+    const updateResizePreview = (width: number) => {
+      if (!resizePreview || !container) return;
+      const rect = container.getBoundingClientRect();
+      const clientX = clamp(startEvent.clientX + (width - startWidth), rect.left + 4, rect.right - 4);
+      resizePreview.style.transform = `translate3d(${snapToDevicePixel(clientX - rect.left - 4)}px, 0, 0)`;
+    };
     startColumnResizeDrag({
       startEvent,
-      startWidth: columnManager.getWidth(colIndex),
-      minWidth: column.minWidth,
+      startWidth,
+      minWidth: column.minWidth ?? options.columnDefaults?.minWidth,
+      maxWidth: effectiveMaxWidth,
+      liveUpdate: false,
       onUpdate: (width) => instance.setColumnWidth(column.id, width),
+      onPreview: (width) => updateResizePreview(width),
       onCursorMove: showResizeTooltip
         ? (width, clientX, clientY) => {
             // Immediate-show is idempotent — reuses the existing tooltip
@@ -910,7 +917,10 @@ export function createGrid<
             );
           }
         : undefined,
-      onComplete: showResizeTooltip ? () => tooltip.dismiss() : undefined,
+      onComplete: () => {
+        resizePreview?.remove();
+        if (showResizeTooltip) tooltip.dismiss();
+      },
     });
   }
 
@@ -1053,6 +1063,8 @@ export function createGrid<
     const right = resolveScrollbarOffset('horizontalOffsetRight');
     const bottom = resolveScrollbarOffset('verticalOffsetBottom');
     const left = resolveScrollbarOffset('horizontalOffsetLeft');
+    const scrollbarSize = getFloatingScrollbarSize();
+    const bottomEdgeInset = getFloatingScrollbarBottomInset();
     fakeScrollbar.style.top = `${top}px`;
     fakeScrollbar.style.right = `${right}px`;
     fakeScrollbar.style.bottom = `${bottom}px`;
@@ -1063,14 +1075,118 @@ export function createGrid<
     // --bg-scrollbar-size); the vertical track sits at the right strip.
     if (floatingHTrack) {
       floatingHTrack.style.left = `${left}px`;
-      floatingHTrack.style.right = `${right}px`;
-      floatingHTrack.style.bottom = `${bottom}px`;
+      floatingHTrack.style.setProperty('right', `calc(${right}px + var(--bg-scrollbar-size, 8px))`);
+      floatingHTrack.style.bottom = `${bottom + bottomEdgeInset}px`;
     }
     if (floatingVTrack) {
       floatingVTrack.style.top = `${top}px`;
-      floatingVTrack.style.bottom = `${bottom}px`;
+      floatingVTrack.style.bottom = `${bottom + scrollbarSize + bottomEdgeInset}px`;
       floatingVTrack.style.right = `${right}px`;
     }
+    updateFloatingScrollbarThumbs();
+  }
+
+  function getFloatingScrollbarSize(): number {
+    if (!container) return 8;
+    const raw = getComputedStyle(container).getPropertyValue('--bg-scrollbar-size');
+    const parsed = parseFloat(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 8;
+  }
+
+  function getFloatingScrollbarBottomInset(): number {
+    if (options.bordered === false || !container) return 0;
+    const raw = getComputedStyle(container).borderBottomWidth;
+    const parsed = parseFloat(raw);
+    return Number.isFinite(parsed) ? parsed : 1;
+  }
+
+  function updateFloatingScrollbarThumbs(): void {
+    if (!isFloatingScrollbar || !fakeScrollbar) return;
+    if (floatingHTrack && floatingHThumb) {
+      const trackWidth = floatingHTrack.clientWidth;
+      const scrollWidth = fakeScrollbar.scrollWidth;
+      const clientWidth = fakeScrollbar.clientWidth;
+      const maxScroll = Math.max(0, scrollWidth - clientWidth);
+      const thumbWidth = maxScroll > 0 && trackWidth > 0
+        ? clamp(Math.round((clientWidth / scrollWidth) * trackWidth), 20, trackWidth)
+        : trackWidth;
+      const maxTravel = Math.max(0, trackWidth - thumbWidth);
+      const offset = maxScroll > 0 && maxTravel > 0
+        ? (fakeScrollbar.scrollLeft / maxScroll) * maxTravel
+        : 0;
+      floatingHTrack.style.visibility = maxScroll > 0 && trackWidth > 0 ? 'visible' : 'hidden';
+      floatingHThumb.style.width = `${thumbWidth}px`;
+      floatingHThumb.style.transform = `translate3d(${snapToDevicePixel(offset)}px, 0, 0)`;
+    }
+    if (floatingVTrack && floatingVThumb) {
+      const trackHeight = floatingVTrack.clientHeight;
+      const scrollHeight = fakeScrollbar.scrollHeight;
+      const clientHeight = fakeScrollbar.clientHeight;
+      const maxScroll = Math.max(0, scrollHeight - clientHeight);
+      const thumbHeight = maxScroll > 0 && trackHeight > 0
+        ? clamp(Math.round((clientHeight / scrollHeight) * trackHeight), 20, trackHeight)
+        : trackHeight;
+      const maxTravel = Math.max(0, trackHeight - thumbHeight);
+      const offset = maxScroll > 0 && maxTravel > 0
+        ? (fakeScrollbar.scrollTop / maxScroll) * maxTravel
+        : 0;
+      floatingVTrack.style.visibility = maxScroll > 0 && trackHeight > 0 ? 'visible' : 'hidden';
+      floatingVThumb.style.height = `${thumbHeight}px`;
+      floatingVThumb.style.transform = `translate3d(0, ${snapToDevicePixel(offset)}px, 0)`;
+    }
+  }
+
+  function bindFloatingThumbDrag(
+    track: HTMLElement,
+    thumb: HTMLElement,
+    axis: 'horizontal' | 'vertical',
+  ): void {
+    track.addEventListener('pointerdown', (event) => {
+      if (!fakeScrollbar || event.button !== 0) return;
+      const trackRect = track.getBoundingClientRect();
+      const thumbRect = thumb.getBoundingClientRect();
+      const isHorizontal = axis === 'horizontal';
+      const trackLength = isHorizontal ? trackRect.width : trackRect.height;
+      const thumbLength = isHorizontal ? thumbRect.width : thumbRect.height;
+      const maxTravel = Math.max(0, trackLength - thumbLength);
+      const maxScroll = isHorizontal
+        ? Math.max(0, fakeScrollbar.scrollWidth - fakeScrollbar.clientWidth)
+        : Math.max(0, fakeScrollbar.scrollHeight - fakeScrollbar.clientHeight);
+      if (maxTravel <= 0 || maxScroll <= 0) return;
+
+      event.preventDefault();
+      track.setPointerCapture(event.pointerId);
+
+      const clientStart = isHorizontal ? event.clientX : event.clientY;
+      let scrollStart = isHorizontal ? fakeScrollbar.scrollLeft : fakeScrollbar.scrollTop;
+
+      if (event.target !== thumb) {
+        const trackStart = isHorizontal ? trackRect.left : trackRect.top;
+        const nextThumbOffset = clamp(clientStart - trackStart - (thumbLength / 2), 0, maxTravel);
+        scrollStart = (nextThumbOffset / maxTravel) * maxScroll;
+        if (isHorizontal) fakeScrollbar.scrollLeft = scrollStart;
+        else fakeScrollbar.scrollTop = scrollStart;
+      }
+
+      const onPointerMove = (moveEvent: PointerEvent): void => {
+        const client = isHorizontal ? moveEvent.clientX : moveEvent.clientY;
+        const delta = client - clientStart;
+        const scrollDelta = (delta / maxTravel) * maxScroll;
+        const nextScroll = clamp(scrollStart + scrollDelta, 0, maxScroll);
+        if (isHorizontal) fakeScrollbar!.scrollLeft = nextScroll;
+        else fakeScrollbar!.scrollTop = nextScroll;
+      };
+      const onPointerUp = (upEvent: PointerEvent): void => {
+        track.releasePointerCapture(upEvent.pointerId);
+        track.removeEventListener('pointermove', onPointerMove);
+        track.removeEventListener('pointerup', onPointerUp);
+        track.removeEventListener('pointercancel', onPointerUp);
+      };
+
+      track.addEventListener('pointermove', onPointerMove);
+      track.addEventListener('pointerup', onPointerUp);
+      track.addEventListener('pointercancel', onPointerUp);
+    });
   }
 
   function invalidateHeaders(): void {
@@ -1332,7 +1448,7 @@ export function createGrid<
         frozenColOverlay.style.top = '0';
         frozenColOverlay.style.left = '0';
         // Match viewport bottom so pinned rows align pixel-perfectly
-        frozenColOverlay.style.bottom = 'var(--bg-scrollbar-size, 10px)';
+        frozenColOverlay.style.bottom = isFloatingScrollbar ? '0' : 'var(--bg-scrollbar-size, 10px)';
         frozenColOverlay.style.overflow = 'hidden';
         frozenColOverlay.style.zIndex = '8';
 
@@ -1390,45 +1506,29 @@ export function createGrid<
       container.appendChild(fakeScrollbar);
 
       // Floating-mode visible tracks. fakeScrollbar's native scrollbar is
-      // CSS-hidden in floating mode; these two thin overlays render the
-      // actual scrollbar UI and forward their scroll into fakeScrollbar.
+      // CSS-hidden in floating mode; these custom thumb overlays render the
+      // actual scrollbar UI so platform arrow buttons never appear.
       if (isFloatingScrollbar) {
-        const trackSize = 'var(--bg-scrollbar-size, 10px)';
+        const trackSize = 'var(--bg-scrollbar-size, 8px)';
         floatingHTrack = document.createElement('div');
         floatingHTrack.className = 'bg-grid__float-h-track';
         floatingHTrack.style.height = trackSize;
-        floatingHSizer = document.createElement('div');
-        floatingHSizer.className = 'bg-grid__sizer';
-        floatingHSizer.style.height = '1px';
-        floatingHTrack.appendChild(floatingHSizer);
+        floatingHThumb = document.createElement('div');
+        floatingHThumb.className = 'bg-grid__float-h-thumb';
+        floatingHTrack.appendChild(floatingHThumb);
         container.appendChild(floatingHTrack);
 
         floatingVTrack = document.createElement('div');
         floatingVTrack.className = 'bg-grid__float-v-track';
         floatingVTrack.style.width = trackSize;
-        floatingVSizer = document.createElement('div');
-        floatingVSizer.className = 'bg-grid__sizer';
-        floatingVSizer.style.width = '1px';
-        floatingVTrack.appendChild(floatingVSizer);
+        floatingVThumb = document.createElement('div');
+        floatingVThumb.className = 'bg-grid__float-v-thumb';
+        floatingVTrack.appendChild(floatingVThumb);
         container.appendChild(floatingVTrack);
 
         applyFloatingScrollbarOffsets();
-
-        // Track → fakeScrollbar sync: user-driven scroll on the visible
-        // track propagates into the state holder, which fires its own
-        // scroll event to drive cell positioning.
-        floatingHTrack.addEventListener('scroll', () => {
-          if (isSyncingFloatingTracks) return;
-          isSyncingFloatingTracks = true;
-          if (fakeScrollbar) fakeScrollbar.scrollLeft = floatingHTrack!.scrollLeft;
-          isSyncingFloatingTracks = false;
-        });
-        floatingVTrack.addEventListener('scroll', () => {
-          if (isSyncingFloatingTracks) return;
-          isSyncingFloatingTracks = true;
-          if (fakeScrollbar) fakeScrollbar.scrollTop = floatingVTrack!.scrollTop;
-          isSyncingFloatingTracks = false;
-        });
+        bindFloatingThumbDrag(floatingHTrack, floatingHThumb, 'horizontal');
+        bindFloatingThumbDrag(floatingVTrack, floatingVThumb, 'vertical');
       }
 
       // Append frozen overlay AFTER viewport so it renders on top
@@ -1641,9 +1741,9 @@ export function createGrid<
       fakeScrollbar = null;
       scrollSizer = null;
       floatingHTrack = null;
-      floatingHSizer = null;
+      floatingHThumb = null;
       floatingVTrack = null;
-      floatingVSizer = null;
+      floatingVThumb = null;
       headerContainer = null;
       cellContainer = null;
       frozenColOverlay = null;

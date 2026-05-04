@@ -9,7 +9,7 @@ import {
   type FeatureName,
 } from './presets/features';
 import { resolveMode } from './presets/modes';
-import { getGlobalFeatureOptions } from './configure';
+import { getGlobalColumnDefaults, getGlobalFeatureOptions } from './configure';
 
 const DEFAULT_MODE: string | null = null;
 
@@ -71,8 +71,13 @@ export function useGrid<TData = unknown, TContext = unknown>(
   // Feature swaps mid-lifetime are out of scope for v1.
   const grid = useMemo<GridInstance<TData>>(() => {
     const plugins = resolvePlugins(options);
+    const globalColumnDefaults = getGlobalColumnDefaults();
     return createGrid<TData, TContext>({
       ...options,
+      columnDefaults: {
+        ...globalColumnDefaults,
+        ...options.columnDefaults,
+      },
       plugins,
       context: options.context,
     });
