@@ -320,6 +320,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             .bg-cell--input-editable .bg-input-box--placeholder {
               color: var(--bg-input-placeholder, #98A2B3);
             }
+            .bg-cell-editor--masked::selection {
+              background: transparent;
+              color: transparent;
+            }
             .bg-cell--input-editable .bg-input-box--has-adornment {
               position: relative;
             }
