@@ -602,25 +602,35 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               }
 
               // Run original renderer to set styles (bg, font, padding) on the cell.
-              // When no column.cellRenderer is set, fall back to valueFormatter or
-              // the raw value so editable cells without a custom renderer still
-              // produce text for the input box.
+              // Formatter-only columns can compute their display string directly,
+              // which lets us reuse the existing input-box DOM across scroll renders.
+              const canReuseInputBox = !origRenderer;
+              let text: string;
               if (origRenderer) {
                 origRenderer(container, context);
-              } else if (col.valueFormatter) {
-                renderFormattedDisplay(container, context);
-              } else if (col.cellType) {
-                renderFormattedDisplay(container, context);
+                text = container.textContent?.trim() || '';
               } else {
-                renderFormattedDisplay(container, context);
+                text = getFormattedDisplayText(
+                  context.column,
+                  context.row,
+                  context.value,
+                  context.rowIndex,
+                  context.colIndex,
+                ).trim();
               }
 
-              // Capture text set by original renderer, then replace with input box
-              const text = container.textContent?.trim() || '';
-              container.textContent = '';
-
-              const box = document.createElement('div');
+              let box = canReuseInputBox ? (container.firstElementChild as HTMLElement | null) : null;
+              if (!box || !box.classList.contains('bg-input-box')) {
+                box = document.createElement('div');
+                container.replaceChildren(box);
+              } else if (box.parentElement === container && container.childNodes.length !== 1) {
+                container.replaceChildren(box);
+              }
               box.className = 'bg-input-box';
+              box.textContent = '';
+              box.style.justifyContent = '';
+              box.style.removeProperty('--bg-input-prefix-space');
+              box.style.removeProperty('--bg-input-suffix-space');
               // Inherit alignment from column
               if (context.column.align === 'center') box.style.justifyContent = 'center';
               else if (context.column.align === 'right') box.style.justifyContent = 'flex-end';
@@ -674,7 +684,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                 box.textContent = placeholder;
                 box.classList.add('bg-input-box--placeholder');
               }
-              container.appendChild(box);
             };
 
             changed = true;

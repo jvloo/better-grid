@@ -285,10 +285,12 @@ export function createGrid<
 
   let renderPending = false;
   let headersDirty = true; // track whether headers need re-rendering
-  function scheduleRender(): void {
+  function scheduleRender(opts: { headersDirty?: boolean } = {}): void {
     if (!viewport || !cellContainer || renderPending) return;
     renderPending = true;
-    headersDirty = true;
+    if (opts.headersDirty !== false) {
+      headersDirty = true;
+    }
     requestAnimationFrame(() => {
       renderPending = false;
       render();
@@ -494,7 +496,10 @@ export function createGrid<
       }
     }
 
-    // Render pinned rows (always re-render — cheap since typically 1-3 rows)
+    const pinnedStartCol = Math.max(visibleRange.startCol, frozenCols);
+    const pinnedEndCol = visibleRange.endCol;
+
+    // Render pinned rows (virtualized horizontally; typically 1-3 rows)
     if (pinnedTopContainer) {
       const wrapper = pinnedTopContainer.parentElement;
       if (pinnedTopH > 0) {
@@ -503,7 +508,8 @@ export function createGrid<
           state.pinned.top,
           state.columns,
           measurements,
-          frozenCols,
+          pinnedStartCol,
+          pinnedEndCol,
         );
         pinnedTopContainer.style.height = `${pinnedTopH}px`;
         pinnedTopContainer.style.width = `${measurements.totalWidth}px`;
@@ -525,7 +531,8 @@ export function createGrid<
           state.pinned.bottom,
           state.columns,
           measurements,
-          frozenCols,
+          pinnedStartCol,
+          pinnedEndCol,
         );
         pinnedBottomContainer.style.height = `${pinnedBottomH}px`;
         pinnedBottomContainer.style.width = `${measurements.totalWidth}px`;
@@ -698,7 +705,7 @@ export function createGrid<
       emitter.emit('scroll', { scrollTop, scrollLeft });
     }
     if (opts.schedule) {
-      scheduleRender();
+      scheduleRender({ headersDirty: false });
     }
   }
 

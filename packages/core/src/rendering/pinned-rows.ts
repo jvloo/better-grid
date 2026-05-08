@@ -59,13 +59,16 @@ export function createPinnedRowRenderer<TData = unknown>(
   // the inputs that affect output have changed. With ~3 pinned rows × 60 cols,
   // each call previously created ~180 fresh DOM nodes — re-rendering on every
   // scroll tick is wasteful when only the main pipeline actually moved.
-  let lastContainer: HTMLElement | null = null;
-  let lastRows: readonly TData[] | null = null;
-  let lastColumns: readonly NormalizedColumnDef<TData>[] | null = null;
-  let lastMeasurements: LayoutMeasurements | null = null;
-  let lastTotalWidth = -1;
-  let lastColStart = -1;
-  let lastColEnd = -1;
+  type RenderCache = {
+    rows: readonly TData[] | null;
+    columns: readonly NormalizedColumnDef<TData>[] | null;
+    measurements: LayoutMeasurements | null;
+    totalWidth: number;
+    colStart: number;
+    colEnd: number;
+  };
+
+  const cacheByContainer = new WeakMap<HTMLElement, RenderCache>();
 
   function render(
     pinnedContainer: HTMLElement,
@@ -83,24 +86,26 @@ export function createPinnedRowRenderer<TData = unknown>(
     // colOffsets length cover the column-resize case where the array identity
     // is reused but cell widths shift.
     const totalWidth = measurements.colOffsets[measurements.colOffsets.length - 1] ?? 0;
+    const cached = cacheByContainer.get(pinnedContainer);
     if (
-      lastContainer === pinnedContainer &&
-      lastRows === rows &&
-      lastColumns === columns &&
-      lastMeasurements === measurements &&
-      lastTotalWidth === totalWidth &&
-      lastColStart === colStart &&
-      lastColEnd === colEnd
+      cached &&
+      cached.rows === rows &&
+      cached.columns === columns &&
+      cached.measurements === measurements &&
+      cached.totalWidth === totalWidth &&
+      cached.colStart === colStart &&
+      cached.colEnd === colEnd
     ) {
       return;
     }
-    lastContainer = pinnedContainer;
-    lastRows = rows;
-    lastColumns = columns;
-    lastMeasurements = measurements;
-    lastTotalWidth = totalWidth;
-    lastColStart = colStart;
-    lastColEnd = colEnd;
+    cacheByContainer.set(pinnedContainer, {
+      rows,
+      columns,
+      measurements,
+      totalWidth,
+      colStart,
+      colEnd,
+    });
 
     pinnedContainer.innerHTML = '';
     if (rows.length === 0) return;
