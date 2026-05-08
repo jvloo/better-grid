@@ -137,6 +137,7 @@ export function createGrid<
   let freezeClipInitialApplied = false;
   let pendingScrollRestore: ScrollState | null = null;
   let resizeObserver: ResizeObserver | null = null;
+  let offFrozenClipScrollbarOffsets: (() => void) | null = null;
   let mounted = false;
 
   const singleHeaderRowHeight = options.headerHeight ?? DEFAULT_HEADER_HEIGHT;
@@ -895,6 +896,12 @@ export function createGrid<
       emitter.emit('key:escape', state.selection.active);
       return;
     }
+  }
+
+  function handleFreezeClipMouseEnter(e: MouseEvent): void {
+    if (!freezeClipHandle) return;
+    const text = freezeClipWidth !== null ? 'Double-click to expand' : 'Drag to clip';
+    showTooltip(freezeClipHandle, text, e.clientX, e.clientY);
   }
 
   // ---------------------------------------------------------------------------
@@ -1681,10 +1688,7 @@ export function createGrid<
 
         freezeClipHandle.addEventListener('pointerdown', startFreezeClipDrag);
         freezeClipHandle.addEventListener('dblclick', restoreAllFrozenColumns);
-        freezeClipHandle.addEventListener('mouseenter', (e: MouseEvent) => {
-          const text = freezeClipWidth !== null ? 'Double-click to expand' : 'Drag to clip';
-          showTooltip(freezeClipHandle!, text, e.clientX, e.clientY);
-        });
+        freezeClipHandle.addEventListener('mouseenter', handleFreezeClipMouseEnter);
         freezeClipHandle.addEventListener('mouseleave', dismissTooltip);
 
         freezeClipIndicator = document.createElement('div');
@@ -1813,7 +1817,7 @@ export function createGrid<
 
       // Frozen-clip drag changes the resolved value of `'after-frozen-left'`
       // — rebind the floating scrollbar so its left edge tracks the clip.
-      emitter.on('frozen:clip', () => applyFloatingScrollbarOffsets());
+      offFrozenClipScrollbarOffsets = emitter.on('frozen:clip', applyFloatingScrollbarOffsets);
 
       mounted = true;
       recomputeMeasurements();
@@ -1830,8 +1834,19 @@ export function createGrid<
       cellContainer?.removeEventListener('dblclick', handleDblClick);
       cellContainer?.removeEventListener('mouseover', handleCellMouseOver);
       cellContainer?.removeEventListener('mouseout', handleCellMouseOut);
+      frozenCellOverlay?.removeEventListener('pointerdown', handlePointerDown);
+      frozenCellOverlay?.removeEventListener('dblclick', handleDblClick);
+      frozenCellOverlay?.removeEventListener('mouseover', handleCellMouseOver);
+      frozenCellOverlay?.removeEventListener('mouseout', handleCellMouseOut);
+      freezeClipHandle?.removeEventListener('pointerdown', startFreezeClipDrag);
+      freezeClipHandle?.removeEventListener('dblclick', restoreAllFrozenColumns);
+      freezeClipHandle?.removeEventListener('mouseenter', handleFreezeClipMouseEnter);
+      freezeClipHandle?.removeEventListener('mouseleave', dismissTooltip);
+      offFrozenClipScrollbarOffsets?.();
+      offFrozenClipScrollbarOffsets = null;
       dismissTooltip();
       dismissFilterPanel();
+      dismissContextMenu();
       container?.removeEventListener('keydown', handleKeyDown);
       resizeObserver?.disconnect();
 

@@ -113,7 +113,11 @@ export function useGrid<TData = unknown, TContext = unknown>(
 
   useEffect(
     () => () => {
-      if (mountedRef.current) grid.unmount();
+      if (mountedRef.current) {
+        grid.unmount();
+        mountedRef.current = null;
+      }
+      grid.destroy();
     },
     [grid],
   );

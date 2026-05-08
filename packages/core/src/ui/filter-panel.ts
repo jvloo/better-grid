@@ -54,8 +54,18 @@ const NUMBER_OPERATORS = [
 
 export function createFilterPanel(deps: FilterPanelDeps): FilterPanel {
   let activePanel: HTMLElement | null = null;
+  let closeHandler: ((e: MouseEvent) => void) | null = null;
+  let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
   function dismiss(): void {
+    if (closeTimer !== null) {
+      clearTimeout(closeTimer);
+      closeTimer = null;
+    }
+    if (closeHandler) {
+      document.removeEventListener('mousedown', closeHandler);
+      closeHandler = null;
+    }
     if (activePanel) {
       activePanel.remove();
       activePanel = null;
@@ -244,13 +254,16 @@ export function createFilterPanel(deps: FilterPanelDeps): FilterPanel {
     input.focus();
 
     // Close on click outside (delayed to avoid immediate dismiss from the click that opened us)
-    const closeHandler = (e: MouseEvent) => {
+    closeHandler = (e: MouseEvent) => {
       if (!panel.contains(e.target as Node)) {
         dismiss();
-        document.removeEventListener('mousedown', closeHandler);
       }
     };
-    setTimeout(() => document.addEventListener('mousedown', closeHandler), 0);
+    closeTimer = setTimeout(() => {
+      if (!closeHandler) return;
+      document.addEventListener('mousedown', closeHandler);
+      closeTimer = null;
+    }, 0);
   }
 
   return {

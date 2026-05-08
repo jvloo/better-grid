@@ -24,8 +24,18 @@ export interface ContextMenu {
 
 export function createContextMenu(): ContextMenu {
   let activeMenu: HTMLElement | null = null;
+  let closeHandler: ((e: MouseEvent) => void) | null = null;
+  let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
   function dismiss(): void {
+    if (closeTimer !== null) {
+      clearTimeout(closeTimer);
+      closeTimer = null;
+    }
+    if (closeHandler) {
+      document.removeEventListener('mousedown', closeHandler);
+      closeHandler = null;
+    }
     if (activeMenu) {
       activeMenu.remove();
       activeMenu = null;
@@ -88,13 +98,16 @@ export function createContextMenu(): ContextMenu {
     activeMenu = menu;
 
     // Close on click outside (delayed to avoid the opening click dismissing us)
-    const closeHandler = (e: MouseEvent) => {
+    closeHandler = (e: MouseEvent) => {
       if (!menu.contains(e.target as Node)) {
         dismiss();
-        document.removeEventListener('mousedown', closeHandler);
       }
     };
-    setTimeout(() => document.addEventListener('mousedown', closeHandler), 0);
+    closeTimer = setTimeout(() => {
+      if (!closeHandler) return;
+      document.addEventListener('mousedown', closeHandler);
+      closeTimer = null;
+    }, 0);
   }
 
   return {
