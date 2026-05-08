@@ -138,6 +138,9 @@ export function createGrid<
   let pendingScrollRestore: ScrollState | null = null;
   let resizeObserver: ResizeObserver | null = null;
   let offFrozenClipScrollbarOffsets: (() => void) | null = null;
+  let wheelFrame: number | null = null;
+  let pendingWheelTop = 0;
+  let pendingWheelLeft = 0;
   let mounted = false;
   let floatingScrollbarMetricsDirty = true;
   const floatingScrollbarMetrics = {
@@ -663,6 +666,27 @@ export function createGrid<
   // Event handlers
   // ---------------------------------------------------------------------------
 
+  function flushPendingWheel(): void {
+    wheelFrame = null;
+    if (!fakeScrollbar) {
+      pendingWheelTop = 0;
+      pendingWheelLeft = 0;
+      return;
+    }
+
+    const deltaTop = pendingWheelTop;
+    const deltaLeft = pendingWheelLeft;
+    pendingWheelTop = 0;
+    pendingWheelLeft = 0;
+
+    if (deltaTop !== 0) {
+      fakeScrollbar.scrollTop += deltaTop;
+    }
+    if (deltaLeft !== 0) {
+      fakeScrollbar.scrollLeft += deltaLeft;
+    }
+  }
+
   /** Forward wheel events from viewport to fakeScrollbar */
   function handleWheel(e: WheelEvent): void {
     if (!fakeScrollbar) return;
@@ -673,10 +697,13 @@ export function createGrid<
     const dx = e.deltaX * multiplier;
     // Shift+scroll → horizontal scroll (standard UX convention)
     if (e.shiftKey && dx === 0) {
-      fakeScrollbar.scrollLeft += dy;
+      pendingWheelLeft += dy;
     } else {
-      fakeScrollbar.scrollTop += dy;
-      fakeScrollbar.scrollLeft += dx;
+      pendingWheelTop += dy;
+      pendingWheelLeft += dx;
+    }
+    if (wheelFrame === null) {
+      wheelFrame = requestAnimationFrame(flushPendingWheel);
     }
   }
 
@@ -1915,6 +1942,12 @@ export function createGrid<
 
       fakeScrollbar?.removeEventListener('scroll', handleScroll);
       container?.removeEventListener('wheel', handleWheel);
+      if (wheelFrame !== null) {
+        cancelAnimationFrame(wheelFrame);
+        wheelFrame = null;
+      }
+      pendingWheelTop = 0;
+      pendingWheelLeft = 0;
       cellContainer?.removeEventListener('pointerdown', handlePointerDown);
       cellContainer?.removeEventListener('dblclick', handleDblClick);
       cellContainer?.removeEventListener('mouseover', handleCellMouseOver);
