@@ -127,6 +127,25 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         column: import('@better-grid/core').ColumnDef;
       };
 
+      function internalEntry(position: CellPosition, failure: CellFailure): InternalEntry {
+        const entry: InternalEntry = {
+          position,
+          message: failure.message,
+          code: failure.code,
+        };
+
+        // Rows in wide financial grids can be very large. Keep row/value/column
+        // context only when a custom renderer will actually consume it.
+        if (failure.renderer) {
+          entry.renderer = failure.renderer;
+          entry.row = failure.row;
+          entry.value = failure.value;
+          entry.column = failure.column;
+        }
+
+        return entry;
+      }
+
       function validateCell(position: CellPosition): CellFailure | null {
         const state = ctx.grid.getState();
         const column = state.columns[position.colIndex];
@@ -411,11 +430,15 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
         const gridEl = ctx.grid.getContainer();
         if (!gridEl) return;
 
-        // Remove existing error styles and hover listeners
+        // Virtualized rendering resets cell className before this runs, so old
+        // error cells may no longer match `.bg-cell--error`. Clean every tracked
+        // hover handler first to avoid accumulating listeners across renders.
+        for (const cleanup of hoverCleanups.values()) cleanup();
+        hoverCleanups.clear();
+
+        // Remove existing error styles
         gridEl.querySelectorAll('.bg-cell--error').forEach((el) => {
           el.classList.remove('bg-cell--error');
-          const cleanup = hoverCleanups.get(el as HTMLElement);
-          if (cleanup) { cleanup(); hoverCleanups.delete(el as HTMLElement); }
         });
 
         // Ensure layer exists and geometry is current before creating tooltips
@@ -487,7 +510,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
 
           const failure = validateCell(position);
           if (failure) {
-            errors.set(positionKey(position), { position, ...failure });
+            errors.set(positionKey(position), internalEntry(position, failure));
           }
         }
 
@@ -504,7 +527,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
             const failure = validateCell(position);
             const key = positionKey(position);
             if (failure) {
-              const entry: InternalEntry = { position, ...failure };
+              const entry = internalEntry(position, failure);
               errors.set(key, entry);
               return [publicError(entry)];
             }
@@ -525,7 +548,7 @@ export function validation(options?: ValidationOptions): GridPlugin<'validation'
               const pos = { rowIndex: row, colIndex: col };
               const failure = validateCell(pos);
               if (failure) {
-                const entry: InternalEntry = { position: pos, ...failure };
+                const entry = internalEntry(pos, failure);
                 errors.set(positionKey(pos), entry);
                 allErrors.push(publicError(entry));
               }
