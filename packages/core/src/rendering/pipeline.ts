@@ -30,17 +30,34 @@ function cellKey(row: number, col: number): number {
 interface StyledElement extends HTMLElement {
   __bgAppliedStyleKeys?: string[];
 }
+
+interface CellRenderMeta<TData = unknown> {
+  row: TData;
+  column: NormalizedColumnDef<TData>;
+  value: unknown;
+  selected: boolean;
+  active: boolean;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  context: unknown;
+}
 // CSSStyleDeclaration.setProperty expects kebab-case for spec-defined properties.
 // Callers pass camelCase ({fontWeight: '600'}), so convert before forwarding.
 // Custom properties (`--foo`) and already-kebab keys pass through untouched.
+const kebabCache = new Map<string, string>();
 function toKebab(key: string): string {
   if (key.charCodeAt(0) === 45 /* '-' */) return key; // --custom or already kebab
+  const cached = kebabCache.get(key);
+  if (cached) return cached;
   let out = '';
   for (let i = 0; i < key.length; i++) {
     const c = key.charCodeAt(i);
     if (c >= 65 && c <= 90 /* A-Z */) out += '-' + key[i]!.toLowerCase();
     else out += key[i];
   }
+  kebabCache.set(key, out);
   return out;
 }
 function applyCellStyles(el: HTMLElement, styles: Record<string, string>): void {
@@ -73,6 +90,7 @@ function resetAppliedStyles(el: HTMLElement): void {
 export class RenderingPipeline<TData = unknown> {
   private cellPool = new Map<number, HTMLElement>();
   private cleanupFns = new Map<number, () => void>();
+  private cellMeta = new Map<number, CellRenderMeta<TData>>();
   private cellTypes = new Map<string, CellTypeRenderer>();
   private globalCellRenderer: CellRenderer<TData> | null = null;
   /** Frozen cells keyed by numeric key with their base left offset */
@@ -121,6 +139,7 @@ export class RenderingPipeline<TData = unknown> {
     frozenLeftColumns = 0,
     scrollLeft = 0,
     frozenTopRows = 0,
+    opts: { force?: boolean } = {},
   ): void {
     const visibleKeys = this.visibleKeys;
     visibleKeys.clear();
@@ -190,6 +209,7 @@ export class RenderingPipeline<TData = unknown> {
       if (!visibleKeys.has(key)) {
         this.cleanupFns.get(key)?.();
         this.cleanupFns.delete(key);
+        this.cellMeta.delete(key);
         this.frozenCells.delete(key);
         this.recyclePool.push(element);
         this.cellPool.delete(key);
@@ -233,15 +253,43 @@ export class RenderingPipeline<TData = unknown> {
         // We still update position so the cell stays correctly placed on scroll.
         const isEditingCell = cell.classList.contains('bg-cell--editing');
 
-        if (!isEditingCell) {
-          cell.className = 'bg-cell';
-        }
-
         // Position — snap to device pixel boundaries for crisp rendering at all zoom levels
         const top = snapToDevicePixel(measurements.rowOffsets[row]!);
         const left = snapToDevicePixel(measurements.colOffsets[col]!);
         const height = snapToDevicePixel(measurements.rowOffsets[row + 1]!) - top;
         const width = snapToDevicePixel(measurements.colOffsets[col + 1]!) - left;
+
+        const column = columns[col]!;
+        const rowData = data[row]!;
+        const value = getCellValue(rowData, column, row);
+
+        // Selection classes
+        const selected = isCellInSelection(row, col, selection);
+        const active = isCellActive(row, col, selection);
+
+        const contextValue = this.contextRef?.current;
+        const previousMeta = this.cellMeta.get(key);
+        const forceRender = opts.force === true;
+        const contentUnchanged =
+          !forceRender &&
+          !isEditingCell &&
+          previousMeta !== undefined &&
+          previousMeta.row === rowData &&
+          previousMeta.column === column &&
+          Object.is(previousMeta.value, value) &&
+          previousMeta.selected === selected &&
+          previousMeta.active === active &&
+          previousMeta.top === top &&
+          previousMeta.left === left &&
+          previousMeta.width === width &&
+          previousMeta.height === height &&
+          previousMeta.context === contextValue;
+
+        if (!isEditingCell && !contentUnchanged) {
+          cell.className = 'bg-cell';
+        } else {
+          cell.classList.add('bg-cell');
+        }
 
         cell.style.transform = `translate3d(${left}px, ${top}px, 0)`;
         cell.style.width = `${width}px`;
@@ -262,20 +310,19 @@ export class RenderingPipeline<TData = unknown> {
         cell.classList.toggle('bg-cell--frozen-col-last', col === frozenLeftColumns - 1);
         cell.classList.toggle('bg-cell--frozen-row-last', frozenTopRows > 0 && row === frozenTopRows - 1);
 
-        // Selection classes
-        const selected = isCellInSelection(row, col, selection);
-        const active = isCellActive(row, col, selection);
         cell.classList.toggle('bg-cell--selected', selected);
         cell.classList.toggle('bg-cell--active', active);
 
         // Skip content re-render for actively edited cells — preserve the live editor.
         if (isEditingCell) continue;
 
-        // Build context
-        const column = columns[col]!;
-        const rowData = data[row]!;
-        const value = getCellValue(rowData, column, row);
+        // Scroll-window changes usually keep most visible cells as the same
+        // logical row/column. Keep their rendered DOM intact and only move the
+        // container; this turns a one-row scroll from "rerender every cell" into
+        // "render the newly-entered cells".
+        if (contentUnchanged) continue;
 
+        // Build context
         const context: CellRenderContext<TData> = {
           rowIndex: row,
           colIndex: col,
@@ -285,11 +332,12 @@ export class RenderingPipeline<TData = unknown> {
           isSelected: selected,
           isActive: active,
           style: { top, left, width, height },
-          context: this.contextRef?.current,
+          context: contextValue,
         };
 
         // Cleanup previous render
         this.cleanupFns.get(key)?.();
+        this.cleanupFns.delete(key);
 
         // Apply column-level alignment before render (renderer can override)
         cell.style.textAlign = column.align ?? '';
@@ -316,6 +364,18 @@ export class RenderingPipeline<TData = unknown> {
         if (cleanup) {
           this.cleanupFns.set(key, cleanup);
         }
+        this.cellMeta.set(key, {
+          row: rowData,
+          column,
+          value,
+          selected,
+          active,
+          top,
+          left,
+          width,
+          height,
+          context: contextValue,
+        });
 
         // Apply column-level styles (cellStyle). Row-level styles are handled
         // by the row-bg strip (Phase 1.5) — applyCellStyles' clear-old-keys
@@ -366,6 +426,7 @@ export class RenderingPipeline<TData = unknown> {
     this.frozenCells.clear();
     this.cellPool.clear();
     this.cleanupFns.clear();
+    this.cellMeta.clear();
     for (const el of this.rowBgPool.values()) el.remove();
     for (const el of this.rowBgRecyclePool) el.remove();
     this.rowBgPool.clear();

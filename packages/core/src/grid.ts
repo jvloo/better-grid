@@ -421,6 +421,7 @@ export function createGrid<
     }
 
     const visibleData = getVisibleData();
+    const forceBodyRender = opts.bodyDirty !== false;
 
     // Render non-frozen cells into main cell container
     const frozenCols = state.frozen.left;
@@ -439,6 +440,7 @@ export function createGrid<
       0, // no frozen col handling in main pipeline
       0,
       state.frozen.top,
+      { force: forceBodyRender },
     );
 
     // Render frozen columns into separate overlay (outside scroll container)
@@ -457,6 +459,7 @@ export function createGrid<
         frozenCols, // apply last-frozen-col class
         0,
         state.frozen.top,
+        { force: forceBodyRender },
       );
 
       // Update frozen overlay width and clip scroll container

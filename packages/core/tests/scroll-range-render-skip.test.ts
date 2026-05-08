@@ -90,4 +90,48 @@ describe('scroll render throttling', () => {
 
     grid.unmount();
   });
+
+  it('only renders cells entering the virtual range on scroll-window changes', () => {
+    const host = makeHost();
+    let renderCalls = 0;
+
+    const columns: ColumnDef<Row>[] = [
+      {
+        id: 'value',
+        field: 'value',
+        headerName: 'Value',
+        width: 160,
+        cellRenderer: (container: HTMLElement, ctx: CellRenderContext<Row>) => {
+          renderCalls++;
+          container.textContent = String(ctx.value ?? '');
+          container.classList.add('custom-rendered-cell');
+        },
+      },
+    ];
+    const data = Array.from({ length: 100 }, (_, id) => ({ id, value: `Row ${id}` }));
+    const grid = createGrid<Row>({
+      columns,
+      data,
+      virtualization: { overscanRows: 0, overscanColumns: 0 },
+      rowHeight: 40,
+      headerHeight: 40,
+    });
+
+    grid.mount(host);
+
+    const viewport = host.querySelector('.bg-grid__viewport') as HTMLElement;
+    const scrollbar = host.querySelector('.bg-grid__scroll') as HTMLElement;
+    setClientSize(viewport, 400, 250);
+    setClientSize(scrollbar, 400, 250);
+    grid.refresh();
+
+    renderCalls = 0;
+    scrollbar.scrollTop = 41;
+    scrollbar.dispatchEvent(new Event('scroll'));
+
+    expect(renderCalls).toBe(1);
+    expect(host.querySelector('.bg-cell[data-row="1"]')?.classList.contains('custom-rendered-cell')).toBe(true);
+
+    grid.unmount();
+  });
 });
