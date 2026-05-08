@@ -139,6 +139,13 @@ export function createGrid<
   let resizeObserver: ResizeObserver | null = null;
   let offFrozenClipScrollbarOffsets: (() => void) | null = null;
   let mounted = false;
+  let floatingScrollbarMetricsDirty = true;
+  const floatingScrollbarMetrics = {
+    hMaxScroll: 0,
+    hMaxTravel: 0,
+    vMaxScroll: 0,
+    vMaxTravel: 0,
+  };
 
   const singleHeaderRowHeight = options.headerHeight ?? DEFAULT_HEADER_HEIGHT;
   const headerRows = options.headers;
@@ -285,25 +292,31 @@ export function createGrid<
 
   let renderPending = false;
   let headersDirty = true; // track whether headers need re-rendering
-  function scheduleRender(opts: { headersDirty?: boolean } = {}): void {
-    if (!viewport || !cellContainer || renderPending) return;
-    renderPending = true;
+  let bodyDirty = true;
+  function scheduleRender(opts: { headersDirty?: boolean; bodyDirty?: boolean } = {}): void {
+    if (!viewport || !cellContainer) return;
     if (opts.headersDirty !== false) {
       headersDirty = true;
     }
+    if (opts.bodyDirty !== false) {
+      bodyDirty = true;
+    }
+    if (renderPending) return;
+    renderPending = true;
     requestAnimationFrame(() => {
       renderPending = false;
-      render();
+      const shouldRenderBody = bodyDirty;
+      bodyDirty = false;
+      render({ bodyDirty: shouldRenderBody });
     });
   }
 
-  function render(): void {
+  function render(opts: { bodyDirty?: boolean } = {}): void {
     if (!viewport || !scrollSizer || !cellContainer) return;
 
     let state = store.getState();
     const measurements = virtualization.getMeasurements();
     applyInitialFreezeClip(state, measurements);
-    const visibleData = getVisibleData();
 
     // Update scroll sizer (inside fakeScrollbar) for scrollbar dimensions.
     // The sizer must be tall enough so that at max scrollTop the last row
@@ -333,7 +346,7 @@ export function createGrid<
       state = store.getState();
     }
 
-    updateFloatingScrollbarThumbs();
+    updateFloatingScrollbarThumbs(true);
 
     // Cell container sized to full data dimensions (cells at data-space positions).
     // Container-level transform shifts them into the viewport.
@@ -393,14 +406,21 @@ export function createGrid<
 
     // Reuse same object ref when indices unchanged so store skip kicks in
     const prevRange = state.visibleRange;
-    if (
+    const rangeChanged =
       prevRange.startRow !== visibleRange.startRow ||
       prevRange.endRow !== visibleRange.endRow ||
       prevRange.startCol !== visibleRange.startCol ||
-      prevRange.endCol !== visibleRange.endCol
-    ) {
+      prevRange.endCol !== visibleRange.endCol;
+    if (rangeChanged) {
       store.update('visibleRange', () => ({ visibleRange }));
     }
+
+    const shouldRenderBody = opts.bodyDirty !== false || rangeChanged;
+    if (!shouldRenderBody) {
+      return;
+    }
+
+    const visibleData = getVisibleData();
 
     // Render non-frozen cells into main cell container
     const frozenCols = state.frozen.left;
@@ -698,15 +718,56 @@ export function createGrid<
     }
 
     store.setScroll(scrollTop, scrollLeft);
-    updateFloatingScrollbarThumbs();
+    updateFloatingScrollbarThumbs(false);
     applyScrollTransforms(scrollTop, scrollLeft);
 
     if (opts.emit) {
       emitter.emit('scroll', { scrollTop, scrollLeft });
     }
     if (opts.schedule) {
-      scheduleRender({ headersDirty: false });
+      if (bodyDirty || headersDirty || hasVisibleRangeChangedForScroll(scrollTop, scrollLeft)) {
+        scheduleRender({ headersDirty: false, bodyDirty: false });
+      }
     }
+  }
+
+  function hasVisibleRangeChangedForScroll(scrollTop: number, scrollLeft: number): boolean {
+    if (!viewport) return true;
+    const state = store.getState();
+    const pinnedTopH = getPinnedTopHeight();
+    const pinnedBottomH = getPinnedBottomHeight();
+    const zoneDims = computeZoneDimensions(
+      {
+        frozenTopRows: state.frozen.top,
+        frozenBottomRows: 0,
+        frozenLeftColumns: state.frozen.left,
+        frozenRightColumns: 0,
+      },
+      (i) =>
+        state.rowHeights.length > 0 ? (state.rowHeights[i] ?? DEFAULT_ROW_HEIGHT) : getRowHeight(i),
+      (i) => columnManager.getWidth(i),
+    );
+    const effectiveFrozenLeftWidth =
+      freezeClipWidth !== null
+        ? clamp(freezeClipWidth, 0, zoneDims.frozenLeftWidth)
+        : zoneDims.frozenLeftWidth;
+    const visibleRange = virtualization.computeVisibleRange(
+      scrollTop,
+      scrollLeft + getFreezeClipOffset(),
+      viewport.clientWidth,
+      viewport.clientHeight - headerHeight - pinnedTopH - pinnedBottomH,
+      zoneDims.frozenTopHeight,
+      zoneDims.frozenBottomHeight,
+      effectiveFrozenLeftWidth,
+      zoneDims.frozenRightWidth,
+    );
+    const prevRange = state.visibleRange;
+    return (
+      prevRange.startRow !== visibleRange.startRow ||
+      prevRange.endRow !== visibleRange.endRow ||
+      prevRange.startCol !== visibleRange.startCol ||
+      prevRange.endCol !== visibleRange.endCol
+    );
   }
 
   function handleScroll(): void {
@@ -1199,7 +1260,8 @@ export function createGrid<
       floatingVTrack.style.bottom = `${bottom + scrollbarSize + bottomEdgeInset}px`;
       floatingVTrack.style.right = `${right}px`;
     }
-    updateFloatingScrollbarThumbs();
+    floatingScrollbarMetricsDirty = true;
+    updateFloatingScrollbarThumbs(true);
   }
 
   function getFloatingScrollbarSize(): number {
@@ -1216,9 +1278,12 @@ export function createGrid<
     return Number.isFinite(parsed) ? parsed : 1;
   }
 
-  function updateFloatingScrollbarThumbs(): void {
+  function updateFloatingScrollbarThumbs(measure = floatingScrollbarMetricsDirty): void {
     if (!isFloatingScrollbar || !fakeScrollbar) return;
-    if (floatingHTrack && floatingHThumb) {
+    if (measure) {
+      floatingScrollbarMetricsDirty = false;
+    }
+    if (floatingHTrack && floatingHThumb && measure) {
       const trackWidth = floatingHTrack.clientWidth;
       const scrollWidth = fakeScrollbar.scrollWidth;
       const clientWidth = fakeScrollbar.clientWidth;
@@ -1228,13 +1293,12 @@ export function createGrid<
           ? clamp(Math.round((clientWidth / scrollWidth) * trackWidth), 20, trackWidth)
           : trackWidth;
       const maxTravel = Math.max(0, trackWidth - thumbWidth);
-      const offset =
-        maxScroll > 0 && maxTravel > 0 ? (fakeScrollbar.scrollLeft / maxScroll) * maxTravel : 0;
+      floatingScrollbarMetrics.hMaxScroll = maxScroll;
+      floatingScrollbarMetrics.hMaxTravel = maxTravel;
       floatingHTrack.style.visibility = maxScroll > 0 && trackWidth > 0 ? 'visible' : 'hidden';
       floatingHThumb.style.width = `${thumbWidth}px`;
-      floatingHThumb.style.transform = `translate3d(${snapToDevicePixel(offset)}px, 0, 0)`;
     }
-    if (floatingVTrack && floatingVThumb) {
+    if (floatingVTrack && floatingVThumb && measure) {
       const trackHeight = floatingVTrack.clientHeight;
       const scrollHeight = fakeScrollbar.scrollHeight;
       const clientHeight = fakeScrollbar.clientHeight;
@@ -1244,10 +1308,21 @@ export function createGrid<
           ? clamp(Math.round((clientHeight / scrollHeight) * trackHeight), 20, trackHeight)
           : trackHeight;
       const maxTravel = Math.max(0, trackHeight - thumbHeight);
-      const offset =
-        maxScroll > 0 && maxTravel > 0 ? (fakeScrollbar.scrollTop / maxScroll) * maxTravel : 0;
+      floatingScrollbarMetrics.vMaxScroll = maxScroll;
+      floatingScrollbarMetrics.vMaxTravel = maxTravel;
       floatingVTrack.style.visibility = maxScroll > 0 && trackHeight > 0 ? 'visible' : 'hidden';
       floatingVThumb.style.height = `${thumbHeight}px`;
+    }
+    if (floatingHThumb) {
+      const { hMaxScroll, hMaxTravel } = floatingScrollbarMetrics;
+      const offset =
+        hMaxScroll > 0 && hMaxTravel > 0 ? (fakeScrollbar.scrollLeft / hMaxScroll) * hMaxTravel : 0;
+      floatingHThumb.style.transform = `translate3d(${snapToDevicePixel(offset)}px, 0, 0)`;
+    }
+    if (floatingVThumb) {
+      const { vMaxScroll, vMaxTravel } = floatingScrollbarMetrics;
+      const offset =
+        vMaxScroll > 0 && vMaxTravel > 0 ? (fakeScrollbar.scrollTop / vMaxScroll) * vMaxTravel : 0;
       floatingVThumb.style.transform = `translate3d(0, ${snapToDevicePixel(offset)}px, 0)`;
     }
   }
