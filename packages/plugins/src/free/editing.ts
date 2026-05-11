@@ -973,6 +973,40 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         return next;
       }
 
+      function formatNumberInputValue(raw: string): string {
+        if (!raw) return raw;
+        const negative = raw.startsWith('-');
+        const body = negative ? raw.slice(1) : raw;
+        const hasDecimal = body.includes('.');
+        const [intPart = '', ...decParts] = body.split('.');
+        const cleanInt = intPart.replace(/\D/g, '');
+        const groupedInt = cleanInt.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        const decPart = decParts.join('').replace(/\D/g, '');
+        const result = hasDecimal ? `${groupedInt}.${decPart}` : groupedInt;
+        return negative ? `-${result}` : result;
+      }
+
+      function getContentEditableTextOffset(element: HTMLElement): number {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return (element.textContent ?? '').length;
+        const range = selection.getRangeAt(0);
+        if (!element.contains(range.endContainer)) return (element.textContent ?? '').length;
+        const before = range.cloneRange();
+        before.selectNodeContents(element);
+        before.setEnd(range.endContainer, range.endOffset);
+        return before.toString().length;
+      }
+
+      function getNumericOffset(text: string, count: number): number {
+        let pos = 0;
+        let seen = 0;
+        while (pos < text.length && seen < count) {
+          if (/[0-9.-]/.test(text[pos]!)) seen++;
+          pos++;
+        }
+        return pos;
+      }
+
       function resolveInputCellBoolean(
         setting: InputCellBoolean | undefined,
         fallback: boolean,
@@ -1983,9 +2017,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const maxEditorHeight = editorHeight * 4;
           const basePadLeft = parseFloat(anchorComputed.paddingLeft) || 12;
           const basePadRight = parseFloat(anchorComputed.paddingRight) || basePadLeft;
-          const valuePadLeft = Math.max(basePadLeft, prefixSpace);
-          const valuePadRight = Math.max(basePadRight, suffixSpace);
-          measureSpan.style.cssText = `position:fixed;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;font:${cellFont};padding:0 ${valuePadRight}px 0 ${valuePadLeft}px;`;
+          const isCenteredText = cellTextAlign === 'center' || cellTextAlign === '-webkit-center';
+          const valuePadLeft = isCenteredText ? basePadLeft : Math.max(basePadLeft, prefixSpace);
+          const valuePadRight = isCenteredText ? basePadRight : Math.max(basePadRight, suffixSpace);
+          const measurePadLeft = valuePadLeft + (isCenteredText ? prefixSpace : 0);
+          const measurePadRight = valuePadRight + (isCenteredText ? suffixSpace : 0);
+          measureSpan.style.cssText = `position:fixed;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;font:${cellFont};padding:0 ${measurePadRight}px 0 ${measurePadLeft}px;`;
 
           const createFloatAdornment = (
             text: string,
@@ -2034,6 +2071,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           // Number editor: add inputmode hint and restrict input to numeric characters
           if (numberColumn) {
             ed.setAttribute('inputmode', 'decimal');
+            ed.textContent = formatNumberInputValue(ed.textContent ?? '');
             const numberPrecision = getPrecision(numberColumn, rowData);
             const numberMin = getMin(numberColumn, rowData);
             const numberMax = getMax(numberColumn, rowData);
@@ -2054,7 +2092,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                 }
                 if (numberMin != null && next < numberMin) next = numberMin;
                 if (numberMax != null && next > numberMax) next = numberMax;
-                ed.textContent = String(next);
+                ed.textContent = formatNumberInputValue(String(next));
                 setContentEditableSelection(ed, 0, (ed.textContent ?? '').length);
                 return;
               }
@@ -2120,13 +2158,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                   if (!Number.isNaN(projectedNum)) {
                     if (numberMin != null && projectedNum < numberMin) {
                       e.preventDefault();
-                      ed.textContent = String(numberMin);
+                      ed.textContent = formatNumberInputValue(String(numberMin));
                       setContentEditableSelection(ed, 0, ed.textContent.length);
                       return;
                     }
                     if (numberMax != null && projectedNum > numberMax) {
                       e.preventDefault();
-                      ed.textContent = String(numberMax);
+                      ed.textContent = formatNumberInputValue(String(numberMax));
                       setContentEditableSelection(ed, 0, ed.textContent.length);
                       return;
                     }
@@ -2136,6 +2174,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               }
               // Block everything else
               e.preventDefault();
+            });
+
+            ed.addEventListener('input', () => {
+              const before = ed.textContent ?? '';
+              const caret = getContentEditableTextOffset(ed);
+              const numericBeforeCaret = before.slice(0, caret).replace(/[^0-9.-]/g, '').length;
+              const formatted = formatNumberInputValue(before);
+              if (formatted === before) return;
+              ed.textContent = formatted;
+              setContentEditableCaret(ed, getNumericOffset(formatted, numericBeforeCaret));
             });
           }
 
@@ -2356,30 +2404,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
           // Thousand-separator formatting — retain comma grouping
           // while editing ("27,000,000") rather than reverting to the raw
-          // "27000000". Uses toLocaleString to insert commas in the integer
-          // portion; decimal portion is kept verbatim so mid-typing strings
+          // "27000000". Decimal input is kept as typed so mid-typing strings
           // like "10." don't lose the trailing dot.
-          const formatWithCommas = (raw: string): string => {
-            if (!raw) return raw;
-            // Keep a leading minus if present
-            const negative = raw.startsWith('-');
-            const body = negative ? raw.slice(1) : raw;
-            const [intPart = '', ...decParts] = body.split('.');
-            const decPart = decParts.join('.');
-            const cleanInt = intPart.replace(/\D/g, '');
-            const formattedInt = cleanInt
-              ? Number(cleanInt).toLocaleString('en-AU', { useGrouping: true, maximumFractionDigits: 0 })
-              : '';
-            const result = decPart !== undefined && body.includes('.')
-              ? `${formattedInt}.${decPart.replace(/\D/g, '')}`
-              : formattedInt;
-            return negative ? `-${result}` : result;
-          };
-
           // Format initial display with commas so open-edit matches the
           // read-only display. stripInputAdornments already removed any
           // $/% adornment before this function was called.
-          input.value = formatWithCommas(input.value);
+          input.value = formatNumberInputValue(input.value);
 
           // Reformat on every keystroke + preserve cursor position by
           // counting digits before the caret before + after reformat.
@@ -2387,7 +2417,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             const before = input.value;
             const caret = input.selectionStart ?? before.length;
             const digitsBeforeCaret = before.slice(0, caret).replace(/[^0-9.-]/g, '').length;
-            const reformatted = formatWithCommas(before);
+            const reformatted = formatNumberInputValue(before);
             if (reformatted === before) return;
             input.value = reformatted;
             // Walk forward through the new string until we've passed the
@@ -2414,7 +2444,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               }
               if (numberMin != null && next < numberMin) next = numberMin;
               if (numberMax != null && next > numberMax) next = numberMax;
-              input.value = formatWithCommas(String(next));
+              input.value = formatNumberInputValue(String(next));
               input.select();
               return;
             }

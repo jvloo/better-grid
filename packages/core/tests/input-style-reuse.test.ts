@@ -167,11 +167,75 @@ describe('editing inputStyle reuse', () => {
 
     const floatBox = document.body.querySelector('.bg-cell-editor-float') as HTMLElement | null;
     const inlineInput = host.querySelector('input.bg-cell-editor--inline');
+    const editor = floatBox?.querySelector('.bg-cell-editor') as HTMLElement | null;
+    const suffix = floatBox?.querySelector('.bg-cell-editor-float__suffix') as HTMLElement | null;
     expect(floatBox).not.toBeNull();
     expect(floatBox?.textContent).toContain('10.00');
     expect(floatBox?.textContent).toContain('%');
+    expect(editor).not.toBeNull();
+    expect(suffix).not.toBeNull();
+    expect(getComputedStyle(editor!).paddingLeft).toBe('8px');
+    expect(getComputedStyle(editor!).paddingRight).toBe('8px');
     expect(inlineInput).toBeNull();
 
     grid.unmount();
+  });
+
+  it('keeps thousand separators while typing in floating number editors', () => {
+    const originalGetRect = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect(): DOMRect {
+      if (this instanceof HTMLElement && this.style.visibility === 'hidden') {
+        const styles = getComputedStyle(this);
+        const padLeft = parseFloat(styles.paddingLeft) || 0;
+        const padRight = parseFloat(styles.paddingRight) || 0;
+        const textWidth = (this.textContent ?? '').length * 7.5;
+        return makeRect(-9999, -9999, textWidth + padLeft + padRight, 16);
+      }
+      return originalGetRect.call(this);
+    };
+
+    try {
+      const host = makeHost();
+      const columns: ColumnDef<Row>[] = [
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          width: 100,
+          align: 'center',
+          editable: true,
+          cellType: 'number',
+        },
+      ];
+      const grid = createGrid<Row>({
+        columns,
+        data: [{ amount: 2700000 }],
+        plugins: [editing({ inputStyle: true, editTrigger: 'click' })],
+      });
+
+      grid.mount(host);
+      grid.refresh();
+
+      grid.plugins.editing.startEdit({ rowIndex: 0, colIndex: 0 });
+
+      const editor = document.body.querySelector('.bg-cell-editor') as HTMLElement;
+      expect(editor).not.toBeNull();
+      expect(editor.textContent).toBe('2,700,000');
+
+      editor.textContent = '27000000';
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '0' }));
+
+      expect(editor.textContent).toBe('27,000,000');
+
+      grid.unmount();
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = originalGetRect;
+    }
   });
 });
