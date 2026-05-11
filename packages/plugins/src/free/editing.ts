@@ -2145,21 +2145,31 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
           function applyFloatingEditorLayout(anchorRect: DOMRect, hostRect?: DOMRect): void {
             measureSpan.textContent = ed.textContent || ' ';
-            const textWidth = measureSpan.offsetWidth + 16;
+            const measuredWidth = Math.ceil(measureSpan.getBoundingClientRect().width);
             const hostLeft = hostRect?.left ?? anchorRect.left;
             const hostRight = hostRect?.right ?? anchorRect.right;
             const hostWidth = hostRect?.width ?? anchorRect.width;
-            const maxWidthToRight = hostRight - anchorRect.left;
-            const useFullWidth = textWidth > maxWidthToRight;
-            const shouldWrap = textWidth > hostWidth;
+            const desiredWidth = Math.max(anchorRect.width, measuredWidth);
+            const shouldWrap = measuredWidth > hostWidth;
+            const editorWidth = shouldWrap ? hostWidth : desiredWidth;
+            const align = (cellTextAlign || '').toLowerCase();
+            let editorLeft = anchorRect.left;
+
+            if (align === 'center') {
+              editorLeft = anchorRect.left + (anchorRect.width - editorWidth) / 2;
+            } else if (align === 'right' || align === 'end') {
+              editorLeft = anchorRect.right - editorWidth;
+            }
+
+            editorLeft = Math.max(hostLeft, Math.min(editorLeft, hostRight - editorWidth));
 
             floatBox.style.top = `${anchorRect.top}px`;
-            if (useFullWidth) {
+            if (shouldWrap) {
               floatBox.style.left = `${hostLeft}px`;
-              floatBox.style.width = `${hostWidth}px`;
+              floatBox.style.width = `${editorWidth}px`;
             } else {
-              floatBox.style.left = `${anchorRect.left}px`;
-              floatBox.style.width = `${Math.max(anchorRect.width, textWidth)}px`;
+              floatBox.style.left = `${editorLeft}px`;
+              floatBox.style.width = `${editorWidth}px`;
             }
 
             if (shouldWrap) {
