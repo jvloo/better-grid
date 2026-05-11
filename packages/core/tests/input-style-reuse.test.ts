@@ -76,7 +76,7 @@ describe('editing inputStyle reuse', () => {
     grid.unmount();
   });
 
-  it('keeps centered input-style floating editors aligned while growing to fit text', () => {
+  it('keeps input-style floating editors left-aligned while growing to fit text', () => {
     const originalGetRect = HTMLElement.prototype.getBoundingClientRect;
     HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect(): DOMRect {
       if (this instanceof HTMLElement && this.style.visibility === 'hidden') {
@@ -131,11 +131,47 @@ describe('editing inputStyle reuse', () => {
       const floatBox = document.body.querySelector('.bg-cell-editor-float') as HTMLElement;
       expect(floatBox).not.toBeNull();
       expect(parseFloat(floatBox.style.width)).toBeCloseTo(95, 0);
-      expect(parseFloat(floatBox.style.left)).toBeCloseTo(92.5, 1);
+      expect(parseFloat(floatBox.style.left)).toBeCloseTo(100, 1);
 
       grid.unmount();
     } finally {
       HTMLElement.prototype.getBoundingClientRect = originalGetRect;
     }
+  });
+
+  it('opens adorned input-style number cells in the floating editor on first edit', () => {
+    const host = makeHost();
+    const columns: ColumnDef<Row>[] = [
+      {
+        id: 'amount',
+        field: 'amount',
+        headerName: 'Amount',
+        width: 100,
+        align: 'center',
+        editable: true,
+        cellType: 'number',
+        unit: '%',
+        valueFormatter: (value) => Number(value).toFixed(2),
+      },
+    ];
+    const grid = createGrid<Row>({
+      columns,
+      data: [{ amount: 10 }],
+      plugins: [editing({ inputStyle: true, editTrigger: 'click' })],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    grid.plugins.editing.startEdit({ rowIndex: 0, colIndex: 0 });
+
+    const floatBox = document.body.querySelector('.bg-cell-editor-float') as HTMLElement | null;
+    const inlineInput = host.querySelector('input.bg-cell-editor--inline');
+    expect(floatBox).not.toBeNull();
+    expect(floatBox?.textContent).toContain('10.00');
+    expect(floatBox?.textContent).toContain('%');
+    expect(inlineInput).toBeNull();
+
+    grid.unmount();
   });
 });

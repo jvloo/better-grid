@@ -1827,7 +1827,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             (!column.cellEditor && (column.cellType === 'number' || column.cellType === 'currency'));
 
           const editValue = initialValue ?? rawStr;
-          const hasAdornedInputBox = !!cellEl.querySelector('.bg-input-box--has-adornment .bg-input-box__value');
           const shouldFloatOverflowInput = displayWasOverflowing && initialValue === undefined;
 
           if (column.cellEditor === 'masked' && column.mask) {
@@ -1843,7 +1842,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               suffix,
             );
             activeEditor = createTextInput(cellEl, displayText || rawStr, false, isNumberEditor ? column : undefined, rowData, clickEvent);
-          } else if (config.editorMode === 'inline' || hasAdornedInputBox) {
+          } else if (config.editorMode === 'inline') {
             activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined, rowData, clickEvent, inputEllipsisEnabled);
           } else if (isNumberEditor) {
             activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, column, rowData, clickEvent);
@@ -2152,16 +2151,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             const desiredWidth = Math.max(anchorRect.width, measuredWidth);
             const shouldWrap = measuredWidth > hostWidth;
             const editorWidth = shouldWrap ? hostWidth : desiredWidth;
-            const align = (cellTextAlign || '').toLowerCase();
-            let editorLeft = anchorRect.left;
-
-            if (align === 'center') {
-              editorLeft = anchorRect.left + (anchorRect.width - editorWidth) / 2;
-            } else if (align === 'right' || align === 'end') {
-              editorLeft = anchorRect.right - editorWidth;
-            }
-
-            editorLeft = Math.max(hostLeft, Math.min(editorLeft, hostRight - editorWidth));
+            const editorLeft = Math.max(hostLeft, Math.min(anchorRect.left, hostRight - editorWidth));
 
             floatBox.style.top = `${anchorRect.top}px`;
             if (shouldWrap) {
