@@ -167,6 +167,12 @@ const INPUT_CSS = `
 const CHEVRON_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E")`;
 const EDITOR_HIGHLIGHT_INSET_Y = 8;
 
+interface FloatingInputGeometry {
+  valueRect?: DOMRect;
+  prefixRect?: DOMRect;
+  suffixRect?: DOMRect;
+}
+
 // Module-level canvas reused across caret-from-x measurements (avoids
 // allocating a canvas on every cell click).
 let caretMeasureCanvas: HTMLCanvasElement | null = null;
@@ -1803,6 +1809,15 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // If the input box is structured as value+unit, clear only the value span
         // so the unit suffix stays visible throughout editing.
         const valueSpan = inputBox?.querySelector('.bg-input-box__value') as HTMLElement | null;
+        const prefixSpan = inputBox?.querySelector('.bg-input-box__prefix') as HTMLElement | null;
+        const suffixSpan = inputBox?.querySelector('.bg-input-box__suffix, .bg-input-box__unit') as HTMLElement | null;
+        const floatingInputGeometry: FloatingInputGeometry | undefined = inputBox
+          ? {
+              valueRect: valueSpan?.getBoundingClientRect(),
+              prefixRect: prefixSpan?.getBoundingClientRect(),
+              suffixRect: suffixSpan?.getBoundingClientRect(),
+            }
+          : undefined;
         if (valueSpan) {
           valueSpan.textContent = '';
         } else if (inputBox) {
@@ -1875,13 +1890,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               prefix,
               suffix,
             );
-            activeEditor = createTextInput(cellEl, displayText || rawStr, false, isNumberEditor ? column : undefined, rowData, clickEvent);
+            activeEditor = createTextInput(cellEl, displayText || rawStr, false, isNumberEditor ? column : undefined, rowData, clickEvent, undefined, floatingInputGeometry);
           } else if (config.editorMode === 'inline') {
             activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined, rowData, clickEvent, inputEllipsisEnabled);
           } else if (isNumberEditor) {
-            activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, column, rowData, clickEvent);
+            activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, column, rowData, clickEvent, undefined, floatingInputGeometry);
           } else {
-            activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, undefined, undefined, clickEvent);
+            activeEditor = createTextInput(cellEl, editValue, initialValue !== undefined, undefined, undefined, clickEvent, undefined, floatingInputGeometry);
           }
         }
       }
@@ -1898,6 +1913,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         rowData?: unknown,
         clickEvent?: MouseEvent,
         selectionRange?: { start: number; end: number },
+        sourceGeometry?: FloatingInputGeometry,
       ): HTMLInputElement {
           // Use input box rect if present (inputStyle mode), otherwise cell rect
           const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
@@ -1919,7 +1935,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const initialMaxWidth = gridRect?.width ?? cellRect.width;
           const anchorComputed = getComputedStyle(anchorEl);
           const valueSource = inputBox?.querySelector('.bg-input-box__value') as HTMLElement | null;
-          const valueSourceRect = valueSource?.getBoundingClientRect();
+          const valueSourceRect = sourceGeometry?.valueRect ?? valueSource?.getBoundingClientRect();
           const valueComputed = valueSource ? getComputedStyle(valueSource) : null;
           const editorComputed = valueComputed ?? anchorComputed;
           const cellFont = editorComputed.font;
@@ -2068,10 +2084,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             source: HTMLElement | null,
             side: 'left' | 'right',
             width: number,
+            sourceRect?: DOMRect,
           ): HTMLElement | null => {
             if (!text) return null;
             const sourceStyles = source ? getComputedStyle(source) : anchorComputed;
-            const sourceRect = source?.getBoundingClientRect();
+            sourceRect = sourceRect ?? source?.getBoundingClientRect();
             const sourceWidth = sourceRect?.width ?? width;
             const sourceInsetLeft = sourceRect
               ? Math.max(0, sourceRect.left - cellRect.left)
@@ -2115,8 +2132,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             white-space:nowrap;
           `;
 
-          const prefixEl = createFloatAdornment(prefixText, prefixSource, 'left', prefixSpace);
-          const suffixEl = createFloatAdornment(suffixText, suffixSource, 'right', suffixSpace);
+          const prefixEl = createFloatAdornment(prefixText, prefixSource, 'left', prefixSpace, sourceGeometry?.prefixRect);
+          const suffixEl = createFloatAdornment(suffixText, suffixSource, 'right', suffixSpace, sourceGeometry?.suffixRect);
           if (prefixEl) floatBox.appendChild(prefixEl);
           floatBox.appendChild(ed);
           if (suffixEl) floatBox.appendChild(suffixEl);

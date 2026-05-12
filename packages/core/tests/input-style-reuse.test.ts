@@ -168,7 +168,8 @@ describe('editing inputStyle reuse', () => {
     const valueSpan = cell.querySelector('.bg-input-box__value') as HTMLElement;
     const sourceSuffix = cell.querySelector('.bg-input-box__suffix') as HTMLElement;
     inputBox.getBoundingClientRect = () => makeRect(100, 45, 80, 30);
-    valueSpan.getBoundingClientRect = () => makeRect(110, 52, 60, 16);
+    valueSpan.getBoundingClientRect = () =>
+      valueSpan.textContent ? makeRect(110, 52, 60, 16) : makeRect(100, 45, 80, 30);
     sourceSuffix.getBoundingClientRect = () => makeRect(152, 45, 10, 30);
 
     grid.plugins.editing.startEdit({ rowIndex: 0, colIndex: 0 });
