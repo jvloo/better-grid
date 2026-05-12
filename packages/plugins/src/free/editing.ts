@@ -2043,10 +2043,24 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const valueInsetRight = valueSourceRect
             ? Math.max(0, cellRect.right - valueSourceRect.right)
             : 0;
+          const valueInsetTop = valueSourceRect
+            ? Math.max(0, valueSourceRect.top - cellRect.top)
+            : 0;
+          const valueInsetBottom = valueSourceRect
+            ? Math.max(0, cellRect.bottom - valueSourceRect.bottom)
+            : 0;
           const valueInsetWidth = valueInsetLeft + valueInsetRight;
+          const valueInsetHeight = valueInsetTop + valueInsetBottom;
           const valueInsetStyle = valueComputed
-            ? `margin-left:${valueInsetLeft}px; margin-right:${valueInsetRight}px; width:calc(100% - ${valueInsetWidth}px);`
+            ? `margin-left:${valueInsetLeft}px; margin-right:${valueInsetRight}px; margin-top:${valueInsetTop}px; margin-bottom:${valueInsetBottom}px; width:calc(100% - ${valueInsetWidth}px);`
             : '';
+          const singleLineEditorHeight = valueComputed && valueSourceRect
+            ? Math.max(1, cellRect.height - valueInsetHeight)
+            : editorHeight;
+          const singleLineContentLineHeight = valueComputed
+            ? (editorComputed.lineHeight || 'normal')
+            : `${contentLineHeight}px`;
+          const singleLinePadY = valueComputed ? 0 : vertPad;
           measureSpan.style.cssText = `position:fixed;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;font:${cellFont};padding:0 ${measurePadRight}px 0 ${measurePadLeft}px;`;
 
           const createFloatAdornment = (
@@ -2090,12 +2104,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             outline:none; margin:0;
             ${valueInsetStyle}
             font-family:${editorComputed.fontFamily}; font-size:${editorComputed.fontSize};
-            font-weight:${editorComputed.fontWeight}; line-height:${contentLineHeight}px;
+            font-weight:${editorComputed.fontWeight}; line-height:${singleLineContentLineHeight};
             color:${editorComputed.color}; letter-spacing:${cellLetterSpacing};
             background:transparent; box-sizing:border-box;
-            padding:${vertPad}px ${valuePadRight}px ${vertPad}px ${valuePadLeft}px; text-align:${cellTextAlign};
-            height:${editorHeight}px;
-            min-height:${editorHeight}px;
+            padding:${singleLinePadY}px ${valuePadRight}px ${singleLinePadY}px ${valuePadLeft}px; text-align:${cellTextAlign};
+            height:${singleLineEditorHeight}px;
+            min-height:${singleLineEditorHeight}px;
             max-height:${maxEditorHeight}px;
             overflow:hidden;
             white-space:nowrap;
@@ -2263,10 +2277,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             } else {
               ed.style.whiteSpace = 'nowrap';
               ed.style.wordBreak = '';
-              ed.style.lineHeight = `${contentLineHeight}px`;
+              ed.style.lineHeight = singleLineContentLineHeight;
               ed.style.overflow = 'hidden';
-              ed.style.padding = `${vertPad}px ${valuePadRight}px ${vertPad}px ${valuePadLeft}px`;
-              ed.style.height = `${editorHeight}px`;
+              ed.style.padding = `${singleLinePadY}px ${valuePadRight}px ${singleLinePadY}px ${valuePadLeft}px`;
+              ed.style.height = `${singleLineEditorHeight}px`;
               floatBox.style.height = `${anchorRect.height}px`;
               floatBox.style.minHeight = '';
             }

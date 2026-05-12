@@ -168,7 +168,7 @@ describe('editing inputStyle reuse', () => {
     const valueSpan = cell.querySelector('.bg-input-box__value') as HTMLElement;
     const sourceSuffix = cell.querySelector('.bg-input-box__suffix') as HTMLElement;
     inputBox.getBoundingClientRect = () => makeRect(100, 45, 80, 30);
-    valueSpan.getBoundingClientRect = () => makeRect(110, 45, 60, 30);
+    valueSpan.getBoundingClientRect = () => makeRect(110, 52, 60, 16);
     sourceSuffix.getBoundingClientRect = () => makeRect(152, 45, 10, 30);
 
     grid.plugins.editing.startEdit({ rowIndex: 0, colIndex: 0 });
@@ -186,6 +186,8 @@ describe('editing inputStyle reuse', () => {
     expect(getComputedStyle(editor!).paddingRight).toBe('18px');
     expect(getComputedStyle(editor!).marginLeft).toBe('10px');
     expect(getComputedStyle(editor!).marginRight).toBe('10px');
+    expect(getComputedStyle(editor!).marginTop).toBe('7px');
+    expect(getComputedStyle(editor!).height).toBe('16px');
     expect(getComputedStyle(suffix!).right).toBe('18px');
     expect(getComputedStyle(suffix!).width).toBe('10px');
     expect(inlineInput).toBeNull();
