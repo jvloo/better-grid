@@ -197,6 +197,138 @@ describe('editing inputStyle reuse', () => {
     grid.unmount();
   });
 
+  it('uses adornment-aware overflow when choosing inline vs floating editors', () => {
+    const originalGetRect = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect(): DOMRect {
+      if (this instanceof HTMLElement && this.style.visibility === 'hidden') {
+        const textWidth = (this.textContent ?? '').length * 7.5;
+        return makeRect(-9999, -9999, textWidth, 16);
+      }
+      return originalGetRect.call(this);
+    };
+
+    try {
+      const host = makeHost();
+      const columns: ColumnDef<Row>[] = [
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          width: 50,
+          align: 'center',
+          editable: true,
+          cellType: 'number',
+          unit: '%',
+          valueFormatter: (value) => Number(value).toFixed(2),
+        },
+      ];
+      const grid = createGrid<Row>({
+        columns,
+        data: [{ amount: 10 }],
+        plugins: [editing({ inputStyle: true, editTrigger: 'click', editorMode: 'inline' })],
+      });
+
+      grid.mount(host);
+      grid.refresh();
+
+      const cell = host.querySelector('.bg-cell[data-row="0"][data-col="0"]') as HTMLElement;
+      const inputBox = cell.querySelector('.bg-input-box') as HTMLElement;
+      const valueSpan = cell.querySelector('.bg-input-box__value') as HTMLElement;
+      const sourceSuffix = cell.querySelector('.bg-input-box__suffix') as HTMLElement;
+      inputBox.getBoundingClientRect = () => makeRect(100, 45, 50, 30);
+      valueSpan.getBoundingClientRect = () =>
+        valueSpan.textContent ? makeRect(110, 52, 30, 16) : makeRect(100, 45, 50, 30);
+      sourceSuffix.getBoundingClientRect = () => makeRect(132, 45, 8, 30);
+
+      grid.plugins.editing.startEdit({ rowIndex: 0, colIndex: 0 });
+
+      expect(document.body.querySelector('.bg-cell-editor-float')).not.toBeNull();
+      expect(host.querySelector('input.bg-cell-editor--inline')).toBeNull();
+
+      grid.unmount();
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = originalGetRect;
+    }
+  });
+
+  it('promotes and demotes inline adorned editors as edited text overflows or fits', () => {
+    const originalGetRect = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect(): DOMRect {
+      if (this instanceof HTMLElement && this.style.visibility === 'hidden') {
+        const textWidth = (this.textContent ?? '').length * 7.5;
+        return makeRect(-9999, -9999, textWidth, 16);
+      }
+      return originalGetRect.call(this);
+    };
+
+    try {
+      const host = makeHost();
+      const columns: ColumnDef<Row>[] = [
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          width: 100,
+          align: 'center',
+          editable: true,
+          cellType: 'number',
+          unit: '%',
+          valueFormatter: (value) => Number(value).toFixed(2),
+        },
+      ];
+      const grid = createGrid<Row>({
+        columns,
+        data: [{ amount: 1 }],
+        plugins: [editing({ inputStyle: true, editTrigger: 'click', editorMode: 'inline' })],
+      });
+
+      grid.mount(host);
+      grid.refresh();
+
+      const cell = host.querySelector('.bg-cell[data-row="0"][data-col="0"]') as HTMLElement;
+      const inputBox = cell.querySelector('.bg-input-box') as HTMLElement;
+      const valueSpan = cell.querySelector('.bg-input-box__value') as HTMLElement;
+      const sourceSuffix = cell.querySelector('.bg-input-box__suffix') as HTMLElement;
+      inputBox.getBoundingClientRect = () => makeRect(100, 45, 80, 30);
+      valueSpan.getBoundingClientRect = () =>
+        valueSpan.querySelector('input') || valueSpan.textContent
+          ? makeRect(110, 52, 60, 16)
+          : makeRect(100, 45, 80, 30);
+      sourceSuffix.getBoundingClientRect = () => makeRect(152, 45, 10, 30);
+
+      grid.plugins.editing.startEdit({ rowIndex: 0, colIndex: 0 });
+
+      const inlineInput = host.querySelector('input.bg-cell-editor--inline') as HTMLInputElement | null;
+      expect(inlineInput).not.toBeNull();
+      expect(document.body.querySelector('.bg-cell-editor-float')).toBeNull();
+
+      inlineInput!.value = '123456789';
+      inlineInput!.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '9' }));
+
+      const floatingEditor = document.body.querySelector('.bg-cell-editor') as HTMLElement | null;
+      expect(floatingEditor).not.toBeNull();
+      expect(host.querySelector('input.bg-cell-editor--inline')).toBeNull();
+
+      floatingEditor!.textContent = '1';
+      const range = document.createRange();
+      range.selectNodeContents(floatingEditor!);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      floatingEditor!.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }));
+
+      const demotedInput = host.querySelector('input.bg-cell-editor--inline') as HTMLInputElement | null;
+      expect(document.body.querySelector('.bg-cell-editor-float')).toBeNull();
+      expect(demotedInput).not.toBeNull();
+      expect(demotedInput!.value).toBe('1');
+
+      grid.unmount();
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = originalGetRect;
+    }
+  });
+
   it('keeps thousand separators while typing in floating number editors', () => {
     const originalGetRect = HTMLElement.prototype.getBoundingClientRect;
     HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect(): DOMRect {

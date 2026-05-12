@@ -1003,6 +1003,24 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         return before.toString().length;
       }
 
+      function getContentEditableSelectionRange(element: HTMLElement): { start: number; end: number } {
+        const textLength = (element.textContent ?? '').length;
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return { start: textLength, end: textLength };
+        const range = selection.getRangeAt(0);
+        if (!element.contains(range.startContainer) || !element.contains(range.endContainer)) {
+          return { start: textLength, end: textLength };
+        }
+
+        const beforeStart = range.cloneRange();
+        beforeStart.selectNodeContents(element);
+        beforeStart.setEnd(range.startContainer, range.startOffset);
+        const beforeEnd = range.cloneRange();
+        beforeEnd.selectNodeContents(element);
+        beforeEnd.setEnd(range.endContainer, range.endOffset);
+        return { start: beforeStart.toString().length, end: beforeEnd.toString().length };
+      }
+
       function getNumericOffset(text: string, count: number): number {
         let pos = 0;
         let seen = 0;
@@ -1039,14 +1057,76 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         return el.scrollWidth > el.clientWidth + 1;
       }
 
-      function isInputDisplayOverflowing(inputBox: HTMLElement): boolean {
+      function getLayoutWidth(el: HTMLElement): number {
+        const rectWidth = el.getBoundingClientRect().width;
+        return el.clientWidth || rectWidth;
+      }
+
+      function measureTextWidth(text: string, styles: CSSStyleDeclaration): number {
+        if (!text) return 0;
+
+        const font = styles.font ||
+          `${styles.fontStyle} ${styles.fontVariant} ${styles.fontWeight} ${styles.fontSize} / ${styles.lineHeight} ${styles.fontFamily}`;
+        const span = document.createElement('span');
+        span.textContent = text;
+        span.style.cssText = `
+          position:fixed; left:-9999px; top:-9999px; visibility:hidden;
+          white-space:pre; padding:0; margin:0;
+          font:${font};
+          letter-spacing:${styles.letterSpacing};
+          text-transform:${styles.textTransform};
+        `;
+        document.body.appendChild(span);
+        const measured = span.getBoundingClientRect().width;
+        span.remove();
+        if (measured > 0) return measured;
+
+        if (!caretMeasureCanvas) caretMeasureCanvas = document.createElement('canvas');
+        const ctx2d = caretMeasureCanvas.getContext('2d');
+        if (!ctx2d) return 0;
+        ctx2d.font = font;
+        return ctx2d.measureText(text).width;
+      }
+
+      function isInputValueOverflowing(
+        inputBox: HTMLElement,
+        valueOverride?: string,
+      ): boolean {
+        const valueEl = inputBox.querySelector('.bg-input-box__value') as HTMLElement | null;
+        if (!valueEl) return false;
+
+        const inlineInput = valueEl.querySelector<HTMLInputElement>('input.bg-cell-editor--inline');
+        const text = valueOverride ?? inlineInput?.value ?? valueEl.textContent ?? '';
+        if (!text) return false;
+
+        const textSource = inlineInput ?? valueEl;
+        const textStyles = getComputedStyle(textSource);
+        const valueStyles = getComputedStyle(valueEl);
+        const textWidth = measureTextWidth(text, textStyles);
+
+        const directWidth = getLayoutWidth(textSource);
+        const directRequired =
+          textWidth +
+          parseCssPixel(textStyles.paddingLeft) +
+          parseCssPixel(textStyles.paddingRight);
+        if (directWidth > 0 && directRequired > directWidth + 1) return true;
+
+        const valueWidth = getLayoutWidth(valueEl);
+        const compositeRequired =
+          textWidth +
+          parseCssPixel(valueStyles.paddingLeft) +
+          parseCssPixel(valueStyles.paddingRight);
+        return valueWidth > 0 && compositeRequired > valueWidth + 1;
+      }
+
+      function isInputDisplayOverflowing(inputBox: HTMLElement, valueOverride?: string): boolean {
         const targets = [
           inputBox,
           ...Array.from(inputBox.querySelectorAll<HTMLElement>(
             '.bg-input-box__value, .bg-select-trigger, .bg-select-compound-input',
           )),
         ];
-        return targets.some(isDisplayOverflowing);
+        return targets.some(isDisplayOverflowing) || isInputValueOverflowing(inputBox, valueOverride);
       }
 
       function getTextOffsetFromClientX(
@@ -1890,7 +1970,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               prefix,
               suffix,
             );
-            activeEditor = createTextInput(cellEl, displayText || rawStr, false, isNumberEditor ? column : undefined, rowData, clickEvent, undefined, floatingInputGeometry);
+            activeEditor = createTextInput(cellEl, displayText || rawStr, false, isNumberEditor ? column : undefined, rowData, clickEvent, undefined, floatingInputGeometry, config.editorMode === 'inline');
           } else if (config.editorMode === 'inline') {
             activeEditor = createInlineTextInput(cellEl, editValue, initialValue !== undefined, isNumberEditor ? column : undefined, rowData, clickEvent, inputEllipsisEnabled);
           } else if (isNumberEditor) {
@@ -1914,6 +1994,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         clickEvent?: MouseEvent,
         selectionRange?: { start: number; end: number },
         sourceGeometry?: FloatingInputGeometry,
+        demoteToInlineOnFit = false,
       ): HTMLInputElement {
           // Use input box rect if present (inputStyle mode), otherwise cell rect
           const inputBox = cellEl.querySelector('.bg-input-box') as HTMLElement | null;
@@ -2343,6 +2424,25 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               anchorEl;
             applyFloatingEditorLayout(currentAnchor.getBoundingClientRect(), gridEl?.getBoundingClientRect());
             syncPosition();
+            if (
+              demoteToInlineOnFit &&
+              currentAnchor.classList.contains('bg-input-box') &&
+              !isInputDisplayOverflowing(currentAnchor, ed.textContent ?? '')
+            ) {
+              const nextValue = ed.textContent ?? '';
+              const nextSelection = getContentEditableSelectionRange(ed);
+              cleanupFloat();
+              activeEditor = createInlineTextInput(
+                cellEl,
+                nextValue,
+                false,
+                numberColumn,
+                rowData,
+                undefined,
+                true,
+                nextSelection,
+              );
+            }
           });
           let floatActive = true;
           const edText = ed.textContent ?? '';
@@ -2435,6 +2535,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         rowData?: unknown,
         clickEventRef?: MouseEvent,
         inputEllipsisEnabled = true,
+        selectionRange?: { start: number; end: number },
       ): HTMLInputElement {
         // Capture computed styles BEFORE clearing cell content
         const computed = getComputedStyle(cellEl);
@@ -2569,7 +2670,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         let promotedToFloat = false;
         function maybePromoteInlineOverflow(): void {
           if (!inputEllipsisEnabled || promotedToFloat || !inlineInputBox || !document.body.contains(input)) return;
-          if (input.scrollWidth <= input.clientWidth + 1) return;
+          if (input.scrollWidth <= input.clientWidth + 1 && !isInputDisplayOverflowing(inlineInputBox, input.value)) return;
 
           promotedToFloat = true;
           const selectionStart = input.selectionStart ?? input.value.length;
@@ -2585,6 +2686,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             rowData,
             undefined,
             { start: selectionStart, end: selectionEnd },
+            undefined,
+            true,
           );
         }
 
@@ -2592,6 +2695,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         if (cursorAtEnd) {
           input.setSelectionRange(value.length, value.length);
+        } else if (selectionRange) {
+          input.setSelectionRange(selectionRange.start, selectionRange.end);
         } else {
           // `caretPositionFromPoint` doesn't resolve character offsets inside
           // <input> elements (always returns 0), so we measure via canvas to
