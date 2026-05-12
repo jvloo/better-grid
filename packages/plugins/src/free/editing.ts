@@ -2110,9 +2110,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               pointer-events:none; box-sizing:border-box;
               font-family:${sourceStyles.fontFamily || anchorComputed.fontFamily};
               font-size:${sourceStyles.fontSize || anchorComputed.fontSize};
+              font-style:${sourceStyles.fontStyle || anchorComputed.fontStyle};
               font-weight:${sourceStyles.fontWeight || anchorComputed.fontWeight};
               color:${sourceStyles.color || anchorComputed.color};
-              line-height:${editorHeight}px;
+              letter-spacing:${sourceStyles.letterSpacing || anchorComputed.letterSpacing};
+              line-height:${sourceStyles.lineHeight || anchorComputed.lineHeight};
             `;
             return adornment;
           };

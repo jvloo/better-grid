@@ -191,6 +191,7 @@ describe('editing inputStyle reuse', () => {
     expect(getComputedStyle(editor!).height).toBe('16px');
     expect(getComputedStyle(suffix!).right).toBe('18px');
     expect(getComputedStyle(suffix!).width).toBe('10px');
+    expect(getComputedStyle(suffix!).lineHeight).toBe(getComputedStyle(sourceSuffix).lineHeight);
     expect(inlineInput).toBeNull();
 
     grid.unmount();
