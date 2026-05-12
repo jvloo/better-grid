@@ -2345,10 +2345,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
           function applyFloatingEditorLayout(anchorRect: DOMRect, hostRect?: DOMRect): void {
             measureSpan.textContent = ed.textContent || ' ';
-            const measuredWidth = Math.ceil(measureSpan.getBoundingClientRect().width);
-            const hostLeft = hostRect?.left ?? anchorRect.left;
-            const hostRight = hostRect?.right ?? anchorRect.right;
-            const hostWidth = hostRect?.width ?? anchorRect.width;
+            const measuredWidth = Math.ceil(measureSpan.getBoundingClientRect().width + valueInsetWidth);
+            const hasHostRect = !!hostRect && hostRect.width > 0;
+            const hostLeft = hasHostRect ? hostRect.left : anchorRect.left;
+            const hostRight = hasHostRect ? hostRect.right : anchorRect.right;
+            const hostWidth = hasHostRect ? hostRect.width : anchorRect.width;
             const desiredWidth = Math.max(anchorRect.width, measuredWidth);
             const shouldWrap = measuredWidth > hostWidth;
             const editorWidth = shouldWrap ? hostWidth : desiredWidth;

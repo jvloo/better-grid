@@ -231,10 +231,15 @@ describe('editing inputStyle reuse', () => {
       grid.mount(host);
       grid.refresh();
 
+      const gridEl = host.classList.contains('bg-grid')
+        ? host
+        : (host.querySelector('.bg-grid') as HTMLElement);
       const cell = host.querySelector('.bg-cell[data-row="0"][data-col="0"]') as HTMLElement;
       const inputBox = cell.querySelector('.bg-input-box') as HTMLElement;
       const valueSpan = cell.querySelector('.bg-input-box__value') as HTMLElement;
       const sourceSuffix = cell.querySelector('.bg-input-box__suffix') as HTMLElement;
+      gridEl.getBoundingClientRect = () => makeRect(0, 0, 400, 240);
+      cell.getBoundingClientRect = () => makeRect(90, 40, 50, 40);
       inputBox.getBoundingClientRect = () => makeRect(100, 45, 50, 30);
       valueSpan.getBoundingClientRect = () =>
         valueSpan.textContent ? makeRect(110, 52, 30, 16) : makeRect(100, 45, 50, 30);
@@ -242,7 +247,9 @@ describe('editing inputStyle reuse', () => {
 
       grid.plugins.editing.startEdit({ rowIndex: 0, colIndex: 0 });
 
-      expect(document.body.querySelector('.bg-cell-editor-float')).not.toBeNull();
+      const floatBox = document.body.querySelector('.bg-cell-editor-float') as HTMLElement | null;
+      expect(floatBox).not.toBeNull();
+      expect(parseFloat(floatBox!.style.width)).toBeGreaterThan(50);
       expect(host.querySelector('input.bg-cell-editor--inline')).toBeNull();
 
       grid.unmount();
