@@ -163,6 +163,14 @@ describe('editing inputStyle reuse', () => {
     grid.mount(host);
     grid.refresh();
 
+    const cell = host.querySelector('.bg-cell[data-row="0"][data-col="0"]') as HTMLElement;
+    const inputBox = cell.querySelector('.bg-input-box') as HTMLElement;
+    const valueSpan = cell.querySelector('.bg-input-box__value') as HTMLElement;
+    const sourceSuffix = cell.querySelector('.bg-input-box__suffix') as HTMLElement;
+    inputBox.getBoundingClientRect = () => makeRect(100, 45, 80, 30);
+    valueSpan.getBoundingClientRect = () => makeRect(110, 45, 60, 30);
+    sourceSuffix.getBoundingClientRect = () => makeRect(152, 45, 10, 30);
+
     grid.plugins.editing.startEdit({ rowIndex: 0, colIndex: 0 });
 
     const floatBox = document.body.querySelector('.bg-cell-editor-float') as HTMLElement | null;
@@ -174,8 +182,12 @@ describe('editing inputStyle reuse', () => {
     expect(floatBox?.textContent).toContain('%');
     expect(editor).not.toBeNull();
     expect(suffix).not.toBeNull();
-    expect(getComputedStyle(editor!).paddingLeft).toBe('8px');
-    expect(getComputedStyle(editor!).paddingRight).toBe('8px');
+    expect(getComputedStyle(editor!).paddingLeft).toBe('0px');
+    expect(getComputedStyle(editor!).paddingRight).toBe('18px');
+    expect(getComputedStyle(editor!).marginLeft).toBe('10px');
+    expect(getComputedStyle(editor!).marginRight).toBe('10px');
+    expect(getComputedStyle(suffix!).right).toBe('18px');
+    expect(getComputedStyle(suffix!).width).toBe('10px');
     expect(inlineInput).toBeNull();
 
     grid.unmount();

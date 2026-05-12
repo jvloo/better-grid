@@ -1918,9 +1918,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const gridRect = gridEl?.getBoundingClientRect();
           const initialMaxWidth = gridRect?.width ?? cellRect.width;
           const anchorComputed = getComputedStyle(anchorEl);
-          const cellFont = anchorComputed.font;
-          const cellTextAlign = anchorComputed.textAlign;
-          const cellLetterSpacing = anchorComputed.letterSpacing;
+          const valueSource = inputBox?.querySelector('.bg-input-box__value') as HTMLElement | null;
+          const valueSourceRect = valueSource?.getBoundingClientRect();
+          const valueComputed = valueSource ? getComputedStyle(valueSource) : null;
+          const editorComputed = valueComputed ?? anchorComputed;
+          const cellFont = editorComputed.font;
+          const cellTextAlign = editorComputed.textAlign;
+          const cellLetterSpacing = editorComputed.letterSpacing;
           const prefixSource = inputBox?.querySelector('.bg-input-box__prefix') as HTMLElement | null;
           const suffixSource = inputBox?.querySelector('.bg-input-box__suffix, .bg-input-box__unit') as HTMLElement | null;
           const prefixText = prefixSource?.textContent ?? '';
@@ -1987,6 +1991,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             border: ${borderShorthand};
             border-radius: ${borderRadius};
             box-shadow: ${useInputStyleFloat ? anchorComputed.boxShadow : edShadow};
+            color: ${anchorComputed.color};
             overflow: hidden;
           `;
 
@@ -1999,9 +2004,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           ed.textContent = value;
           // Match cell position exactly. Use normal line-height + vertical padding
           // for centering, so text selection highlight doesn't span full cell height.
-          const fontSize = parseFloat(anchorComputed.fontSize) || 14;
+          const fontSize = parseFloat(editorComputed.fontSize) || 14;
           const editorHeight = cellRect.height - floatBorderY;
-          const anchorLineHeight = parseCssPixel(anchorComputed.lineHeight);
+          const anchorLineHeight = parseCssPixel(editorComputed.lineHeight);
           const useAnchorLineHeight =
             anchorLineHeight > 0 &&
             anchorLineHeight <= editorHeight &&
@@ -2015,13 +2020,33 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             fontSize,
           );
           const maxEditorHeight = editorHeight * 4;
-          const basePadLeft = parseFloat(anchorComputed.paddingLeft) || 12;
-          const basePadRight = parseFloat(anchorComputed.paddingRight) || basePadLeft;
+          const computedPadLeft = parseCssPixel(editorComputed.paddingLeft);
+          const computedPadRight = parseCssPixel(editorComputed.paddingRight);
+          const basePadLeft = valueComputed ? computedPadLeft : (computedPadLeft || 12);
+          const basePadRight = valueComputed ? computedPadRight : (computedPadRight || basePadLeft);
           const isCenteredText = cellTextAlign === 'center' || cellTextAlign === '-webkit-center';
-          const valuePadLeft = isCenteredText ? basePadLeft : Math.max(basePadLeft, prefixSpace);
-          const valuePadRight = isCenteredText ? basePadRight : Math.max(basePadRight, suffixSpace);
-          const measurePadLeft = valuePadLeft + (isCenteredText ? prefixSpace : 0);
-          const measurePadRight = valuePadRight + (isCenteredText ? suffixSpace : 0);
+          const valuePadLeft = valueComputed
+            ? basePadLeft
+            : isCenteredText
+              ? basePadLeft
+              : Math.max(basePadLeft, prefixSpace);
+          const valuePadRight = valueComputed
+            ? basePadRight
+            : isCenteredText
+              ? basePadRight
+              : Math.max(basePadRight, suffixSpace);
+          const measurePadLeft = valuePadLeft + (!valueComputed && isCenteredText ? prefixSpace : 0);
+          const measurePadRight = valuePadRight + (!valueComputed && isCenteredText ? suffixSpace : 0);
+          const valueInsetLeft = valueSourceRect
+            ? Math.max(0, valueSourceRect.left - cellRect.left)
+            : 0;
+          const valueInsetRight = valueSourceRect
+            ? Math.max(0, cellRect.right - valueSourceRect.right)
+            : 0;
+          const valueInsetWidth = valueInsetLeft + valueInsetRight;
+          const valueInsetStyle = valueComputed
+            ? `margin-left:${valueInsetLeft}px; margin-right:${valueInsetRight}px; width:calc(100% - ${valueInsetWidth}px);`
+            : '';
           measureSpan.style.cssText = `position:fixed;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;font:${cellFont};padding:0 ${measurePadRight}px 0 ${measurePadLeft}px;`;
 
           const createFloatAdornment = (
@@ -2032,12 +2057,25 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           ): HTMLElement | null => {
             if (!text) return null;
             const sourceStyles = source ? getComputedStyle(source) : anchorComputed;
+            const sourceRect = source?.getBoundingClientRect();
+            const sourceWidth = sourceRect?.width ?? width;
+            const sourceInsetLeft = sourceRect
+              ? Math.max(0, sourceRect.left - cellRect.left)
+              : 0;
+            const sourceInsetRight = sourceRect
+              ? Math.max(0, cellRect.right - sourceRect.right)
+              : 0;
+            const horizontalPosition = sourceRect
+              ? side === 'left'
+                ? `left:${sourceInsetLeft}px;`
+                : `right:${sourceInsetRight}px;`
+              : `${side}:0;`;
             const adornment = document.createElement('span');
             adornment.className = `bg-cell-editor-float__${side === 'left' ? 'prefix' : 'suffix'}`;
             adornment.textContent = text;
             adornment.style.cssText = `
-              position:absolute; ${side}:0; top:0; bottom:0;
-              width:${width}px; display:flex; align-items:center; justify-content:center;
+              position:absolute; ${horizontalPosition} top:0; bottom:0;
+              width:${sourceWidth}px; display:flex; align-items:center; justify-content:center;
               pointer-events:none; box-sizing:border-box;
               font-family:${sourceStyles.fontFamily || anchorComputed.fontFamily};
               font-size:${sourceStyles.fontSize || anchorComputed.fontSize};
@@ -2050,9 +2088,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
           ed.style.cssText = `
             outline:none; margin:0;
-            font-family:${anchorComputed.fontFamily}; font-size:${anchorComputed.fontSize};
-            font-weight:${anchorComputed.fontWeight}; line-height:${contentLineHeight}px;
-            color:inherit; letter-spacing:${cellLetterSpacing};
+            ${valueInsetStyle}
+            font-family:${editorComputed.fontFamily}; font-size:${editorComputed.fontSize};
+            font-weight:${editorComputed.fontWeight}; line-height:${contentLineHeight}px;
+            color:${editorComputed.color}; letter-spacing:${cellLetterSpacing};
             background:transparent; box-sizing:border-box;
             padding:${vertPad}px ${valuePadRight}px ${vertPad}px ${valuePadLeft}px; text-align:${cellTextAlign};
             height:${editorHeight}px;
