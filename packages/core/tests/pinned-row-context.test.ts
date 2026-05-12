@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createGrid } from '../src/grid';
 import type { CellRenderContext, ColumnDef } from '../src/types';
 
@@ -13,6 +13,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   globalThis.requestAnimationFrame = originalRaf;
   document.body.innerHTML = '';
 });
@@ -94,6 +95,49 @@ describe('CellRenderContext.isPinned', () => {
 
     expect(host.querySelector('.totals-cell')).not.toBeNull();
     expect(host.querySelector('.body-cell')).not.toBeNull();
+
+    grid.unmount();
+  });
+
+  test('shows clipped-text tooltips for pinned top and bottom cells', () => {
+    const host = makeHost();
+    const longTop = 'Pinned top header value that is too long for the cell';
+    const longBottom = 'Pinned footer total value that is too long for the cell';
+
+    const grid = createGrid<Row>({
+      columns: [
+        { id: 'label', field: 'label' as never, headerName: 'Label', width: 80 },
+      ],
+      data: [{ id: 1, label: 'body', amount: 10 }],
+      pinned: {
+        top: [{ id: -1, label: longTop, amount: 0 }],
+        bottom: [{ id: -2, label: longBottom, amount: 30 }],
+      },
+      tooltip: { delay: 0 },
+    });
+    grid.mount(host);
+    grid.refresh();
+    vi.useFakeTimers();
+
+    const topCell = host.querySelector('.bg-grid__pinned-top .bg-cell') as HTMLElement;
+    const bottomCell = host.querySelector('.bg-grid__pinned-bottom .bg-cell') as HTMLElement;
+    expect(topCell).not.toBeNull();
+    expect(bottomCell).not.toBeNull();
+
+    Object.defineProperty(topCell, 'scrollWidth', { value: 220, configurable: true });
+    Object.defineProperty(topCell, 'clientWidth', { value: 80, configurable: true });
+    topCell.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    vi.runOnlyPendingTimers();
+    expect(document.querySelector('.bg-tooltip')?.textContent).toBe(longTop);
+
+    topCell.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+    expect(document.querySelector('.bg-tooltip')).toBeNull();
+
+    Object.defineProperty(bottomCell, 'scrollWidth', { value: 240, configurable: true });
+    Object.defineProperty(bottomCell, 'clientWidth', { value: 80, configurable: true });
+    bottomCell.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    vi.runOnlyPendingTimers();
+    expect(document.querySelector('.bg-tooltip')?.textContent).toBe(longBottom);
 
     grid.unmount();
   });

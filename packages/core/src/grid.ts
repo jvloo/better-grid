@@ -1906,11 +1906,23 @@ export function createGrid<
       cellContainer.addEventListener('dblclick', handleDblClick);
       cellContainer.addEventListener('mouseover', handleCellMouseOver);
       cellContainer.addEventListener('mouseout', handleCellMouseOut);
+      pinnedTopContainer?.addEventListener('mouseover', handleCellMouseOver);
+      pinnedTopContainer?.addEventListener('mouseout', handleCellMouseOut);
+      pinnedBottomContainer?.addEventListener('mouseover', handleCellMouseOver);
+      pinnedBottomContainer?.addEventListener('mouseout', handleCellMouseOut);
       if (frozenCellOverlay) {
         frozenCellOverlay.addEventListener('pointerdown', handlePointerDown);
         frozenCellOverlay.addEventListener('mouseover', handleCellMouseOver);
         frozenCellOverlay.addEventListener('mouseout', handleCellMouseOut);
         frozenCellOverlay.addEventListener('dblclick', handleDblClick);
+      }
+      if (frozenPinnedTopContainer) {
+        frozenPinnedTopContainer.addEventListener('mouseover', handleCellMouseOver);
+        frozenPinnedTopContainer.addEventListener('mouseout', handleCellMouseOut);
+      }
+      if (frozenPinnedBottomContainer) {
+        frozenPinnedBottomContainer.addEventListener('mouseover', handleCellMouseOver);
+        frozenPinnedBottomContainer.addEventListener('mouseout', handleCellMouseOut);
       }
       container.addEventListener('keydown', handleKeyDown);
 
@@ -1952,10 +1964,18 @@ export function createGrid<
       cellContainer?.removeEventListener('dblclick', handleDblClick);
       cellContainer?.removeEventListener('mouseover', handleCellMouseOver);
       cellContainer?.removeEventListener('mouseout', handleCellMouseOut);
+      pinnedTopContainer?.removeEventListener('mouseover', handleCellMouseOver);
+      pinnedTopContainer?.removeEventListener('mouseout', handleCellMouseOut);
+      pinnedBottomContainer?.removeEventListener('mouseover', handleCellMouseOver);
+      pinnedBottomContainer?.removeEventListener('mouseout', handleCellMouseOut);
       frozenCellOverlay?.removeEventListener('pointerdown', handlePointerDown);
       frozenCellOverlay?.removeEventListener('dblclick', handleDblClick);
       frozenCellOverlay?.removeEventListener('mouseover', handleCellMouseOver);
       frozenCellOverlay?.removeEventListener('mouseout', handleCellMouseOut);
+      frozenPinnedTopContainer?.removeEventListener('mouseover', handleCellMouseOver);
+      frozenPinnedTopContainer?.removeEventListener('mouseout', handleCellMouseOut);
+      frozenPinnedBottomContainer?.removeEventListener('mouseover', handleCellMouseOver);
+      frozenPinnedBottomContainer?.removeEventListener('mouseout', handleCellMouseOut);
       freezeClipHandle?.removeEventListener('pointerdown', startFreezeClipDrag);
       freezeClipHandle?.removeEventListener('dblclick', restoreAllFrozenColumns);
       freezeClipHandle?.removeEventListener('mouseenter', handleFreezeClipMouseEnter);
