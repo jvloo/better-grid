@@ -536,6 +536,7 @@ export function createGrid<
           measurements,
           pinnedStartCol,
           pinnedEndCol,
+          frozenCols,
         );
         pinnedTopContainer.style.height = `${pinnedTopH}px`;
         pinnedTopContainer.style.width = `${measurements.totalWidth}px`;
@@ -559,6 +560,7 @@ export function createGrid<
           measurements,
           pinnedStartCol,
           pinnedEndCol,
+          frozenCols,
         );
         pinnedBottomContainer.style.height = `${pinnedBottomH}px`;
         pinnedBottomContainer.style.width = `${measurements.totalWidth}px`;
@@ -591,6 +593,7 @@ export function createGrid<
         measurements,
         0,
         frozenCols,
+        frozenCols,
       );
       frozenPinnedTopContainer.style.height = `${pinnedTopH}px`;
       frozenPinnedTopContainer.style.display = pinnedTopH > 0 ? '' : 'none';
@@ -602,6 +605,7 @@ export function createGrid<
         state.columns,
         measurements,
         0,
+        frozenCols,
         frozenCols,
       );
       frozenPinnedBottomContainer.style.height = `${pinnedBottomH}px`;
@@ -650,8 +654,9 @@ export function createGrid<
     measurements: LayoutMeasurements,
     startCol?: number,
     endCol?: number,
+    frozenLeftColumns?: number,
   ): void {
-    pinnedRenderer.render(pinnedContainer, rows, columns, measurements, startCol, endCol);
+    pinnedRenderer.render(pinnedContainer, rows, columns, measurements, startCol, endCol, frozenLeftColumns);
   }
 
   function getPinnedTopHeight(): number {

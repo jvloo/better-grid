@@ -354,6 +354,76 @@ describe('createHeaderRenderer', () => {
     expect(groupLabel).toBe('Group');
   });
 
+  it('sizes row-spanned headers to the sum of variable header row heights', () => {
+    const headerRows: HeaderRow[] = [
+      {
+        id: 'groups',
+        height: 32,
+        cells: [
+          { id: 'label', content: 'Label', columnId: 'label', rowSpan: 2 },
+          { id: 'group', content: 'Group', colSpan: 2 },
+        ],
+      },
+      {
+        id: 'cols',
+        height: 36,
+        cells: [
+          { id: 'h-a', content: 'A', columnId: 'a' },
+          { id: 'h-b', content: 'B', columnId: 'b' },
+        ],
+      },
+    ];
+    const { headerContainer } = setup(
+      [
+        { id: 'label', headerName: 'Label' } as ColumnDef,
+        { id: 'a', headerName: 'A' } as ColumnDef,
+        { id: 'b', headerName: 'B' } as ColumnDef,
+      ],
+      {},
+      headerRows,
+    );
+
+    const labelCell = Array.from(headerContainer.querySelectorAll<HTMLElement>('.bg-header-cell'))
+      .find((cell) => cell.textContent === 'Label');
+
+    expect(labelCell?.style.height).toBe('68px');
+  });
+
+  it('lets group header CSS center labels when no explicit alignment is set', () => {
+    const headerRows: HeaderRow[] = [
+      {
+        id: 'groups',
+        height: 32,
+        cells: [
+          { id: 'group', content: 'Group', colSpan: 2 },
+        ],
+      },
+      {
+        id: 'cols',
+        height: 32,
+        cells: [
+          { id: 'h-a', content: 'A', columnId: 'a' },
+          { id: 'h-b', content: 'B', columnId: 'b' },
+        ],
+      },
+    ];
+    const { headerContainer } = setup(
+      [
+        { id: 'a', headerName: 'A' } as ColumnDef,
+        { id: 'b', headerName: 'B' } as ColumnDef,
+      ],
+      {},
+      headerRows,
+    );
+
+    const groupCell = headerContainer.querySelector<HTMLElement>('.bg-header-cell--group');
+    const groupText = groupCell?.querySelector<HTMLElement>('.bg-header-cell__text');
+
+    expect(groupCell?.style.justifyContent).toBe('');
+    expect(groupCell?.style.textAlign).toBe('');
+    expect(groupText?.style.textAlign).toBe('');
+  });
+
   it('keeps a group label visible when the group spans across the freeze boundary (Bug A regression)', () => {
     // Repro: /demo/multi-header has frozen.left = 1 with a group header
     // ("Company Info", colSpan: 3) that starts in the frozen section and

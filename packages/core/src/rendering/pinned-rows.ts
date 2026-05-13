@@ -31,6 +31,8 @@ export interface PinnedRowRenderer<TData = unknown> {
    * @param measurements     Layout measurements (col offsets)
    * @param startCol         Inclusive start column (default: 0)
    * @param endCol           Exclusive end column (default: columns.length)
+   * @param frozenLeftColumns Number of frozen-left columns, used to mirror
+   *                          frozen divider classes onto pinned cells.
    */
   render(
     pinnedContainer: HTMLElement,
@@ -39,6 +41,7 @@ export interface PinnedRowRenderer<TData = unknown> {
     measurements: LayoutMeasurements,
     startCol?: number,
     endCol?: number,
+    frozenLeftColumns?: number,
   ): void;
 }
 
@@ -66,6 +69,7 @@ export function createPinnedRowRenderer<TData = unknown>(
     totalWidth: number;
     colStart: number;
     colEnd: number;
+    frozenLeftColumns: number;
   };
 
   const cacheByContainer = new WeakMap<HTMLElement, RenderCache>();
@@ -77,6 +81,7 @@ export function createPinnedRowRenderer<TData = unknown>(
     measurements: LayoutMeasurements,
     startCol?: number,
     endCol?: number,
+    frozenLeftColumns = 0,
   ): void {
     const colStart = startCol ?? 0;
     const colEnd = endCol ?? columns.length;
@@ -94,7 +99,8 @@ export function createPinnedRowRenderer<TData = unknown>(
       cached.measurements === measurements &&
       cached.totalWidth === totalWidth &&
       cached.colStart === colStart &&
-      cached.colEnd === colEnd
+      cached.colEnd === colEnd &&
+      cached.frozenLeftColumns === frozenLeftColumns
     ) {
       return;
     }
@@ -105,6 +111,7 @@ export function createPinnedRowRenderer<TData = unknown>(
       totalWidth,
       colStart,
       colEnd,
+      frozenLeftColumns,
     });
 
     pinnedContainer.innerHTML = '';
@@ -122,7 +129,14 @@ export function createPinnedRowRenderer<TData = unknown>(
         const width = snapToDevicePixel(measurements.colOffsets[col + 1]!) - left;
 
         const cell = document.createElement('div');
-        cell.className = 'bg-cell bg-cell--pinned';
+        let className = 'bg-cell bg-cell--pinned';
+        if (frozenLeftColumns > 0 && col < frozenLeftColumns) {
+          className += ' bg-cell--frozen-left';
+        }
+        if (frozenLeftColumns > 0 && col === frozenLeftColumns - 1) {
+          className += ' bg-cell--frozen-col-last';
+        }
+        cell.className = className;
         cell.setAttribute('role', 'gridcell');
         cell.setAttribute('aria-colindex', String(col + 1));
         cell.style.position = 'absolute';

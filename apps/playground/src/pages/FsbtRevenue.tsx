@@ -915,19 +915,21 @@ export function FsbtRevenue() {
     [],
   );
 
-  // Multi-header groups match the production reference's holding-general-table layout —
-  // "Development Costs" / "On Completion" / "Exit" banner above the 15 detail
-  // columns that make up each logical section. Since `headerLayout` replaces
-  // the grid's default per-column header row, we also emit a second row that
-  // mirrors each column's `header` so the normal column labels still show
-  // below the group banner.
+  // Multi-header groups match the production reference's holding-general-table layout:
+  // the first 15 general columns span both header rows, while "Development Costs" /
+  // "On Completion" / "Exit" banner their child columns.
   const holdingGeneralHeaderLayout = useMemo(
     () => [
       {
         id: 'holding-general-groups',
         height: 32,
         cells: [
-          { id: 'hg-empty',          content: '',                  colSpan: 15 },
+          ...holdingGeneralColumns.slice(0, 15).map((col) => ({
+            id: `hg-col-${col.id}`,
+            columnId: col.id,
+            content: col.headerName,
+            rowSpan: 2,
+          })),
           { id: 'hg-dev-costs',      content: 'Development Costs', colSpan: 8 },
           { id: 'hg-on-completion',  content: 'On Completion',     colSpan: 2 },
           { id: 'hg-exit',           content: 'Exit',              colSpan: 5 },
@@ -936,7 +938,7 @@ export function FsbtRevenue() {
       {
         id: 'holding-general-columns',
         height: FSBT_STYLES.headerHeight,
-        cells: holdingGeneralColumns.map((col) => ({
+        cells: holdingGeneralColumns.slice(15).map((col) => ({
           id: `hg-col-${col.id}`,
           columnId: col.id,
           content: col.headerName,

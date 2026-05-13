@@ -141,4 +141,32 @@ describe('CellRenderContext.isPinned', () => {
 
     grid.unmount();
   });
+
+  test('marks frozen pinned cells with the frozen divider classes', () => {
+    const host = makeHost();
+    const columns: ColumnDef<Row>[] = [
+      { id: 'label', field: 'label' as never, headerName: 'Label', width: 100 },
+      { id: 'amount', field: 'amount' as never, headerName: 'Amount', width: 100 },
+      { id: 'id', field: 'id' as never, headerName: 'ID', width: 100 },
+    ];
+    const grid = createGrid<Row>({
+      columns,
+      data: [{ id: 1, label: 'body', amount: 10 }],
+      frozen: { left: 2 },
+      pinned: { bottom: [{ id: -1, label: 'TOTAL', amount: 10 }] },
+      rowHeight: 40,
+      headerHeight: 40,
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const frozenPinnedCells = host.querySelectorAll<HTMLElement>('.bg-grid__frozen-pinned-bottom .bg-cell');
+    expect(frozenPinnedCells).toHaveLength(2);
+    expect(frozenPinnedCells[0]?.classList.contains('bg-cell--frozen-left')).toBe(true);
+    expect(frozenPinnedCells[1]?.classList.contains('bg-cell--frozen-left')).toBe(true);
+    expect(frozenPinnedCells[1]?.classList.contains('bg-cell--frozen-col-last')).toBe(true);
+
+    grid.unmount();
+  });
 });

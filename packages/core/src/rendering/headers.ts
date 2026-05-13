@@ -181,6 +181,16 @@ export function createHeaderRenderer<TData = unknown>(
     const headerRows = deps.headerRows!;
     let topOffset = 0;
     const totalRows = headerRows.length;
+    const getHeaderRowHeight = (rowIdx: number): number =>
+      headerRows[rowIdx]?.height ?? deps.singleHeaderRowHeight;
+    const getHeaderSpanHeight = (rowIdx: number, rowSpan: number): number => {
+      let height = 0;
+      const endRow = Math.min(totalRows, rowIdx + rowSpan);
+      for (let r = rowIdx; r < endRow; r++) {
+        height += getHeaderRowHeight(r);
+      }
+      return height;
+    };
     // Track cells occupied by rowSpan from previous rows: "rowIdx:colIdx"
     const occupied = new Set<string>();
 
@@ -209,7 +219,7 @@ export function createHeaderRenderer<TData = unknown>(
 
     for (let rowIdx = 0; rowIdx < totalRows; rowIdx++) {
       const row = headerRows[rowIdx]!;
-      const rowHeight = row.height ?? deps.singleHeaderRowHeight;
+      const rowHeight = getHeaderRowHeight(rowIdx);
       let colIndex = 0;
       let cellIdx = 0;
 
@@ -228,7 +238,7 @@ export function createHeaderRenderer<TData = unknown>(
 
         const left = measurements.colOffsets[colIndex]!;
         const endCol = Math.min(colIndex + span, state.columns.length);
-        const height = rowHeight * rSpan;
+        const height = getHeaderSpanHeight(rowIdx, rSpan);
 
         // Mark positions occupied by this cell's rowSpan for subsequent rows
         if (rSpan > 1) {
@@ -371,14 +381,13 @@ export function createHeaderRenderer<TData = unknown>(
     if (opts.isLastFrozenCol) cls += ' bg-header-cell--frozen-col-last';
     cell.className = cls;
 
-    const alignValue = opts.align ?? 'left';
-    if (alignValue === 'right') {
+    if (opts.align === 'right') {
       cell.style.justifyContent = 'flex-end';
       cell.style.textAlign = 'right';
-    } else if (alignValue === 'center') {
+    } else if (opts.align === 'center') {
       cell.style.justifyContent = 'center';
       cell.style.textAlign = 'center';
-    } else {
+    } else if (opts.align === 'left') {
       cell.style.justifyContent = 'flex-start';
       cell.style.textAlign = 'left';
     }
@@ -401,7 +410,7 @@ export function createHeaderRenderer<TData = unknown>(
 
     const textSpan = document.createElement('span');
     textSpan.className = 'bg-header-cell__text';
-    textSpan.style.textAlign = opts.align ?? 'left';
+    if (opts.align) textSpan.style.textAlign = opts.align;
     textSpan.textContent = opts.content;
     cell.appendChild(textSpan);
 
