@@ -755,7 +755,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         container: HTMLElement,
         context: CellRenderContext,
       ): void {
-        container.textContent = getFormattedDisplayText(context.column, context.row, context.value, context.rowIndex, context.colIndex);
+        const text = getFormattedDisplayText(
+          context.column,
+          context.row,
+          context.value,
+          context.rowIndex,
+          context.colIndex,
+        );
+        container.textContent = getAdornedDisplayText(context.column, context.row, text);
       }
 
       function getFormattedDisplayText(
@@ -788,6 +795,21 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           return precision != null ? value.toFixed(precision) : String(value);
         }
         return value != null ? String(value) : '';
+      }
+
+      function getAdornedDisplayText(
+        column: ColumnDef,
+        row: unknown,
+        text: string,
+      ): string {
+        const prefix = resolveColumnPrefix(column, row);
+        const suffix = resolveColumnSuffix(column, row);
+        if (!prefix && !suffix) return text;
+
+        const bareText = stripInputAdornments(text, prefix, suffix);
+        if (!bareText) return '';
+
+        return `${prefix ?? ''}${bareText}${suffix ?? ''}`;
       }
 
       // Render an always-on <input> inside the cell. Reuses the input across

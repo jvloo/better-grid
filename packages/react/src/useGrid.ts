@@ -98,6 +98,17 @@ export function useGrid<TData = unknown, TContext = unknown>(
     grid.setColumns(options.columns);
   }, [grid, options.columns]);
 
+  const pinnedTopRows = options.pinned?.top;
+  const pinnedBottomRows = options.pinned?.bottom;
+
+  useEffect(() => {
+    grid.setPinnedTopRows(pinnedTopRows ?? []);
+  }, [grid, pinnedTopRows]);
+
+  useEffect(() => {
+    grid.setPinnedBottomRows(pinnedBottomRows ?? []);
+  }, [grid, pinnedBottomRows]);
+
   // Container ref: mount/unmount on attach.
   // MUST be a stable callback — React re-invokes a callback ref with `null` on
   // every render where the callback identity changes, which would unmount and

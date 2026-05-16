@@ -198,6 +198,37 @@ describe('editing inputStyle reuse', () => {
     grid.unmount();
   });
 
+  it('renders adornments on non-editable input-style columns', () => {
+    const host = makeHost();
+    const columns: ColumnDef<Row>[] = [
+      {
+        id: 'amount',
+        field: 'amount',
+        headerName: 'Amount',
+        align: 'center',
+        editable: () => false,
+        cellType: 'number',
+        unit: '%',
+        valueFormatter: (value) => Number(value).toFixed(2),
+      },
+    ];
+    const grid = createGrid<Row>({
+      columns,
+      data: [{ amount: 10 }],
+      plugins: [editing({ inputStyle: true, editTrigger: 'click' })],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const cell = host.querySelector('.bg-cell[data-row="0"][data-col="0"]') as HTMLElement;
+    expect(cell).not.toBeNull();
+    expect(cell.textContent).toBe('10.00%');
+    expect(cell.querySelector('.bg-input-box')).toBeNull();
+
+    grid.unmount();
+  });
+
   it('uses adornment-aware overflow when choosing inline vs floating editors', () => {
     const originalGetRect = HTMLElement.prototype.getBoundingClientRect;
     HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect(): DOMRect {
