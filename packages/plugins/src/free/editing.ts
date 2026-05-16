@@ -1327,6 +1327,41 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         activeDisplaySelectPanel = null;
       }
 
+      function getDisplaySelectAnchorRect(anchorEl: HTMLElement): Pick<DOMRect, 'left' | 'top' | 'right' | 'bottom' | 'width' | 'height'> | null {
+        const rect = anchorEl.getBoundingClientRect();
+        if (rect.width <= 0 && rect.height <= 0) return null;
+
+        const cellEl = anchorEl.closest('.bg-cell--input-editable') as HTMLElement | null;
+        const isSimpleInputStyleSelect =
+          cellEl &&
+          anchorEl.classList.contains('bg-select-trigger') &&
+          anchorEl.classList.contains('bg-input-box') &&
+          !anchorEl.closest('.bg-select-compound');
+        if (!isSimpleInputStyleSelect) return rect;
+
+        const cellRect = cellEl.getBoundingClientRect();
+        const cellStyles = getComputedStyle(cellEl);
+        const padLeft = parseCssPixel(cellStyles.paddingLeft);
+        const padRight = parseCssPixel(cellStyles.paddingRight);
+        const expectedWidth = Math.max(0, cellRect.width - padLeft - padRight);
+        if (expectedWidth <= 0 || rect.width >= expectedWidth - 1) return rect;
+
+        const height = rect.height || parseCssPixel(getComputedStyle(anchorEl).height) || 30;
+        const top =
+          rect.top >= cellRect.top && rect.bottom <= cellRect.bottom
+            ? rect.top
+            : cellRect.top + Math.max(0, (cellRect.height - height) / 2);
+        const left = cellRect.left + padLeft;
+        return {
+          left,
+          top,
+          right: left + expectedWidth,
+          bottom: top + height,
+          width: expectedWidth,
+          height,
+        };
+      }
+
       function openDisplaySelectPanel(
         anchorEl: HTMLElement,
         opts: DropdownOption[],
@@ -1338,7 +1373,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // Stable panel id derived from the anchor element's position in the DOM
         const panelId = 'bg-select-panel-' + (anchorEl.dataset.bgCellKey ?? Math.random().toString(36).slice(2));
 
-        const rect = anchorEl.getBoundingClientRect();
+        const rect = getDisplaySelectAnchorRect(anchorEl);
+        if (!rect) return;
         const panel = document.createElement('div');
         panel.id = panelId;
         panel.className = 'bg-dropdown-panel bg-select-panel';
@@ -1507,6 +1543,29 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         return trigger;
       }
 
+      function getLiveDisplaySelectTrigger(
+        context: CellRenderContext,
+        trigger: HTMLElement,
+      ): HTMLElement | null {
+        if (document.contains(trigger)) return trigger;
+        return getCellElement({ rowIndex: context.rowIndex, colIndex: context.colIndex })
+          ?.querySelector('.bg-select-trigger') as HTMLElement | null;
+      }
+
+      function handleDisplaySelectPointerHandoff(
+        event: PointerEvent,
+        context: CellRenderContext,
+        openPanel: () => void,
+      ): void {
+        const targetCell = { rowIndex: context.rowIndex, colIndex: context.colIndex };
+        if (!editingCell || isSameCell(editingCell, targetCell)) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        commitEdit();
+        requestAnimationFrame(() => requestAnimationFrame(openPanel));
+      }
+
       function renderSelectDisplayCell(
         container: HTMLElement,
         context: CellRenderContext,
@@ -1524,18 +1583,24 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         if (column.cellEditor !== 'selectWithInput') {
           const trigger = createSelectTrigger(selectedOption?.label ?? String(selectedValue ?? ''), column);
-          trigger.addEventListener('click', (event) => {
-            event.stopPropagation();
-            openDisplaySelectPanel(trigger, opts, selectedValue, (option) => {
+          const openPanel = () => {
+            const anchor = getLiveDisplaySelectTrigger(context, trigger);
+            if (!anchor) return;
+            openDisplaySelectPanel(anchor, opts, selectedValue, (option) => {
               commitDisplaySelectValue(context, option.value);
             });
+          };
+          trigger.addEventListener('pointerdown', (event) => {
+            handleDisplaySelectPointerHandoff(event, context, openPanel);
+          });
+          trigger.addEventListener('click', (event) => {
+            event.stopPropagation();
+            openPanel();
           });
           trigger.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
               event.preventDefault();
-              openDisplaySelectPanel(trigger, opts, selectedValue, (option) => {
-                commitDisplaySelectValue(context, option.value);
-              });
+              openPanel();
             }
           });
           container.appendChild(trigger);
@@ -1560,14 +1625,22 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             : option.value;
           commitDisplaySelectValue(context, next);
         };
+        const openCompoundPanel = () => {
+          const anchor = getLiveDisplaySelectTrigger(context, trigger);
+          if (!anchor) return;
+          openDisplaySelectPanel(anchor, opts, selectedValue, selectOption);
+        };
+        trigger.addEventListener('pointerdown', (event) => {
+          handleDisplaySelectPointerHandoff(event, context, openCompoundPanel);
+        });
         trigger.addEventListener('click', (event) => {
           event.stopPropagation();
-          openDisplaySelectPanel(trigger, opts, selectedValue, selectOption);
+          openCompoundPanel();
         });
         trigger.addEventListener('keydown', (event) => {
           if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
             event.preventDefault();
-            openDisplaySelectPanel(trigger, opts, selectedValue, selectOption);
+            openCompoundPanel();
           }
         });
         wrapper.appendChild(trigger);
@@ -1684,6 +1757,71 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         return null;
       }
 
+      function getInputStyleDisplaySelectTrigger(target: EventTarget | null): HTMLElement | null {
+        if (!(target instanceof Element)) return null;
+        const trigger = target.closest('.bg-select-trigger') as HTMLElement | null;
+        if (
+          trigger &&
+          trigger.closest('.bg-cell--input-editable') &&
+          !trigger.closest('.bg-cell--editing') &&
+          !trigger.closest('.bg-select-compound')
+        ) {
+          return trigger;
+        }
+        return null;
+      }
+
+      function openInputStyleDisplaySelectPanel(
+        position: CellPosition,
+        triggerHint: HTMLElement | null,
+      ): boolean {
+        const cellEl = getCellElement(position);
+        const trigger = triggerHint && document.contains(triggerHint)
+          ? triggerHint
+          : cellEl?.querySelector('.bg-select-trigger') as HTMLElement | null;
+        if (!cellEl || !trigger) return false;
+
+        const state = ctx.grid.getState();
+        const column = state.columns[position.colIndex];
+        if (!column || column.cellEditor !== 'select') return false;
+
+        const hs = state.hierarchyState;
+        const dataIndex = hs ? (hs.visibleRows[position.rowIndex] ?? position.rowIndex) : position.rowIndex;
+        const rowData = state.data[dataIndex];
+        if (!rowData) return false;
+
+        const value = column.valueGetter
+          ? column.valueGetter(rowData as never, dataIndex)
+          : column.field
+            ? (rowData as Record<string, unknown>)[column.field]
+            : cellEl.textContent;
+        const opts = getDropdownOptions(column, value);
+        if (!opts) return false;
+
+        const rect = cellEl.getBoundingClientRect();
+        const context = {
+          rowIndex: position.rowIndex,
+          colIndex: position.colIndex,
+          row: rowData,
+          column,
+          value,
+          isSelected: false,
+          isActive: false,
+          style: {
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height,
+          },
+          context: (state as { context?: unknown }).context,
+        } as CellRenderContext;
+        const selectedValue = getSelectedOptionValue(column, context);
+        openDisplaySelectPanel(trigger, opts, selectedValue, (option) => {
+          commitDisplaySelectValue(context, option.value);
+        });
+        return true;
+      }
+
       function handlePointerHandoff(
         cleanup: () => void,
         e: MouseEvent,
@@ -1691,6 +1829,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       ): boolean {
         const nextCell = getNextClickedCell(e, hitTestEl);
         if (!nextCell) return false;
+        const displaySelectTrigger = getInputStyleDisplaySelectTrigger(e.target);
+        if (displaySelectTrigger) {
+          cleanup();
+          if (editingCell) commitEdit();
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => openInputStyleDisplaySelectPanel(nextCell, displaySelectTrigger));
+          });
+          e.preventDefault();
+          return true;
+        }
         suppressNextClickEdit(nextCell);
         cleanup();
         if (editingCell) commitEdit();
@@ -4002,12 +4150,32 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         const parsedValue = parseTextValue(newValue, column, prevValue, rowData);
 
         // Update grid data BEFORE cleanup
-        if (column?.field && parsedValue !== prevValue) {
+        if (column?.field && !isCommitValueUnchanged(column, parsedValue, prevValue)) {
           ctx.grid.updateCell(position.rowIndex, column.id, parsedValue);
         }
 
         cleanupEdit();
         return true;
+      }
+
+      function isCommitValueUnchanged(
+        column: ColumnDef | undefined,
+        parsedValue: unknown,
+        prevValue: unknown,
+      ): boolean {
+        if (Object.is(parsedValue, prevValue)) return true;
+        if (!column || parsedValue == null || prevValue == null) return false;
+
+        const isNumericCell =
+          column.cellType === 'number' ||
+          column.cellType === 'currency' ||
+          column.cellType === 'percent';
+        if (!isNumericCell || typeof parsedValue !== 'number') return false;
+
+        const previousNumber = typeof prevValue === 'number'
+          ? prevValue
+          : Number(String(prevValue).replace(/,/g, '').trim());
+        return Number.isFinite(previousNumber) && Object.is(parsedValue, previousNumber);
       }
 
       function parseTextValue(

@@ -4,7 +4,8 @@ import { editing } from '../../plugins/src/free/editing';
 import type { ColumnDef } from '../src/types';
 
 interface Row {
-  amount: number;
+  amount: number | string;
+  choice?: string;
 }
 
 let originalRaf: typeof requestAnimationFrame;
@@ -392,5 +393,94 @@ describe('editing inputStyle reuse', () => {
     } finally {
       HTMLElement.prototype.getBoundingClientRect = originalGetRect;
     }
+  });
+
+  it('does not refresh numeric string values when editing value is unchanged', () => {
+    const host = makeHost();
+    const columns: ColumnDef<Row>[] = [
+      {
+        id: 'amount',
+        field: 'amount',
+        headerName: 'Amount',
+        width: 100,
+        align: 'center',
+        editable: true,
+        cellType: 'number',
+        valueFormatter: (value) => Number(value).toLocaleString('en-US'),
+      },
+    ];
+    const grid = createGrid<Row>({
+      columns,
+      data: [{ amount: '1000' }],
+      plugins: [editing({ inputStyle: true, editTrigger: 'click' })],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    grid.plugins.editing.startEdit({ rowIndex: 0, colIndex: 0 });
+
+    const editor = document.body.querySelector('.bg-cell-editor') as HTMLElement;
+    expect(editor).not.toBeNull();
+    expect(editor.textContent).toBe('1,000');
+
+    grid.plugins.editing.commitEdit();
+
+    expect(grid.getState().data[0]!.amount).toBe('1000');
+
+    grid.unmount();
+  });
+
+  it('anchors input-style select panels to the full input box during editor handoff', () => {
+    const host = makeHost();
+    const columns: ColumnDef<Row>[] = [
+      {
+        id: 'amount',
+        field: 'amount',
+        headerName: 'Amount',
+        width: 100,
+        editable: true,
+        cellType: 'number',
+      },
+      {
+        id: 'choice',
+        field: 'choice',
+        headerName: 'Choice',
+        width: 100,
+        align: 'center',
+        editable: true,
+        cellEditor: 'select',
+        options: [
+          { value: 'rent-free', label: 'Rent Free' },
+          { value: 'discount', label: 'Discount' },
+        ],
+      },
+    ];
+    const grid = createGrid<Row>({
+      columns,
+      data: [{ amount: 6, choice: 'rent-free' }],
+      plugins: [editing({ inputStyle: true, editTrigger: 'click' })],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const cell = host.querySelector('.bg-cell[data-row="0"][data-col="1"]') as HTMLElement;
+    const trigger = cell.querySelector('.bg-select-trigger') as HTMLElement;
+    expect(cell).not.toBeNull();
+    expect(trigger).not.toBeNull();
+
+    cell.getBoundingClientRect = () => makeRect(100, 40, 100, 44);
+    trigger.getBoundingClientRect = () => makeRect(108, 47, 46, 30);
+
+    trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+    const panel = document.body.querySelector('.bg-select-panel') as HTMLElement | null;
+    expect(panel).not.toBeNull();
+    expect(panel!.style.left).toBe('108px');
+    expect(panel!.style.top).toBe('79px');
+    expect(panel!.style.minWidth).toBe('84px');
+
+    grid.unmount();
   });
 });
