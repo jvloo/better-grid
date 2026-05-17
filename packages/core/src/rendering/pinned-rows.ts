@@ -160,6 +160,8 @@ export function createPinnedRowRenderer<TData = unknown>(
           style: { top, left, width, height: rowH },
           context: deps.contextRef?.current,
           isPinned: true,
+          showTooltip: deps.rendering.showTooltip,
+          dismissTooltip: deps.rendering.dismissTooltip,
         };
 
         // Render priority: column renderer > cell type > valueFormatter > default text

@@ -786,6 +786,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               isActive: false,
               style: { top: 0, left: 0, width: 0, height: 0 },
               context: undefined,
+              showTooltip: ctx.showTooltip,
+              dismissTooltip: ctx.dismissTooltip,
             });
           }
         }
@@ -959,6 +961,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             isActive: false,
             style: { top: 0, left: 0, width: 0, height: 0 },
             context: undefined,
+            showTooltip: ctx.showTooltip,
+            dismissTooltip: ctx.dismissTooltip,
           });
           if (typeof cleanup === 'function') cleanup();
           return temp.textContent?.trim() ?? '';

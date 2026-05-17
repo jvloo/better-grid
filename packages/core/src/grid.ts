@@ -1222,6 +1222,10 @@ export function createGrid<
   });
   const showTooltip = tooltip.show;
   const dismissTooltip = tooltip.dismiss;
+  rendering.showTooltip = showTooltip;
+  rendering.dismissTooltip = dismissTooltip;
+  frozenRendering.showTooltip = showTooltip;
+  frozenRendering.dismissTooltip = dismissTooltip;
 
   // ---------------------------------------------------------------------------
   // Scrollbar layout config

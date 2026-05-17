@@ -94,6 +94,10 @@ export interface CellRenderContext<TData = unknown, TContext = unknown> {
    * relative to the pinned section, not the main data array.
    */
   isPinned?: boolean;
+  /** Show the grid's built-in hover tooltip. Matches clipped-cell text tooltip styling and delay. */
+  showTooltip(target: HTMLElement, text: string, cursorX?: number, cursorY?: number): void;
+  /** Dismiss the grid's built-in hover tooltip. */
+  dismissTooltip(): void;
 }
 
 export type CellRenderer<TData = unknown, TContext = unknown> = (

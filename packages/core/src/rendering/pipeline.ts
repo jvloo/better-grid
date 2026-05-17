@@ -109,6 +109,8 @@ export class RenderingPipeline<TData = unknown> {
   private rowBgRecyclePool: HTMLElement[] = [];
   /** Reused per renderCells() to track which row strips are still visible */
   private visibleRowBgs = new Set<number>();
+  showTooltip: (target: HTMLElement, text: string, cursorX?: number, cursorY?: number) => void = () => {};
+  dismissTooltip: () => void = () => {};
 
   setGlobalCellRenderer(renderer: CellRenderer<TData> | null): void {
     this.globalCellRenderer = renderer;
@@ -333,6 +335,8 @@ export class RenderingPipeline<TData = unknown> {
           isActive: active,
           style: { top, left, width, height },
           context: contextValue,
+          showTooltip: this.showTooltip,
+          dismissTooltip: this.dismissTooltip,
         };
 
         // Cleanup previous render
