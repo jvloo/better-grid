@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGrid } from '../src/grid';
 import { editing } from '../../plugins/src/free/editing';
 import type { ColumnDef } from '../src/types';
@@ -20,6 +20,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   globalThis.requestAnimationFrame = originalRaf;
   document.body.innerHTML = '';
 });
@@ -75,6 +76,76 @@ describe('editing inputStyle reuse', () => {
     expect(host.querySelector('.bg-input-box')).toBe(first);
 
     grid.unmount();
+  });
+
+  it('shows clipped-text tooltips for plain input-style boxes', () => {
+    const host = makeHost();
+    const longValue = 'Plain input text that is too long for the box';
+    const grid = createGrid<Row>({
+      columns: [
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          editable: true,
+          width: 80,
+        },
+      ],
+      data: [{ amount: longValue }],
+      plugins: [editing({ inputStyle: true })],
+      tooltip: { delay: 0 },
+    });
+
+    grid.mount(host);
+    grid.refresh();
+    vi.useFakeTimers();
+
+    const inputBox = host.querySelector('.bg-input-box') as HTMLElement;
+    expect(inputBox).not.toBeNull();
+    Object.defineProperty(inputBox, 'scrollWidth', { value: 220, configurable: true });
+    Object.defineProperty(inputBox, 'clientWidth', { value: 72, configurable: true });
+
+    inputBox.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    vi.runOnlyPendingTimers();
+    expect(document.querySelector('.bg-tooltip')?.textContent).toBe(longValue);
+
+    grid.unmount();
+    vi.useRealTimers();
+  });
+
+  it('shows full input text including adornments when an input-style value is clipped', () => {
+    const host = makeHost();
+    const grid = createGrid<Row>({
+      columns: [
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          editable: true,
+          width: 80,
+          suffix: '%',
+        },
+      ],
+      data: [{ amount: 123456789 }],
+      plugins: [editing({ inputStyle: true })],
+      tooltip: { delay: 0 },
+    });
+
+    grid.mount(host);
+    grid.refresh();
+    vi.useFakeTimers();
+
+    const inputBox = host.querySelector('.bg-input-box') as HTMLElement;
+    expect(inputBox).not.toBeNull();
+    Object.defineProperty(inputBox, 'scrollWidth', { value: 180, configurable: true });
+    Object.defineProperty(inputBox, 'clientWidth', { value: 42, configurable: true });
+
+    inputBox.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    vi.runOnlyPendingTimers();
+    expect(document.querySelector('.bg-tooltip')?.textContent).toBe('123456789%');
+
+    grid.unmount();
+    vi.useRealTimers();
   });
 
   it('keeps input-style floating editors left-aligned while growing to fit text', () => {

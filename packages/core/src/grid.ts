@@ -886,15 +886,24 @@ export function createGrid<
     if (cell.querySelector('.bg-gantt-bar, .bg-gantt-interactive, .bg-gantt-handle')) {
       return;
     }
-    // Prefer the input-style value span when present — its overflow / text
-    // content reflects what the user actually sees inside the input.
-    // Otherwise fall back to the cell box itself.
-    const valueEl = cell.querySelector<HTMLElement>('.bg-input-box__value');
-    const probe = valueEl ?? cell;
-    const text = probe.textContent ?? '';
+    // Prefer the visible input-style text container when present. Plain
+    // inputStyle cells put text directly on `.bg-input-box`; adorned inputs
+    // use `.bg-input-box__value`; select-with-input cells use their compound
+    // input. Probe the element that actually clips so the outer cell box does
+    // not mask overflow that happened inside the input chrome.
+    const inputBox = cell.querySelector<HTMLElement>('.bg-input-box');
+    const probe =
+      cell.querySelector<HTMLElement>(
+        '.bg-input-box__value, .bg-select-compound-input, .bg-select-trigger',
+      ) ??
+      inputBox ??
+      cell;
+    const text = (inputBox?.textContent ?? probe.textContent) ?? '';
     // Skip empty / whitespace cells.
     if (!text.trim()) return;
-    if (probe.scrollWidth > probe.clientWidth) {
+    const isProbeClipped = probe.scrollWidth > probe.clientWidth;
+    const isInputBoxClipped = inputBox ? inputBox.scrollWidth > inputBox.clientWidth : false;
+    if (isProbeClipped || isInputBoxClipped) {
       showTooltip(cell, text);
     }
   }
