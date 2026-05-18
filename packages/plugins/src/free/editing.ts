@@ -3043,6 +3043,60 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           syncDisplayLayer();
         }
 
+        function applyDigitToActiveSection(digit: string): void {
+          const secLen = sectionLengths[activeSectionIdx]!;
+          const cur = sectionValues[activeSectionIdx] || '';
+          const label = sectionLabels[activeSectionIdx] ?? '';
+          const sv = sectionValidation(label, secLen);
+
+          let next = cur.length >= secLen ? digit : cur + digit;
+
+          if (sv && next.length === 1 && Number(next) >= sv.autoPadFrom) {
+            next = `0${next}`;
+          }
+          if (sv && next.length >= 2) {
+            const num = Number(next.slice(0, 2));
+            if (num < sv.min || num > sv.max) {
+              const spillDigit = next[1]!;
+              sectionValues[activeSectionIdx] = `0${next[0]}`;
+              if (activeSectionIdx < sectionLengths.length - 1) {
+                activeSectionIdx += 1;
+                sectionValues[activeSectionIdx] = spillDigit;
+              }
+              syncInputDisplay();
+              return;
+            }
+          }
+
+          sectionValues[activeSectionIdx] = next.slice(0, secLen);
+          if (sectionValues[activeSectionIdx]!.length >= secLen && activeSectionIdx < sectionLengths.length - 1) {
+            activeSectionIdx += 1;
+          }
+          syncInputDisplay();
+        }
+
+        function applyTextToMask(text: string | null | undefined): boolean {
+          const digits = (text ?? '').replace(/\D/g, '');
+          if (!digits) return false;
+          for (const digit of digits) applyDigitToActiveSection(digit);
+          return true;
+        }
+
+        function applyBackspaceToMask(): void {
+          if (sectionValues[activeSectionIdx]) {
+            sectionValues[activeSectionIdx] = '';
+          } else if (activeSectionIdx > 0) {
+            activeSectionIdx -= 1;
+            sectionValues[activeSectionIdx] = '';
+          }
+          syncInputDisplay();
+        }
+
+        function applyDeleteToMask(): void {
+          sectionValues[activeSectionIdx] = '';
+          syncInputDisplay();
+        }
+
         // Get the committed value (only digits from filled sections, joined by separator)
         function getCommitValue(): string {
           const allFilled = sectionValues.every((v) => v !== '');
@@ -3196,8 +3250,22 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           user-select: none;
         `;
 
-        // All input goes through keydown — prevent browser from mutating the value
-        input.addEventListener('beforeinput', (e) => { e.preventDefault(); });
+        input.addEventListener('beforeinput', (e) => {
+          e.preventDefault();
+          const inputEvent = e as InputEvent;
+          const inputType = inputEvent.inputType;
+          if (inputType === 'deleteContentBackward') {
+            applyBackspaceToMask();
+          } else if (inputType === 'deleteContentForward') {
+            applyDeleteToMask();
+          } else if (inputType?.startsWith('insert')) {
+            applyTextToMask(inputEvent.data);
+          }
+        });
+        input.addEventListener('paste', (e) => {
+          e.preventDefault();
+          applyTextToMask(e.clipboardData?.getData('text') ?? '');
+        });
 
         // Click on MM or YY -> select that section. We listen on mouseup
         // (after the browser has placed the caret) and explicitly restore
@@ -3233,65 +3301,21 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           // Digit: type into active section
           if (/^\d$/.test(e.key)) {
             e.preventDefault();
-            const secLen = sectionLengths[activeSectionIdx]!;
-            const cur = sectionValues[activeSectionIdx] || '';
-            const label = sectionLabels[activeSectionIdx] ?? '';
-            const sv = sectionValidation(label, secLen);
-
-            // If section is full, replace it (start fresh)
-            let next = cur.length >= secLen ? e.key : cur + e.key;
-
-            // Auto-pad: first digit already exceeds max tens → "0X" and advance
-            if (sv && next.length === 1 && Number(next) >= sv.autoPadFrom) {
-              next = `0${next}`;
-            }
-            // Validation: if completed value is out of range, auto-pad first
-            // digit and spill the second into the next section
-            if (sv && next.length >= 2) {
-              const num = Number(next.slice(0, 2));
-              if (num < sv.min || num > sv.max) {
-                const spillDigit = next[1]!;
-                sectionValues[activeSectionIdx] = `0${next[0]}`;
-                if (activeSectionIdx < sectionLengths.length - 1) {
-                  activeSectionIdx += 1;
-                  sectionValues[activeSectionIdx] = spillDigit;
-                }
-                syncInputDisplay();
-                return;
-              }
-            }
-
-            sectionValues[activeSectionIdx] = next.slice(0, secLen);
-
-            // Auto-advance to next section when current is full
-            if (sectionValues[activeSectionIdx]!.length >= secLen && activeSectionIdx < sectionLengths.length - 1) {
-              activeSectionIdx += 1;
-            }
-
-            syncInputDisplay();
+            applyDigitToActiveSection(e.key);
             return;
           }
 
           // Backspace: clear active section, then move to previous
           if (e.key === 'Backspace') {
             e.preventDefault();
-            if (sectionValues[activeSectionIdx]) {
-              // Section has a value → clear it (show label placeholder)
-              sectionValues[activeSectionIdx] = '';
-            } else if (activeSectionIdx > 0) {
-              // Section already empty → move to previous and clear it
-              activeSectionIdx -= 1;
-              sectionValues[activeSectionIdx] = '';
-            }
-            syncInputDisplay();
+            applyBackspaceToMask();
             return;
           }
 
           // Delete: clear active section
           if (e.key === 'Delete') {
             e.preventDefault();
-            sectionValues[activeSectionIdx] = '';
-            syncInputDisplay();
+            applyDeleteToMask();
             return;
           }
 
