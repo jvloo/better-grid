@@ -87,6 +87,8 @@ export interface CellRenderContext<TData = unknown, TContext = unknown> {
   isActive: boolean;
   style: CellStyle;
   context: TContext;
+  showTooltip(target: HTMLElement, text: string, cursorX?: number, cursorY?: number): void;
+  dismissTooltip(): void;
   /**
    * True when this cell is part of a pinned row (top or bottom).
    * Custom `cellRenderer` and plugin-wrapped renderers (e.g. row-actions)
@@ -735,6 +737,7 @@ export interface PluginGridApi<TData = unknown> {
   // Data access
   getData(): TData[];
   setData(data: TData[], options?: SetDataOptions): void;
+  updateRow(rowIndex: number, data: Partial<TData>): void;
   updateCell(rowIndex: number, columnId: string, value: unknown): void;
 
   // Columns

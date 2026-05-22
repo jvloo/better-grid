@@ -730,6 +730,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         });
       }
       let editingCell: CellPosition | null = null;
+      let activeCellElement: HTMLElement | null = null;
       let activeEditor: HTMLInputElement | null = null;
       let activeFloatBox: HTMLElement | null = null;
       let activeDropdownPanel: HTMLElement | null = null;
@@ -746,9 +747,37 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         return ctx.grid.getContainer() ?? document.body;
       }
 
-      function getCellElement(pos: CellPosition): HTMLElement | null {
+      function isCellElementForPosition(cell: HTMLElement | null, pos: CellPosition): boolean {
+        if (!cell) return false;
+        const rowIndex = Number(cell.dataset.row);
+        const colIndex = Number(cell.dataset.col);
+        return rowIndex === pos.rowIndex && colIndex === pos.colIndex;
+      }
+
+      function getEventCellElement(event: MouseEvent | undefined, pos: CellPosition): HTMLElement | null {
+        const target = event?.target;
+        if (!(target instanceof Element)) return null;
+
+        const cell = target.closest('.bg-cell');
+        if (!(cell instanceof HTMLElement)) return null;
+        if (!getGridContainer().contains(cell)) return null;
+        return isCellElementForPosition(cell, pos) ? cell : null;
+      }
+
+      function getCellElement(pos: CellPosition, event?: MouseEvent): HTMLElement | null {
+        const eventCell = getEventCellElement(event, pos);
+        if (eventCell) return eventCell;
+
+        if (
+          activeCellElement &&
+          getGridContainer().contains(activeCellElement) &&
+          isCellElementForPosition(activeCellElement, pos)
+        ) {
+          return activeCellElement;
+        }
+
         const selector = `.bg-cell[data-row="${pos.rowIndex}"][data-col="${pos.colIndex}"]`;
-        return getGridContainer().querySelector(selector);
+        return getGridContainer().querySelector<HTMLElement>(selector);
       }
 
       function renderFormattedDisplay(
@@ -1994,7 +2023,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       function startEdit(position: CellPosition, initialValue?: string, clickEvent?: MouseEvent): void {
         if (editingCell) commitEdit();
 
-        const cellEl = getCellElement(position);
+        const cellEl = getCellElement(position, clickEvent);
         if (!cellEl) return;
 
         const state = ctx.grid.getState();
@@ -2042,6 +2071,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         }
 
         editingCell = position;
+        activeCellElement = cellEl;
 
         // Get current raw value
         const data = rowData;
@@ -4379,6 +4409,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         }
 
         activeEditor = null;
+        activeCellElement = null;
         editingCell = null;
         originalValue = null;
 

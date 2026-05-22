@@ -103,14 +103,15 @@ export class RenderingPipeline<TData = unknown> {
   getRowStyle: ((row: TData, rowIndex: number) => Record<string, string> | undefined) | undefined;
   /** Live context ref — read every render so handler swaps don't require re-init. */
   contextRef?: { current: unknown };
+  /** Renderer-facing tooltip helpers. Wired by createGrid after tooltip UI init. */
+  showTooltip: (target: HTMLElement, text: string, cursorX?: number, cursorY?: number) => void = () => {};
+  dismissTooltip: () => void = () => {};
   /** Pool of row-background strip elements keyed by data row index */
   private rowBgPool = new Map<number, HTMLElement>();
   /** Recycled row-bg strips awaiting reuse */
   private rowBgRecyclePool: HTMLElement[] = [];
   /** Reused per renderCells() to track which row strips are still visible */
   private visibleRowBgs = new Set<number>();
-  showTooltip: (target: HTMLElement, text: string, cursorX?: number, cursorY?: number) => void = () => {};
-  dismissTooltip: () => void = () => {};
 
   setGlobalCellRenderer(renderer: CellRenderer<TData> | null): void {
     this.globalCellRenderer = renderer;

@@ -270,31 +270,34 @@ export function gantt(options?: GanttOptions): GridPlugin<'gantt', GanttApi> {
           const visibleData = ctx.grid.getData();
           const rowData = visibleData[rowIndex] as Record<string, unknown> | undefined;
           if (rowData) {
-            // Update column indices on the row object
-            rowData[startColumnField] = newStart;
-            rowData[endColumnField] = newEnd;
+            const patch: Record<string, unknown> = {
+              [startColumnField]: newStart,
+              [endColumnField]: newEnd,
+            };
+            let notifyField = dragType === 'resize-end' ? endColumnField : startColumnField;
 
             // Update date/duration fields if configured
             if (options?.columnToDate) {
               const startDateFld = options.startDateField ?? 'start';
               const endDateFld = options.endDateField ?? 'end';
               const durFld = options.durationField ?? 'duration';
-              rowData[startDateFld] = options.columnToDate(newStart);
-              rowData[endDateFld] = options.columnToDate(newEnd);
-              rowData[durFld] = options.columnsToDuration
+              patch[startDateFld] = options.columnToDate(newStart);
+              patch[endDateFld] = options.columnToDate(newEnd);
+              patch[durFld] = options.columnsToDuration
                 ? options.columnsToDuration(newStart, newEnd)
                 : newEnd - newStart + 1;
+              notifyField = dragType === 'resize-end' ? endDateFld : startDateFld;
             }
 
-            // Update cells that have corresponding columns (for display refresh)
+            // Patch the row once, then emit exactly one cell-change through
+            // updateCell. Emitting every matching field makes consumers submit
+            // several partial-looking saves for a single gantt drag.
+            ctx.grid.updateRow(rowIndex, patch);
             const cols = ctx.grid.getColumns();
-            for (const col of cols) {
-              if (col.field && col.field in rowData) {
-                const val = rowData[col.field];
-                if (val !== undefined) {
-                  ctx.grid.updateCell(rowIndex, col.id, val);
-                }
-              }
+            const notifyColumn = cols.find((col) => col.field === notifyField);
+            const notifyValue = patch[notifyField];
+            if (notifyColumn && notifyValue !== undefined) {
+              ctx.grid.updateCell(rowIndex, notifyColumn.id, notifyValue);
             }
           }
         }
