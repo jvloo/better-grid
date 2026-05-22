@@ -290,6 +290,13 @@ export class RenderingPipeline<TData = unknown> {
 
         if (!isEditingCell && !contentUnchanged) {
           cell.className = 'bg-cell';
+          // The same logical row/col slot can be reused for different data
+          // after inserts/removes or hierarchy changes. Cell renderers are
+          // allowed to set inline styles (background, font weight, flex
+          // layout, etc.), so reset the inline style surface before the next
+          // renderer runs. Layout styles are reapplied immediately below.
+          cell.style.cssText = 'position: absolute';
+          resetAppliedStyles(cell);
         } else {
           cell.classList.add('bg-cell');
         }

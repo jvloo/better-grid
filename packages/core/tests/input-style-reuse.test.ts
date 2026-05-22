@@ -4,6 +4,8 @@ import { editing } from '../../plugins/src/free/editing';
 import type { ColumnDef } from '../src/types';
 
 interface Row {
+  id?: number;
+  parentId?: number | null;
   amount: number | string;
   choice?: string;
 }
@@ -74,6 +76,62 @@ describe('editing inputStyle reuse', () => {
     grid.refresh();
 
     expect(host.querySelector('.bg-input-box')).toBe(first);
+
+    grid.unmount();
+  });
+
+  it('clears renderer inline styles before an input-style select reuses a parent row slot', () => {
+    const host = makeHost();
+    const columns: ColumnDef<Row>[] = [
+      {
+        id: 'choice',
+        field: 'choice',
+        headerName: 'Choice',
+        width: 120,
+        editable: (row) => row.parentId !== null,
+        cellEditor: 'select',
+        options: [
+          { value: 'cpi', label: 'CPI' },
+          { value: 'none', label: 'None' },
+        ],
+        valueFormatter: (value) => (value === 'cpi' ? 'CPI' : ''),
+        cellRenderer: (container, ctx) => {
+          const row = ctx.row as Row;
+          container.textContent = row.parentId === null ? '' : String(ctx.value ?? '');
+          container.style.backgroundColor = row.parentId === null ? '#F8F8F8' : '';
+          container.style.fontWeight = row.parentId === null ? '500' : '400';
+        },
+      },
+    ];
+    const grid = createGrid<Row>({
+      columns,
+      data: [
+        { id: 1, parentId: null, amount: 0, choice: '' },
+        { id: 2, parentId: 1, amount: 0, choice: 'cpi' },
+      ],
+      plugins: [editing({ inputStyle: true })],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const parentCell = host.querySelector<HTMLElement>('.bg-cell[data-row="0"][data-col="0"]');
+    expect(parentCell?.style.backgroundColor).toBe('#F8F8F8');
+    expect(parentCell?.style.fontWeight).toBe('500');
+
+    grid.setData([
+      { id: 3, parentId: 1, amount: 0, choice: 'cpi' },
+      { id: 1, parentId: null, amount: 0, choice: '' },
+      { id: 2, parentId: 1, amount: 0, choice: 'cpi' },
+    ]);
+
+    const reusedCell = host.querySelector<HTMLElement>('.bg-cell[data-row="0"][data-col="0"]');
+    const trigger = reusedCell?.querySelector<HTMLElement>('.bg-select-trigger');
+
+    expect(reusedCell?.textContent).toBe('CPI');
+    expect(reusedCell?.style.backgroundColor).toBe('');
+    expect(reusedCell?.style.fontWeight).toBe('');
+    expect(trigger?.style.fontWeight).not.toBe('500');
 
     grid.unmount();
   });
