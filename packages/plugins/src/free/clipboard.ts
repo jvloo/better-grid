@@ -2,8 +2,9 @@
 // Clipboard Plugin — Copy, paste, cut + Pro fill-down/right/series & rich paste
 // ============================================================================
 
-import type { GridPlugin, PluginContext, ColumnDef, CellRange } from '@better-grid/core';
+import type { GridPlugin, PluginContext, ColumnDef, CellRange, CellPosition } from '@better-grid/core';
 import { escapeXml, getCellValue } from '@better-grid/core';
+import type { EditingApi } from './editing';
 
 export interface ClipboardOptions {
   /** Include column headers when copying. Default: false */
@@ -335,6 +336,15 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
         return raw;
       }
 
+      function isCellEditable(column: ColumnDef | undefined, row: unknown): column is ColumnDef {
+        if (!column) return false;
+        if (column.editable === false) return false;
+        if (typeof column.editable === 'function') {
+          return column.editable(row as never, column as never);
+        }
+        return true;
+      }
+
       /** Escape a cell value for TSV: if it contains tab, newline, or quote, wrap in quotes */
       function escapeTsv(value: string): string {
         if (value.includes(config.separator) || value.includes('\n') || value.includes('\r') || value.includes('"')) {
@@ -496,10 +506,59 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
       // Paste (with rich HTML support)
       // -------------------------------------------------------------------
 
-      async function paste(): Promise<void> {
+      function getEditingCell(): CellPosition | null {
+        const editingApi = ctx.getPluginApi<EditingApi>('editing');
+        if (!editingApi?.isEditing()) return null;
+        return editingApi.getEditingCell();
+      }
+
+      function getPasteAnchor(): CellPosition | null {
         const state = ctx.grid.getState();
-        const { selection } = state;
-        const active = selection.active;
+        return state.selection.active ?? getEditingCell();
+      }
+
+      function applyParsedRows(parsedRows: string[][], active: CellPosition): void {
+        const state = ctx.grid.getState();
+        if (!active) return;
+
+        const editingApi = ctx.getPluginApi<EditingApi>('editing');
+        if (editingApi?.isEditing()) {
+          editingApi.cancelEdit();
+        }
+
+        const changes: Array<{ rowIndex: number; columnId: string; oldValue: unknown; newValue: unknown }> = [];
+
+        for (let r = 0; r < parsedRows.length; r++) {
+          const rowIndex = active.rowIndex + r;
+          if (rowIndex >= state.data.length) break;
+
+          const row = state.data[rowIndex];
+          if (!row) continue;
+
+          const cells = parsedRows[r]!;
+          for (let c = 0; c < cells.length; c++) {
+            const colIndex = active.colIndex + c;
+            if (colIndex >= state.columns.length) break;
+
+            const column = state.columns[colIndex]!;
+            if (!isCellEditable(column, row)) continue;
+
+            const rawValue = cells[c]!;
+            const oldValue = getCellValue(row, column);
+            const newValue = parsePasteValue(rawValue, column, oldValue, row);
+
+            ctx.grid.updateCell(rowIndex, column.id, newValue);
+            changes.push({ rowIndex, columnId: column.id, oldValue, newValue });
+          }
+        }
+
+        if (changes.length > 0) {
+          config.onPaste?.(changes);
+        }
+      }
+
+      async function paste(): Promise<void> {
+        const active = getPasteAnchor();
         if (!active) return;
 
         let parsedRows: string[][] | null = null;
@@ -540,35 +599,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
 
         if (!parsedRows || parsedRows.length === 0) return;
 
-        const changes: Array<{ rowIndex: number; columnId: string; oldValue: unknown; newValue: unknown }> = [];
-
-        for (let r = 0; r < parsedRows.length; r++) {
-          const rowIndex = active.rowIndex + r;
-          if (rowIndex >= state.data.length) break;
-
-          const row = state.data[rowIndex];
-          if (!row) continue;
-
-          const cells = parsedRows[r]!;
-          for (let c = 0; c < cells.length; c++) {
-            const colIndex = active.colIndex + c;
-            if (colIndex >= state.columns.length) break;
-
-            const column = state.columns[colIndex]!;
-            if (column.editable === false) continue;
-
-            const rawValue = cells[c]!;
-            const oldValue = getCellValue(row, column);
-            const newValue = parsePasteValue(rawValue, column, oldValue, row);
-
-            ctx.grid.updateCell(rowIndex, column.id, newValue);
-            changes.push({ rowIndex, columnId: column.id, oldValue, newValue });
-          }
-        }
-
-        if (changes.length > 0) {
-          config.onPaste?.(changes);
-        }
+        applyParsedRows(parsedRows, active);
       }
 
       // -------------------------------------------------------------------
@@ -590,8 +621,8 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
           for (let r = r1; r <= r2; r++) {
             for (let c = c1; c <= c2; c++) {
               const column = state.columns[c];
-              if (!column) continue;
-              if (column.editable === false) continue;
+              const row = state.data[r];
+              if (!row || !isCellEditable(column, row)) continue;
               ctx.grid.updateCell(r, column.id, null);
             }
           }
@@ -623,7 +654,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
           // Fill down to all rows below
           for (let r = minRow + 1; r <= maxRow; r++) {
             const row = state.data[r];
-            if (!row) continue;
+            if (!row || !isCellEditable(column, row)) continue;
             const oldValue = getCellValue(row, column);
             ctx.grid.updateCell(r, column.id, sourceValue);
             changes.push({ rowIndex: r, columnId: column.id, oldValue, newValue: sourceValue });
@@ -661,7 +692,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
           // Fill right to all columns
           for (let c = minCol + 1; c <= maxCol; c++) {
             const column = state.columns[c];
-            if (!column || column.editable === false) continue;
+            if (!isCellEditable(column, row)) continue;
             const oldValue = getCellValue(row, column);
             ctx.grid.updateCell(r, column.id, sourceValue);
             changes.push({ rowIndex: r, columnId: column.id, oldValue, newValue: sourceValue });
@@ -714,7 +745,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
 
               for (let r = targetRange.startRow; r <= targetRange.endRow; r++) {
                 const row = state.data[r];
-                if (!row) continue;
+                if (!row || !isCellEditable(column, row)) continue;
 
                 let index: number;
                 if (fillingDown) {
@@ -752,7 +783,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
 
               for (let c = targetRange.startCol; c <= targetRange.endCol; c++) {
                 const column = columns[c];
-                if (!column || column.editable === false) continue;
+                if (!isCellEditable(column, row)) continue;
 
                 let index: number;
                 if (fillingRight) {
@@ -828,9 +859,82 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
         return cells;
       }
 
+      function isBulkPasteShape(rows: string[][]): boolean {
+        return rows.length > 1 || rows.some((row) => row.length > 1);
+      }
+
       // -------------------------------------------------------------------
       // Key bindings
       // -------------------------------------------------------------------
+
+      function handleNativePaste(event: ClipboardEvent): void {
+        const target = event.target as HTMLElement | null;
+        const gridEl = ctx.grid.getContainer();
+        const ownsTarget = !!target && !!gridEl?.contains(target);
+        const hasEditingAnchor = !!getEditingCell();
+        if (!target || (!ownsTarget && !hasEditingAnchor)) return;
+
+        // Let normal single-value editor pastes stay native. Only TSV/HTML
+        // shapes should escape the editor and become a grid paste.
+        const active = getPasteAnchor();
+        if (!active) return;
+
+        const clipboardData = event.clipboardData;
+        if (!clipboardData) return;
+
+        let parsedRows: string[][] | null = null;
+        const html = clipboardData.getData('text/html');
+        if (config.richPaste && html) {
+          parsedRows = parseHtmlTable(html);
+        }
+
+        if (!parsedRows) {
+          const text = clipboardData.getData('text/plain');
+          if (!text) return;
+          const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+          if (!normalized.includes(config.separator) && !normalized.includes('\n')) return;
+
+          const lines = normalized.split('\n');
+          if (lines.length > 1 && lines[lines.length - 1] === '') {
+            lines.pop();
+          }
+          parsedRows = lines.map((line) => parseTsvLine(line, config.separator));
+        }
+
+        if (!parsedRows || !isBulkPasteShape(parsedRows)) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        applyParsedRows(parsedRows, active);
+      }
+
+      function handleNativeKeyDown(event: KeyboardEvent): void {
+        if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'v') return;
+
+        const target = event.target as HTMLElement | null;
+        const gridEl = ctx.grid.getContainer();
+        const ownsTarget = !!target && !!gridEl?.contains(target);
+        const hasEditingAnchor = !!getEditingCell();
+        if (!target || (!ownsTarget && !hasEditingAnchor)) return;
+
+        const isEditorTarget =
+          target.classList.contains('bg-cell-editor') ||
+          !!target.closest('.bg-cell--editing') ||
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable;
+        if (!isEditorTarget || !getPasteAnchor()) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        void paste();
+      }
+
+      const gridEl = ctx.grid.getContainer();
+      gridEl?.addEventListener('paste', handleNativePaste, true);
+      gridEl?.addEventListener('keydown', handleNativeKeyDown, true);
+      document.addEventListener('paste', handleNativePaste, true);
+      document.addEventListener('keydown', handleNativeKeyDown, true);
 
       const unbindCopy = ctx.registerKeyBinding({
         key: '*',
@@ -926,6 +1030,10 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
         unbindFillDown?.();
         unbindFillRight?.();
         unbindFillExecute?.();
+        gridEl?.removeEventListener('paste', handleNativePaste, true);
+        gridEl?.removeEventListener('keydown', handleNativeKeyDown, true);
+        document.removeEventListener('paste', handleNativePaste, true);
+        document.removeEventListener('keydown', handleNativeKeyDown, true);
       };
     },
   };
