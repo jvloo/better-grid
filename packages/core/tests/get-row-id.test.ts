@@ -26,6 +26,71 @@ describe('top-level getRowId', () => {
     expect(afterSelected?.rowIndex).toBe(1);
   });
 
+  test('setData preserves range selection by stable row id when rows refresh', () => {
+    const data1: Row[] = [
+      { id: 1, name: 'A' },
+      { id: 2, name: 'B' },
+      { id: 3, name: 'C' },
+    ];
+    const grid = createGrid<Row>({
+      columns: [
+        { field: 'id' as never, headerName: 'ID' },
+        { field: 'name' as never, headerName: 'Name' },
+      ],
+      data: data1,
+      getRowId: (row) => row.id,
+      selection: { mode: 'range' },
+    });
+
+    grid.setSelection({
+      active: { rowIndex: 0, colIndex: 1 },
+      ranges: [{ startRow: 0, endRow: 2, startCol: 1, endCol: 1 }],
+    });
+
+    grid.setData([
+      { id: 1, name: 'A updated' },
+      { id: 2, name: 'B updated' },
+      { id: 3, name: 'C updated' },
+    ]);
+
+    expect(grid.getState().selection).toEqual({
+      active: { rowIndex: 0, colIndex: 1 },
+      ranges: [{ startRow: 0, endRow: 2, startCol: 1, endCol: 1 }],
+    });
+  });
+
+  test('setData relocates range selection by row id when row order changes', () => {
+    const grid = createGrid<Row>({
+      columns: [
+        { field: 'id' as never, headerName: 'ID' },
+        { field: 'name' as never, headerName: 'Name' },
+      ],
+      data: [
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+      ],
+      getRowId: (row) => row.id,
+      selection: { mode: 'range' },
+    });
+
+    grid.setSelection({
+      active: { rowIndex: 0, colIndex: 1 },
+      ranges: [{ startRow: 0, endRow: 2, startCol: 1, endCol: 1 }],
+    });
+
+    grid.setData([
+      { id: 3, name: 'C' },
+      { id: 2, name: 'B' },
+      { id: 1, name: 'A' },
+    ]);
+
+    expect(grid.getState().selection).toEqual({
+      active: { rowIndex: 2, colIndex: 1 },
+      ranges: [{ startRow: 0, endRow: 2, startCol: 1, endCol: 1 }],
+    });
+  });
+
   test('hierarchy.getRowId wins for hierarchy state when both are set', () => {
     // This is a smoke test: configuration accepts both without error.
     const grid = createGrid<Row>({

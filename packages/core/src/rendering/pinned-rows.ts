@@ -12,6 +12,7 @@ import type { NormalizedColumnDef } from '../columns/manager';
 import type { LayoutMeasurements } from '../virtualization/engine';
 import type { RenderingPipeline } from './pipeline';
 import { getCellValue, snapToDevicePixel } from '../utils';
+import { normalizeDirectTextContent, renderTextContent } from './text';
 
 export interface PinnedRowRendererDeps<TData = unknown> {
   /** Shared cell-type registry (for custom cellRenderer lookup) */
@@ -173,10 +174,12 @@ export function createPinnedRowRenderer<TData = unknown>(
         } else if (column.cellType && deps.rendering.getCellType(column.cellType)) {
           deps.rendering.getCellType(column.cellType)!.render(cell, context as CellRenderContext);
         } else if (column.valueFormatter) {
-          cell.textContent = column.valueFormatter(value, rowData as never);
+          renderTextContent(cell, column.valueFormatter(value, rowData as never));
         } else {
-          cell.textContent = value != null ? String(value) : '';
+          renderTextContent(cell, value != null ? String(value) : '');
         }
+
+        normalizeDirectTextContent(cell);
 
         // Apply conditional cellStyle / cellClass
         if (column.cellStyle) {

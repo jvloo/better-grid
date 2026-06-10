@@ -12,6 +12,7 @@ type AnyCellRenderContext = CellRenderContext<any>;
 import type { LayoutMeasurements } from '../virtualization/engine';
 import { isCellActive, isCellInSelection } from '../selection/model';
 import { getCellValue, snapToDevicePixel } from '../utils';
+import { normalizeDirectTextContent, renderTextContent } from './text';
 
 // Encode row:col into a single number to avoid string allocation per cell
 const MAX_COLS = 16384; // 2^14 — supports up to 16K columns
@@ -42,6 +43,7 @@ interface CellRenderMeta<TData = unknown> {
   width: number;
   height: number;
   context: unknown;
+  nativeTextSelectable: boolean;
 }
 // CSSStyleDeclaration.setProperty expects kebab-case for spec-defined properties.
 // Callers pass camelCase ({fontWeight: '600'}), so convert before forwarding.
@@ -142,7 +144,10 @@ export class RenderingPipeline<TData = unknown> {
     frozenLeftColumns = 0,
     scrollLeft = 0,
     frozenTopRows = 0,
-    opts: { force?: boolean } = {},
+    opts: {
+      force?: boolean;
+      isNativeTextSelectable?: (rowIndex: number, colIndex: number) => boolean;
+    } = {},
   ): void {
     const visibleKeys = this.visibleKeys;
     visibleKeys.clear();
@@ -269,6 +274,7 @@ export class RenderingPipeline<TData = unknown> {
         // Selection classes
         const selected = isCellInSelection(row, col, selection);
         const active = isCellActive(row, col, selection);
+        const nativeTextSelectable = opts.isNativeTextSelectable?.(row, col) ?? false;
 
         const contextValue = this.contextRef?.current;
         const previousMeta = this.cellMeta.get(key);
@@ -286,7 +292,8 @@ export class RenderingPipeline<TData = unknown> {
           previousMeta.left === left &&
           previousMeta.width === width &&
           previousMeta.height === height &&
-          previousMeta.context === contextValue;
+          previousMeta.context === contextValue &&
+          previousMeta.nativeTextSelectable === nativeTextSelectable;
 
         if (!isEditingCell && !contentUnchanged) {
           cell.className = 'bg-cell';
@@ -322,6 +329,7 @@ export class RenderingPipeline<TData = unknown> {
 
         cell.classList.toggle('bg-cell--selected', selected);
         cell.classList.toggle('bg-cell--active', active);
+        cell.classList.toggle('bg-cell--native-text-selectable', nativeTextSelectable);
 
         // Skip content re-render for actively edited cells — preserve the live editor.
         if (isEditingCell) continue;
@@ -368,10 +376,12 @@ export class RenderingPipeline<TData = unknown> {
         } else if (this.globalCellRenderer) {
           cleanup = this.globalCellRenderer(cell, context);
         } else if (column.valueFormatter) {
-          cell.textContent = column.valueFormatter(value, rowData as never);
+          renderTextContent(cell, column.valueFormatter(value, rowData as never));
         } else {
-          cell.textContent = value != null ? String(value) : '';
+          renderTextContent(cell, value != null ? String(value) : '');
         }
+
+        normalizeDirectTextContent(cell);
 
         if (cleanup) {
           this.cleanupFns.set(key, cleanup);
@@ -387,6 +397,7 @@ export class RenderingPipeline<TData = unknown> {
           width,
           height,
           context: contextValue,
+          nativeTextSelectable,
         });
 
         // Apply column-level styles (cellStyle). Row-level styles are handled

@@ -38,6 +38,22 @@ export interface Selection {
   ranges: CellRange[];
 }
 
+export interface FillHandlePredicateContext<TData = unknown> {
+  row: TData;
+  column: ColumnDef<TData>;
+  rowIndex: number;
+  colIndex: number;
+  value: unknown;
+}
+
+export type FillHandlePredicate<TData = unknown> = (
+  context: FillHandlePredicateContext<TData>,
+) => boolean;
+
+export type CellSelectionPredicate<TData = unknown> = (
+  context: FillHandlePredicateContext<TData>,
+) => boolean;
+
 // ---------------------------------------------------------------------------
 // Scroll & Viewport
 // ---------------------------------------------------------------------------
@@ -64,6 +80,12 @@ export interface CellChange<TData = unknown> {
   oldValue: unknown;
   newValue: unknown;
   row: TData;
+}
+
+export interface CellUpdate {
+  rowIndex: number;
+  columnId: string;
+  value: unknown;
 }
 
 // ---------------------------------------------------------------------------
@@ -263,11 +285,27 @@ export interface FooterRow {
 // Selection Options
 // ---------------------------------------------------------------------------
 
-export type SelectionOptions =
+export type SelectionOptions<TData = unknown> =
   | false
   | { mode: 'cell' }
   | { mode: 'row' }
-  | { mode: 'range'; multiRange?: boolean; fillHandle?: boolean };
+  | {
+      mode: 'range';
+      multiRange?: boolean;
+      fillHandle?: boolean;
+      /**
+       * Optional per-cell eligibility check for showing and dragging the fill
+       * handle. The default still follows editable cells; use this when only a
+       * subset of editable cells should support bulk fill/paste workflows.
+       */
+      fillHandlePredicate?: FillHandlePredicate<TData>;
+      /**
+       * Optional per-cell eligibility check for Better Grid selection. Cells
+       * rejected by this predicate do not get selected by pointer interaction,
+       * allowing native browser text selection to work inside them.
+       */
+      cellSelectionPredicate?: CellSelectionPredicate<TData>;
+    };
 
 // ---------------------------------------------------------------------------
 // Virtualization Options
@@ -471,7 +509,7 @@ export interface GridOptions<
 
   // Behavior
   /** Default = { mode: 'cell' }. Pass `false` to disable selection entirely. */
-  selection?: SelectionOptions;
+  selection?: SelectionOptions<TData>;
   /** Stable row identity. Used by selection-stability across data swaps. Mirrored to hierarchy.getRowId when hierarchy is configured (hierarchy.getRowId wins for hierarchy state if both are set). */
   getRowId?: (row: TData) => string | number;
   hierarchy?: HierarchyConfig<TData>;
@@ -653,6 +691,7 @@ export interface GridInstance<
   setData(data: TData[], options?: SetDataOptions): void;
   updateRow(rowIndex: number, data: Partial<TData>): void;
   updateCell(rowIndex: number, columnId: string, value: unknown): void;
+  updateCells(updates: CellUpdate[]): void;
 
   getPinnedTopRows(): TData[];
   setPinnedTopRows(rows: TData[]): void;
@@ -739,6 +778,7 @@ export interface PluginGridApi<TData = unknown> {
   setData(data: TData[], options?: SetDataOptions): void;
   updateRow(rowIndex: number, data: Partial<TData>): void;
   updateCell(rowIndex: number, columnId: string, value: unknown): void;
+  updateCells(updates: CellUpdate[]): void;
 
   // Columns
   getColumns(): NormalizedColumnDef<TData>[];

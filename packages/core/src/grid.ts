@@ -17,6 +17,8 @@ import type {
   PluginContext,
   HierarchyConfig,
   CellChange,
+  CellUpdate,
+  CellRange,
 } from './types';
 import { EventEmitter } from './events/emitter';
 import { StateStore } from './state/store';
@@ -33,7 +35,12 @@ import {
   addRangeToSelection,
   normalizeSelection,
 } from './selection/model';
-import { navigateCell, navigateTab, getNavigationDirection } from './keyboard/navigation';
+import {
+  navigateCell,
+  navigateTab,
+  getNavigationDirection,
+  type NavigationBounds,
+} from './keyboard/navigation';
 import { computeZoneDimensions } from './virtualization/layout';
 import { createFilterPanel, type FilterApi } from './ui/filter-panel';
 import { createContextMenu } from './ui/context-menu';
@@ -257,6 +264,104 @@ export function createGrid<
     return state.hierarchyState.visibleRows[visibleIndex] ?? visibleIndex;
   }
 
+  function isCellSelectableForSelection(rowIndex: number, colIndex: number): boolean {
+    if (!normalizedSelection.cellSelectionPredicate) return true;
+
+    const state = store.getState();
+    const column = state.columns[colIndex];
+    if (!column) return false;
+
+    const row = state.data[visibleToDataIndex(rowIndex)];
+    if (!row) return false;
+
+    return normalizedSelection.cellSelectionPredicate({
+      row,
+      column,
+      rowIndex,
+      colIndex,
+      value: getCellValue(row, column),
+    });
+  }
+
+  function isNativeTextSelectableCell(rowIndex: number, colIndex: number): boolean {
+    return (
+      normalizedSelection.mode !== 'off' &&
+      !!normalizedSelection.cellSelectionPredicate &&
+      !isCellSelectableForSelection(rowIndex, colIndex)
+    );
+  }
+
+  function isCellEditableForFill(rowIndex: number, colIndex: number): boolean {
+    const state = store.getState();
+    const column = state.columns[colIndex];
+    if (!column) return false;
+
+    const row = state.data[visibleToDataIndex(rowIndex)];
+    if (!row) return false;
+
+    if (column.editable === false) return false;
+    if (typeof column.editable === 'function') {
+      if (!column.editable(row, column)) return false;
+    }
+
+    if (normalizedSelection.fillHandlePredicate) {
+      return normalizedSelection.fillHandlePredicate({
+        row,
+        column,
+        rowIndex,
+        colIndex,
+        value: getCellValue(row, column),
+      });
+    }
+
+    return true;
+  }
+
+  function isRangeEditableForFill(range: CellRange): boolean {
+    for (let r = range.startRow; r <= range.endRow; r++) {
+      for (let c = range.startCol; c <= range.endCol; c++) {
+        if (!isCellEditableForFill(r, c)) return false;
+      }
+    }
+    return true;
+  }
+
+  function isSameCell(a: CellPosition, b: CellPosition): boolean {
+    return a.rowIndex === b.rowIndex && a.colIndex === b.colIndex;
+  }
+
+  function navigateSelectableCell(
+    active: CellPosition,
+    direction: 'up' | 'down' | 'left' | 'right',
+    bounds: NavigationBounds,
+  ): CellPosition | null {
+    let current = active;
+    const maxSteps = Math.max(1, bounds.rowCount * bounds.colCount);
+    for (let step = 0; step < maxSteps; step++) {
+      const next = navigateCell(current, direction, bounds);
+      if (isSameCell(next, current)) return null;
+      if (isCellSelectableForSelection(next.rowIndex, next.colIndex)) return next;
+      current = next;
+    }
+    return null;
+  }
+
+  function navigateSelectableTab(
+    active: CellPosition,
+    forward: boolean,
+    bounds: NavigationBounds,
+  ): CellPosition | null {
+    let current = active;
+    const maxSteps = Math.max(1, bounds.rowCount * bounds.colCount);
+    for (let step = 0; step < maxSteps; step++) {
+      const next = navigateTab(current, forward, bounds);
+      if (isSameCell(next, active)) return null;
+      if (isCellSelectableForSelection(next.rowIndex, next.colIndex)) return next;
+      current = next;
+    }
+    return null;
+  }
+
   /** Sync aria-rowcount/aria-colcount on the grid container. */
   function updateAriaCounts(): void {
     if (!container) return;
@@ -443,7 +548,7 @@ export function createGrid<
       0, // no frozen col handling in main pipeline
       0,
       state.frozen.top,
-      { force: forceBodyRender },
+      { force: forceBodyRender, isNativeTextSelectable: isNativeTextSelectableCell },
     );
 
     // Render frozen columns into separate overlay (outside scroll container)
@@ -462,7 +567,7 @@ export function createGrid<
         frozenCols, // apply last-frozen-col class
         0,
         state.frozen.top,
-        { force: forceBodyRender },
+        { force: forceBodyRender, isNativeTextSelectable: isNativeTextSelectableCell },
       );
 
       // Update frozen overlay width and clip scroll container
@@ -631,8 +736,12 @@ export function createGrid<
       frozenCellOverlay.style.top = `${headerHeight + pinnedTopH}px`;
     }
 
-    // Render selection layer (readonly cols are cached on ColumnManager, rebuilt on setColumns)
-    selectionLayer?.render(state.selection, measurements, columnManager.getReadonlyColumns());
+    // Render selection layer. Fill-handle visibility must honor row-level
+    // editable predicates, not just static readonly columns.
+    selectionLayer?.render(state.selection, measurements, {
+      readonlyColumns: columnManager.getReadonlyColumns(),
+      canShowFillHandle: isRangeEditableForFill,
+    });
 
     emitter.emit('render', visibleRange);
   }
@@ -832,6 +941,17 @@ export function createGrid<
     const selectionMode = normalizedSelection.mode;
     if (selectionMode === 'off') return;
 
+    if (!isCellSelectableForSelection(cell.rowIndex, cell.colIndex)) {
+      const currentSelection = store.getState().selection;
+      if (currentSelection.active || currentSelection.ranges.length > 0) {
+        const clearedSelection = createEmptySelection();
+        store.setSelection(clearedSelection);
+        emitter.emit('selection:change', clearedSelection);
+        scheduleRender();
+      }
+      return;
+    }
+
     const isCtrlHeld = event.ctrlKey || event.metaKey;
     const allowRange = selectionMode === 'range';
     const allowMultiRange = allowRange && normalizedSelection.multiRange;
@@ -967,16 +1087,18 @@ export function createGrid<
         // Shift+arrow: extend range (range mode only)
         const lastRange = state.selection.ranges[state.selection.ranges.length - 1];
         if (lastRange) {
-          const end = navigateCell(
+          const end = navigateSelectableCell(
             { rowIndex: lastRange.endRow, colIndex: lastRange.endCol },
             direction,
             bounds,
           );
+          if (!end) return;
           const newSelection = extendSelection(state.selection, end);
           store.setSelection(newSelection);
         }
       } else {
-        const newActive = navigateCell(state.selection.active, direction, bounds);
+        const newActive = navigateSelectableCell(state.selection.active, direction, bounds);
+        if (!newActive) return;
         store.setSelection(createCellSelection(newActive));
         scrollCellIntoView(newActive);
       }
@@ -988,7 +1110,8 @@ export function createGrid<
     // Tab
     if (event.key === 'Tab') {
       event.preventDefault();
-      const newActive = navigateTab(state.selection.active, !event.shiftKey, bounds);
+      const newActive = navigateSelectableTab(state.selection.active, !event.shiftKey, bounds);
+      if (!newActive) return;
       store.setSelection(createCellSelection(newActive));
       scrollCellIntoView(newActive);
       emitter.emit('key:tab', state.selection.active, event.shiftKey ? 'backward' : 'forward');
@@ -1845,6 +1968,7 @@ export function createGrid<
           // Default: cycle source values (no series detection)
           const state = store.getState();
           const columns = state.columns;
+          const updates: CellUpdate[] = [];
           const sourceRowCount = sourceRange.endRow - sourceRange.startRow + 1;
           const sourceColCount = sourceRange.endCol - sourceRange.startCol + 1;
           const isVertical =
@@ -1874,7 +1998,7 @@ export function createGrid<
                 const srcIdx = (row - targetRange.startRow) % sourceRowCount;
                 const value = sourceVals[srcIdx];
                 if (value !== undefined) {
-                  instance.updateCell(row, column.id, value);
+                  updates.push({ rowIndex: row, columnId: column.id, value });
                 }
               }
             }
@@ -1891,11 +2015,13 @@ export function createGrid<
 
                 const value = (state.data[row] as Record<string, unknown>)?.[srcCol.field];
                 if (value !== undefined) {
-                  instance.updateCell(row, column.id, value);
+                  updates.push({ rowIndex: row, columnId: column.id, value });
                 }
               }
             }
           }
+
+          instance.updateCells(updates);
         }
 
         // Extend selection to include filled area
@@ -2074,14 +2200,32 @@ export function createGrid<
             scrollLeft: fakeScrollbar?.scrollLeft ?? oldState.scrollLeft,
           }
         : null;
-      const oldActiveRow = oldState.selection.active;
-      let preservedId: string | number | null = null;
-      if (hasRowId && oldActiveRow != null) {
-        const oldRow = oldState.data[oldActiveRow.rowIndex];
-        if (oldRow !== undefined) {
-          preservedId = resolveRowId(oldRow, oldActiveRow.rowIndex);
-        }
-      }
+      const rowIdFromVisibleIndex = (
+        state: GridState<TData>,
+        visibleIndex: number,
+      ): string | number | null => {
+        const dataIndex = state.hierarchyState?.visibleRows[visibleIndex] ?? visibleIndex;
+        const row = state.data[dataIndex];
+        return row === undefined ? null : resolveRowId(row, dataIndex);
+      };
+
+      const oldActive = oldState.selection.active;
+      const preservedActive = hasRowId && oldActive != null
+        ? {
+            rowId: rowIdFromVisibleIndex(oldState, oldActive.rowIndex),
+            colIndex: oldActive.colIndex,
+          }
+        : null;
+      const preservedRanges = hasRowId
+        ? oldState.selection.ranges
+            .map((range) => ({
+              startRowId: rowIdFromVisibleIndex(oldState, range.startRow),
+              endRowId: rowIdFromVisibleIndex(oldState, range.endRow),
+              startCol: range.startCol,
+              endCol: range.endCol,
+            }))
+            .filter((range) => range.startRowId !== null && range.endRowId !== null)
+        : [];
 
       store.setData(data);
       store.update('rowHeights', () => ({
@@ -2092,20 +2236,45 @@ export function createGrid<
       updateAriaCounts();
 
       // Spec: state-on-data-swap defaults — selection clears, scroll resets to (0,0).
-      // Exception: when getRowId is provided, relocate the previously-selected row
-      // in the new array instead of clearing selection.
+      // Exception: when getRowId is provided, relocate the previous active cell
+      // and selection ranges by stable row id instead of clearing selection.
       // Editing plugin handles its own commit-or-cancel via existing rules.
       // Undo plugin clears its own history if subscribed to data:set.
       // TODO(perf): add a `resetOn: 'never' | 'data' | 'columns'` option to opt out.
-      if (hasRowId && preservedId !== null && oldActiveRow !== null) {
-        const newIdx = data.findIndex((row, idx) => resolveRowId(row, idx) === preservedId);
-        if (newIdx >= 0) {
-          // Row still exists in new data — update its position.
+      if (hasRowId && preservedActive !== null && preservedActive.rowId !== null && oldActive !== null) {
+        const currentState = store.getState();
+        const visibleIndexForRowId = (rowId: string | number | null): number => {
+          if (rowId === null) return -1;
+          if (currentState.hierarchyState) {
+            return currentState.hierarchyState.visibleRows.findIndex((dataIndex) => {
+              const row = data[dataIndex];
+              return row !== undefined && resolveRowId(row, dataIndex) === rowId;
+            });
+          }
+          return data.findIndex((row, idx) => resolveRowId(row, idx) === rowId);
+        };
+
+        const activeRowIndex = visibleIndexForRowId(preservedActive.rowId);
+        if (activeRowIndex >= 0) {
+          const relocatedRanges = preservedRanges
+            .map((range) => {
+              const startRow = visibleIndexForRowId(range.startRowId);
+              const endRow = visibleIndexForRowId(range.endRowId);
+              if (startRow < 0 || endRow < 0) return null;
+              return {
+                startRow: Math.min(startRow, endRow),
+                endRow: Math.max(startRow, endRow),
+                startCol: range.startCol,
+                endCol: range.endCol,
+              };
+            })
+            .filter((range): range is NonNullable<typeof range> => range !== null);
+
+          // Rows still exist in new data — update their visible positions.
           const relocatedSelection = {
             ...oldState.selection,
-            active: { ...oldActiveRow, rowIndex: newIdx },
-            // Ranges are cleared on data swap; only the active anchor is preserved.
-            ranges: [],
+            active: { ...oldActive, rowIndex: activeRowIndex },
+            ranges: relocatedRanges,
           };
           store.setSelection(relocatedSelection);
           emitter.emit('selection:change', relocatedSelection);
@@ -2174,6 +2343,40 @@ export function createGrid<
       };
       emitter.emit('cell:change', [change]);
       options.onCellChange?.([change]);
+      scheduleRender();
+    },
+
+    updateCells(updates: CellUpdate[]): void {
+      if (updates.length === 0) return;
+
+      const changes: CellChange<TData>[] = [];
+      const columns = columnManager.getAllColumns();
+
+      for (const update of updates) {
+        const dataIndex = visibleToDataIndex(update.rowIndex);
+        const oldRow = store.getState().data[dataIndex];
+        if (oldRow === undefined) continue;
+
+        const column = columns.find((c) => c.id === update.columnId);
+        const oldValue = column ? getCellValue(oldRow, column, dataIndex) : undefined;
+
+        store.setCellValue(dataIndex, update.columnId, update.value);
+        const newRow = store.getState().data[dataIndex];
+        if (newRow === undefined) continue;
+
+        changes.push({
+          rowIndex: update.rowIndex,
+          columnId: update.columnId,
+          oldValue,
+          newValue: update.value,
+          row: newRow,
+        });
+      }
+
+      if (changes.length === 0) return;
+
+      emitter.emit('cell:change', changes);
+      options.onCellChange?.(changes);
       scheduleRender();
     },
 

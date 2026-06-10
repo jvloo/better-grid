@@ -2,6 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createGrid } from '../src/grid';
+import { hierarchy } from '../../plugins/src/free/hierarchy';
 
 const cssSource = readFileSync(
   path.resolve(__dirname, '../src/styles/grid.css'),
@@ -124,6 +125,156 @@ describe('table-style CSS rules', () => {
     expect(gridSource).toContain('getFloatingScrollbarSize()');
     expect(gridSource).toContain("floatingHThumb.className = 'bg-grid__float-h-thumb'");
     expect(gridSource).toContain("floatingVThumb.className = 'bg-grid__float-v-thumb'");
+  });
+
+  test('header text remains natively selectable while header controls are not', () => {
+    const headerTextRule = cssSource.match(/\.bg-header-cell__text\s*\{([^}]*)\}/);
+    expect(headerTextRule?.[1]).toMatch(/user-select:\s*text/);
+    expect(headerTextRule?.[1]).toMatch(/-webkit-user-select:\s*text/);
+
+    const filterButtonRule = cssSource.match(/\.bg-header-cell__filter-btn\s*\{([^}]*)\}/);
+    expect(filterButtonRule?.[1]).toMatch(/user-select:\s*none/);
+    expect(filterButtonRule?.[1]).toMatch(/-webkit-user-select:\s*none/);
+
+    const sortIndicatorRule = cssSource.match(/\.bg-sort-indicator\s*\{([^}]*)\}/);
+    expect(sortIndicatorRule?.[1]).toMatch(/user-select:\s*none/);
+    expect(sortIndicatorRule?.[1]).toMatch(/-webkit-user-select:\s*none/);
+
+    const resizeHandleRule = cssSource.match(/\.bg-resize-handle\s*\{([^}]*)\}/);
+    expect(resizeHandleRule?.[1]).toMatch(/user-select:\s*none/);
+    expect(resizeHandleRule?.[1]).toMatch(/-webkit-user-select:\s*none/);
+  });
+
+  test('default cell text has its own selectable text-height line box', () => {
+    const cellTextRule = cssSource.match(/\.bg-cell__text\s*\{([^}]*)\}/);
+    expect(cellTextRule?.[1]).toMatch(/line-height:\s*var\(--bg-cell-text-line-height,\s*normal\)/);
+    expect(cellTextRule?.[1]).toMatch(/user-select:\s*inherit/);
+    expect(cellTextRule?.[1]).toMatch(/-webkit-user-select:\s*inherit/);
+  });
+
+  test('custom renderer text children do not inherit the full cell-height line box', () => {
+    const customTextChildRule = cssSource.match(
+      /\.bg-cell > :where\(span, div, p\):not\(\.bg-input-box\):not\(\.bg-select-compound\):not\(\.bg-select-compound-input-wrap\):not\(\.bg-cell__text\)\s*\{([^}]*)\}/,
+    );
+    expect(customTextChildRule?.[1]).toMatch(/display:\s*inline-block/);
+    expect(customTextChildRule?.[1]).toMatch(/max-width:\s*100%/);
+    expect(customTextChildRule?.[1]).toMatch(/line-height:\s*var\(--bg-cell-text-line-height,\s*normal\)\s*!important/);
+    expect(customTextChildRule?.[1]).toMatch(/vertical-align:\s*middle/);
+
+    expect(cssSource).toContain(':where(span, div, p):not(.bg-input-box)');
+    expect(cssSource).toContain('line-height: inherit !important;');
+  });
+});
+
+describe('default cell text rendering', () => {
+  test('wraps default and valueFormatter text in bg-cell__text spans', () => {
+    const host = makeHost();
+    const grid = createGrid({
+      columns: [
+        { id: 'name', field: 'name' as never, headerName: 'Name' },
+        {
+          id: 'amount',
+          field: 'amount' as never,
+          headerName: 'Amount',
+          valueFormatter: (value) => Number(value).toLocaleString('en-US'),
+        },
+      ],
+      data: [{ name: 'Land Cost', amount: 25000000 }],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const nameText = host.querySelector('.bg-cell[data-row="0"][data-col="0"] .bg-cell__text');
+    const amountText = host.querySelector('.bg-cell[data-row="0"][data-col="1"] .bg-cell__text');
+    expect(nameText?.textContent).toBe('Land Cost');
+    expect(amountText?.textContent).toBe('25,000,000');
+
+    grid.unmount();
+  });
+
+  test('wraps direct text left by custom cell renderers', () => {
+    const host = makeHost();
+    const grid = createGrid({
+      columns: [
+        {
+          id: 'name',
+          field: 'name' as never,
+          headerName: 'Name',
+          cellRenderer: (container, ctx) => {
+            container.textContent = String(ctx.value ?? '');
+          },
+        },
+      ],
+      data: [{ name: 'Program Phase' }],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const text = host.querySelector('.bg-cell[data-row="0"][data-col="0"] .bg-cell__text');
+    expect(text?.textContent).toBe('Program Phase');
+
+    grid.unmount();
+  });
+
+  test('wraps direct text left by custom pinned-row renderers', () => {
+    const host = makeHost();
+    const grid = createGrid({
+      columns: [
+        {
+          id: 'amount',
+          field: 'amount' as never,
+          headerName: 'Amount',
+          cellRenderer: (container, ctx) => {
+            container.textContent = String(ctx.value ?? '');
+          },
+        },
+      ],
+      data: [],
+      pinned: {
+        bottom: [{ amount: 'Pinned Total' }],
+      },
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const text = host.querySelector('.bg-grid__pinned-bottom .bg-cell__text');
+    expect(text?.textContent).toBe('Pinned Total');
+
+    grid.unmount();
+  });
+
+  test('hierarchy text content gets a bounded selectable line box', () => {
+    const host = makeHost();
+    const grid = createGrid({
+      columns: [
+        {
+          id: 'code',
+          field: 'code' as never,
+          headerName: 'Code',
+          cellRenderer: (container, ctx) => {
+            container.textContent = String(ctx.value ?? '');
+          },
+        },
+      ],
+      data: [{ id: 1, code: '1.1', parentId: null }],
+      hierarchy: {
+        getRowId: (row: { id: number }) => row.id,
+        getParentId: (row: { parentId: number | null }) => row.parentId,
+      },
+      plugins: [hierarchy({ indentColumn: 'code' })],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const content = host.querySelector<HTMLElement>('.bg-hierarchy-content');
+    expect(content?.textContent).toBe('1.1');
+    expect(content?.tagName).toBe('SPAN');
+
+    grid.unmount();
   });
 });
 
