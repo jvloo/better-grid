@@ -180,10 +180,12 @@ describe('selection fill handle editability', () => {
     flushRaf();
     expect(grid.getSelection().active).toBeNull();
     expect(grid.getSelection().ranges).toHaveLength(0);
+    expect(document.activeElement).not.toBe(host);
 
     amountCell!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
     flushRaf();
     expect(grid.getSelection().active).toEqual({ rowIndex: 0, colIndex: 1 });
+    expect(document.activeElement).toBe(host);
     expect(host.querySelector('.bg-fill-handle')).toBeNull();
     expect(host.querySelector('.bg-selection-range--single')).not.toBeNull();
 

@@ -952,6 +952,8 @@ export function createGrid<
       return;
     }
 
+    container?.focus({ preventScroll: true });
+
     const isCtrlHeld = event.ctrlKey || event.metaKey;
     const allowRange = selectionMode === 'range';
     const allowMultiRange = allowRange && normalizedSelection.multiRange;
