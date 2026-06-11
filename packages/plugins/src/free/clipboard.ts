@@ -930,8 +930,23 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
         applyParsedRows(parsedRows, active);
       }
 
+      function hasNativeTextSelection(target: HTMLElement): boolean {
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+          const input = target as HTMLInputElement | HTMLTextAreaElement;
+          return input.selectionStart != null && input.selectionEnd != null && input.selectionStart !== input.selectionEnd;
+        }
+
+        if (!target.isContentEditable && !target.closest('[contenteditable="true"]')) return false;
+
+        const selection = window.getSelection();
+        return !!selection && !selection.isCollapsed && selection.toString().length > 0;
+      }
+
       function handleNativeKeyDown(event: KeyboardEvent): void {
-        if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'v') return;
+        if (!(event.ctrlKey || event.metaKey)) return;
+
+        const key = event.key.toLowerCase();
+        if (key !== 'c' && key !== 'v' && key !== 'x') return;
 
         const target = event.target as HTMLElement | null;
         const gridEl = ctx.grid.getContainer();
@@ -946,10 +961,17 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
           target.tagName === 'TEXTAREA' ||
           target.isContentEditable;
         if (!isEditorTarget || !getPasteAnchor()) return;
+        if ((key === 'c' || key === 'x') && hasNativeTextSelection(target)) return;
 
         event.preventDefault();
         event.stopPropagation();
-        void paste();
+        if (key === 'v') {
+          void paste();
+        } else if (key === 'x') {
+          cut();
+        } else {
+          copy();
+        }
       }
 
       const gridEl = ctx.grid.getContainer();
