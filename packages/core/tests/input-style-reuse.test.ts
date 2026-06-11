@@ -50,6 +50,35 @@ function makeRect(left: number, top: number, width: number, height: number): DOM
 }
 
 describe('editing inputStyle reuse', () => {
+  it('wraps plain static input values so narrow columns preserve input padding with ellipsis', () => {
+    const host = makeHost();
+    const longValue = '123456789';
+    const grid = createGrid<Row>({
+      columns: [
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          editable: true,
+          width: 36,
+        },
+      ],
+      data: [{ amount: longValue }],
+      plugins: [editing({ inputStyle: true })],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const inputBox = host.querySelector('.bg-input-box') as HTMLElement;
+    const valueSpan = inputBox.querySelector('.bg-input-box__value') as HTMLElement | null;
+    expect(valueSpan).not.toBeNull();
+    expect(inputBox.textContent).toBe(longValue);
+    expect(valueSpan!.textContent).toBe(longValue);
+
+    grid.unmount();
+  });
+
   it('reuses formatter-only input boxes across refreshes', () => {
     const host = makeHost();
     const columns: ColumnDef<Row>[] = [

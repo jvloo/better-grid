@@ -648,6 +648,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               const prefix = resolveColumnPrefix(col, context.row);
               const suffix = resolveColumnSuffix(col, context.row);
               const isDropdown = (Array.isArray(col.options) && col.options.length > 0) || typeof context.value === 'boolean';
+              const appendValueSpan = (valueText: string): HTMLElement => {
+                const valueSpan = document.createElement('span');
+                valueSpan.className = 'bg-input-box__value';
+                valueSpan.textContent = valueText;
+                box.appendChild(valueSpan);
+                return valueSpan;
+              };
+
               if (isDropdown) box.classList.add('bg-input-box--dropdown');
               if (prefix || suffix) {
                 box.classList.add('bg-input-box--has-adornment');
@@ -666,17 +674,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                   prefixSpan.textContent = prefix;
                   box.appendChild(prefixSpan);
                 }
-                const valueSpan = document.createElement('span');
-                valueSpan.className = 'bg-input-box__value';
                 const displayText = stripInputAdornments(text, prefix, suffix);
                 if (text) {
-                  valueSpan.textContent = displayText;
+                  appendValueSpan(displayText);
                   if (isPlaceholderText) box.classList.add('bg-input-box--placeholder');
                 } else if (placeholder) {
-                  valueSpan.textContent = placeholder;
+                  appendValueSpan(placeholder);
                   box.classList.add('bg-input-box--placeholder');
+                } else {
+                  appendValueSpan('');
                 }
-                box.appendChild(valueSpan);
                 if (suffix) {
                   const suffixSpan = document.createElement('span');
                   suffixSpan.className = 'bg-input-box__suffix bg-input-box__unit';
@@ -684,11 +691,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                   box.appendChild(suffixSpan);
                 }
               } else if (text) {
-                box.textContent = text;
+                appendValueSpan(text);
                 if (isPlaceholderText) box.classList.add('bg-input-box--placeholder');
               } else if (placeholder) {
-                box.textContent = placeholder;
+                appendValueSpan(placeholder);
                 box.classList.add('bg-input-box--placeholder');
+              } else {
+                appendValueSpan('');
               }
             };
 
@@ -1877,6 +1886,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         return true;
       }
 
+      function getCellEditTrigger(cell: CellPosition): EditingOptions['editTrigger'] {
+        const column = ctx.store.getState().columns[cell.colIndex];
+        const trigger = column?.meta?.editTrigger;
+        return trigger === 'click' || trigger === 'dblclick' || trigger === 'type'
+          ? trigger
+          : config.editTrigger;
+      }
+
       function handlePointerHandoff(
         cleanup: () => void,
         e: MouseEvent,
@@ -1902,7 +1919,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // NOT enter edit mode — that requires dblclick). With 'click' or
         // 'type', preserve the spreadsheet-style handoff and immediately
         // open the editor on the next cell.
-        if (config.editTrigger === 'dblclick') {
+        if (getCellEditTrigger(nextCell) === 'dblclick') {
           ctx.grid.setSelection({
             active: { rowIndex: nextCell.rowIndex, colIndex: nextCell.colIndex },
             ranges: [{
@@ -2219,8 +2236,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const gridRect = gridEl?.getBoundingClientRect();
           const initialMaxWidth = gridRect?.width ?? cellRect.width;
           const anchorComputed = getComputedStyle(anchorEl);
-          const valueSource = inputBox?.querySelector('.bg-input-box__value') as HTMLElement | null;
-          const valueSourceRect = sourceGeometry?.valueRect ?? valueSource?.getBoundingClientRect();
+          const hasAdornedInputBox = !!inputBox?.classList.contains('bg-input-box--has-adornment');
+          const valueSource = hasAdornedInputBox
+            ? inputBox?.querySelector('.bg-input-box__value') as HTMLElement | null
+            : null;
+          const valueSourceRect = hasAdornedInputBox
+            ? sourceGeometry?.valueRect ?? valueSource?.getBoundingClientRect()
+            : undefined;
           const valueComputed = valueSource ? getComputedStyle(valueSource) : null;
           const editorComputed = valueComputed ?? anchorComputed;
           const cellFont = editorComputed.font;
@@ -4500,11 +4522,20 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       let clickEditFrame: number | null = null;
 
       if (config.editTrigger === 'dblclick') {
-        ctx.on('cell:dblclick', (cell) => startEdit(cell));
+        ctx.on('cell:dblclick', (cell) => {
+          if (getCellEditTrigger(cell) === 'dblclick') startEdit(cell);
+        });
       } else if (config.editTrigger === 'click') {
         ctx.on('cell:click', (cell, event) => {
           if (pendingClickEditHandoff && isSameCell(pendingClickEditHandoff, cell)) {
             pendingClickEditHandoff = null;
+            return;
+          }
+          if (getCellEditTrigger(cell) !== 'click') {
+            if (clickEditFrame !== null) {
+              cancelAnimationFrame(clickEditFrame);
+              clickEditFrame = null;
+            }
             return;
           }
           if (clickEditFrame !== null) cancelAnimationFrame(clickEditFrame);
@@ -4526,6 +4557,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // click opens the editor, then the second click (which makes it a
         // dblclick) selects all.
         ctx.on('cell:dblclick', (cell) => {
+          const trigger = getCellEditTrigger(cell);
+          if (trigger !== 'dblclick' && trigger !== 'click') return;
           // Cancel any pending cell:click rAF for the same cell so it
           // doesn't fire startEdit *after* the dblclick and undo our select.
           if (clickEditFrame !== null) {
