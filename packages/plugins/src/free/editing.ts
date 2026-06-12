@@ -166,6 +166,7 @@ const INPUT_CSS = `
 // Chevron SVG for dropdown trigger
 const CHEVRON_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E")`;
 const EDITOR_HIGHLIGHT_INSET_Y = 8;
+const MASKED_SECTION_HIGHLIGHT_INSET_Y = 0;
 
 interface FloatingInputGeometry {
   valueRect?: DOMRect;
@@ -2328,10 +2329,17 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const singleLineEditorHeight = valueComputed && valueSourceRect
             ? Math.max(1, cellRect.height - valueInsetHeight)
             : editorHeight;
-          const singleLineContentLineHeight = valueComputed
-            ? (editorComputed.lineHeight || 'normal')
-            : `${contentLineHeight}px`;
-          const singleLinePadY = valueComputed ? 0 : vertPad;
+          const valueLineHeight = parseCssPixel(editorComputed.lineHeight);
+          const singleLineNaturalLineHeight = valueComputed
+            ? Math.min(
+              singleLineEditorHeight,
+              Math.max(fontSize, valueLineHeight > 0 ? valueLineHeight : Math.round(fontSize * 1.4)),
+            )
+            : contentLineHeight;
+          const singleLineContentLineHeight = `${singleLineNaturalLineHeight}px`;
+          const singleLinePadY = valueComputed
+            ? Math.max(0, (singleLineEditorHeight - singleLineNaturalLineHeight) / 2)
+            : vertPad;
           measureSpan.style.cssText = `position:fixed;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;font:${cellFont};padding:0 ${measurePadRight}px 0 ${measurePadLeft}px;`;
 
           const createFloatAdornment = (
@@ -3206,10 +3214,15 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             const filled = sectionValues[i];
             span.textContent = filled || sectionLabels[i] || '';
             if (i === activeSectionIdx) {
+              span.classList.add('bg-masked-section--active');
               span.style.backgroundImage =
-                `linear-gradient(to bottom, transparent ${EDITOR_HIGHLIGHT_INSET_Y}px, Highlight ${EDITOR_HIGHLIGHT_INSET_Y}px, Highlight calc(100% - ${EDITOR_HIGHLIGHT_INSET_Y}px), transparent calc(100% - ${EDITOR_HIGHLIGHT_INSET_Y}px))`;
-              span.style.color = 'HighlightText';
+                `linear-gradient(to bottom, transparent ${MASKED_SECTION_HIGHLIGHT_INSET_Y}px, var(--bg-masked-section-bg, Highlight) ${MASKED_SECTION_HIGHLIGHT_INSET_Y}px, var(--bg-masked-section-bg, Highlight) calc(100% - ${MASKED_SECTION_HIGHLIGHT_INSET_Y}px), transparent calc(100% - ${MASKED_SECTION_HIGHLIGHT_INSET_Y}px))`;
+              span.style.borderRadius = '';
+              span.style.color = 'var(--bg-masked-section-color, HighlightText)';
             } else {
+              span.classList.remove('bg-masked-section--active');
+              span.style.backgroundImage = '';
+              span.style.borderRadius = '';
               span.style.color = filled ? 'inherit' : placeholderColor;
             }
             sectionSpans[i] = span;
