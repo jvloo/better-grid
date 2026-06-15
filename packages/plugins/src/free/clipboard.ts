@@ -246,6 +246,18 @@ function decodeHtmlEntities(str: string): string {
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)));
 }
 
+function isNativeClipboardTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return true;
+  if (target.isContentEditable) return true;
+  return !!target.closest('input, textarea, [contenteditable="true"], .bg-cell-editor');
+}
+
+function hasNativeTextSelection(): boolean {
+  const selection = window.getSelection();
+  return !!selection && !selection.isCollapsed && selection.toString().length > 0;
+}
+
 // ============================================================================
 // Plugin
 // ============================================================================
@@ -837,6 +849,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
         priority: 5,
         handler: (event) => {
           if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+            if (isNativeClipboardTarget(event.target) || hasNativeTextSelection()) return false;
             event.preventDefault();
             copy();
             return true;
@@ -850,6 +863,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
         priority: 5,
         handler: (event) => {
           if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+            if (isNativeClipboardTarget(event.target)) return false;
             event.preventDefault();
             paste();
             return true;
@@ -863,6 +877,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
         priority: 5,
         handler: (event) => {
           if ((event.ctrlKey || event.metaKey) && event.key === 'x') {
+            if (isNativeClipboardTarget(event.target) || hasNativeTextSelection()) return false;
             event.preventDefault();
             cut();
             return true;

@@ -315,6 +315,7 @@ describe('editing inputStyle reuse', () => {
     expect(suffix).not.toBeNull();
     expect(getComputedStyle(editor!).paddingLeft).toBe('0px');
     expect(getComputedStyle(editor!).paddingRight).toBe('18px');
+    expect(getComputedStyle(editor!).lineHeight).toBe('16px');
     expect(getComputedStyle(editor!).marginLeft).toBe('10px');
     expect(getComputedStyle(editor!).marginRight).toBe('10px');
     expect(getComputedStyle(editor!).marginTop).toBe('7px');

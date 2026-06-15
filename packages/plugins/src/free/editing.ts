@@ -2359,7 +2359,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             ? Math.max(1, cellRect.height - valueInsetHeight)
             : editorHeight;
           const singleLineContentLineHeight = valueComputed
-            ? (editorComputed.lineHeight || 'normal')
+            ? `${singleLineEditorHeight}px`
             : `${contentLineHeight}px`;
           const singleLinePadY = valueComputed ? 0 : vertPad;
           measureSpan.style.cssText = `position:fixed;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;font:${cellFont};padding:0 ${measurePadRight}px 0 ${measurePadLeft}px;`;
