@@ -12,6 +12,7 @@ type AnyCellRenderContext = CellRenderContext<any>;
 import type { LayoutMeasurements } from '../virtualization/engine';
 import { isCellActive, isCellInSelection } from '../selection/model';
 import { getCellValue, snapToDevicePixel } from '../utils';
+import { renderCellText } from './text';
 
 // Encode row:col into a single number to avoid string allocation per cell
 const MAX_COLS = 16384; // 2^14 — supports up to 16K columns
@@ -368,9 +369,9 @@ export class RenderingPipeline<TData = unknown> {
         } else if (this.globalCellRenderer) {
           cleanup = this.globalCellRenderer(cell, context);
         } else if (column.valueFormatter) {
-          cell.textContent = column.valueFormatter(value, rowData as never);
+          renderCellText(cell, column.valueFormatter(value, rowData as never));
         } else {
-          cell.textContent = value != null ? String(value) : '';
+          renderCellText(cell, value);
         }
 
         if (cleanup) {

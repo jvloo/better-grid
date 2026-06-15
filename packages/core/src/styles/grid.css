@@ -293,6 +293,15 @@ body.bg-grid-resizing .bg-resize-handle:active {
   z-index: 1;
 }
 
+.bg-cell__text {
+  display: inline-block;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bg-cell--selected {
   background: var(--bg-selection-bg, rgba(33, 133, 208, 0.08));
 }
