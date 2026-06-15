@@ -498,6 +498,46 @@ describe('editing inputStyle reuse', () => {
     }
   });
 
+  it('keeps adorned inline editors aligned to the value text line box', () => {
+    const host = makeHost();
+    const columns: ColumnDef<Row>[] = [
+      {
+        id: 'amount',
+        field: 'amount',
+        headerName: 'Amount',
+        width: 100,
+        align: 'center',
+        editable: true,
+        cellType: 'number',
+        unit: '%',
+        valueFormatter: (value) => Number(value).toFixed(2),
+      },
+    ];
+    const grid = createGrid<Row>({
+      columns,
+      data: [{ amount: 9.09 }],
+      plugins: [editing({ inputStyle: true, editTrigger: 'click', editorMode: 'inline' })],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const cell = host.querySelector('.bg-cell[data-row="0"][data-col="0"]') as HTMLElement;
+    const valueSpan = cell.querySelector('.bg-input-box__value') as HTMLElement;
+    valueSpan.style.lineHeight = '16px';
+
+    grid.plugins.editing.startEdit({ rowIndex: 0, colIndex: 0 });
+
+    const inlineInput = host.querySelector('input.bg-cell-editor--inline') as HTMLInputElement | null;
+    expect(inlineInput).not.toBeNull();
+    expect(inlineInput!.style.height).toBe('16px');
+    expect(inlineInput!.style.lineHeight).toBe('16px');
+    expect(inlineInput!.style.paddingTop).toBe('0px');
+    expect(inlineInput!.style.paddingBottom).toBe('0px');
+
+    grid.unmount();
+  });
+
   it('keeps thousand separators while typing in floating number editors', () => {
     const originalGetRect = HTMLElement.prototype.getBoundingClientRect;
     HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect(): DOMRect {

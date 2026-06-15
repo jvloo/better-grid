@@ -1,6 +1,6 @@
 {
   "name": "@better-grid/react",
-  "version": "1.0.45",
+  "version": "1.0.46",
   "description": "React adapter for Better Grid",
   "license": "MIT",
   "type": "module",
@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@better-grid/core": "1.0.45",
-    "@better-grid/plugins": "1.0.45"
+    "@better-grid/plugins": "1.0.50"
   },
   "peerDependencies": {
     "react": ">=18.0.0",

@@ -503,7 +503,6 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             .bg-cell--editing .bg-input-box--has-adornment .bg-input-box__value .bg-cell-editor--inline {
               width: 100% !important;
               min-width: 0 !important;
-              height: 100% !important;
               text-align: inherit;
             }
           `;
@@ -2858,15 +2857,24 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         if (valueAnchor) {
           const adornedBox = valueAnchor.closest('.bg-input-box--has-adornment') as HTMLElement | null;
           if (adornedBox) {
+            const valueAnchorStyles = getComputedStyle(valueAnchor);
+            const valueLineHeight =
+              parseCssPixel(valueAnchor.style.lineHeight) ||
+              parseCssPixel(valueAnchorStyles.lineHeight) ||
+              inlineLineHeight;
             input.style.width = '100%';
             input.style.minWidth = '0';
-            input.style.textAlign = getComputedStyle(valueAnchor).textAlign || cellTextAlign;
+            input.style.textAlign = valueAnchorStyles.textAlign || cellTextAlign;
+            input.style.height = `${valueLineHeight}px`;
+            input.style.lineHeight = `${valueLineHeight}px`;
+            input.style.paddingTop = '0';
+            input.style.paddingBottom = '0';
           } else {
             input.style.width = `${Math.max(40, Math.min(72, value.length * 8 + 14))}px`;
             input.style.minWidth = '40px';
             input.style.textAlign = 'right';
+            input.style.height = '30px';
           }
-          input.style.height = '30px';
           valueAnchor.appendChild(input);
         } else {
           cellEl.appendChild(input);
