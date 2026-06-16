@@ -909,6 +909,14 @@ export function createGrid<
     return true;
   }
 
+  function isEditableCellForFill(row: unknown, column: ColumnDef<TData>): boolean {
+    if (column.editable === false) return false;
+    if (typeof column.editable === 'function') {
+      return column.editable(row as TData, column) !== false;
+    }
+    return true;
+  }
+
   function handleDblClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     if (target.classList.contains('bg-cell-editor') || target.closest('.bg-cell--editing')) {
@@ -1979,10 +1987,12 @@ export function createGrid<
           if (isVertical) {
             for (let col = targetRange.startCol; col <= targetRange.endCol; col++) {
               const column = columns[col];
-              if (!column || column.editable === false) continue;
+              if (!column) continue;
 
               const sourceVals = getSourceValues(col);
               for (let row = targetRange.startRow; row <= targetRange.endRow; row++) {
+                const rowData = state.data[row];
+                if (rowData === undefined || !isEditableCellForFill(rowData, column)) continue;
                 const srcIdx = (row - targetRange.startRow) % sourceRowCount;
                 const value = sourceVals[srcIdx];
                 if (value !== undefined) {
@@ -1992,9 +2002,11 @@ export function createGrid<
             }
           } else if (isHorizontal) {
             for (let row = targetRange.startRow; row <= targetRange.endRow; row++) {
+              const rowData = state.data[row];
+              if (rowData === undefined) continue;
               for (let col = targetRange.startCol; col <= targetRange.endCol; col++) {
                 const column = columns[col];
-                if (!column || column.editable === false) continue;
+                if (!column || !isEditableCellForFill(rowData, column)) continue;
 
                 const srcColIdx =
                   sourceRange.startCol + ((col - targetRange.startCol) % sourceColCount);

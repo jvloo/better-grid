@@ -268,6 +268,73 @@ describe('clipboard native text selection', () => {
     grid.unmount();
   });
 
+  it('filters fill-handle drag writes through row-level editable predicates', () => {
+    const host = makeHost();
+    const onFill = vi.fn();
+    const grid = createGrid<Row>({
+      columns: [
+        { id: 'name', field: 'name', headerName: 'Name', width: 120 },
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          width: 120,
+          editable: (row) => row.editable === true,
+        },
+      ],
+      data: [
+        { name: 'Alpha', amount: 1, editable: true },
+        { name: 'Beta', amount: 2, editable: false },
+        { name: 'Gamma', amount: 3, editable: true },
+      ],
+      plugins: [clipboard({ onFill })],
+      selection: { mode: 'range', fillHandle: true },
+      rowHeight: 40,
+    });
+
+    grid.mount(host);
+    grid.refresh();
+    grid.setSelection({
+      active: { rowIndex: 0, colIndex: 1 },
+      ranges: [{ startRow: 0, endRow: 0, startCol: 1, endCol: 1 }],
+    });
+
+    const handle = host.querySelector('.bg-fill-handle') as HTMLElement;
+    expect(handle).not.toBeNull();
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      clientX: 240,
+      clientY: 40,
+      pointerId: 10,
+    }));
+    document.dispatchEvent(new PointerEvent('pointermove', {
+      bubbles: true,
+      button: 0,
+      clientX: 240,
+      clientY: 105,
+      pointerId: 10,
+    }));
+    document.dispatchEvent(new PointerEvent('pointerup', {
+      bubbles: true,
+      button: 0,
+      clientX: 240,
+      clientY: 105,
+      pointerId: 10,
+    }));
+
+    const data = grid.getState().data;
+    expect(data[0]?.amount).toBe(1);
+    expect(data[1]?.amount).toBe(2);
+    expect(data[2]?.amount).toBe(1);
+    expect(onFill).toHaveBeenCalledWith([
+      { rowIndex: 2, columnId: 'amount', oldValue: 3, newValue: 1 },
+    ]);
+
+    grid.unmount();
+  });
+
   it('renders the selection overlay above active and editing cells', () => {
     const host = makeHost();
     const grid = createGrid<Row>({

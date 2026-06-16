@@ -263,6 +263,14 @@ function getNativeTextSelection(): string {
   return selection.toString();
 }
 
+function isEditableCell(column: ColumnDef, row: unknown): boolean {
+  if (column.editable === false) return false;
+  if (typeof column.editable === 'function') {
+    return column.editable(row as never, column as never) !== false;
+  }
+  return true;
+}
+
 // ============================================================================
 // Plugin
 // ============================================================================
@@ -572,7 +580,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
             if (colIndex >= state.columns.length) break;
 
             const column = state.columns[colIndex]!;
-            if (column.editable === false) continue;
+            if (!isEditableCell(column, row)) continue;
 
             const rawValue = cells[c]!;
             const oldValue = getCellValue(row, column);
@@ -605,10 +613,12 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
           const c2 = Math.max(range.startCol, range.endCol);
 
           for (let r = r1; r <= r2; r++) {
+            const row = state.data[r];
+            if (!row) continue;
             for (let c = c1; c <= c2; c++) {
               const column = state.columns[c];
               if (!column) continue;
-              if (column.editable === false) continue;
+              if (!isEditableCell(column, row)) continue;
               ctx.grid.updateCell(r, column.id, null);
             }
           }
@@ -630,7 +640,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
 
         for (let c = minCol; c <= maxCol; c++) {
           const column = state.columns[c];
-          if (!column || column.editable === false) continue;
+          if (!column) continue;
 
           // Get the value from the top row
           const sourceRow = state.data[minRow];
@@ -641,6 +651,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
           for (let r = minRow + 1; r <= maxRow; r++) {
             const row = state.data[r];
             if (!row) continue;
+            if (!isEditableCell(column, row)) continue;
             const oldValue = getCellValue(row, column);
             ctx.grid.updateCell(r, column.id, sourceValue);
             changes.push({ rowIndex: r, columnId: column.id, oldValue, newValue: sourceValue });
@@ -678,7 +689,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
           // Fill right to all columns
           for (let c = minCol + 1; c <= maxCol; c++) {
             const column = state.columns[c];
-            if (!column || column.editable === false) continue;
+            if (!column || !isEditableCell(column, row)) continue;
             const oldValue = getCellValue(row, column);
             ctx.grid.updateCell(r, column.id, sourceValue);
             changes.push({ rowIndex: r, columnId: column.id, oldValue, newValue: sourceValue });
@@ -713,7 +724,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
             // For each column, detect series pattern and generate values
             for (let col = sourceRange.startCol; col <= sourceRange.endCol; col++) {
               const column = columns[col];
-              if (!column || column.editable === false) continue;
+              if (!column) continue;
 
               // Collect source values
               const sourceValues: unknown[] = [];
@@ -732,6 +743,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
               for (let r = targetRange.startRow; r <= targetRange.endRow; r++) {
                 const row = state.data[r];
                 if (!row) continue;
+                if (!isEditableCell(column, row)) continue;
 
                 let index: number;
                 if (fillingDown) {
@@ -769,7 +781,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
 
               for (let c = targetRange.startCol; c <= targetRange.endCol; c++) {
                 const column = columns[c];
-                if (!column || column.editable === false) continue;
+                if (!column || !isEditableCell(column, row)) continue;
 
                 let index: number;
                 if (fillingRight) {
