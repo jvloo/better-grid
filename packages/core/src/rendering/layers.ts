@@ -34,7 +34,7 @@ export class SelectionLayer {
     this.overlay.style.position = 'absolute';
     this.overlay.style.inset = '0';
     this.overlay.style.pointerEvents = 'none';
-    this.overlay.style.zIndex = '2';
+    this.overlay.style.zIndex = '6';
     container.appendChild(this.overlay);
   }
 
@@ -104,25 +104,8 @@ export class SelectionLayer {
       this.fillHandle = null;
     }
 
-    const hasMultipleRanges = selection.ranges.length > 1;
-
     // Range selection highlights
     for (const range of selection.ranges) {
-      const isSingleCell = range.startRow === range.endRow && range.startCol === range.endCol;
-
-      // Skip single-cell ranges ONLY when there's just one range
-      // (handled by .bg-cell--active CSS). With multi-range (Ctrl+click),
-      // non-active single-cell ranges need visible highlights.
-      if (isSingleCell && !hasMultipleRanges) {
-        continue;
-      }
-
-      // Skip the active cell's range in multi-range — it already has .bg-cell--active outline
-      const isActiveRange = isSingleCell && selection.active &&
-        range.startRow === selection.active.rowIndex &&
-        range.startCol === selection.active.colIndex;
-      if (isActiveRange) continue;
-
       const border = document.createElement('div');
       border.className = 'bg-selection-range';
       const top = measurements.rowOffsets[range.startRow]!;

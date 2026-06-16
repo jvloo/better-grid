@@ -136,6 +136,8 @@ export interface EditingOptions {
   matchAnchorStyle?: boolean;
 }
 
+type EditTrigger = NonNullable<EditingOptions['editTrigger']>;
+
 /** Dropdown option for columns with meta.options */
 export interface DropdownOption {
   label: string;
@@ -1935,7 +1937,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // NOT enter edit mode — that requires dblclick). With 'click' or
         // 'type', preserve the spreadsheet-style handoff and immediately
         // open the editor on the next cell.
-        if (config.editTrigger === 'dblclick') {
+        if (getColumnEditTrigger(nextCell) === 'dblclick') {
           ctx.grid.setSelection({
             active: { rowIndex: nextCell.rowIndex, colIndex: nextCell.colIndex },
             ranges: [{
@@ -2047,6 +2049,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         }
 
         return null;
+      }
+
+      function getColumnEditTrigger(position: CellPosition): EditTrigger {
+        const column = ctx.grid.getState().columns[position.colIndex];
+        const trigger = column?.meta?.editTrigger;
+        return trigger === 'click' || trigger === 'dblclick' || trigger === 'type'
+          ? trigger
+          : config.editTrigger;
       }
 
       // -----------------------------------------------------------------------
@@ -4548,9 +4558,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
       let clickEditFrame: number | null = null;
 
       if (config.editTrigger === 'dblclick') {
-        ctx.on('cell:dblclick', (cell) => startEdit(cell));
+        ctx.on('cell:dblclick', (cell) => {
+          if (getColumnEditTrigger(cell) === 'dblclick') startEdit(cell);
+        });
       } else if (config.editTrigger === 'click') {
         ctx.on('cell:click', (cell, event) => {
+          if (getColumnEditTrigger(cell) !== 'click') return;
           if (pendingClickEditHandoff && isSameCell(pendingClickEditHandoff, cell)) {
             pendingClickEditHandoff = null;
             return;
@@ -4574,6 +4587,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         // click opens the editor, then the second click (which makes it a
         // dblclick) selects all.
         ctx.on('cell:dblclick', (cell) => {
+          if (getColumnEditTrigger(cell) !== 'dblclick') return;
           // Cancel any pending cell:click rAF for the same cell so it
           // doesn't fire startEdit *after* the dblclick and undo our select.
           if (clickEditFrame !== null) {

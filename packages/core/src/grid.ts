@@ -831,6 +831,8 @@ export function createGrid<
     const cell = getCellFromEvent(event);
     if (!cell) return;
 
+    container?.focus({ preventScroll: true });
+
     // Always emit cell:click (editing and other plugins depend on it)
     emitter.emit('cell:click', cell, event as unknown as MouseEvent);
 

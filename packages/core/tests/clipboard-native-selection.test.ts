@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGrid } from '../src/grid';
 import { clipboard } from '../../plugins/src/free/clipboard';
+import { editing } from '../../plugins/src/free/editing';
 import type { ColumnDef } from '../src/types';
 
 interface Row {
@@ -175,6 +176,56 @@ describe('clipboard native text selection', () => {
     grid.unmount();
   });
 
+  it('focuses the grid when a selectable cell is clicked so Ctrl+C copies the selected range', () => {
+    const host = makeHost();
+    const onCopy = vi.fn();
+    const write = vi.fn().mockResolvedValue(undefined);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { write, writeText },
+    });
+    const grid = createGrid<Row>({
+      columns: [
+        { id: 'name', field: 'name', headerName: 'Name', width: 120 },
+        { id: 'amount', field: 'amount', headerName: 'Amount', width: 120 },
+      ],
+      data: [{ name: 'Alpha', amount: 42 }],
+      plugins: [clipboard({ onCopy })],
+      selection: {
+        mode: 'range',
+        cellSelectionPredicate: ({ column }) => column.id === 'amount',
+      },
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const gridEl = getMountedGridElement(host);
+    const amountCell = host.querySelectorAll('.bg-cell')[1] as HTMLElement;
+    amountCell.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      pointerId: 1,
+    }));
+
+    expect(document.activeElement).toBe(gridEl);
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'c',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.activeElement?.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(onCopy).toHaveBeenCalledWith('42');
+    expect(write.mock.calls.length + writeText.mock.calls.length).toBeGreaterThan(0);
+
+    grid.unmount();
+  });
+
   it('honors fillHandlePredicate when rendering the fill handle', () => {
     const host = makeHost();
     const grid = createGrid<Row>({
@@ -213,6 +264,86 @@ describe('clipboard native text selection', () => {
       ranges: [{ startRow: 0, endRow: 0, startCol: 1, endCol: 1 }],
     });
     expect(host.querySelector('.bg-fill-handle')).not.toBeNull();
+
+    grid.unmount();
+  });
+
+  it('renders the selection overlay above active and editing cells', () => {
+    const host = makeHost();
+    const grid = createGrid<Row>({
+      columns: [{ id: 'amount', field: 'amount', headerName: 'Amount', width: 120, editable: true }],
+      data: [{ name: 'Alpha', amount: 1 }],
+      selection: { mode: 'range' },
+    });
+
+    grid.mount(host);
+    grid.refresh();
+    grid.setSelection({
+      active: { rowIndex: 0, colIndex: 0 },
+      ranges: [{ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }],
+    });
+
+    const overlay = host.querySelector('.bg-selection-overlay') as HTMLElement;
+    expect(overlay.style.zIndex).toBe('6');
+    expect(host.querySelector('.bg-selection-range')).not.toBeNull();
+
+    grid.unmount();
+  });
+
+  it('supports per-column double-click edit trigger while the grid defaults to click edit', () => {
+    const host = makeHost();
+    const grid = createGrid<Row>({
+      columns: [
+        { id: 'name', field: 'name', headerName: 'Name', width: 120, editable: true },
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          width: 120,
+          editable: true,
+          meta: { editTrigger: 'dblclick' },
+        },
+      ],
+      data: [{ name: 'Alpha', amount: 42 }],
+      plugins: [editing({ editTrigger: 'click' })],
+      selection: { mode: 'range' },
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    let cells = host.querySelectorAll('.bg-cell');
+    const nameCell = cells[0] as HTMLElement;
+    let amountCell = cells[1] as HTMLElement;
+
+    amountCell.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      pointerId: 1,
+    }));
+    expect(amountCell.classList.contains('bg-cell--editing')).toBe(false);
+
+    nameCell.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      pointerId: 2,
+    }));
+    expect(nameCell.classList.contains('bg-cell--editing')).toBe(true);
+
+    amountCell.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      pointerId: 3,
+    }));
+    cells = host.querySelectorAll('.bg-cell');
+    amountCell = cells[1] as HTMLElement;
+    expect(amountCell.classList.contains('bg-cell--editing')).toBe(false);
+
+    amountCell.dispatchEvent(new MouseEvent('dblclick', {
+      bubbles: true,
+      button: 0,
+    }));
+    expect(amountCell.classList.contains('bg-cell--editing')).toBe(true);
 
     grid.unmount();
   });
