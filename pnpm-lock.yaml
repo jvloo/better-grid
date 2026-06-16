@@ -108,8 +108,8 @@ importers:
   packages/plugins:
     dependencies:
       '@better-grid/core':
-        specifier: 1.0.55
-        version: 1.0.55
+        specifier: 1.0.56
+        version: 1.0.56
     devDependencies:
       tsup:
         specifier: ^8.3.0
@@ -118,8 +118,8 @@ importers:
   packages/pro:
     dependencies:
       '@better-grid/core':
-        specifier: 1.0.55
-        version: 1.0.55
+        specifier: 1.0.56
+        version: 1.0.56
     devDependencies:
       tsup:
         specifier: ^8.3.0
@@ -128,11 +128,11 @@ importers:
   packages/react:
     dependencies:
       '@better-grid/core':
-        specifier: 1.0.55
-        version: 1.0.55
+        specifier: 1.0.56
+        version: 1.0.56
       '@better-grid/plugins':
-        specifier: 1.0.60
-        version: 1.0.60
+        specifier: 1.0.61
+        version: 1.0.61
     devDependencies:
       '@types/react':
         specifier: ^19.0.0
@@ -354,11 +354,11 @@ packages:
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
 
-  '@better-grid/core@1.0.55':
-    resolution: {integrity: sha512-+EYOOqss5lmI7v8iYpdQEncXKY5eK817LscjFP8o/JsDU0/YV96yu5/oeJIjN/xaZ0YkNGvMMtoRbW2/CwfNRA==}
+  '@better-grid/core@1.0.56':
+    resolution: {integrity: sha512-4xR6wXgF9Q73IRTekmuzKeHnsx3c8CrKEUx03esDjyWDOczjbvIKCrV0IrffKKnX0bMuq0GBl9/Ycg4DAkQeag==}
 
-  '@better-grid/plugins@1.0.60':
-    resolution: {integrity: sha512-mogtbyWA3TXakdW99+bXP7qIwRyaXjby5dpO/Hq44wFbcZRGlr9gWVXK+yFE5rgDC6gCuMHPieI+TviqkcOuaA==}
+  '@better-grid/plugins@1.0.61':
+    resolution: {integrity: sha512-8MsaOOD9rmMNa9JilP1Q599APtBrxLAf981KBeAgxbBzC65SUb3eJzzoy8zQL5Xc4mQ8gjTprG3Q6FGier1pUw==}
 
   '@changesets/apply-release-plan@7.1.0':
     resolution: {integrity: sha512-yq8ML3YS7koKQ/9bk1PqO0HMzApIFNwjlwCnwFEXMzNe8NpzeeYYKCmnhWJGkN8g7E51MnWaSbqRcTcdIxUgnQ==}
@@ -2177,11 +2177,11 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
-  '@better-grid/core@1.0.55': {}
+  '@better-grid/core@1.0.56': {}
 
-  '@better-grid/plugins@1.0.60':
+  '@better-grid/plugins@1.0.61':
     dependencies:
-      '@better-grid/core': 1.0.55
+      '@better-grid/core': 1.0.56
 
   '@changesets/apply-release-plan@7.1.0':
     dependencies:

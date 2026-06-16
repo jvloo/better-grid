@@ -197,6 +197,37 @@ describe('editing inputStyle reuse', () => {
     grid.unmount();
   });
 
+  it('wraps non-adorned input-style display text for ellipsis', () => {
+    const host = makeHost();
+    const grid = createGrid<Row>({
+      columns: [
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          editable: true,
+          width: 48,
+          valueFormatter: (value) => Number(value).toLocaleString('en-AU'),
+        },
+      ],
+      data: [{ amount: 123456789 }],
+      plugins: [editing({ inputStyle: true, inputEllipsis: true })],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const box = host.querySelector('.bg-input-box') as HTMLElement | null;
+    const value = box?.querySelector('.bg-input-box__value') as HTMLElement | null;
+    expect(box).not.toBeNull();
+    expect(value).not.toBeNull();
+    expect(value?.textContent).toBe('123,456,789');
+    expect(Array.from(box?.childNodes ?? []).filter((node) => node.nodeType === Node.TEXT_NODE))
+      .toHaveLength(0);
+
+    grid.unmount();
+  });
+
   it('shows clipped-text tooltips for plain input-style boxes', () => {
     const host = makeHost();
     const longValue = 'Plain input text that is too long for the box';

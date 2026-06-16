@@ -691,10 +691,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                   box.appendChild(suffixSpan);
                 }
               } else if (text) {
-                box.textContent = text;
+                const valueSpan = document.createElement('span');
+                valueSpan.className = 'bg-input-box__value';
+                valueSpan.textContent = text;
+                box.appendChild(valueSpan);
                 if (isPlaceholderText) box.classList.add('bg-input-box--placeholder');
               } else if (placeholder) {
-                box.textContent = placeholder;
+                const valueSpan = document.createElement('span');
+                valueSpan.className = 'bg-input-box__value';
+                valueSpan.textContent = placeholder;
+                box.appendChild(valueSpan);
                 box.classList.add('bg-input-box--placeholder');
               }
             };
@@ -2268,8 +2274,13 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const gridRect = gridEl?.getBoundingClientRect();
           const initialMaxWidth = gridRect?.width ?? cellRect.width;
           const anchorComputed = getComputedStyle(anchorEl);
-          const valueSource = inputBox?.querySelector('.bg-input-box__value') as HTMLElement | null;
-          const valueSourceRect = sourceGeometry?.valueRect ?? valueSource?.getBoundingClientRect();
+          const hasInputAdornment = inputBox?.classList.contains('bg-input-box--has-adornment') ?? false;
+          const valueSource = hasInputAdornment
+            ? inputBox?.querySelector('.bg-input-box__value') as HTMLElement | null
+            : null;
+          const valueSourceRect = hasInputAdornment
+            ? sourceGeometry?.valueRect ?? valueSource?.getBoundingClientRect()
+            : undefined;
           const valueComputed = valueSource ? getComputedStyle(valueSource) : null;
           const editorComputed = valueComputed ?? anchorComputed;
           const cellFont = editorComputed.font;
