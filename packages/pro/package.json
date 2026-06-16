@@ -1,6 +1,6 @@
 {
   "name": "@better-grid/pro",
-  "version": "1.0.54",
+  "version": "1.0.55",
   "description": "Commercial plugins for Better Grid (gantt, aggregation, merge-cells, row-actions, advanced renderers)",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
@@ -30,7 +30,7 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "@better-grid/core": "1.0.54"
+    "@better-grid/core": "1.0.55"
   },
   "devDependencies": {
     "tsup": "^8.3.0"

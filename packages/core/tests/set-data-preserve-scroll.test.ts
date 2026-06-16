@@ -177,4 +177,32 @@ describe('setData({ preserveScroll }) — Bug B regression', () => {
 
     grid.unmount();
   });
+
+  test('setData(data, { preserveSelection: true }) keeps single and range selection', () => {
+    const host = makeHost();
+    const grid = createGrid<Row>({
+      columns: [
+        { id: 'a', field: 'name' as never, headerName: 'A', width: 120 },
+        { id: 'b', field: 'name' as never, headerName: 'B', width: 120 },
+        { id: 'c', field: 'name' as never, headerName: 'C', width: 120 },
+      ],
+      data: [{ id: 1, name: 'X' }, { id: 2, name: 'Y' }],
+      selection: { mode: 'range' },
+    });
+    grid.mount(host);
+
+    grid.setSelection({
+      active: { rowIndex: 1, colIndex: 1 },
+      ranges: [{ startRow: 1, endRow: 1, startCol: 1, endCol: 2 }],
+    });
+
+    grid.setData([{ id: 1, name: 'X2' }, { id: 2, name: 'Y2' }], { preserveSelection: true });
+
+    expect(grid.getSelection()).toEqual({
+      active: { rowIndex: 1, colIndex: 1 },
+      ranges: [{ startRow: 1, endRow: 1, startCol: 1, endCol: 2 }],
+    });
+
+    grid.unmount();
+  });
 });

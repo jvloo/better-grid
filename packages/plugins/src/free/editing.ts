@@ -281,6 +281,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             text-align: inherit;
             padding: 0 var(--bg-input-suffix-space, 8px) 0 var(--bg-input-prefix-space, 8px);
             margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
           .bg-cell--always-input.bg-cell--align-right > .bg-always-input { text-align: right; }
           .bg-cell--always-input.bg-cell--align-center > .bg-always-input { text-align: center; }
@@ -334,6 +337,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             }
             .bg-cell--input-editable .bg-input-box,
             .bg-cell--input-editable .bg-input-box__value,
+            .bg-cell--input-editable .bg-cell-editor--inline,
             .bg-cell--input-editable .bg-select-trigger,
             .bg-cell--input-editable .bg-select-compound,
             .bg-cell--input-editable .bg-select-compound-input-wrap,
@@ -342,12 +346,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             }
             .bg-cell--input-editable .bg-input-box,
             .bg-cell--input-editable .bg-input-box__value,
+            .bg-cell--input-editable .bg-cell-editor--inline,
             .bg-cell--input-editable .bg-select-trigger,
             .bg-cell--input-editable .bg-select-compound-input {
               white-space: nowrap;
             }
             .bg-cell--input-ellipsis .bg-input-box,
             .bg-cell--input-ellipsis .bg-input-box__value,
+            .bg-cell--input-ellipsis .bg-cell-editor--inline,
             .bg-cell--input-ellipsis .bg-select-trigger,
             .bg-cell--input-ellipsis .bg-select-compound-input {
               overflow: hidden;

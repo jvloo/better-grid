@@ -171,6 +171,32 @@ describe('editing inputStyle reuse', () => {
     grid.unmount();
   });
 
+  it('applies ellipsis rules to narrow input-style editor nodes', () => {
+    const host = makeHost();
+    const grid = createGrid<Row>({
+      columns: [
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          editable: true,
+          width: 48,
+        },
+      ],
+      data: [{ amount: 123456789 }],
+      plugins: [editing({ inputStyle: true, inputEllipsis: true, editorMode: 'inline' })],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const injectedCss = document.getElementById('bg-editing-input-style')?.textContent ?? '';
+    expect(injectedCss).toContain('.bg-cell--input-ellipsis .bg-cell-editor--inline');
+    expect(injectedCss).toContain('text-overflow: ellipsis');
+
+    grid.unmount();
+  });
+
   it('shows clipped-text tooltips for plain input-style boxes', () => {
     const host = makeHost();
     const longValue = 'Plain input text that is too long for the box';

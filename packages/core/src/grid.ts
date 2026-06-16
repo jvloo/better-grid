@@ -2189,7 +2189,7 @@ export function createGrid<
 
     getData: () => store.getState().data,
 
-    setData(data: TData[], setDataOptions?: { preserveScroll?: boolean }): void {
+    setData(data: TData[], setDataOptions?: { preserveScroll?: boolean; preserveSelection?: boolean }): void {
       // Selection-stability: when getRowId is provided (top-level or via
       // hierarchy), capture the selected row's id before swapping data so we
       // can relocate it in the new array after the swap.
@@ -2224,7 +2224,29 @@ export function createGrid<
       // Editing plugin handles its own commit-or-cancel via existing rules.
       // Undo plugin clears its own history if subscribed to data:set.
       // TODO(perf): add a `resetOn: 'never' | 'data' | 'columns'` option to opt out.
-      if (hasRowId && preservedId !== null && oldActiveRow !== null) {
+      if (setDataOptions?.preserveSelection) {
+        const maxRow = data.length - 1;
+        const maxCol = columnManager.getColumns().length - 1;
+        const clamp = (value: number, max: number) => Math.max(0, Math.min(value, max));
+        const hasCells = maxRow >= 0 && maxCol >= 0;
+        const active = oldState.selection.active && hasCells
+          ? {
+              rowIndex: clamp(oldState.selection.active.rowIndex, maxRow),
+              colIndex: clamp(oldState.selection.active.colIndex, maxCol),
+            }
+          : null;
+        const ranges = hasCells
+          ? oldState.selection.ranges.map((range) => ({
+              startRow: clamp(range.startRow, maxRow),
+              endRow: clamp(range.endRow, maxRow),
+              startCol: clamp(range.startCol, maxCol),
+              endCol: clamp(range.endCol, maxCol),
+            }))
+          : [];
+        const preservedSelection = { active, ranges };
+        store.setSelection(preservedSelection);
+        emitter.emit('selection:change', preservedSelection);
+      } else if (hasRowId && preservedId !== null && oldActiveRow !== null) {
         const newIdx = data.findIndex((row, idx) => resolveRowId(row, idx) === preservedId);
         if (newIdx >= 0) {
           // Row still exists in new data — update its position.

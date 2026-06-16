@@ -656,6 +656,8 @@ export interface GridPlugin<TId extends string = string, TApi = unknown> {
 export interface SetDataOptions {
   /** Keep the current scroll position instead of resetting to (0, 0). */
   preserveScroll?: boolean;
+  /** Keep the current cell/range selection when replacing data in-place. */
+  preserveSelection?: boolean;
 }
 
 // ---------------------------------------------------------------------------
