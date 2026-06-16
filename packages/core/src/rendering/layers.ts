@@ -62,7 +62,12 @@ export class SelectionLayer {
     this.lastRenderHash = null;
   }
 
-  render(selection: Selection, measurements: LayoutMeasurements, readonlyColumns?: Set<number>): void {
+  render(
+    selection: Selection,
+    measurements: LayoutMeasurements,
+    readonlyColumns?: Set<number>,
+    fillHandleAllowed = true,
+  ): void {
     // Change-detection: hash everything that affects output. If unchanged, skip.
     // Render previously tore down + recreated all range borders + the fill
     // handle on every frame, even when nothing changed (e.g. scroll-driven
@@ -79,7 +84,7 @@ export class SelectionLayer {
     const ro = measurements.rowOffsets;
     const co = measurements.colOffsets;
     hash += `|${ro.length}:${ro[ro.length - 1] ?? 0}|${co.length}:${co[co.length - 1] ?? 0}`;
-    hash += `|fh=${this.fillHandleEnabled ? 1 : 0}|ed=${this.isEditing ? 1 : 0}`;
+    hash += `|fh=${this.fillHandleEnabled ? 1 : 0}|fha=${fillHandleAllowed ? 1 : 0}|ed=${this.isEditing ? 1 : 0}`;
     if (readonlyColumns && readonlyColumns.size > 0) {
       // Order-independent: cheap sum over a typically-small set.
       let ros = 0;
@@ -138,7 +143,7 @@ export class SelectionLayer {
 
     // Fill handle at bottom-right corner of last range (or active cell)
     // Skip if all columns in the range are readonly
-    if (!this.fillHandleEnabled) return;
+    if (!this.fillHandleEnabled || !fillHandleAllowed) return;
     const lastRange = selection.ranges[selection.ranges.length - 1];
     if (lastRange && readonlyColumns && readonlyColumns.size > 0) {
       let allReadonly = true;

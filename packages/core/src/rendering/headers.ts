@@ -88,14 +88,22 @@ export function createHeaderRenderer<TData = unknown>(
     // up from child elements like the text span and the filter button).
     const related = event.relatedTarget as Node | null;
     if (related && cell.contains(related)) return;
-    const textSpan = cell.querySelector('.bg-header-cell__text') as HTMLElement | null;
+    const hoveredText = target.closest('.bg-header-cell__text') as HTMLElement | null;
+    const textSpan = hoveredText ?? (
+      target === cell ? cell.querySelector('.bg-header-cell__text') as HTMLElement | null : null
+    );
     if (!textSpan) return;
     // Skip empty / whitespace-only header text — common for utility columns
     // (selection checkbox, action menu, expand chevron) where a clipped check
     // would still trigger a meaningless empty tooltip.
     const text = textSpan.textContent ?? '';
-    if (text.trim() && textSpan.scrollWidth > textSpan.clientWidth) {
-      deps.tooltip.show(cell, text);
+    textSpan.removeAttribute('title');
+    cell.removeAttribute('title');
+    const isClipped =
+      textSpan.scrollWidth > textSpan.clientWidth + 1 ||
+      textSpan.scrollHeight > textSpan.clientHeight + 1;
+    if (text.trim() && isClipped) {
+      deps.tooltip.show(textSpan, text);
     }
   }
 
@@ -447,7 +455,6 @@ export function createHeaderRenderer<TData = unknown>(
         // it without needing a full stylesheet parse.
         filterBtn.style.position = 'absolute';
         filterBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 1.5h8M2.5 4h5M4 6.5h2M5 6.5V9"/></svg>';
-        filterBtn.title = 'Filter';
         filterBtn.setAttribute('role', 'button');
         filterBtn.setAttribute('aria-label', `Filter ${textSpan.textContent?.trim() || colId}`);
         filterBtn.addEventListener('mousedown', (e) => {

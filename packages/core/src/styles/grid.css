@@ -124,7 +124,7 @@
   background: var(--bg-header-bg, #f8f9fa);
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
   user-select: none;
   cursor: default;
 }
@@ -141,9 +141,15 @@
 
 /* Header text wrapper — clips text while allowing resize handles to overflow */
 .bg-header-cell__text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--bg-header-text-line-clamp, 2);
+  line-height: var(--bg-header-text-line-height, normal);
   overflow: hidden;
+  overflow-wrap: normal;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: normal;
   max-width: 100%;
 }
 
@@ -286,7 +292,7 @@ body.bg-grid-resizing .bg-resize-handle:active {
   background: var(--bg-cell-bg, #fff);
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
   /* line-height set inline to match cell height for vertical centering */
   cursor: default;
   user-select: none;
@@ -294,22 +300,39 @@ body.bg-grid-resizing .bg-resize-handle:active {
 }
 
 .bg-cell__text {
-  display: inline-block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--bg-cell-text-line-clamp, 2);
+  line-height: var(--bg-cell-text-line-height, normal);
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
+  overflow-wrap: normal;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  user-select: text;
+  -webkit-user-select: text;
+  white-space: normal;
+  word-break: normal;
 }
 
 .bg-cell__text--multiline {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--bg-cell-text-line-clamp, 2);
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
   text-overflow: clip;
+  user-select: text;
+  -webkit-user-select: text;
   white-space: normal;
-  word-break: break-word;
+  word-break: normal;
+}
+
+.bg-header-cell__text,
+.bg-input-box__value,
+.bg-select-compound-input,
+.bg-select-trigger {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .bg-cell--selected {

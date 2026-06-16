@@ -263,11 +263,26 @@ export interface FooterRow {
 // Selection Options
 // ---------------------------------------------------------------------------
 
-export type SelectionOptions =
+export type CellSelectionPredicate<TData = unknown> = (ctx: {
+  row: TData;
+  rowIndex: number;
+  column: ColumnDef<TData>;
+  columnIndex: number;
+}) => boolean;
+
+export type FillHandlePredicate<TData = unknown> = CellSelectionPredicate<TData>;
+
+export type SelectionOptions<TData = unknown> =
   | false
   | { mode: 'cell' }
   | { mode: 'row' }
-  | { mode: 'range'; multiRange?: boolean; fillHandle?: boolean };
+  | {
+      mode: 'range';
+      multiRange?: boolean;
+      fillHandle?: boolean;
+      fillHandlePredicate?: FillHandlePredicate<TData>;
+      cellSelectionPredicate?: CellSelectionPredicate<TData>;
+    };
 
 // ---------------------------------------------------------------------------
 // Virtualization Options
@@ -471,7 +486,7 @@ export interface GridOptions<
 
   // Behavior
   /** Default = { mode: 'cell' }. Pass `false` to disable selection entirely. */
-  selection?: SelectionOptions;
+  selection?: SelectionOptions<TData>;
   /** Stable row identity. Used by selection-stability across data swaps. Mirrored to hierarchy.getRowId when hierarchy is configured (hierarchy.getRowId wins for hierarchy state if both are set). */
   getRowId?: (row: TData) => string | number;
   hierarchy?: HierarchyConfig<TData>;

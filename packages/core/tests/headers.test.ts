@@ -229,11 +229,31 @@ describe('createHeaderRenderer', () => {
     // delegated listener on headerContainer.
     textSpan.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true }));
     expect(show).toHaveBeenCalledTimes(1);
-    expect(show).toHaveBeenCalledWith(cell, expect.stringContaining('A very long'));
+    expect(show).toHaveBeenCalledWith(textSpan, expect.stringContaining('A very long'));
 
     // Dispatch mouseout leaving the cell — dismiss fires.
     textSpan.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, cancelable: true }));
     expect(dismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires tooltip.show when header text is vertically clamped', () => {
+    const show = vi.fn();
+    const dismiss = vi.fn();
+    const { headerContainer } = setup(
+      [{ id: 'a', headerName: 'A very long header label that wraps past two lines' } as ColumnDef],
+      { tooltip: { show, dismiss } as unknown as HeaderRendererDeps['tooltip'] },
+    );
+    const textSpan = headerContainer.querySelector('.bg-header-cell__text') as HTMLElement;
+
+    Object.defineProperty(textSpan, 'scrollWidth', { value: 50, configurable: true });
+    Object.defineProperty(textSpan, 'clientWidth', { value: 50, configurable: true });
+    Object.defineProperty(textSpan, 'scrollHeight', { value: 48, configurable: true });
+    Object.defineProperty(textSpan, 'clientHeight', { value: 28, configurable: true });
+
+    textSpan.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true }));
+
+    expect(show).toHaveBeenCalledTimes(1);
+    expect(show).toHaveBeenCalledWith(textSpan, expect.stringContaining('wraps past two lines'));
   });
 
   it('does NOT re-fire tooltip.show when moving within the same cell (relatedTarget guard)', () => {

@@ -50,6 +50,41 @@ function makeRect(left: number, top: number, width: number, height: number): DOM
 }
 
 describe('editing inputStyle reuse', () => {
+  it('shows clipped-text tooltips for vertically clamped cell text', () => {
+    const host = makeHost();
+    const longValue = 'Cell text that wraps beyond the two allowed display lines';
+    const grid = createGrid<Row>({
+      columns: [
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          width: 80,
+        },
+      ],
+      data: [{ amount: longValue }],
+      tooltip: { delay: 0 },
+    });
+
+    grid.mount(host);
+    grid.refresh();
+    vi.useFakeTimers();
+
+    const text = host.querySelector('.bg-cell__text') as HTMLElement;
+    expect(text).not.toBeNull();
+    Object.defineProperty(text, 'scrollWidth', { value: 70, configurable: true });
+    Object.defineProperty(text, 'clientWidth', { value: 70, configurable: true });
+    Object.defineProperty(text, 'scrollHeight', { value: 48, configurable: true });
+    Object.defineProperty(text, 'clientHeight', { value: 28, configurable: true });
+
+    text.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    vi.runOnlyPendingTimers();
+
+    expect(document.querySelector('.bg-tooltip')?.textContent).toBe(longValue);
+
+    grid.unmount();
+  });
+
   it('reuses formatter-only input boxes across refreshes', () => {
     const host = makeHost();
     const columns: ColumnDef<Row>[] = [
@@ -194,11 +229,13 @@ describe('editing inputStyle reuse', () => {
     vi.useFakeTimers();
 
     const inputBox = host.querySelector('.bg-input-box') as HTMLElement;
+    const valueSpan = host.querySelector('.bg-input-box__value') as HTMLElement;
     expect(inputBox).not.toBeNull();
+    expect(valueSpan).not.toBeNull();
     Object.defineProperty(inputBox, 'scrollWidth', { value: 180, configurable: true });
     Object.defineProperty(inputBox, 'clientWidth', { value: 42, configurable: true });
 
-    inputBox.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    valueSpan.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
     vi.runOnlyPendingTimers();
     expect(document.querySelector('.bg-tooltip')?.textContent).toBe('123456789%');
 
@@ -534,6 +571,46 @@ describe('editing inputStyle reuse', () => {
     expect(inlineInput!.style.lineHeight).toBe('16px');
     expect(inlineInput!.style.paddingTop).toBe('0px');
     expect(inlineInput!.style.paddingBottom).toBe('0px');
+
+    grid.unmount();
+  });
+
+  it('shows full text tooltip when floating editor text is clipped', () => {
+    const host = makeHost();
+    const longValue = '12345678901234567890';
+    const grid = createGrid<Row>({
+      columns: [
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          width: 80,
+          editable: true,
+        },
+      ],
+      data: [{ amount: longValue }],
+      plugins: [editing({ inputStyle: true, editTrigger: 'click' })],
+      tooltip: { delay: 0 },
+    });
+
+    grid.mount(host);
+    grid.refresh();
+    vi.useFakeTimers();
+
+    const cell = host.querySelector('.bg-cell[data-row="0"][data-col="0"]') as HTMLElement;
+    cell.getBoundingClientRect = () => makeRect(20, 40, 80, 40);
+
+    grid.plugins.editing.startEdit({ rowIndex: 0, colIndex: 0 });
+
+    const editor = document.body.querySelector('.bg-cell-editor-float .bg-cell-editor') as HTMLElement;
+    expect(editor).not.toBeNull();
+    Object.defineProperty(editor, 'scrollWidth', { value: 220, configurable: true });
+    Object.defineProperty(editor, 'clientWidth', { value: 60, configurable: true });
+
+    editor.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 60, clientY: 60 }));
+    vi.runOnlyPendingTimers();
+
+    expect(document.querySelector('.bg-tooltip')?.textContent).toBe(longValue);
 
     grid.unmount();
   });

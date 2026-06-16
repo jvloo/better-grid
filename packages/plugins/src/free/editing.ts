@@ -1111,6 +1111,40 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         return el.scrollWidth > el.clientWidth + 1;
       }
 
+      function isTooltipTextClipped(el: HTMLElement | null | undefined): boolean {
+        if (!el) return false;
+        return el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
+      }
+
+      function getEditorTooltipText(el: HTMLElement): string {
+        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+          return el.value;
+        }
+        return el.textContent ?? '';
+      }
+
+      function bindFloatingEditorTooltip(anchor: HTMLElement, probe: HTMLElement = anchor): () => void {
+        const onMouseOver = (event: MouseEvent): void => {
+          const target = event.target as HTMLElement | null;
+          if (!target || !anchor.contains(target)) return;
+          const text = getEditorTooltipText(probe);
+          if (!text.trim() || !isTooltipTextClipped(probe)) return;
+          ctx.showTooltip(anchor, text, event.clientX, event.clientY);
+        };
+        const onMouseOut = (event: MouseEvent): void => {
+          const related = event.relatedTarget as Node | null;
+          if (related && anchor.contains(related)) return;
+          ctx.dismissTooltip();
+        };
+        anchor.addEventListener('mouseover', onMouseOver);
+        anchor.addEventListener('mouseout', onMouseOut);
+        return () => {
+          anchor.removeEventListener('mouseover', onMouseOver);
+          anchor.removeEventListener('mouseout', onMouseOut);
+          ctx.dismissTooltip();
+        };
+      }
+
       function getLayoutWidth(el: HTMLElement): number {
         const rectWidth = el.getBoundingClientRect().width;
         return el.clientWidth || rectWidth;
@@ -2545,6 +2579,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
           document.body.appendChild(floatBox);
           activeFloatBox = floatBox;
+          const unbindFloatingTooltip = bindFloatingEditorTooltip(ed);
 
           function applyFloatingEditorLayout(anchorRect: DOMRect, hostRect?: DOMRect): void {
             measureSpan.textContent = ed.textContent || ' ';
@@ -2694,6 +2729,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             measureSpan.remove();
             floatBox.remove();
             activeFloatBox = null;
+            unbindFloatingTooltip();
             unbindPositionSync();
             document.removeEventListener('mousedown', onOutsideClick, true);
           }
@@ -3406,6 +3442,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
 
         document.body.appendChild(floatBox);
         activeFloatBox = floatBox;
+        const unbindMaskedTooltip = bindFloatingEditorTooltip(displayLayer);
 
         const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
         const editRow = cellEl.dataset.row;
@@ -3461,6 +3498,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           if (!maskedActive) return;
           maskedActive = false;
           document.removeEventListener('mousedown', onMaskedOutsideClick, true);
+          unbindMaskedTooltip();
           unbindPositionSync();
           activeOutsideClickCleanup = null;
         }
@@ -3553,6 +3591,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
         floatBox.appendChild(input);
         document.body.appendChild(floatBox);
         activeFloatBox = floatBox;
+        const unbindDateTooltip = bindFloatingEditorTooltip(input);
 
         const gridEl = cellEl.closest('.bg-grid') as HTMLElement | null;
         const editRow = cellEl.dataset.row;
@@ -3630,6 +3669,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           if (!active) return;
           active = false;
           unbindPositionSync();
+          unbindDateTooltip();
           floatBox.remove();
           activeFloatBox = null;
           document.removeEventListener('mousedown', onOutsideClick, true);

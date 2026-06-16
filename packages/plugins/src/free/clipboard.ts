@@ -254,8 +254,13 @@ function isNativeClipboardTarget(target: EventTarget | null): boolean {
 }
 
 function hasNativeTextSelection(): boolean {
+  return getNativeTextSelection().length > 0;
+}
+
+function getNativeTextSelection(): string {
   const selection = window.getSelection();
-  return !!selection && !selection.isCollapsed && selection.toString().length > 0;
+  if (!selection || selection.isCollapsed) return '';
+  return selection.toString();
 }
 
 // ============================================================================
@@ -849,7 +854,10 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
         priority: 5,
         handler: (event) => {
           if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
-            if (isNativeClipboardTarget(event.target) || hasNativeTextSelection()) return false;
+            if (isNativeClipboardTarget(event.target)) return false;
+            if (hasNativeTextSelection()) {
+              return false;
+            }
             event.preventDefault();
             copy();
             return true;
@@ -877,7 +885,10 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
         priority: 5,
         handler: (event) => {
           if ((event.ctrlKey || event.metaKey) && event.key === 'x') {
-            if (isNativeClipboardTarget(event.target) || hasNativeTextSelection()) return false;
+            if (isNativeClipboardTarget(event.target)) return false;
+            if (hasNativeTextSelection()) {
+              return false;
+            }
             event.preventDefault();
             cut();
             return true;

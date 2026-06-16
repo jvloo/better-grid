@@ -632,7 +632,12 @@ export function createGrid<
     }
 
     // Render selection layer (readonly cols are cached on ColumnManager, rebuilt on setColumns)
-    selectionLayer?.render(state.selection, measurements, columnManager.getReadonlyColumns());
+    selectionLayer?.render(
+      state.selection,
+      measurements,
+      columnManager.getReadonlyColumns(),
+      canUseFillHandleForSelection(state.selection),
+    );
 
     emitter.emit('render', visibleRange);
   }
@@ -832,6 +837,16 @@ export function createGrid<
     const selectionMode = normalizedSelection.mode;
     if (selectionMode === 'off') return;
 
+    if (!canSelectCell(cell)) {
+      const currentSelection = store.getState().selection;
+      if (currentSelection.active || currentSelection.ranges.length > 0) {
+        store.setSelection(createEmptySelection());
+        emitter.emit('selection:change', store.getState().selection);
+        scheduleRender();
+      }
+      return;
+    }
+
     const isCtrlHeld = event.ctrlKey || event.metaKey;
     const allowRange = selectionMode === 'range';
     const allowMultiRange = allowRange && normalizedSelection.multiRange;
@@ -857,6 +872,41 @@ export function createGrid<
     scheduleRender();
   }
 
+  function canSelectCell(cell: CellPosition): boolean {
+    const predicate = normalizedSelection.cellSelectionPredicate;
+    if (!predicate) return true;
+    const state = store.getState();
+    const column = state.columns[cell.colIndex];
+    const row = state.data[cell.rowIndex];
+    if (!column || row === undefined) return false;
+    return predicate({
+      row,
+      rowIndex: cell.rowIndex,
+      column,
+      columnIndex: cell.colIndex,
+    });
+  }
+
+  function canUseFillHandleForSelection(selection: Selection): boolean {
+    const predicate = normalizedSelection.fillHandlePredicate;
+    if (!predicate) return true;
+    const range = selection.ranges[selection.ranges.length - 1];
+    if (!range) return false;
+    const state = store.getState();
+    for (let rowIndex = range.startRow; rowIndex <= range.endRow; rowIndex++) {
+      const row = state.data[rowIndex];
+      if (row === undefined) return false;
+      for (let columnIndex = range.startCol; columnIndex <= range.endCol; columnIndex++) {
+        const column = state.columns[columnIndex];
+        if (!column) return false;
+        if (!predicate({ row, rowIndex, column, columnIndex })) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   function handleDblClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     if (target.classList.contains('bg-cell-editor') || target.closest('.bg-cell--editing')) {
@@ -868,9 +918,76 @@ export function createGrid<
     }
   }
 
+  function isElementClipped(el: HTMLElement): boolean {
+    return el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
+  }
+
+  function getTooltipText(el: HTMLElement, fallbackText = ''): string {
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      return el.value;
+    }
+    return el.textContent ?? fallbackText;
+  }
+
+  function suppressNativeTextTooltip(...els: Array<HTMLElement | null | undefined>): void {
+    for (const el of els) {
+      el?.removeAttribute('title');
+    }
+  }
+
+  function getCellTooltipProbe(
+    cell: HTMLElement,
+    target: HTMLElement,
+  ): { anchor: HTMLElement; probe: HTMLElement; text: string; fallbackProbe?: HTMLElement } | null {
+    const editor = target.closest('.bg-cell-editor') as HTMLElement | null;
+    if (editor && cell.contains(editor)) {
+      return {
+        anchor: editor,
+        probe: editor,
+        text: getTooltipText(editor),
+      };
+    }
+
+    const textTarget = target.closest(
+      '.bg-input-box, .bg-cell__text, .bg-select-compound-input, .bg-select-trigger',
+    ) as HTMLElement | null;
+    if (textTarget && cell.contains(textTarget)) {
+      const inputBox = textTarget.closest('.bg-input-box') as HTMLElement | null;
+      const valueProbe = inputBox?.querySelector<HTMLElement>('.bg-input-box__value');
+      const probe = valueProbe ?? textTarget;
+      const text = inputBox?.textContent ?? getTooltipText(probe);
+      return {
+        anchor: probe,
+        probe,
+        text,
+      };
+    }
+
+    // Backward-compatible fallback for existing callers/tests that dispatch
+    // hover from the cell box rather than the text child.
+    if (target === cell) {
+      const inputBox = cell.querySelector<HTMLElement>('.bg-input-box');
+      const probe =
+        cell.querySelector<HTMLElement>(
+          '.bg-input-box__value, .bg-cell__text, .bg-select-compound-input, .bg-select-trigger',
+        ) ??
+        inputBox ??
+        cell;
+      return {
+        anchor: probe,
+        probe,
+        fallbackProbe: probe === cell ? undefined : cell,
+        text: inputBox?.textContent ?? getTooltipText(probe),
+      };
+    }
+
+    return null;
+  }
+
   function handleCellMouseOver(event: MouseEvent): void {
     if (!tooltipConfig.enabled || !tooltipConfig.clippedText) return;
-    const cell = (event.target as HTMLElement).closest('.bg-cell') as HTMLElement | null;
+    const target = event.target as HTMLElement;
+    const cell = target.closest('.bg-cell, .bg-pinned-cell') as HTMLElement | null;
     if (!cell) return;
     // Hard skip for utility cells. Even if a kebab button or hierarchy
     // chevron has non-empty textContent (icon glyph, accessible-name leak
@@ -886,31 +1003,24 @@ export function createGrid<
     if (cell.querySelector('.bg-gantt-bar, .bg-gantt-interactive, .bg-gantt-handle')) {
       return;
     }
-    // Prefer the visible input-style text container when present. Plain
-    // inputStyle cells put text directly on `.bg-input-box`; adorned inputs
-    // use `.bg-input-box__value`; select-with-input cells use their compound
-    // input. Probe the element that actually clips so the outer cell box does
-    // not mask overflow that happened inside the input chrome.
-    const inputBox = cell.querySelector<HTMLElement>('.bg-input-box');
-    const probe =
-      cell.querySelector<HTMLElement>(
-        '.bg-input-box__value, .bg-select-compound-input, .bg-select-trigger',
-      ) ??
-      inputBox ??
-      cell;
-    const text = (inputBox?.textContent ?? probe.textContent) ?? '';
+    const tooltipProbe = getCellTooltipProbe(cell, target);
+    if (!tooltipProbe) return;
+    const { anchor, probe, fallbackProbe, text } = tooltipProbe;
     // Skip empty / whitespace cells.
     if (!text.trim()) return;
-    const isProbeClipped = probe.scrollWidth > probe.clientWidth;
-    const isInputBoxClipped = inputBox ? inputBox.scrollWidth > inputBox.clientWidth : false;
-    if (isProbeClipped || isInputBoxClipped) {
-      showTooltip(cell, text);
+    const inputBox = probe.closest('.bg-input-box') as HTMLElement | null;
+    suppressNativeTextTooltip(cell, inputBox, anchor, probe, fallbackProbe);
+    const isProbeClipped = isElementClipped(probe);
+    const isFallbackProbeClipped = fallbackProbe ? isElementClipped(fallbackProbe) : false;
+    const isInputBoxClipped = inputBox ? isElementClipped(inputBox) : false;
+    if (isProbeClipped || isFallbackProbeClipped || isInputBoxClipped) {
+      showTooltip(anchor, text);
     }
   }
 
   function handleCellMouseOut(event: MouseEvent): void {
     const related = (event as MouseEvent).relatedTarget as HTMLElement | null;
-    const cell = (event.target as HTMLElement).closest('.bg-cell');
+    const cell = (event.target as HTMLElement).closest('.bg-cell, .bg-pinned-cell');
     if (cell && !cell.contains(related)) {
       dismissTooltip();
     }

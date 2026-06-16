@@ -5,6 +5,8 @@ import type { ColumnDef } from '../src/types';
 
 interface Row {
   name: string;
+  amount?: number;
+  editable?: boolean;
 }
 
 let originalClipboard: Clipboard | undefined;
@@ -55,9 +57,14 @@ function getMountedGridElement(host: HTMLElement): HTMLElement {
 }
 
 describe('clipboard native text selection', () => {
-  it('does not intercept Ctrl+C when browser text is selected', () => {
+  it('lets the browser copy selected text instead of grid range data on Ctrl+C', () => {
     const host = makeHost();
     const onCopy = vi.fn();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
     const grid = createGrid<Row>({
       columns: makeColumns(),
       data: [{ name: 'Alpha' }],
@@ -85,6 +92,7 @@ describe('clipboard native text selection', () => {
     gridEl.dispatchEvent(event);
 
     expect(event.defaultPrevented).toBe(false);
+    expect(writeText).not.toHaveBeenCalled();
     expect(onCopy).not.toHaveBeenCalled();
 
     grid.unmount();
@@ -124,4 +132,89 @@ describe('clipboard native text selection', () => {
 
     grid.unmount();
   });
+
+  it('honors cellSelectionPredicate before creating a range selection', () => {
+    const host = makeHost();
+    const grid = createGrid<Row>({
+      columns: [
+        { id: 'name', field: 'name', headerName: 'Name', width: 120 },
+        { id: 'amount', field: 'amount', headerName: 'Amount', width: 120 },
+      ],
+      data: [{ name: 'Alpha', amount: 1 }],
+      selection: {
+        mode: 'range',
+        cellSelectionPredicate: ({ column }) => column.id === 'amount',
+      },
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const nameCell = host.querySelector('.bg-cell') as HTMLElement;
+    nameCell.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      pointerId: 1,
+    }));
+
+    expect(grid.getState().selection.active).toBeNull();
+    expect(grid.getState().selection.ranges).toEqual([]);
+
+    const amountCell = host.querySelectorAll('.bg-cell')[1] as HTMLElement;
+    amountCell.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      pointerId: 2,
+    }));
+
+    expect(grid.getState().selection.active).toEqual({ rowIndex: 0, colIndex: 1 });
+    expect(grid.getState().selection.ranges).toEqual([
+      { startRow: 0, endRow: 0, startCol: 1, endCol: 1 },
+    ]);
+
+    grid.unmount();
+  });
+
+  it('honors fillHandlePredicate when rendering the fill handle', () => {
+    const host = makeHost();
+    const grid = createGrid<Row>({
+      columns: [
+        { id: 'name', field: 'name', headerName: 'Name', width: 120 },
+        { id: 'amount', field: 'amount', headerName: 'Amount', width: 120 },
+      ],
+      data: [
+        { name: 'Alpha', amount: 1, editable: true },
+        { name: 'Beta', amount: 2, editable: false },
+      ],
+      selection: {
+        mode: 'range',
+        fillHandle: true,
+        fillHandlePredicate: ({ row, column }) => column.id === 'amount' && row.editable === true,
+      },
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    grid.setSelection({
+      active: { rowIndex: 0, colIndex: 0 },
+      ranges: [{ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }],
+    });
+    expect(host.querySelector('.bg-fill-handle')).toBeNull();
+
+    grid.setSelection({
+      active: { rowIndex: 1, colIndex: 1 },
+      ranges: [{ startRow: 1, endRow: 1, startCol: 1, endCol: 1 }],
+    });
+    expect(host.querySelector('.bg-fill-handle')).toBeNull();
+
+    grid.setSelection({
+      active: { rowIndex: 0, colIndex: 1 },
+      ranges: [{ startRow: 0, endRow: 0, startCol: 1, endCol: 1 }],
+    });
+    expect(host.querySelector('.bg-fill-handle')).not.toBeNull();
+
+    grid.unmount();
+  });
+
 });
