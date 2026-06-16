@@ -1,6 +1,6 @@
 {
   "name": "@better-grid/plugins",
-  "version": "1.0.57",
+  "version": "1.0.59",
   "description": "Official plugins for Better Grid",
   "license": "MIT",
   "type": "module",
@@ -30,7 +30,7 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "@better-grid/core": "1.0.52"
+    "@better-grid/core": "1.0.54"
   },
   "devDependencies": {
     "tsup": "^8.3.0"

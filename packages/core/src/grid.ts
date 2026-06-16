@@ -1965,6 +1965,7 @@ export function createGrid<
           // Default: cycle source values (no series detection)
           const state = store.getState();
           const columns = state.columns;
+          const updates: Array<{ rowIndex: number; columnId: string; value: unknown }> = [];
           const sourceRowCount = sourceRange.endRow - sourceRange.startRow + 1;
           const sourceColCount = sourceRange.endCol - sourceRange.startCol + 1;
           const isVertical =
@@ -1996,7 +1997,7 @@ export function createGrid<
                 const srcIdx = (row - targetRange.startRow) % sourceRowCount;
                 const value = sourceVals[srcIdx];
                 if (value !== undefined) {
-                  instance.updateCell(row, column.id, value);
+                  updates.push({ rowIndex: row, columnId: column.id, value });
                 }
               }
             }
@@ -2015,11 +2016,13 @@ export function createGrid<
 
                 const value = (state.data[row] as Record<string, unknown>)?.[srcCol.field];
                 if (value !== undefined) {
-                  instance.updateCell(row, column.id, value);
+                  updates.push({ rowIndex: row, columnId: column.id, value });
                 }
               }
             }
           }
+
+          instance.updateCells(updates);
         }
 
         // Extend selection to include filled area
@@ -2277,27 +2280,54 @@ export function createGrid<
     },
 
     updateCell(rowIndex: number, columnId: string, value: unknown): void {
-      const dataIndex = visibleToDataIndex(rowIndex);
-      const oldRow = store.getState().data[dataIndex];
-      if (oldRow === undefined) return;
+      instance.updateCells([{ rowIndex, columnId, value }]);
+    },
 
-      // Capture the previous CELL value before mutation (not the old row object)
-      const column = columnManager.getAllColumns().find((c) => c.id === columnId);
-      const oldValue = column ? getCellValue(oldRow, column, dataIndex) : undefined;
+    updateCells(updates): void {
+      if (updates.length === 0) return;
 
-      store.setCellValue(dataIndex, columnId, value);
-      const newRow = store.getState().data[dataIndex];
-      if (newRow === undefined) return;
+      const columnsById = new Map(columnManager.getAllColumns().map((column) => [column.id, column]));
+      let nextData = store.getState().data;
+      const pendingChanges: Array<CellChange<TData> & { dataIndex: number }> = [];
 
-      const change: CellChange<TData> = {
-        rowIndex,
-        columnId,
-        oldValue,
-        newValue: value,
-        row: newRow,
-      };
-      emitter.emit('cell:change', [change]);
-      options.onCellChange?.([change]);
+      for (const update of updates) {
+        const dataIndex = visibleToDataIndex(update.rowIndex);
+        const oldRow = nextData[dataIndex];
+        if (oldRow === undefined) continue;
+
+        const column = columnsById.get(update.columnId);
+        const oldValue = column ? getCellValue(oldRow, column, dataIndex) : undefined;
+
+        let newRow: TData = oldRow as TData;
+        if (column?.field) {
+          if (nextData === store.getState().data) {
+            nextData = [...nextData];
+          }
+          newRow = { ...(oldRow as Record<string, unknown>), [column.field]: update.value } as TData;
+          nextData[dataIndex] = newRow;
+        }
+
+        pendingChanges.push({
+          rowIndex: update.rowIndex,
+          columnId: update.columnId,
+          oldValue,
+          newValue: update.value,
+          row: newRow,
+          dataIndex,
+        });
+      }
+
+      if (pendingChanges.length === 0) return;
+
+      if (nextData !== store.getState().data) {
+        store.setData(nextData);
+      }
+      const changes = pendingChanges.map(({ dataIndex, ...change }) => ({
+        ...change,
+        row: nextData[dataIndex] ?? change.row,
+      }));
+      emitter.emit('cell:change', changes);
+      options.onCellChange?.(changes);
       scheduleRender();
     },
 

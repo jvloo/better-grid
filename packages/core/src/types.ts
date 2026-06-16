@@ -66,6 +66,12 @@ export interface CellChange<TData = unknown> {
   row: TData;
 }
 
+export interface CellUpdate {
+  rowIndex: number;
+  columnId: string;
+  value: unknown;
+}
+
 // ---------------------------------------------------------------------------
 // Cell Rendering
 // ---------------------------------------------------------------------------
@@ -668,6 +674,7 @@ export interface GridInstance<
   setData(data: TData[], options?: SetDataOptions): void;
   updateRow(rowIndex: number, data: Partial<TData>): void;
   updateCell(rowIndex: number, columnId: string, value: unknown): void;
+  updateCells(updates: CellUpdate[]): void;
 
   getPinnedTopRows(): TData[];
   setPinnedTopRows(rows: TData[]): void;
@@ -754,6 +761,7 @@ export interface PluginGridApi<TData = unknown> {
   setData(data: TData[], options?: SetDataOptions): void;
   updateRow(rowIndex: number, data: Partial<TData>): void;
   updateCell(rowIndex: number, columnId: string, value: unknown): void;
+  updateCells(updates: CellUpdate[]): void;
 
   // Columns
   getColumns(): NormalizedColumnDef<TData>[];

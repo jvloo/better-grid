@@ -719,6 +719,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
           const isHorizontal = targetRange.startRow === sourceRange.startRow && targetRange.endRow === sourceRange.endRow;
 
           const changes: Array<{ rowIndex: number; columnId: string; oldValue: unknown; newValue: unknown }> = [];
+          const updates: Array<{ rowIndex: number; columnId: string; value: unknown }> = [];
 
           if (isVertical) {
             // For each column, detect series pattern and generate values
@@ -756,7 +757,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
 
                 const newValue = pattern.generate(index);
                 const oldValue = getCellValue(row, column);
-                ctx.grid.updateCell(r, column.id, newValue);
+                updates.push({ rowIndex: r, columnId: column.id, value: newValue });
                 changes.push({ rowIndex: r, columnId: column.id, oldValue, newValue });
               }
             }
@@ -792,13 +793,14 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
 
                 const newValue = pattern.generate(index);
                 const oldValue = getCellValue(row, column);
-                ctx.grid.updateCell(r, column.id, newValue);
+                updates.push({ rowIndex: r, columnId: column.id, value: newValue });
                 changes.push({ rowIndex: r, columnId: column.id, oldValue, newValue });
               }
             }
           }
 
           if (changes.length > 0) {
+            ctx.grid.updateCells(updates);
             config.onFill?.(changes);
           }
         }) as () => void);

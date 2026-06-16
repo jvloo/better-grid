@@ -271,6 +271,7 @@ describe('clipboard native text selection', () => {
   it('filters fill-handle drag writes through row-level editable predicates', () => {
     const host = makeHost();
     const onFill = vi.fn();
+    const onCellChange = vi.fn();
     const grid = createGrid<Row>({
       columns: [
         { id: 'name', field: 'name', headerName: 'Name', width: 120 },
@@ -286,10 +287,12 @@ describe('clipboard native text selection', () => {
         { name: 'Alpha', amount: 1, editable: true },
         { name: 'Beta', amount: 2, editable: false },
         { name: 'Gamma', amount: 3, editable: true },
+        { name: 'Delta', amount: 4, editable: true },
       ],
       plugins: [clipboard({ onFill })],
       selection: { mode: 'range', fillHandle: true },
       rowHeight: 40,
+      onCellChange,
     });
 
     grid.mount(host);
@@ -313,14 +316,14 @@ describe('clipboard native text selection', () => {
       bubbles: true,
       button: 0,
       clientX: 240,
-      clientY: 105,
+      clientY: 145,
       pointerId: 10,
     }));
     document.dispatchEvent(new PointerEvent('pointerup', {
       bubbles: true,
       button: 0,
       clientX: 240,
-      clientY: 105,
+      clientY: 145,
       pointerId: 10,
     }));
 
@@ -328,8 +331,15 @@ describe('clipboard native text selection', () => {
     expect(data[0]?.amount).toBe(1);
     expect(data[1]?.amount).toBe(2);
     expect(data[2]?.amount).toBe(1);
+    expect(data[3]?.amount).toBe(1);
+    expect(onCellChange).toHaveBeenCalledTimes(1);
+    expect(onCellChange.mock.calls[0]?.[0]).toMatchObject([
+      { rowIndex: 2, columnId: 'amount', oldValue: 3, newValue: 1 },
+      { rowIndex: 3, columnId: 'amount', oldValue: 4, newValue: 1 },
+    ]);
     expect(onFill).toHaveBeenCalledWith([
       { rowIndex: 2, columnId: 'amount', oldValue: 3, newValue: 1 },
+      { rowIndex: 3, columnId: 'amount', oldValue: 4, newValue: 1 },
     ]);
 
     grid.unmount();
