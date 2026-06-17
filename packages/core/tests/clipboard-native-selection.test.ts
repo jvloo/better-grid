@@ -345,6 +345,65 @@ describe('clipboard native text selection', () => {
     grid.unmount();
   });
 
+  it('applies multi-cell paste as one batched cell change', async () => {
+    const host = makeHost();
+    const onPaste = vi.fn();
+    const onCellChange = vi.fn();
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        read: vi.fn().mockRejectedValue(new Error('no rich clipboard')),
+        readText: vi.fn().mockResolvedValue('10\t20\n30\t40'),
+      },
+    });
+
+    const grid = createGrid<Row>({
+      columns: [
+        { id: 'name', field: 'name', headerName: 'Name', width: 120, editable: true },
+        { id: 'amount', field: 'amount', headerName: 'Amount', width: 120, editable: (row) => row.editable === true },
+      ],
+      data: [
+        { name: 'Alpha', amount: 1, editable: true },
+        { name: 'Beta', amount: 2, editable: false },
+      ],
+      plugins: [clipboard({ onPaste })],
+      selection: { mode: 'range' },
+      onCellChange,
+    });
+
+    grid.mount(host);
+    grid.refresh();
+    grid.setSelection({
+      active: { rowIndex: 0, colIndex: 0 },
+      ranges: [{ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }],
+    });
+
+    const gridEl = getMountedGridElement(host);
+    gridEl.focus();
+    gridEl.dispatchEvent(new KeyboardEvent('keydown', {
+      bubbles: true,
+      ctrlKey: true,
+      key: 'v',
+    }));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(grid.getState().data).toMatchObject([
+      { name: '10', amount: 20 },
+      { name: '30', amount: 2 },
+    ]);
+    expect(onCellChange).toHaveBeenCalledTimes(1);
+    expect(onCellChange.mock.calls[0]?.[0]).toMatchObject([
+      { rowIndex: 0, columnId: 'name', oldValue: 'Alpha', newValue: '10' },
+      { rowIndex: 0, columnId: 'amount', oldValue: 1, newValue: 20 },
+      { rowIndex: 1, columnId: 'name', oldValue: 'Beta', newValue: '30' },
+    ]);
+    expect(onPaste).toHaveBeenCalledTimes(1);
+    expect(onPaste.mock.calls[0]?.[0]).toHaveLength(3);
+
+    grid.unmount();
+  });
+
   it('renders the selection overlay above active and editing cells', () => {
     const host = makeHost();
     const grid = createGrid<Row>({

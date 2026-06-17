@@ -566,6 +566,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
         if (!parsedRows || parsedRows.length === 0) return;
 
         const changes: Array<{ rowIndex: number; columnId: string; oldValue: unknown; newValue: unknown }> = [];
+        const updates: Array<{ rowIndex: number; columnId: string; value: unknown }> = [];
 
         for (let r = 0; r < parsedRows.length; r++) {
           const rowIndex = active.rowIndex + r;
@@ -586,12 +587,13 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
             const oldValue = getCellValue(row, column);
             const newValue = parsePasteValue(rawValue, column, oldValue, row);
 
-            ctx.grid.updateCell(rowIndex, column.id, newValue);
+            updates.push({ rowIndex, columnId: column.id, value: newValue });
             changes.push({ rowIndex, columnId: column.id, oldValue, newValue });
           }
         }
 
         if (changes.length > 0) {
+          ctx.grid.updateCells(updates);
           config.onPaste?.(changes);
         }
       }
@@ -605,6 +607,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
 
         const state = ctx.grid.getState();
         const ranges = getSelectionRanges();
+        const updates: Array<{ rowIndex: number; columnId: string; value: unknown }> = [];
 
         for (const range of ranges) {
           const r1 = Math.min(range.startRow, range.endRow);
@@ -619,10 +622,11 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
               const column = state.columns[c];
               if (!column) continue;
               if (!isEditableCell(column, row)) continue;
-              ctx.grid.updateCell(r, column.id, null);
+              updates.push({ rowIndex: r, columnId: column.id, value: null });
             }
           }
         }
+        ctx.grid.updateCells(updates);
       }
 
       // -------------------------------------------------------------------
@@ -637,6 +641,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
 
         const state = ctx.grid.getState();
         const changes: Array<{ rowIndex: number; columnId: string; oldValue: unknown; newValue: unknown }> = [];
+        const updates: Array<{ rowIndex: number; columnId: string; value: unknown }> = [];
 
         for (let c = minCol; c <= maxCol; c++) {
           const column = state.columns[c];
@@ -653,12 +658,13 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
             if (!row) continue;
             if (!isEditableCell(column, row)) continue;
             const oldValue = getCellValue(row, column);
-            ctx.grid.updateCell(r, column.id, sourceValue);
+            updates.push({ rowIndex: r, columnId: column.id, value: sourceValue });
             changes.push({ rowIndex: r, columnId: column.id, oldValue, newValue: sourceValue });
           }
         }
 
         if (changes.length > 0) {
+          ctx.grid.updateCells(updates);
           config.onFill?.(changes);
           config.onPaste?.(changes);
         }
@@ -676,6 +682,7 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
 
         const state = ctx.grid.getState();
         const changes: Array<{ rowIndex: number; columnId: string; oldValue: unknown; newValue: unknown }> = [];
+        const updates: Array<{ rowIndex: number; columnId: string; value: unknown }> = [];
 
         for (let r = minRow; r <= maxRow; r++) {
           const row = state.data[r];
@@ -691,12 +698,13 @@ export function clipboard(options?: ClipboardOptions): GridPlugin<'clipboard', C
             const column = state.columns[c];
             if (!column || !isEditableCell(column, row)) continue;
             const oldValue = getCellValue(row, column);
-            ctx.grid.updateCell(r, column.id, sourceValue);
+            updates.push({ rowIndex: r, columnId: column.id, value: sourceValue });
             changes.push({ rowIndex: r, columnId: column.id, oldValue, newValue: sourceValue });
           }
         }
 
         if (changes.length > 0) {
+          ctx.grid.updateCells(updates);
           config.onFill?.(changes);
           config.onPaste?.(changes);
         }

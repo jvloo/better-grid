@@ -131,8 +131,8 @@ importers:
         specifier: 1.0.56
         version: 1.0.56
       '@better-grid/plugins':
-        specifier: 1.0.61
-        version: 1.0.61
+        specifier: 1.0.62
+        version: 1.0.62
     devDependencies:
       '@types/react':
         specifier: ^19.0.0
@@ -357,8 +357,8 @@ packages:
   '@better-grid/core@1.0.56':
     resolution: {integrity: sha512-4xR6wXgF9Q73IRTekmuzKeHnsx3c8CrKEUx03esDjyWDOczjbvIKCrV0IrffKKnX0bMuq0GBl9/Ycg4DAkQeag==}
 
-  '@better-grid/plugins@1.0.61':
-    resolution: {integrity: sha512-8MsaOOD9rmMNa9JilP1Q599APtBrxLAf981KBeAgxbBzC65SUb3eJzzoy8zQL5Xc4mQ8gjTprG3Q6FGier1pUw==}
+  '@better-grid/plugins@1.0.62':
+    resolution: {integrity: sha512-Ifb5jqVcxOHS3xqJkdgxgPRwFmGqbWbYkD3Hs/64pjgsh91Sveo3GtPlRlNGQNB7W3AXf4YYJyZyRzUTM9s2ew==}
 
   '@changesets/apply-release-plan@7.1.0':
     resolution: {integrity: sha512-yq8ML3YS7koKQ/9bk1PqO0HMzApIFNwjlwCnwFEXMzNe8NpzeeYYKCmnhWJGkN8g7E51MnWaSbqRcTcdIxUgnQ==}
@@ -2179,7 +2179,7 @@ snapshots:
 
   '@better-grid/core@1.0.56': {}
 
-  '@better-grid/plugins@1.0.61':
+  '@better-grid/plugins@1.0.62':
     dependencies:
       '@better-grid/core': 1.0.56
 
