@@ -335,8 +335,15 @@ export function createGrid<
     const vpHeight = viewport.clientHeight;
     const vpWidth = viewport.clientWidth;
     const clipOffset = getFreezeClipOffset();
-    scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth - clipOffset}px`;
-    scrollSizer.style.height = `${measurements.totalHeight + sbClientHeight - vpHeight + headerHeight + pinnedTopH + pinnedBottomH}px`;
+    const floatingEndPadding = isFloatingScrollbar ? getFloatingScrollbarSize() : 0;
+    const horizontalEndPadding =
+      isFloatingScrollbar && measurements.totalWidth - clipOffset > vpWidth ? floatingEndPadding : 0;
+    const verticalEndPadding =
+      isFloatingScrollbar && measurements.totalHeight + headerHeight + pinnedTopH + pinnedBottomH > vpHeight
+        ? floatingEndPadding
+        : 0;
+    scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth - clipOffset + horizontalEndPadding}px`;
+    scrollSizer.style.height = `${measurements.totalHeight + sbClientHeight - vpHeight + headerHeight + pinnedTopH + pinnedBottomH + verticalEndPadding}px`;
 
     if (pendingScrollRestore) {
       const nextScroll = pendingScrollRestore;

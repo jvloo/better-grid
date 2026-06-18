@@ -37,6 +37,11 @@ function makeHost(): HTMLElement {
   return host;
 }
 
+function setClientSize(el: HTMLElement, width: number, height: number): void {
+  Object.defineProperty(el, 'clientWidth', { configurable: true, value: width });
+  Object.defineProperty(el, 'clientHeight', { configurable: true, value: height });
+}
+
 describe('table-style flags', () => {
   test('default adds bg-grid--bordered class (bordered=true is the default)', () => {
     const host = makeHost();
@@ -215,6 +220,56 @@ describe('floating scrollbar layout', () => {
     expect(frozenOverlay!.style.bottom).toBe('0px');
 
     grid.unmount();
+  });
+
+  test('floating scrollbar adds inner end padding only on overflowing axes', () => {
+    const host = makeHost();
+    const grid = createGrid({
+      columns: [
+        { id: 'a', field: 'a' as never, width: 120 },
+        { id: 'm_0', field: 'm0' as never, width: 300 },
+        { id: 'm_1', field: 'm1' as never, width: 300 },
+      ],
+      data: Array.from({ length: 20 }, (_, i) => ({ a: `A${i}`, m0: '0', m1: '1' })),
+      scrollbar: { mode: 'floating' },
+      headerHeight: 40,
+    });
+
+    grid.mount(host);
+
+    const viewport = host.querySelector<HTMLElement>('.bg-grid__viewport')!;
+    const scrollbar = host.querySelector<HTMLElement>('.bg-grid__scroll')!;
+    const sizer = host.querySelector<HTMLElement>('.bg-grid__sizer')!;
+    setClientSize(viewport, 600, 400);
+    setClientSize(scrollbar, 600, 400);
+    grid.refresh();
+
+    expect(sizer.style.width).toBe('728px');
+    expect(sizer.style.height).toBe('848px');
+
+    grid.unmount();
+
+    const fittingHost = makeHost();
+    const fittingGrid = createGrid({
+      columns: [{ id: 'a', field: 'a' as never, width: 100 }],
+      data: [{ a: 'A' }, { a: 'B' }],
+      scrollbar: { mode: 'floating' },
+      headerHeight: 40,
+    });
+
+    fittingGrid.mount(fittingHost);
+
+    const fittingViewport = fittingHost.querySelector<HTMLElement>('.bg-grid__viewport')!;
+    const fittingScrollbar = fittingHost.querySelector<HTMLElement>('.bg-grid__scroll')!;
+    const fittingSizer = fittingHost.querySelector<HTMLElement>('.bg-grid__sizer')!;
+    setClientSize(fittingViewport, 600, 400);
+    setClientSize(fittingScrollbar, 600, 400);
+    fittingGrid.refresh();
+
+    expect(fittingSizer.style.width).toBe('100px');
+    expect(fittingSizer.style.height).toBe('120px');
+
+    fittingGrid.unmount();
   });
 
   test('fixed scrollbar keeps the frozen overlay gutter branch', () => {
