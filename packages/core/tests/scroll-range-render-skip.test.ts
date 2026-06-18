@@ -197,6 +197,46 @@ describe('scroll render throttling', () => {
     grid.unmount();
   });
 
+  it('hides the fill handle when selection scrolls under the header', () => {
+    const host = makeHost();
+
+    const columns: ColumnDef<Row>[] = [
+      { id: 'id', field: 'id', headerName: 'ID', width: 80 },
+      { id: 'value', field: 'value', headerName: 'Value', width: 160 },
+    ];
+    const data = Array.from({ length: 100 }, (_, id) => ({ id, value: `Row ${id}` }));
+    const grid = createGrid<Row>({
+      columns,
+      data,
+      virtualization: { overscanRows: 1, overscanColumns: 1 },
+      rowHeight: 40,
+      headerHeight: 40,
+      selection: { mode: 'range' },
+    });
+
+    grid.mount(host);
+
+    const viewport = host.querySelector('.bg-grid__viewport') as HTMLElement;
+    const scrollbar = host.querySelector('.bg-grid__scroll') as HTMLElement;
+    setClientSize(viewport, 400, 250);
+    setClientSize(scrollbar, 400, 250);
+    grid.refresh();
+    grid.setSelection({
+      active: { rowIndex: 0, colIndex: 1 },
+      ranges: [{ startRow: 0, endRow: 0, startCol: 1, endCol: 1 }],
+    });
+
+    expect(host.querySelector('.bg-fill-handle')).not.toBeNull();
+
+    scrollbar.scrollTop = 45;
+    scrollbar.dispatchEvent(new Event('scroll'));
+
+    expect(host.querySelector('.bg-selection-range')).toBeNull();
+    expect(host.querySelector('.bg-fill-handle')).toBeNull();
+
+    grid.unmount();
+  });
+
   it('only renders cells entering the virtual range on scroll-window changes', () => {
     const host = makeHost();
     let renderCalls = 0;

@@ -232,6 +232,9 @@ export class SelectionLayer {
         if (viewState && x < viewState.bodyLeft) {
           return;
         }
+        if (viewState && y < viewState.containerTop) {
+          return;
+        }
         if (
           viewState &&
           viewState.pinnedBottomHeight > 0 &&
