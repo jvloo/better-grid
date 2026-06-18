@@ -38,7 +38,7 @@ export class SelectionLayer {
    */
   private lastRenderHash: string | null = null;
 
-  constructor(container: HTMLElement, gridRoot?: HTMLElement) {
+  constructor(container: HTMLElement, rangeRoot?: HTMLElement, handleRoot?: HTMLElement) {
     this.container = container;
     this.overlay = document.createElement('div');
     this.overlay.className = 'bg-selection-overlay';
@@ -53,7 +53,7 @@ export class SelectionLayer {
     this.rangeLayer.style.position = 'absolute';
     this.rangeLayer.style.inset = '0';
     this.rangeLayer.style.pointerEvents = 'none';
-    this.rangeLayer.style.zIndex = '11';
+    this.rangeLayer.style.zIndex = '5';
 
     this.handleLayer = document.createElement('div');
     this.handleLayer.className = 'bg-fill-handle-layer';
@@ -61,7 +61,8 @@ export class SelectionLayer {
     this.handleLayer.style.inset = '0';
     this.handleLayer.style.pointerEvents = 'none';
     this.handleLayer.style.zIndex = '12';
-    (gridRoot ?? container).append(this.rangeLayer, this.handleLayer);
+    (rangeRoot ?? container).appendChild(this.rangeLayer);
+    (handleRoot ?? rangeRoot ?? container).appendChild(this.handleLayer);
   }
 
   setFillHandleEnabled(enabled: boolean): void {

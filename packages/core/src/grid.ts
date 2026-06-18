@@ -1726,7 +1726,7 @@ export function createGrid<
       pinnedTopWrapper.style.left = '0';
       pinnedTopWrapper.style.right = '0';
       pinnedTopWrapper.style.overflow = 'hidden';
-      pinnedTopWrapper.style.zIndex = '4';
+      pinnedTopWrapper.style.zIndex = '6';
       const pinnedTopH = getPinnedTopHeight();
       pinnedTopWrapper.style.height = `${pinnedTopH}px`;
       if (pinnedTopH === 0) pinnedTopWrapper.style.display = 'none';
@@ -1750,7 +1750,7 @@ export function createGrid<
       pinnedBottomWrapper.style.left = '0';
       pinnedBottomWrapper.style.right = '0';
       pinnedBottomWrapper.style.overflow = 'hidden';
-      pinnedBottomWrapper.style.zIndex = '4';
+      pinnedBottomWrapper.style.zIndex = '6';
       const pinnedBottomH = getPinnedBottomHeight();
       pinnedBottomWrapper.style.height = `${pinnedBottomH}px`;
       if (pinnedBottomH === 0) pinnedBottomWrapper.style.display = 'none';
@@ -1955,8 +1955,9 @@ export function createGrid<
         container.appendChild(freezeClipIndicator);
       }
 
-      // Selection layer (inside cell container so offsets align with cells)
-      selectionLayer = new SelectionLayer(cellContainer, container!);
+      // Range border renders inside the clipped viewport, below pinned rows.
+      // Fill handle renders at grid-root level so its protruding corner is not clipped.
+      selectionLayer = new SelectionLayer(cellContainer, viewport!, container!);
       selectionLayer.setFillHandleEnabled(
         normalizedSelection.mode !== 'off' && normalizedSelection.fillHandle,
       );

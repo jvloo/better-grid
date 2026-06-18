@@ -217,4 +217,12 @@ describe('floating scrollbar layout', () => {
     expect(gridSource).toContain("frozenColOverlay!.style.bottom = isFloatingScrollbar ? '0' : 'var(--bg-scrollbar-size, 10px)'");
     expect(gridSource).toContain("frozenColOverlay.style.bottom = isFloatingScrollbar ? '0' : 'var(--bg-scrollbar-size, 10px)'");
   });
+
+  test('selection range sits behind pinned rows while fill handle remains unclipped', () => {
+    expect(gridSource).toContain('selectionLayer = new SelectionLayer(cellContainer, viewport!, container!)');
+    expect(gridSource).toContain("pinnedTopWrapper.style.zIndex = '6'");
+    expect(gridSource).toContain("pinnedBottomWrapper.style.zIndex = '6'");
+    expect(gridSource).toContain('Range border renders inside the clipped viewport, below pinned rows.');
+    expect(gridSource).toContain('Fill handle renders at grid-root level so its protruding corner is not clipped.');
+  });
 });
