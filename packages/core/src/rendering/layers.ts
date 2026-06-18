@@ -14,9 +14,7 @@ export interface FillDragResult {
 
 export interface SelectionLayerViewState {
   clipOffset: number;
-  clipBottom: number;
   containerTop: number;
-  pinnedBottomHeight: number;
   scrollLeft: number;
   scrollTop: number;
   viewportHeight: number;
@@ -115,7 +113,7 @@ export class SelectionLayer {
     hash += `|${ro.length}:${ro[ro.length - 1] ?? 0}|${co.length}:${co[co.length - 1] ?? 0}`;
     hash += `|fh=${this.fillHandleEnabled ? 1 : 0}|fha=${fillHandleAllowed ? 1 : 0}|ed=${this.isEditing ? 1 : 0}`;
     if (viewState) {
-      hash += `|vs=${Math.round(viewState.scrollLeft)}:${Math.round(viewState.scrollTop)}:${Math.round(viewState.clipOffset)}:${Math.round(viewState.containerTop)}:${Math.round(viewState.clipBottom)}:${Math.round(viewState.viewportWidth)}:${Math.round(viewState.viewportHeight)}:${Math.round(viewState.pinnedBottomHeight)}`;
+      hash += `|vs=${Math.round(viewState.scrollLeft)}:${Math.round(viewState.scrollTop)}:${Math.round(viewState.clipOffset)}:${Math.round(viewState.containerTop)}:${Math.round(viewState.viewportWidth)}:${Math.round(viewState.viewportHeight)}`;
     }
     if (readonlyColumns && readonlyColumns.size > 0) {
       // Order-independent: cheap sum over a typically-small set.
@@ -152,11 +150,11 @@ export class SelectionLayer {
         left = left - viewState.scrollLeft - viewState.clipOffset;
         right = right - viewState.scrollLeft - viewState.clipOffset;
 
-        const hasViewportBounds = viewState.viewportWidth > 0 && viewState.clipBottom > viewState.containerTop;
+        const hasViewportBounds = viewState.viewportWidth > 0 && viewState.viewportHeight > viewState.containerTop;
         if (hasViewportBounds) {
           const clippedTop = Math.max(viewState.containerTop, top);
           const clippedLeft = Math.max(0, left);
-          const clippedBottom = Math.min(viewState.clipBottom, bottom);
+          const clippedBottom = Math.min(viewState.viewportHeight, bottom);
           const clippedRight = Math.min(viewState.viewportWidth, right);
 
           if (clippedBottom <= clippedTop || clippedRight <= clippedLeft) {
@@ -210,9 +208,6 @@ export class SelectionLayer {
 
         const x = viewState ? right - viewState.scrollLeft - viewState.clipOffset - 4 : right - 4;
         const y = viewState ? viewState.containerTop + bottom - viewState.scrollTop - 4 : bottom - 4;
-        if (viewState && viewState.pinnedBottomHeight > 0 && y + 7 > viewState.clipBottom) {
-          return;
-        }
         handle.style.transform = `translate3d(${x}px, ${y}px, 0)`;
 
         // Hide when editing

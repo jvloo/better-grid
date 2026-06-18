@@ -122,7 +122,6 @@ describe('table-style CSS rules', () => {
     expect(gridSource).toContain("floatingHTrack.style.setProperty('right', `calc(${right}px + var(--bg-scrollbar-size, 8px))`)");
     expect(gridSource).toContain('getFloatingScrollbarBottomInset()');
     expect(gridSource).toContain('getFloatingScrollbarSize()');
-    expect(gridSource).toContain('getFloatingHorizontalScrollbarInset()');
     expect(gridSource).toContain("floatingHThumb.className = 'bg-grid__float-h-thumb'");
     expect(gridSource).toContain("floatingVThumb.className = 'bg-grid__float-v-thumb'");
   });
@@ -217,12 +216,5 @@ describe('floating scrollbar layout', () => {
   test('fixed scrollbar keeps the frozen overlay gutter branch', () => {
     expect(gridSource).toContain("frozenColOverlay!.style.bottom = isFloatingScrollbar ? '0' : 'var(--bg-scrollbar-size, 10px)'");
     expect(gridSource).toContain("frozenColOverlay.style.bottom = isFloatingScrollbar ? '0' : 'var(--bg-scrollbar-size, 10px)'");
-  });
-
-  test('floating scrollbar sits below pinned bottom rows', () => {
-    expect(gridSource).toContain('const floatingHorizontalScrollbarInset = getFloatingHorizontalScrollbarInset()');
-    expect(gridSource).toContain('wrapper.style.bottom = `${floatingHorizontalScrollbarInset}px`');
-    expect(gridSource).toContain('frozenPinnedBottomContainer.style.bottom = `${floatingHorizontalScrollbarInset}px`');
-    expect(gridSource).toContain('clipBottom: viewport!.clientHeight - pinnedBottomH - floatingHorizontalScrollbarInset');
   });
 });
