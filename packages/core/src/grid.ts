@@ -332,6 +332,7 @@ export function createGrid<
     const sbClientWidth = fakeScrollbar?.clientWidth ?? viewport.clientWidth;
     const pinnedTopH = getPinnedTopHeight();
     const pinnedBottomH = getPinnedBottomHeight();
+    const floatingHorizontalScrollbarInset = getFloatingHorizontalScrollbarInset();
     const vpHeight = viewport.clientHeight;
     const vpWidth = viewport.clientWidth;
     const clipOffset = getFreezeClipOffset();
@@ -571,12 +572,12 @@ export function createGrid<
           // When content is shorter than viewport, stick to last row instead of viewport bottom
           const dataBottom = headerHeight + pinnedTopH + measurements.totalHeight;
           const viewportH = viewport!.clientHeight;
-          if (dataBottom + pinnedBottomH < viewportH) {
+          if (dataBottom + pinnedBottomH + floatingHorizontalScrollbarInset < viewportH) {
             wrapper.style.bottom = 'auto';
             wrapper.style.top = `${dataBottom}px`;
           } else {
             wrapper.style.top = '';
-            wrapper.style.bottom = '0';
+            wrapper.style.bottom = `${floatingHorizontalScrollbarInset}px`;
           }
         }
       } else if (wrapper) {
@@ -613,12 +614,12 @@ export function createGrid<
       // Match main pinned bottom position
       const dataBottom = headerHeight + pinnedTopH + measurements.totalHeight;
       const viewportH = viewport!.clientHeight;
-      if (dataBottom + pinnedBottomH < viewportH) {
+      if (dataBottom + pinnedBottomH + floatingHorizontalScrollbarInset < viewportH) {
         frozenPinnedBottomContainer.style.bottom = 'auto';
         frozenPinnedBottomContainer.style.top = `${dataBottom}px`;
       } else {
         frozenPinnedBottomContainer.style.top = '';
-        frozenPinnedBottomContainer.style.bottom = '0';
+        frozenPinnedBottomContainer.style.bottom = `${floatingHorizontalScrollbarInset}px`;
       }
     }
 
@@ -639,7 +640,9 @@ export function createGrid<
       canUseFillHandleForSelection(state.selection),
       {
         clipOffset,
+        clipBottom: viewport!.clientHeight - pinnedBottomH - floatingHorizontalScrollbarInset,
         containerTop: headerHeight + pinnedTopH,
+        pinnedBottomHeight: pinnedBottomH,
         scrollLeft: state.scrollLeft,
         scrollTop: state.scrollTop,
         viewportHeight: viewport?.clientHeight ?? 0,
@@ -1452,6 +1455,12 @@ export function createGrid<
     const raw = getComputedStyle(container).borderBottomWidth;
     const parsed = parseFloat(raw);
     return Number.isFinite(parsed) ? parsed : 1;
+  }
+
+  function getFloatingHorizontalScrollbarInset(): number {
+    if (!isFloatingScrollbar || !floatingHTrack) return 0;
+    if (floatingHTrack.style.visibility === 'hidden') return 0;
+    return getFloatingScrollbarSize() + getFloatingScrollbarBottomInset();
   }
 
   function updateFloatingScrollbarThumbs(measure = floatingScrollbarMetricsDirty): void {
