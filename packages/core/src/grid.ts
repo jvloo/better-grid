@@ -336,8 +336,9 @@ export function createGrid<
     const vpWidth = viewport.clientWidth;
     const clipOffset = getFreezeClipOffset();
     const floatingEndPadding = isFloatingScrollbar ? getFloatingScrollbarSize() : 0;
+    const hasPinnedRows = pinnedTopH > 0 || pinnedBottomH > 0;
     const horizontalEndPadding =
-      isFloatingScrollbar && measurements.totalWidth - clipOffset > vpWidth ? floatingEndPadding : 0;
+      isFloatingScrollbar && !hasPinnedRows && measurements.totalWidth - clipOffset > vpWidth ? floatingEndPadding : 0;
     const verticalEndPadding =
       isFloatingScrollbar && measurements.totalHeight + headerHeight + pinnedTopH + pinnedBottomH > vpHeight
         ? floatingEndPadding

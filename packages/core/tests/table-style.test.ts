@@ -270,6 +270,33 @@ describe('floating scrollbar layout', () => {
     expect(fittingSizer.style.height).toBe('120px');
 
     fittingGrid.unmount();
+
+    const pinnedHost = makeHost();
+    const pinnedGrid = createGrid({
+      columns: [
+        { id: 'a', field: 'a' as never, width: 120 },
+        { id: 'm_0', field: 'm0' as never, width: 300 },
+        { id: 'm_1', field: 'm1' as never, width: 300 },
+      ],
+      data: Array.from({ length: 20 }, (_, i) => ({ a: `A${i}`, m0: '0', m1: '1' })),
+      pinned: { bottom: [{ a: 'Total', m0: '0', m1: '1' }] },
+      scrollbar: { mode: 'floating' },
+      headerHeight: 40,
+    });
+
+    pinnedGrid.mount(pinnedHost);
+
+    const pinnedViewport = pinnedHost.querySelector<HTMLElement>('.bg-grid__viewport')!;
+    const pinnedScrollbar = pinnedHost.querySelector<HTMLElement>('.bg-grid__scroll')!;
+    const pinnedSizer = pinnedHost.querySelector<HTMLElement>('.bg-grid__sizer')!;
+    setClientSize(pinnedViewport, 600, 400);
+    setClientSize(pinnedScrollbar, 600, 400);
+    pinnedGrid.refresh();
+
+    expect(pinnedSizer.style.width).toBe('720px');
+    expect(pinnedSizer.style.height).toBe('888px');
+
+    pinnedGrid.unmount();
   });
 
   test('fixed scrollbar keeps the frozen overlay gutter branch', () => {
