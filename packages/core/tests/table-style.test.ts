@@ -11,6 +11,10 @@ const gridSource = readFileSync(
   path.resolve(__dirname, '../src/grid.ts'),
   'utf8',
 );
+const layersSource = readFileSync(
+  path.resolve(__dirname, '../src/rendering/layers.ts'),
+  'utf8',
+);
 
 let originalRaf: typeof requestAnimationFrame;
 
@@ -224,5 +228,9 @@ describe('floating scrollbar layout', () => {
     expect(gridSource).toContain("pinnedBottomWrapper.style.zIndex = '6'");
     expect(gridSource).toContain('Range border renders inside the clipped viewport, below pinned rows.');
     expect(gridSource).toContain('Fill handle renders at grid-root level so its protruding corner is not clipped.');
+    expect(gridSource).toContain('bodyBottom: viewport!.clientHeight - pinnedBottomH');
+    expect(gridSource).toContain('bodyLeft: getVisibleFrozenLeftWidth(measurements, state)');
+    expect(layersSource).toContain('viewState.bodyBottom > viewState.containerTop && y + 7 > viewState.bodyBottom');
+    expect(layersSource).toContain('x < viewState.bodyLeft');
   });
 });

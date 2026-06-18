@@ -638,6 +638,8 @@ export function createGrid<
       columnManager.getReadonlyColumns(),
       canUseFillHandleForSelection(state.selection),
       {
+        bodyBottom: viewport!.clientHeight - pinnedBottomH,
+        bodyLeft: getVisibleFrozenLeftWidth(measurements, state),
         clipOffset,
         containerTop: headerHeight + pinnedTopH,
         scrollLeft: state.scrollLeft,
@@ -732,6 +734,11 @@ export function createGrid<
     const state = store.getState();
     const fullFrozenWidth = measurements.colOffsets[state.frozen.left]!;
     return Math.max(0, fullFrozenWidth - clamp(freezeClipWidth, 0, fullFrozenWidth));
+  }
+
+  function getVisibleFrozenLeftWidth(measurements: LayoutMeasurements, state: GridState<TData>): number {
+    const fullFrozenWidth = measurements.colOffsets[state.frozen.left] ?? 0;
+    return freezeClipWidth !== null ? Math.min(freezeClipWidth, fullFrozenWidth) : fullFrozenWidth;
   }
 
   function applyScrollTransforms(scrollTop: number, scrollLeft: number): void {
@@ -1399,9 +1406,7 @@ export function createGrid<
       // all flow into this naturally.
       const measurements = virtualization.getMeasurements();
       const state = store.getState();
-      const fullFrozenWidth = measurements.colOffsets[state.frozen.left] ?? 0;
-      const clip = freezeClipWidth;
-      return clip != null ? Math.min(clip, fullFrozenWidth) : fullFrozenWidth;
+      return getVisibleFrozenLeftWidth(measurements, state);
     }
     if (value === 'header') {
       return headerHeight;

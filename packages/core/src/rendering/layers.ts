@@ -13,6 +13,8 @@ export interface FillDragResult {
 }
 
 export interface SelectionLayerViewState {
+  bodyBottom: number;
+  bodyLeft: number;
   clipOffset: number;
   containerTop: number;
   scrollLeft: number;
@@ -114,7 +116,7 @@ export class SelectionLayer {
     hash += `|${ro.length}:${ro[ro.length - 1] ?? 0}|${co.length}:${co[co.length - 1] ?? 0}`;
     hash += `|fh=${this.fillHandleEnabled ? 1 : 0}|fha=${fillHandleAllowed ? 1 : 0}|ed=${this.isEditing ? 1 : 0}`;
     if (viewState) {
-      hash += `|vs=${Math.round(viewState.scrollLeft)}:${Math.round(viewState.scrollTop)}:${Math.round(viewState.clipOffset)}:${Math.round(viewState.containerTop)}:${Math.round(viewState.viewportWidth)}:${Math.round(viewState.viewportHeight)}`;
+      hash += `|vs=${Math.round(viewState.scrollLeft)}:${Math.round(viewState.scrollTop)}:${Math.round(viewState.clipOffset)}:${Math.round(viewState.containerTop)}:${Math.round(viewState.bodyLeft)}:${Math.round(viewState.bodyBottom)}:${Math.round(viewState.viewportWidth)}:${Math.round(viewState.viewportHeight)}`;
     }
     if (readonlyColumns && readonlyColumns.size > 0) {
       // Order-independent: cheap sum over a typically-small set.
@@ -209,6 +211,12 @@ export class SelectionLayer {
 
         const x = viewState ? right - viewState.scrollLeft - viewState.clipOffset - 4 : right - 4;
         const y = viewState ? viewState.containerTop + bottom - viewState.scrollTop - 4 : bottom - 4;
+        if (viewState && x < viewState.bodyLeft) {
+          return;
+        }
+        if (viewState && viewState.bodyBottom > viewState.containerTop && y + 7 > viewState.bodyBottom) {
+          return;
+        }
         handle.style.transform = `translate3d(${x}px, ${y}px, 0)`;
 
         // Hide when editing
