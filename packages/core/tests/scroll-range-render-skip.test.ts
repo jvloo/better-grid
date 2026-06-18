@@ -91,6 +91,67 @@ describe('scroll render throttling', () => {
     grid.unmount();
   });
 
+  it('updates selection overlay during scroll-only updates without re-running cell renderers', () => {
+    const host = makeHost();
+    let renderCalls = 0;
+
+    const columns: ColumnDef<Row>[] = [
+      { id: 'id', field: 'id', headerName: 'ID', width: 80 },
+      {
+        id: 'value',
+        field: 'value',
+        headerName: 'Value',
+        width: 160,
+        cellRenderer: (container: HTMLElement, ctx: CellRenderContext<Row>) => {
+          renderCalls++;
+          container.textContent = String(ctx.value ?? '');
+        },
+      },
+    ];
+    const data = Array.from({ length: 100 }, (_, id) => ({ id, value: `Row ${id}` }));
+    const grid = createGrid<Row>({
+      columns,
+      data,
+      virtualization: { overscanRows: 1, overscanColumns: 1 },
+      rowHeight: 40,
+      headerHeight: 40,
+      selection: { mode: 'range' },
+    });
+
+    grid.mount(host);
+
+    const viewport = host.querySelector('.bg-grid__viewport') as HTMLElement;
+    const scrollbar = host.querySelector('.bg-grid__scroll') as HTMLElement;
+    setClientSize(viewport, 400, 250);
+    setClientSize(scrollbar, 400, 250);
+    grid.refresh();
+    grid.setSelection({
+      active: { rowIndex: 2, colIndex: 1 },
+      ranges: [{ startRow: 2, endRow: 2, startCol: 1, endCol: 1 }],
+    });
+
+    const rangeBefore = host.querySelector<HTMLElement>('.bg-selection-range');
+    const handleBefore = host.querySelector<HTMLElement>('.bg-fill-handle');
+    expect(rangeBefore).not.toBeNull();
+    expect(handleBefore).not.toBeNull();
+    expect(rangeBefore!.style.transform).toBe('translate3d(80px, 120px, 0)');
+    expect(handleBefore!.style.transform).toBe('translate3d(236px, 156px, 0)');
+
+    renderCalls = 0;
+    rafCalls = 0;
+    scrollbar.scrollTop = 1;
+    scrollbar.dispatchEvent(new Event('scroll'));
+
+    const rangeAfter = host.querySelector<HTMLElement>('.bg-selection-range');
+    const handleAfter = host.querySelector<HTMLElement>('.bg-fill-handle');
+    expect(rangeAfter!.style.transform).toBe('translate3d(80px, 119px, 0)');
+    expect(handleAfter!.style.transform).toBe('translate3d(236px, 155px, 0)');
+    expect(renderCalls).toBe(0);
+    expect(rafCalls).toBe(0);
+
+    grid.unmount();
+  });
+
   it('only renders cells entering the virtual range on scroll-window changes', () => {
     const host = makeHost();
     let renderCalls = 0;

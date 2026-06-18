@@ -228,7 +228,7 @@ describe('floating scrollbar layout', () => {
     expect(gridSource).toContain("pinnedBottomWrapper.style.zIndex = '6'");
     expect(gridSource).toContain('Range border renders inside the clipped viewport, below pinned rows.');
     expect(gridSource).toContain('Fill handle renders at grid-root level so its protruding corner is not clipped.');
-    expect(gridSource).toContain('bodyBottom: viewport!.clientHeight - pinnedBottomH');
+    expect(gridSource).toContain('bodyBottom: viewport.clientHeight - pinnedBottomH');
     expect(gridSource).toContain('bodyLeft: getVisibleFrozenLeftWidth(measurements, state)');
     expect(gridSource).toContain('pinnedBottomHeight: pinnedBottomH');
     expect(layersSource).toContain('viewState.pinnedBottomHeight > 0');

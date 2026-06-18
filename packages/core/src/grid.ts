@@ -631,26 +631,36 @@ export function createGrid<
       frozenCellOverlay.style.top = `${headerHeight + pinnedTopH}px`;
     }
 
-    // Render selection layer (readonly cols are cached on ColumnManager, rebuilt on setColumns)
-    selectionLayer?.render(
+    renderSelectionLayer(state, measurements, pinnedTopH, pinnedBottomH, clipOffset);
+
+    emitter.emit('render', visibleRange);
+  }
+
+  function renderSelectionLayer(
+    state: GridState<TData>,
+    measurements: LayoutMeasurements,
+    pinnedTopH: number,
+    pinnedBottomH: number,
+    clipOffset: number,
+  ): void {
+    if (!viewport || !selectionLayer) return;
+    selectionLayer.render(
       state.selection,
       measurements,
       columnManager.getReadonlyColumns(),
       canUseFillHandleForSelection(state.selection),
       {
-        bodyBottom: viewport!.clientHeight - pinnedBottomH,
+        bodyBottom: viewport.clientHeight - pinnedBottomH,
         bodyLeft: getVisibleFrozenLeftWidth(measurements, state),
         clipOffset,
         containerTop: headerHeight + pinnedTopH,
         pinnedBottomHeight: pinnedBottomH,
         scrollLeft: state.scrollLeft,
         scrollTop: state.scrollTop,
-        viewportHeight: viewport?.clientHeight ?? 0,
-        viewportWidth: viewport?.clientWidth ?? 0,
+        viewportHeight: viewport.clientHeight,
+        viewportWidth: viewport.clientWidth,
       },
     );
-
-    emitter.emit('render', visibleRange);
   }
 
   // ---------------------------------------------------------------------------
@@ -776,6 +786,14 @@ export function createGrid<
     store.setScroll(scrollTop, scrollLeft);
     updateFloatingScrollbarThumbs(false);
     applyScrollTransforms(scrollTop, scrollLeft);
+    const state = store.getState();
+    renderSelectionLayer(
+      state,
+      virtualization.getMeasurements(),
+      getPinnedTopHeight(),
+      getPinnedBottomHeight(),
+      getFreezeClipOffset(),
+    );
 
     if (opts.emit) {
       emitter.emit('scroll', { scrollTop, scrollLeft });
