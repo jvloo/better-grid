@@ -642,6 +642,7 @@ export function createGrid<
         bodyLeft: getVisibleFrozenLeftWidth(measurements, state),
         clipOffset,
         containerTop: headerHeight + pinnedTopH,
+        pinnedBottomHeight: pinnedBottomH,
         scrollLeft: state.scrollLeft,
         scrollTop: state.scrollTop,
         viewportHeight: viewport?.clientHeight ?? 0,

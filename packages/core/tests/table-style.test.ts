@@ -230,7 +230,9 @@ describe('floating scrollbar layout', () => {
     expect(gridSource).toContain('Fill handle renders at grid-root level so its protruding corner is not clipped.');
     expect(gridSource).toContain('bodyBottom: viewport!.clientHeight - pinnedBottomH');
     expect(gridSource).toContain('bodyLeft: getVisibleFrozenLeftWidth(measurements, state)');
-    expect(layersSource).toContain('viewState.bodyBottom > viewState.containerTop && y + 7 > viewState.bodyBottom');
+    expect(gridSource).toContain('pinnedBottomHeight: pinnedBottomH');
+    expect(layersSource).toContain('viewState.pinnedBottomHeight > 0');
+    expect(layersSource).toContain('y + 7 > viewState.bodyBottom');
     expect(layersSource).toContain('x < viewState.bodyLeft');
   });
 });
