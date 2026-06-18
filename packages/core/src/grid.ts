@@ -340,7 +340,7 @@ export function createGrid<
     const horizontalEndPadding =
       isFloatingScrollbar && !hasPinnedRows && measurements.totalWidth - clipOffset > vpWidth ? floatingEndPadding : 0;
     const verticalEndPadding =
-      isFloatingScrollbar && !hasPinnedRows && measurements.totalHeight + headerHeight + pinnedTopH + pinnedBottomH > vpHeight
+      isFloatingScrollbar && measurements.totalHeight + headerHeight + pinnedTopH + pinnedBottomH > vpHeight
         ? floatingEndPadding
         : 0;
     scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth - clipOffset + horizontalEndPadding}px`;
