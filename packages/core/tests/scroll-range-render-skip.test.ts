@@ -191,7 +191,8 @@ describe('scroll render throttling', () => {
     range = host.querySelector<HTMLElement>('.bg-selection-range');
     expect(range!.style.transform).toBe('translate3d(80px, 40px, 0)');
     expect(range!.style.height).toBe('30px');
-    expect(range!.style.borderTopColor).toBe('transparent');
+    expect(range!.style.boxShadow).not.toContain('inset 0 1px 0 0');
+    expect(range!.style.boxShadow).toContain('inset 0 -1px 0 0');
 
     grid.unmount();
   });

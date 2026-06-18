@@ -186,10 +186,15 @@ export class SelectionLayer {
       border.style.height = `${bottom - top}px`;
       border.style.pointerEvents = 'none';
       border.style.boxSizing = 'border-box';
-      if (clippedTopEdge) border.style.borderTopColor = 'transparent';
-      if (clippedBottomEdge) border.style.borderBottomColor = 'transparent';
-      if (clippedLeftEdge) border.style.borderLeftColor = 'transparent';
-      if (clippedRightEdge) border.style.borderRightColor = 'transparent';
+      if (clippedTopEdge || clippedBottomEdge || clippedLeftEdge || clippedRightEdge) {
+        const borderColor = 'var(--bg-selection-range-border, rgba(33, 133, 208, 0.4))';
+        border.style.boxShadow = [
+          clippedTopEdge ? '' : `inset 0 1px 0 0 ${borderColor}`,
+          clippedBottomEdge ? '' : `inset 0 -1px 0 0 ${borderColor}`,
+          clippedLeftEdge ? '' : `inset 1px 0 0 0 ${borderColor}`,
+          clippedRightEdge ? '' : `inset -1px 0 0 0 ${borderColor}`,
+        ].filter(Boolean).join(', ');
+      }
 
       parent.appendChild(border);
       this.rangeBorders.push(border);
