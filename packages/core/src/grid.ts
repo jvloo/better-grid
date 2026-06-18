@@ -389,8 +389,7 @@ export function createGrid<
     const viewportWidth = viewport.clientWidth;
     const viewportHeight = viewport.clientHeight;
 
-    // scrollTop maps directly to data offset (scroll sizer = data height only)
-    const dataScrollTop = state.scrollTop;
+    const dataScrollTop = clampDataScrollTop(state.scrollTop, measurements, pinnedTopH, pinnedBottomH);
 
     // When freeze clip is active, the effective frozen width is smaller,
     // so more scrollable columns are visible in the viewport.
@@ -507,8 +506,9 @@ export function createGrid<
       // Re-apply scroll transforms with updated clip offset
       const scrollState = store.getState();
       const clipOffset = getFreezeClipOffset();
+      const dataScrollTop = clampDataScrollTop(scrollState.scrollTop, measurements, pinnedTopH, pinnedBottomH);
       if (cellContainer) {
-        cellContainer.style.transform = `translate3d(${-scrollState.scrollLeft - clipOffset}px, ${-scrollState.scrollTop}px, 0)`;
+        cellContainer.style.transform = `translate3d(${-scrollState.scrollLeft - clipOffset}px, ${-dataScrollTop}px, 0)`;
       }
       if (headerContainer) {
         headerContainer.style.transform = `translate3d(${-scrollState.scrollLeft - clipOffset}px, 0, 0)`;
@@ -639,7 +639,7 @@ export function createGrid<
       frozenCellOverlay.style.top = `${headerHeight + pinnedTopH}px`;
     }
 
-    renderSelectionLayer(state, measurements, pinnedTopH, pinnedBottomH, clipOffset);
+    renderSelectionLayer(state, measurements, pinnedTopH, pinnedBottomH, clipOffset, dataScrollTop);
 
     emitter.emit('render', visibleRange);
   }
@@ -650,6 +650,7 @@ export function createGrid<
     pinnedTopH: number,
     pinnedBottomH: number,
     clipOffset: number,
+    dataScrollTop = clampDataScrollTop(state.scrollTop, measurements, pinnedTopH, pinnedBottomH),
   ): void {
     if (!viewport || !selectionLayer) return;
     selectionLayer.render(
@@ -664,7 +665,7 @@ export function createGrid<
         containerTop: headerHeight + pinnedTopH,
         pinnedBottomHeight: pinnedBottomH,
         scrollLeft: state.scrollLeft,
-        scrollTop: state.scrollTop,
+        scrollTop: dataScrollTop,
         viewportHeight: viewport.clientHeight,
         viewportWidth: viewport.clientWidth,
       },
@@ -760,16 +761,25 @@ export function createGrid<
     return freezeClipWidth !== null ? Math.min(freezeClipWidth, fullFrozenWidth) : fullFrozenWidth;
   }
 
+  function clampDataScrollTop(scrollTop: number, measurements: LayoutMeasurements, pinnedTopH: number, pinnedBottomH: number): number {
+    if (!viewport) return scrollTop;
+    const bodyViewportHeight = viewport.clientHeight - headerHeight - pinnedTopH - pinnedBottomH;
+    const maxDataScrollTop = Math.max(0, measurements.totalHeight - bodyViewportHeight);
+    return Math.min(scrollTop, maxDataScrollTop);
+  }
+
   function applyScrollTransforms(scrollTop: number, scrollLeft: number): void {
+    const measurements = virtualization.getMeasurements();
+    const dataScrollTop = clampDataScrollTop(scrollTop, measurements, getPinnedTopHeight(), getPinnedBottomHeight());
     const clipOffset = getFreezeClipOffset();
     if (cellContainer) {
-      cellContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, ${-scrollTop}px, 0)`;
+      cellContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, ${-dataScrollTop}px, 0)`;
     }
     if (headerContainer) {
       headerContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
     }
     if (frozenCellOverlay) {
-      frozenCellOverlay.style.transform = `translate3d(0, ${-snapToDevicePixel(scrollTop)}px, 0)`;
+      frozenCellOverlay.style.transform = `translate3d(0, ${-snapToDevicePixel(dataScrollTop)}px, 0)`;
     }
     if (pinnedTopContainer) {
       pinnedTopContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
@@ -833,8 +843,10 @@ export function createGrid<
       freezeClipWidth !== null
         ? clamp(freezeClipWidth, 0, zoneDims.frozenLeftWidth)
         : zoneDims.frozenLeftWidth;
+    const measurements = virtualization.getMeasurements();
+    const dataScrollTop = clampDataScrollTop(scrollTop, measurements, pinnedTopH, pinnedBottomH);
     const visibleRange = virtualization.computeVisibleRange(
-      scrollTop,
+      dataScrollTop,
       scrollLeft + getFreezeClipOffset(),
       viewport.clientWidth,
       viewport.clientHeight - headerHeight - pinnedTopH - pinnedBottomH,
