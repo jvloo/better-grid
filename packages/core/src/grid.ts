@@ -389,7 +389,7 @@ export function createGrid<
     const viewportWidth = viewport.clientWidth;
     const viewportHeight = viewport.clientHeight;
 
-    const dataScrollTop = clampDataScrollTop(state.scrollTop, measurements, pinnedTopH, pinnedBottomH);
+    const dataScrollTop = state.scrollTop;
 
     // When freeze clip is active, the effective frozen width is smaller,
     // so more scrollable columns are visible in the viewport.
@@ -506,9 +506,8 @@ export function createGrid<
       // Re-apply scroll transforms with updated clip offset
       const scrollState = store.getState();
       const clipOffset = getFreezeClipOffset();
-      const dataScrollTop = clampDataScrollTop(scrollState.scrollTop, measurements, pinnedTopH, pinnedBottomH);
       if (cellContainer) {
-        cellContainer.style.transform = `translate3d(${-scrollState.scrollLeft - clipOffset}px, ${-dataScrollTop}px, 0)`;
+        cellContainer.style.transform = `translate3d(${-scrollState.scrollLeft - clipOffset}px, ${-scrollState.scrollTop}px, 0)`;
       }
       if (headerContainer) {
         headerContainer.style.transform = `translate3d(${-scrollState.scrollLeft - clipOffset}px, 0, 0)`;
@@ -583,8 +582,9 @@ export function createGrid<
             wrapper.style.bottom = 'auto';
             wrapper.style.top = `${dataBottom}px`;
           } else {
+            const verticalPaddingTail = getVerticalPaddingTail(state.scrollTop, measurements, pinnedTopH, pinnedBottomH);
             wrapper.style.top = '';
-            wrapper.style.bottom = '0';
+            wrapper.style.bottom = `${verticalPaddingTail}px`;
           }
         }
       } else if (wrapper) {
@@ -625,8 +625,9 @@ export function createGrid<
         frozenPinnedBottomContainer.style.bottom = 'auto';
         frozenPinnedBottomContainer.style.top = `${dataBottom}px`;
       } else {
+        const verticalPaddingTail = getVerticalPaddingTail(state.scrollTop, measurements, pinnedTopH, pinnedBottomH);
         frozenPinnedBottomContainer.style.top = '';
-        frozenPinnedBottomContainer.style.bottom = '0';
+        frozenPinnedBottomContainer.style.bottom = `${verticalPaddingTail}px`;
       }
     }
 
@@ -639,7 +640,7 @@ export function createGrid<
       frozenCellOverlay.style.top = `${headerHeight + pinnedTopH}px`;
     }
 
-    renderSelectionLayer(state, measurements, pinnedTopH, pinnedBottomH, clipOffset, dataScrollTop);
+    renderSelectionLayer(state, measurements, pinnedTopH, pinnedBottomH, clipOffset);
 
     emitter.emit('render', visibleRange);
   }
@@ -650,22 +651,22 @@ export function createGrid<
     pinnedTopH: number,
     pinnedBottomH: number,
     clipOffset: number,
-    dataScrollTop = clampDataScrollTop(state.scrollTop, measurements, pinnedTopH, pinnedBottomH),
   ): void {
     if (!viewport || !selectionLayer) return;
+    const verticalPaddingTail = getVerticalPaddingTail(state.scrollTop, measurements, pinnedTopH, pinnedBottomH);
     selectionLayer.render(
       state.selection,
       measurements,
       columnManager.getReadonlyColumns(),
       canUseFillHandleForSelection(state.selection),
       {
-        bodyBottom: viewport.clientHeight - pinnedBottomH,
+        bodyBottom: viewport.clientHeight - pinnedBottomH - verticalPaddingTail,
         bodyLeft: getVisibleFrozenLeftWidth(measurements, state),
         clipOffset,
         containerTop: headerHeight + pinnedTopH,
         pinnedBottomHeight: pinnedBottomH,
         scrollLeft: state.scrollLeft,
-        scrollTop: dataScrollTop,
+        scrollTop: state.scrollTop,
         viewportHeight: viewport.clientHeight,
         viewportWidth: viewport.clientWidth,
       },
@@ -761,25 +762,51 @@ export function createGrid<
     return freezeClipWidth !== null ? Math.min(freezeClipWidth, fullFrozenWidth) : fullFrozenWidth;
   }
 
-  function clampDataScrollTop(scrollTop: number, measurements: LayoutMeasurements, pinnedTopH: number, pinnedBottomH: number): number {
-    if (!viewport) return scrollTop;
+  function getVerticalPaddingTail(scrollTop: number, measurements: LayoutMeasurements, pinnedTopH: number, pinnedBottomH: number): number {
+    if (!viewport) return 0;
     const bodyViewportHeight = viewport.clientHeight - headerHeight - pinnedTopH - pinnedBottomH;
     const maxDataScrollTop = Math.max(0, measurements.totalHeight - bodyViewportHeight);
-    return Math.min(scrollTop, maxDataScrollTop);
+    return Math.max(0, scrollTop - maxDataScrollTop);
+  }
+
+  function positionPinnedBottomRows(
+    measurements: LayoutMeasurements,
+    scrollTop: number,
+    pinnedTopH: number,
+    pinnedBottomH: number,
+  ): void {
+    if (!viewport) return;
+    const dataBottom = headerHeight + pinnedTopH + measurements.totalHeight;
+    const viewportH = viewport.clientHeight;
+    const verticalPaddingTail = getVerticalPaddingTail(scrollTop, measurements, pinnedTopH, pinnedBottomH);
+    const applyPosition = (element: HTMLElement | null | undefined) => {
+      if (!element) return;
+      if (dataBottom + pinnedBottomH < viewportH) {
+        element.style.bottom = 'auto';
+        element.style.top = `${dataBottom}px`;
+      } else {
+        element.style.top = '';
+        element.style.bottom = `${verticalPaddingTail}px`;
+      }
+    };
+
+    applyPosition(pinnedBottomContainer?.parentElement);
+    applyPosition(frozenPinnedBottomContainer);
   }
 
   function applyScrollTransforms(scrollTop: number, scrollLeft: number): void {
     const measurements = virtualization.getMeasurements();
-    const dataScrollTop = clampDataScrollTop(scrollTop, measurements, getPinnedTopHeight(), getPinnedBottomHeight());
+    const pinnedTopH = getPinnedTopHeight();
+    const pinnedBottomH = getPinnedBottomHeight();
     const clipOffset = getFreezeClipOffset();
     if (cellContainer) {
-      cellContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, ${-dataScrollTop}px, 0)`;
+      cellContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, ${-scrollTop}px, 0)`;
     }
     if (headerContainer) {
       headerContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
     }
     if (frozenCellOverlay) {
-      frozenCellOverlay.style.transform = `translate3d(0, ${-snapToDevicePixel(dataScrollTop)}px, 0)`;
+      frozenCellOverlay.style.transform = `translate3d(0, ${-snapToDevicePixel(scrollTop)}px, 0)`;
     }
     if (pinnedTopContainer) {
       pinnedTopContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
@@ -787,6 +814,7 @@ export function createGrid<
     if (pinnedBottomContainer) {
       pinnedBottomContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
     }
+    positionPinnedBottomRows(measurements, scrollTop, pinnedTopH, pinnedBottomH);
   }
 
   function setScrollPosition(
@@ -843,10 +871,8 @@ export function createGrid<
       freezeClipWidth !== null
         ? clamp(freezeClipWidth, 0, zoneDims.frozenLeftWidth)
         : zoneDims.frozenLeftWidth;
-    const measurements = virtualization.getMeasurements();
-    const dataScrollTop = clampDataScrollTop(scrollTop, measurements, pinnedTopH, pinnedBottomH);
     const visibleRange = virtualization.computeVisibleRange(
-      dataScrollTop,
+      scrollTop,
       scrollLeft + getFreezeClipOffset(),
       viewport.clientWidth,
       viewport.clientHeight - headerHeight - pinnedTopH - pinnedBottomH,
