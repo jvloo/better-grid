@@ -84,7 +84,7 @@ describe('pinned rows on scroll', () => {
     grid.unmount();
   });
 
-  it('moves pinned bottom rows above the floating vertical end padding tail', () => {
+  it('keeps floating vertical end padding between body and pinned bottom rows', () => {
     const host = makeHost();
     const columns: ColumnDef<Row>[] = [
       { id: 'name', field: 'name', headerName: 'Name', width: 160 },
@@ -119,7 +119,7 @@ describe('pinned rows on scroll', () => {
 
     expect(scrollbar.scrollTop).toBe(288);
     expect(cells.style.transform).toBe('translate3d(0px, -288px, 0)');
-    expect(pinnedBottom.style.bottom).toBe('8px');
+    expect(pinnedBottom.style.bottom).toBe('0px');
 
     grid.unmount();
   });

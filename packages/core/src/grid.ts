@@ -582,9 +582,8 @@ export function createGrid<
             wrapper.style.bottom = 'auto';
             wrapper.style.top = `${dataBottom}px`;
           } else {
-            const verticalPaddingTail = getVerticalPaddingTail(state.scrollTop, measurements, pinnedTopH, pinnedBottomH);
             wrapper.style.top = '';
-            wrapper.style.bottom = `${verticalPaddingTail}px`;
+            wrapper.style.bottom = '0';
           }
         }
       } else if (wrapper) {
@@ -625,9 +624,8 @@ export function createGrid<
         frozenPinnedBottomContainer.style.bottom = 'auto';
         frozenPinnedBottomContainer.style.top = `${dataBottom}px`;
       } else {
-        const verticalPaddingTail = getVerticalPaddingTail(state.scrollTop, measurements, pinnedTopH, pinnedBottomH);
         frozenPinnedBottomContainer.style.top = '';
-        frozenPinnedBottomContainer.style.bottom = `${verticalPaddingTail}px`;
+        frozenPinnedBottomContainer.style.bottom = '0';
       }
     }
 
@@ -653,14 +651,13 @@ export function createGrid<
     clipOffset: number,
   ): void {
     if (!viewport || !selectionLayer) return;
-    const verticalPaddingTail = getVerticalPaddingTail(state.scrollTop, measurements, pinnedTopH, pinnedBottomH);
     selectionLayer.render(
       state.selection,
       measurements,
       columnManager.getReadonlyColumns(),
       canUseFillHandleForSelection(state.selection),
       {
-        bodyBottom: viewport.clientHeight - pinnedBottomH - verticalPaddingTail,
+        bodyBottom: viewport.clientHeight - pinnedBottomH,
         bodyLeft: getVisibleFrozenLeftWidth(measurements, state),
         clipOffset,
         containerTop: headerHeight + pinnedTopH,
@@ -762,42 +759,7 @@ export function createGrid<
     return freezeClipWidth !== null ? Math.min(freezeClipWidth, fullFrozenWidth) : fullFrozenWidth;
   }
 
-  function getVerticalPaddingTail(scrollTop: number, measurements: LayoutMeasurements, pinnedTopH: number, pinnedBottomH: number): number {
-    if (!viewport) return 0;
-    const bodyViewportHeight = viewport.clientHeight - headerHeight - pinnedTopH - pinnedBottomH;
-    const maxDataScrollTop = Math.max(0, measurements.totalHeight - bodyViewportHeight);
-    return Math.max(0, scrollTop - maxDataScrollTop);
-  }
-
-  function positionPinnedBottomRows(
-    measurements: LayoutMeasurements,
-    scrollTop: number,
-    pinnedTopH: number,
-    pinnedBottomH: number,
-  ): void {
-    if (!viewport) return;
-    const dataBottom = headerHeight + pinnedTopH + measurements.totalHeight;
-    const viewportH = viewport.clientHeight;
-    const verticalPaddingTail = getVerticalPaddingTail(scrollTop, measurements, pinnedTopH, pinnedBottomH);
-    const applyPosition = (element: HTMLElement | null | undefined) => {
-      if (!element) return;
-      if (dataBottom + pinnedBottomH < viewportH) {
-        element.style.bottom = 'auto';
-        element.style.top = `${dataBottom}px`;
-      } else {
-        element.style.top = '';
-        element.style.bottom = `${verticalPaddingTail}px`;
-      }
-    };
-
-    applyPosition(pinnedBottomContainer?.parentElement);
-    applyPosition(frozenPinnedBottomContainer);
-  }
-
   function applyScrollTransforms(scrollTop: number, scrollLeft: number): void {
-    const measurements = virtualization.getMeasurements();
-    const pinnedTopH = getPinnedTopHeight();
-    const pinnedBottomH = getPinnedBottomHeight();
     const clipOffset = getFreezeClipOffset();
     if (cellContainer) {
       cellContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, ${-scrollTop}px, 0)`;
@@ -814,7 +776,6 @@ export function createGrid<
     if (pinnedBottomContainer) {
       pinnedBottomContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
     }
-    positionPinnedBottomRows(measurements, scrollTop, pinnedTopH, pinnedBottomH);
   }
 
   function setScrollPosition(
