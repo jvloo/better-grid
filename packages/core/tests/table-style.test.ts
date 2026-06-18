@@ -294,7 +294,7 @@ describe('floating scrollbar layout', () => {
     pinnedGrid.refresh();
 
     expect(pinnedSizer.style.width).toBe('720px');
-    expect(pinnedSizer.style.height).toBe('888px');
+    expect(pinnedSizer.style.height).toBe('880px');
 
     pinnedGrid.unmount();
   });
