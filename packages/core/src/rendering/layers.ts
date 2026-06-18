@@ -12,9 +12,20 @@ export interface FillDragResult {
   targetRange: CellRange;
 }
 
+export interface SelectionLayerViewState {
+  clipOffset: number;
+  containerTop: number;
+  scrollLeft: number;
+  scrollTop: number;
+  viewportHeight: number;
+  viewportWidth: number;
+}
+
 export class SelectionLayer {
   private container: HTMLElement;
   private overlay: HTMLElement;
+  private rangeLayer: HTMLElement;
+  private handleLayer: HTMLElement;
   private rangeBorders: HTMLElement[] = [];
   private fillHandle: HTMLElement | null = null;
   private onFillDrag: ((result: FillDragResult) => void) | null = null;
@@ -27,7 +38,7 @@ export class SelectionLayer {
    */
   private lastRenderHash: string | null = null;
 
-  constructor(container: HTMLElement, _gridRoot?: HTMLElement) {
+  constructor(container: HTMLElement, gridRoot?: HTMLElement) {
     this.container = container;
     this.overlay = document.createElement('div');
     this.overlay.className = 'bg-selection-overlay';
@@ -36,6 +47,21 @@ export class SelectionLayer {
     this.overlay.style.pointerEvents = 'none';
     this.overlay.style.zIndex = '6';
     container.appendChild(this.overlay);
+
+    this.rangeLayer = document.createElement('div');
+    this.rangeLayer.className = 'bg-selection-range-layer';
+    this.rangeLayer.style.position = 'absolute';
+    this.rangeLayer.style.inset = '0';
+    this.rangeLayer.style.pointerEvents = 'none';
+    this.rangeLayer.style.zIndex = '11';
+
+    this.handleLayer = document.createElement('div');
+    this.handleLayer.className = 'bg-fill-handle-layer';
+    this.handleLayer.style.position = 'absolute';
+    this.handleLayer.style.inset = '0';
+    this.handleLayer.style.pointerEvents = 'none';
+    this.handleLayer.style.zIndex = '12';
+    (gridRoot ?? container).append(this.rangeLayer, this.handleLayer);
   }
 
   setFillHandleEnabled(enabled: boolean): void {
@@ -67,6 +93,7 @@ export class SelectionLayer {
     measurements: LayoutMeasurements,
     readonlyColumns?: Set<number>,
     fillHandleAllowed = true,
+    viewState?: SelectionLayerViewState,
   ): void {
     // Change-detection: hash everything that affects output. If unchanged, skip.
     // Render previously tore down + recreated all range borders + the fill
@@ -85,6 +112,9 @@ export class SelectionLayer {
     const co = measurements.colOffsets;
     hash += `|${ro.length}:${ro[ro.length - 1] ?? 0}|${co.length}:${co[co.length - 1] ?? 0}`;
     hash += `|fh=${this.fillHandleEnabled ? 1 : 0}|fha=${fillHandleAllowed ? 1 : 0}|ed=${this.isEditing ? 1 : 0}`;
+    if (viewState) {
+      hash += `|vs=${Math.round(viewState.scrollLeft)}:${Math.round(viewState.scrollTop)}:${Math.round(viewState.clipOffset)}:${Math.round(viewState.containerTop)}:${Math.round(viewState.viewportWidth)}:${Math.round(viewState.viewportHeight)}`;
+    }
     if (readonlyColumns && readonlyColumns.size > 0) {
       // Order-independent: cheap sum over a typically-small set.
       let ros = 0;
@@ -108,10 +138,35 @@ export class SelectionLayer {
     for (const range of selection.ranges) {
       const border = document.createElement('div');
       border.className = 'bg-selection-range';
-      const top = measurements.rowOffsets[range.startRow]!;
-      const left = measurements.colOffsets[range.startCol]!;
-      const bottom = measurements.rowOffsets[range.endRow + 1]!;
-      const right = measurements.colOffsets[range.endCol + 1]!;
+      let top = measurements.rowOffsets[range.startRow]!;
+      let left = measurements.colOffsets[range.startCol]!;
+      let bottom = measurements.rowOffsets[range.endRow + 1]!;
+      let right = measurements.colOffsets[range.endCol + 1]!;
+
+      const parent = viewState ? this.rangeLayer : this.overlay;
+      if (viewState) {
+        top = viewState.containerTop + top - viewState.scrollTop;
+        bottom = viewState.containerTop + bottom - viewState.scrollTop;
+        left = left - viewState.scrollLeft - viewState.clipOffset;
+        right = right - viewState.scrollLeft - viewState.clipOffset;
+
+        const hasViewportBounds = viewState.viewportWidth > 0 && viewState.viewportHeight > viewState.containerTop;
+        if (hasViewportBounds) {
+          const clippedTop = Math.max(viewState.containerTop, top);
+          const clippedLeft = Math.max(0, left);
+          const clippedBottom = Math.min(viewState.viewportHeight, bottom);
+          const clippedRight = Math.min(viewState.viewportWidth, right);
+
+          if (clippedBottom <= clippedTop || clippedRight <= clippedLeft) {
+            continue;
+          }
+
+          top = clippedTop;
+          left = clippedLeft;
+          bottom = clippedBottom;
+          right = clippedRight;
+        }
+      }
 
       border.style.position = 'absolute';
       border.style.transform = `translate3d(${left}px, ${top}px, 0)`;
@@ -120,7 +175,7 @@ export class SelectionLayer {
       border.style.pointerEvents = 'none';
       border.style.boxSizing = 'border-box';
 
-      this.overlay.appendChild(border);
+      parent.appendChild(border);
       this.rangeBorders.push(border);
     }
 
@@ -151,11 +206,9 @@ export class SelectionLayer {
         handle.style.zIndex = '20';
         handle.style.pointerEvents = 'auto';
 
-        // Position in cell-container space (offsets are in data-space). Appending
-        // to this.container means the handle inherits the container's translate3d
-        // and follows the cells on scroll automatically — no scroll listener
-        // needed and no cached offset to invalidate.
-        handle.style.transform = `translate3d(${right - 4}px, ${bottom - 4}px, 0)`;
+        const x = viewState ? right - viewState.scrollLeft - viewState.clipOffset - 4 : right - 4;
+        const y = viewState ? viewState.containerTop + bottom - viewState.scrollTop - 4 : bottom - 4;
+        handle.style.transform = `translate3d(${x}px, ${y}px, 0)`;
 
         // Hide when editing
         if (this.isEditing) handle.style.display = 'none';
@@ -167,7 +220,7 @@ export class SelectionLayer {
           this.startFillDrag(e, lastRange, measurements);
         });
 
-        this.container.appendChild(handle);
+        this.handleLayer.appendChild(handle);
         this.fillHandle = handle;
       }
     }
@@ -309,5 +362,7 @@ export class SelectionLayer {
   destroy(): void {
     this.overlay.remove();
     this.fillHandle?.remove();
+    this.rangeLayer.remove();
+    this.handleLayer.remove();
   }
 }

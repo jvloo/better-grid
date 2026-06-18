@@ -637,6 +637,14 @@ export function createGrid<
       measurements,
       columnManager.getReadonlyColumns(),
       canUseFillHandleForSelection(state.selection),
+      {
+        clipOffset,
+        containerTop: headerHeight + pinnedTopH,
+        scrollLeft: state.scrollLeft,
+        scrollTop: state.scrollTop,
+        viewportHeight: viewport?.clientHeight ?? 0,
+        viewportWidth: viewport?.clientWidth ?? 0,
+      },
     );
 
     emitter.emit('render', visibleRange);

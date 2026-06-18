@@ -4,14 +4,14 @@
 
 .bg-grid {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   outline: none;
   font-family: var(--bg-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
   font-size: var(--bg-font-size, 14px);
   color: var(--bg-text-color, #1a1a1a);
   background: var(--bg-grid-bg, #fff);
   border: var(--bg-grid-border, 1px solid #e0e0e0);
-  contain: layout style paint;
+  contain: layout style;
 }
 
 .bg-grid:focus {
