@@ -146,6 +146,10 @@ export class SelectionLayer {
       let left = measurements.colOffsets[range.startCol]!;
       let bottom = measurements.rowOffsets[range.endRow + 1]!;
       let right = measurements.colOffsets[range.endCol + 1]!;
+      let clippedTopEdge = false;
+      let clippedBottomEdge = false;
+      let clippedLeftEdge = false;
+      let clippedRightEdge = false;
 
       const parent = viewState ? this.rangeLayer : this.overlay;
       if (viewState) {
@@ -165,6 +169,10 @@ export class SelectionLayer {
             continue;
           }
 
+          clippedTopEdge = clippedTop > top;
+          clippedBottomEdge = clippedBottom < bottom;
+          clippedLeftEdge = clippedLeft > left;
+          clippedRightEdge = clippedRight < right;
           top = clippedTop;
           left = clippedLeft;
           bottom = clippedBottom;
@@ -178,6 +186,10 @@ export class SelectionLayer {
       border.style.height = `${bottom - top}px`;
       border.style.pointerEvents = 'none';
       border.style.boxSizing = 'border-box';
+      if (clippedTopEdge) border.style.borderTopColor = 'transparent';
+      if (clippedBottomEdge) border.style.borderBottomColor = 'transparent';
+      if (clippedLeftEdge) border.style.borderLeftColor = 'transparent';
+      if (clippedRightEdge) border.style.borderRightColor = 'transparent';
 
       parent.appendChild(border);
       this.rangeBorders.push(border);
