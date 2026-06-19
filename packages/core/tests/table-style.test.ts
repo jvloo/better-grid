@@ -295,14 +295,39 @@ describe('floating scrollbar layout', () => {
       horizontallyOverflowingFitHost.querySelector<HTMLElement>('.bg-grid__scroll')!;
     const horizontallyOverflowingFitSizer =
       horizontallyOverflowingFitHost.querySelector<HTMLElement>('.bg-grid__sizer')!;
-    setClientSize(horizontallyOverflowingFitViewport, 600, 400);
-    setClientSize(horizontallyOverflowingFitScrollbar, 600, 400);
+    setClientSize(horizontallyOverflowingFitViewport, 600, 408);
+    setClientSize(horizontallyOverflowingFitScrollbar, 600, 408);
     horizontallyOverflowingFitGrid.refresh();
 
-    expect(horizontallyOverflowingFitSizer.style.width).toBe('720px');
-    expect(horizontallyOverflowingFitSizer.style.height).toBe('400px');
+    expect(horizontallyOverflowingFitSizer.style.width).toBe('728px');
+    expect(horizontallyOverflowingFitSizer.style.height).toBe('408px');
 
     horizontallyOverflowingFitGrid.unmount();
+
+    const verticallyOverflowingFitHost = makeHost();
+    const verticallyOverflowingFitGrid = createGrid({
+      columns: [{ id: 'a', field: 'a' as never, width: 100 }],
+      data: Array.from({ length: 20 }, (_, i) => ({ a: `A${i}` })),
+      scrollbar: { mode: 'floating' },
+      headerHeight: 40,
+    });
+
+    verticallyOverflowingFitGrid.mount(verticallyOverflowingFitHost);
+
+    const verticallyOverflowingFitViewport =
+      verticallyOverflowingFitHost.querySelector<HTMLElement>('.bg-grid__viewport')!;
+    const verticallyOverflowingFitScrollbar =
+      verticallyOverflowingFitHost.querySelector<HTMLElement>('.bg-grid__scroll')!;
+    const verticallyOverflowingFitSizer =
+      verticallyOverflowingFitHost.querySelector<HTMLElement>('.bg-grid__sizer')!;
+    setClientSize(verticallyOverflowingFitViewport, 600, 400);
+    setClientSize(verticallyOverflowingFitScrollbar, 600, 400);
+    verticallyOverflowingFitGrid.refresh();
+
+    expect(verticallyOverflowingFitSizer.style.width).toBe('100px');
+    expect(verticallyOverflowingFitSizer.style.height).toBe('848px');
+
+    verticallyOverflowingFitGrid.unmount();
 
     const pinnedHost = makeHost();
     const pinnedGrid = createGrid({

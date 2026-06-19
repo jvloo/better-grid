@@ -226,6 +226,44 @@ describe('clipboard native text selection', () => {
     grid.unmount();
   });
 
+  it('clears range selection on Escape', () => {
+    const host = makeHost();
+    const onSelectionChange = vi.fn();
+    const grid = createGrid<Row>({
+      columns: [
+        { id: 'name', field: 'name', headerName: 'Name', width: 120 },
+        { id: 'amount', field: 'amount', headerName: 'Amount', width: 120 },
+      ],
+      data: [{ name: 'Alpha', amount: 42 }],
+      selection: { mode: 'range' },
+      onSelectionChange,
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    grid.setSelection({
+      active: { rowIndex: 0, colIndex: 1 },
+      ranges: [{ startRow: 0, endRow: 0, startCol: 1, endCol: 1 }],
+    });
+
+    expect(host.querySelector('.bg-selection-range')).not.toBeNull();
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+    });
+    getMountedGridElement(host).dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(grid.getState().selection).toEqual({ active: null, ranges: [] });
+    expect(host.querySelector('.bg-selection-range')).toBeNull();
+    expect(onSelectionChange).toHaveBeenLastCalledWith({ active: null, ranges: [] });
+
+    grid.unmount();
+  });
+
   it('honors fillHandlePredicate when rendering the fill handle', () => {
     const host = makeHost();
     const grid = createGrid<Row>({

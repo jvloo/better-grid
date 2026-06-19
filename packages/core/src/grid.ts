@@ -340,9 +340,9 @@ export function createGrid<
     const hasVerticalOverflow = measurements.totalHeight + headerHeight + pinnedTopH + pinnedBottomH > vpHeight;
     const hasHorizontalOverflow = measurements.totalWidth - clipOffset > vpWidth;
     const rightEndPadding =
-      isFloatingScrollbar && hasVerticalOverflow ? floatingEndPadding : 0;
+      isFloatingScrollbar && hasHorizontalOverflow ? floatingEndPadding : 0;
     const bottomEndPadding =
-      isFloatingScrollbar && !hasPinnedRows && hasVerticalOverflow && hasHorizontalOverflow ? floatingEndPadding : 0;
+      isFloatingScrollbar && !hasPinnedRows && (hasVerticalOverflow || hasHorizontalOverflow) ? floatingEndPadding : 0;
     scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth - clipOffset + rightEndPadding}px`;
     scrollSizer.style.height = `${measurements.totalHeight + sbClientHeight - vpHeight + headerHeight + pinnedTopH + pinnedBottomH + bottomEndPadding}px`;
 
@@ -1112,6 +1112,22 @@ export function createGrid<
       return;
     }
 
+    // Escape clears the current grid selection. Editor plugins run above this
+    // via key bindings, so an active editor still gets first chance to cancel.
+    if (event.key === 'Escape') {
+      if (state.selection.active) {
+        emitter.emit('key:escape', state.selection.active);
+      }
+      if (state.selection.active || state.selection.ranges.length > 0) {
+        event.preventDefault();
+        const clearedSelection = createEmptySelection();
+        store.setSelection(clearedSelection);
+        emitter.emit('selection:change', clearedSelection);
+        scheduleRender();
+      }
+      return;
+    }
+
     if (!state.selection.active) return;
 
     const bounds = {
@@ -1165,11 +1181,6 @@ export function createGrid<
       return;
     }
 
-    // Escape
-    if (event.key === 'Escape') {
-      emitter.emit('key:escape', state.selection.active);
-      return;
-    }
   }
 
   function handleFreezeClipMouseEnter(e: MouseEvent): void {
