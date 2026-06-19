@@ -18,6 +18,10 @@
   outline: none;
 }
 
+.bg-grid:not(.bg-grid--bordered) {
+  border: 0;
+}
+
 /* Scroll container */
 .bg-grid__scroll {
   position: relative;

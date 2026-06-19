@@ -96,6 +96,10 @@ describe('table-style CSS rules', () => {
     expect(cssSource).toMatch(/\.bg-grid--bordered \.bg-cell\s*\{[^}]*border-bottom:[^}]*1px solid/);
   });
 
+  test('bordered=false removes the root grid border from layout', () => {
+    expect(cssSource).toMatch(/\.bg-grid:not\(\.bg-grid--bordered\)\s*\{[^}]*border:\s*0\s*;/);
+  });
+
   test('.bg-grid--striped defines alternate row background', () => {
     expect(cssSource).toMatch(/\.bg-grid--striped \.bg-cell\[data-row-even="1"\]\s*\{[^}]*background:/);
     // Stripe color must be themable via --bg-stripe-bg
@@ -270,6 +274,35 @@ describe('floating scrollbar layout', () => {
     expect(fittingSizer.style.height).toBe('120px');
 
     fittingGrid.unmount();
+
+    const horizontallyOverflowingFitHost = makeHost();
+    const horizontallyOverflowingFitGrid = createGrid({
+      columns: [
+        { id: 'a', field: 'a' as never, width: 120 },
+        { id: 'm_0', field: 'm0' as never, width: 300 },
+        { id: 'm_1', field: 'm1' as never, width: 300 },
+      ],
+      data: Array.from({ length: 9 }, (_, i) => ({ a: `A${i}`, m0: '0', m1: '1' })),
+      scrollbar: { mode: 'floating' },
+      headerHeight: 40,
+    });
+
+    horizontallyOverflowingFitGrid.mount(horizontallyOverflowingFitHost);
+
+    const horizontallyOverflowingFitViewport =
+      horizontallyOverflowingFitHost.querySelector<HTMLElement>('.bg-grid__viewport')!;
+    const horizontallyOverflowingFitScrollbar =
+      horizontallyOverflowingFitHost.querySelector<HTMLElement>('.bg-grid__scroll')!;
+    const horizontallyOverflowingFitSizer =
+      horizontallyOverflowingFitHost.querySelector<HTMLElement>('.bg-grid__sizer')!;
+    setClientSize(horizontallyOverflowingFitViewport, 600, 400);
+    setClientSize(horizontallyOverflowingFitScrollbar, 600, 400);
+    horizontallyOverflowingFitGrid.refresh();
+
+    expect(horizontallyOverflowingFitSizer.style.width).toBe('720px');
+    expect(horizontallyOverflowingFitSizer.style.height).toBe('400px');
+
+    horizontallyOverflowingFitGrid.unmount();
 
     const pinnedHost = makeHost();
     const pinnedGrid = createGrid({
