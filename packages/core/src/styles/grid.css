@@ -14,6 +14,17 @@
   contain: layout style;
 }
 
+.bg-grid::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: var(--bg-grid-frame-border, none);
+  border-radius: inherit;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 11;
+}
+
 .bg-grid:focus {
   outline: none;
 }

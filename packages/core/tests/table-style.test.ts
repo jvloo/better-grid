@@ -93,6 +93,8 @@ describe('table-style CSS rules', () => {
 
   test('.bg-grid clips painted layers to the rounded frame', () => {
     expect(cssSource).toMatch(/\.bg-grid\s*\{[^}]*overflow:\s*hidden/);
+    expect(cssSource).toMatch(/\.bg-grid::after\s*\{[^}]*border:\s*var\(--bg-grid-frame-border,\s*none\)/);
+    expect(cssSource).toMatch(/\.bg-grid::after\s*\{[^}]*z-index:\s*11/);
   });
 
   test('.bg-grid--bordered defines cell border-right + border-bottom', () => {
