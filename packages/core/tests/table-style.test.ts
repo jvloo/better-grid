@@ -91,6 +91,10 @@ describe('table-style CSS rules', () => {
   // the source instead. Guards against accidental deletion of the selectors
   // the table-style flags (or merge plugin) depend on.
 
+  test('.bg-grid clips painted layers to the rounded frame', () => {
+    expect(cssSource).toMatch(/\.bg-grid\s*\{[^}]*overflow:\s*hidden/);
+  });
+
   test('.bg-grid--bordered defines cell border-right + border-bottom', () => {
     expect(cssSource).toMatch(/\.bg-grid--bordered \.bg-cell\s*\{[^}]*border-right:[^}]*1px solid/);
     expect(cssSource).toMatch(/\.bg-grid--bordered \.bg-cell\s*\{[^}]*border-bottom:[^}]*1px solid/);

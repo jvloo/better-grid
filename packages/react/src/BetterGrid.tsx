@@ -24,7 +24,7 @@ function BetterGridView<TData, TContext>(props: { handle: GridHandle<TData, TCon
     <div
       ref={props.handle.containerRef}
       className={props.className}
-      style={{ width, height, position: 'relative', overflow: 'visible', ...props.style }}
+      style={{ width, height, position: 'relative', ...props.style }}
     />
   );
 }
