@@ -191,6 +191,58 @@ function getVerticalBorderPixels(styles: CSSStyleDeclaration, fallbackWidth = 0)
   return total > 0 ? total : fallbackWidth * 2;
 }
 
+function getTransformedAncestorScale(element: HTMLElement): { x: number; y: number } {
+  let x = 1;
+  let y = 1;
+  let current = element.parentElement;
+
+  while (current && current !== document.body && current !== document.documentElement) {
+    const styles = getComputedStyle(current);
+    const transform = styles.transform;
+    if (transform && transform !== 'none') {
+      const matrix = transform.match(/^matrix\(([^)]+)\)$/);
+      const matrixValues = matrix?.[1];
+      if (matrixValues) {
+        const values = matrixValues.split(',').map((value) => parseFloat(value.trim()));
+        if (values.length >= 4) {
+          const a = values[0] ?? 1;
+          const b = values[1] ?? 0;
+          const c = values[2] ?? 0;
+          const d = values[3] ?? 1;
+          const scaleX = Math.sqrt(a * a + b * b);
+          const scaleY = Math.sqrt(c * c + d * d);
+          if (Number.isFinite(scaleX) && scaleX > 0) x *= scaleX;
+          if (Number.isFinite(scaleY) && scaleY > 0) y *= scaleY;
+        }
+      } else {
+        const scale = transform.match(/^scale\(([^,\s)]+)(?:,\s*([^)]+))?\)$/);
+        const scaleXValue = scale?.[1];
+        if (scaleXValue) {
+          const scaleX = parseFloat(scaleXValue);
+          const scaleY = parseFloat(scale?.[2] ?? scaleXValue);
+          if (Number.isFinite(scaleX) && scaleX > 0) x *= scaleX;
+          if (Number.isFinite(scaleY) && scaleY > 0) y *= scaleY;
+        }
+      }
+    }
+    current = current.parentElement;
+  }
+
+  return { x, y };
+}
+
+function scaleCssPixel(value: number, scale: number): number {
+  return Number.isFinite(value) ? value * scale : 0;
+}
+
+function getScaledFont(
+  styles: CSSStyleDeclaration,
+  fontSize: number,
+  lineHeight: number,
+): string {
+  return `${styles.fontStyle} ${styles.fontVariant} ${styles.fontWeight} ${fontSize}px / ${lineHeight}px ${styles.fontFamily}`;
+}
+
 function getInsetLineBoxMetrics(
   containerHeight: number,
   naturalLineHeight: number,
@@ -2283,9 +2335,9 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             : undefined;
           const valueComputed = valueSource ? getComputedStyle(valueSource) : null;
           const editorComputed = valueComputed ?? anchorComputed;
-          const cellFont = editorComputed.font;
           const cellTextAlign = editorComputed.textAlign;
           const cellLetterSpacing = editorComputed.letterSpacing;
+          const visualScale = getTransformedAncestorScale(anchorEl);
           const prefixSource = inputBox?.querySelector('.bg-input-box__prefix') as HTMLElement | null;
           const suffixSource = inputBox?.querySelector('.bg-input-box__suffix, .bg-input-box__unit') as HTMLElement | null;
           const prefixText = prefixSource?.textContent ?? '';
@@ -2365,9 +2417,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           ed.textContent = value;
           // Match cell position exactly. Use normal line-height + vertical padding
           // for centering, so text selection highlight doesn't span full cell height.
-          const fontSize = parseFloat(editorComputed.fontSize) || 14;
+          const sourceFontSize = parseFloat(editorComputed.fontSize) || 14;
+          const fontSize = scaleCssPixel(sourceFontSize, visualScale.y);
           const editorHeight = cellRect.height - floatBorderY;
-          const anchorLineHeight = parseCssPixel(editorComputed.lineHeight);
+          const anchorLineHeight = scaleCssPixel(parseCssPixel(editorComputed.lineHeight), visualScale.y);
           const useAnchorLineHeight =
             anchorLineHeight > 0 &&
             anchorLineHeight <= editorHeight &&
@@ -2381,8 +2434,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             fontSize,
           );
           const maxEditorHeight = editorHeight * 4;
-          const computedPadLeft = parseCssPixel(editorComputed.paddingLeft);
-          const computedPadRight = parseCssPixel(editorComputed.paddingRight);
+          const computedPadLeft = scaleCssPixel(parseCssPixel(editorComputed.paddingLeft), visualScale.x);
+          const computedPadRight = scaleCssPixel(parseCssPixel(editorComputed.paddingRight), visualScale.x);
           const basePadLeft = valueComputed ? computedPadLeft : (computedPadLeft || 12);
           const basePadRight = valueComputed ? computedPadRight : (computedPadRight || basePadLeft);
           const isCenteredText = cellTextAlign === 'center' || cellTextAlign === '-webkit-center';
@@ -2418,11 +2471,14 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const singleLineEditorHeight = valueComputed && valueSourceRect
             ? Math.max(1, cellRect.height - valueInsetHeight)
             : editorHeight;
-          const singleLineContentLineHeight = valueComputed
-            ? `${singleLineEditorHeight}px`
+          const valueLineHeight = valueComputed ? scaleCssPixel(parseCssPixel(valueComputed.lineHeight), visualScale.y) : 0;
+          const singleLineContentLineHeight = valueComputed && valueLineHeight > 0
+            ? `${valueLineHeight}px`
             : `${contentLineHeight}px`;
           const singleLinePadY = valueComputed ? 0 : vertPad;
-          measureSpan.style.cssText = `position:fixed;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;font:${cellFont};padding:0 ${measurePadRight}px 0 ${measurePadLeft}px;`;
+          const visualLineHeight = valueComputed && valueLineHeight > 0 ? valueLineHeight : contentLineHeight;
+          const visualCellFont = getScaledFont(editorComputed, fontSize, visualLineHeight);
+          measureSpan.style.cssText = `position:fixed;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;font:${visualCellFont};padding:0 ${measurePadRight}px 0 ${measurePadLeft}px;`;
 
           const createFloatAdornment = (
             text: string,
@@ -2447,6 +2503,8 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                 : `right:${sourceInsetRight}px;`
               : `${side}:0;`;
             const adornment = document.createElement('span');
+            const sourceFontSizePx = parseCssPixel(sourceStyles.fontSize || anchorComputed.fontSize);
+            const sourceLineHeightPx = parseCssPixel(sourceStyles.lineHeight || anchorComputed.lineHeight);
             adornment.className = `bg-cell-editor-float__${side === 'left' ? 'prefix' : 'suffix'}`;
             adornment.textContent = text;
             adornment.style.cssText = `
@@ -2454,12 +2512,12 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               width:${sourceWidth}px; display:flex; align-items:center; justify-content:center;
               pointer-events:none; box-sizing:border-box;
               font-family:${sourceStyles.fontFamily || anchorComputed.fontFamily};
-              font-size:${sourceStyles.fontSize || anchorComputed.fontSize};
+              font-size:${scaleCssPixel(sourceFontSizePx > 0 ? sourceFontSizePx : sourceFontSize, visualScale.y)}px;
               font-style:${sourceStyles.fontStyle || anchorComputed.fontStyle};
               font-weight:${sourceStyles.fontWeight || anchorComputed.fontWeight};
               color:${sourceStyles.color || anchorComputed.color};
               letter-spacing:${sourceStyles.letterSpacing || anchorComputed.letterSpacing};
-              line-height:${sourceStyles.lineHeight || anchorComputed.lineHeight};
+              line-height:${sourceLineHeightPx > 0 ? scaleCssPixel(sourceLineHeightPx, visualScale.y) : visualLineHeight}px;
             `;
             return adornment;
           };
@@ -2467,7 +2525,7 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           ed.style.cssText = `
             outline:none; margin:0;
             ${valueInsetStyle}
-            font-family:${editorComputed.fontFamily}; font-size:${editorComputed.fontSize};
+            font-family:${editorComputed.fontFamily}; font-size:${fontSize}px;
             font-weight:${editorComputed.fontWeight}; line-height:${singleLineContentLineHeight};
             color:${editorComputed.color}; letter-spacing:${cellLetterSpacing};
             background:transparent; box-sizing:border-box;

@@ -391,6 +391,9 @@ describe('editing inputStyle reuse', () => {
     const inputBox = cell.querySelector('.bg-input-box') as HTMLElement;
     const valueSpan = cell.querySelector('.bg-input-box__value') as HTMLElement;
     const sourceSuffix = cell.querySelector('.bg-input-box__suffix') as HTMLElement;
+    const style = document.createElement('style');
+    style.textContent = '.bg-input-box__value { line-height: 20px !important; }';
+    document.head.appendChild(style);
     inputBox.getBoundingClientRect = () => makeRect(100, 45, 80, 30);
     valueSpan.getBoundingClientRect = () =>
       valueSpan.textContent ? makeRect(110, 52, 60, 16) : makeRect(100, 45, 80, 30);
@@ -409,15 +412,68 @@ describe('editing inputStyle reuse', () => {
     expect(suffix).not.toBeNull();
     expect(getComputedStyle(editor!).paddingLeft).toBe('0px');
     expect(getComputedStyle(editor!).paddingRight).toBe('18px');
-    expect(getComputedStyle(editor!).lineHeight).toBe('16px');
+    expect(getComputedStyle(editor!).lineHeight).toBe('20px');
     expect(getComputedStyle(editor!).marginLeft).toBe('10px');
     expect(getComputedStyle(editor!).marginRight).toBe('10px');
     expect(getComputedStyle(editor!).marginTop).toBe('7px');
     expect(getComputedStyle(editor!).height).toBe('16px');
     expect(getComputedStyle(suffix!).right).toBe('18px');
     expect(getComputedStyle(suffix!).width).toBe('10px');
-    expect(getComputedStyle(suffix!).lineHeight).toBe(getComputedStyle(sourceSuffix).lineHeight);
+    expect(getComputedStyle(suffix!).lineHeight).toBe('20px');
     expect(inlineInput).toBeNull();
+
+    grid.unmount();
+  });
+
+  it('scales input-style floating editor text to transformed grid content', () => {
+    const host = makeHost();
+    host.style.transform = 'scale(0.8)';
+    const columns: ColumnDef<Row>[] = [
+      {
+        id: 'amount',
+        field: 'amount',
+        headerName: 'Amount',
+        align: 'center',
+        editable: true,
+        cellType: 'number',
+        precision: 2,
+        unit: '%',
+        valueFormatter: (value) => Number(value).toFixed(2),
+      },
+    ];
+    const grid = createGrid<Row>({
+      columns,
+      data: [{ amount: 10 }],
+      plugins: [editing({ inputStyle: true, editTrigger: 'click', matchAnchorStyle: true })],
+    });
+
+    grid.mount(host);
+    grid.refresh();
+
+    const style = document.createElement('style');
+    style.textContent = '.bg-input-box__value { font-size: 14px !important; line-height: 20px !important; }';
+    document.head.appendChild(style);
+
+    const cell = host.querySelector('.bg-cell[data-row="0"][data-col="0"]') as HTMLElement;
+    const inputBox = cell.querySelector('.bg-input-box') as HTMLElement;
+    const valueSpan = cell.querySelector('.bg-input-box__value') as HTMLElement;
+    const sourceSuffix = cell.querySelector('.bg-input-box__suffix') as HTMLElement;
+    inputBox.style.width = '90px';
+    inputBox.style.height = '30px';
+    inputBox.getBoundingClientRect = () => makeRect(100, 45, 72, 24);
+    valueSpan.getBoundingClientRect = () => makeRect(108, 49, 45, 16);
+    sourceSuffix.getBoundingClientRect = () => makeRect(154, 49, 8, 16);
+
+    grid.plugins.editing.startEdit({ rowIndex: 0, colIndex: 0 });
+
+    const editor = document.body.querySelector('.bg-cell-editor-float .bg-cell-editor') as HTMLElement | null;
+    const suffix = document.body.querySelector('.bg-cell-editor-float__suffix') as HTMLElement | null;
+    expect(editor).not.toBeNull();
+    expect(suffix).not.toBeNull();
+    expect(getComputedStyle(editor!).fontSize).toBe('11.2px');
+    expect(getComputedStyle(editor!).lineHeight).toBe('16px');
+    expect(getComputedStyle(suffix!).fontSize).toBe('11.2px');
+    expect(getComputedStyle(suffix!).lineHeight).toBe('16px');
 
     grid.unmount();
   });
