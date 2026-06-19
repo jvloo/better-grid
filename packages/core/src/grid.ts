@@ -336,15 +336,12 @@ export function createGrid<
     const vpWidth = viewport.clientWidth;
     const clipOffset = getFreezeClipOffset();
     const floatingEndPadding = isFloatingScrollbar ? getFloatingScrollbarSize() : 0;
-    const hasPinnedRows = pinnedTopH > 0 || pinnedBottomH > 0;
-    const horizontalEndPadding =
-      isFloatingScrollbar && !hasPinnedRows && measurements.totalWidth - clipOffset > vpWidth ? floatingEndPadding : 0;
-    const verticalEndPadding =
+    const rightEndPadding =
       isFloatingScrollbar && measurements.totalHeight + headerHeight + pinnedTopH + pinnedBottomH > vpHeight
         ? floatingEndPadding
         : 0;
-    scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth - clipOffset + horizontalEndPadding}px`;
-    scrollSizer.style.height = `${measurements.totalHeight + sbClientHeight - vpHeight + headerHeight + pinnedTopH + pinnedBottomH + verticalEndPadding}px`;
+    scrollSizer.style.width = `${measurements.totalWidth + sbClientWidth - vpWidth - clipOffset + rightEndPadding}px`;
+    scrollSizer.style.height = `${measurements.totalHeight + sbClientHeight - vpHeight + headerHeight + pinnedTopH + pinnedBottomH}px`;
 
     if (pendingScrollRestore) {
       const nextScroll = pendingScrollRestore;
@@ -389,6 +386,7 @@ export function createGrid<
     const viewportWidth = viewport.clientWidth;
     const viewportHeight = viewport.clientHeight;
 
+    // scrollTop maps directly to data offset (scroll sizer = data height only)
     const dataScrollTop = state.scrollTop;
 
     // When freeze clip is active, the effective frozen width is smaller,

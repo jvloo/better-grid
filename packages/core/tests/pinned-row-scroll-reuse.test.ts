@@ -84,43 +84,4 @@ describe('pinned rows on scroll', () => {
     grid.unmount();
   });
 
-  it('keeps floating vertical end padding between body and pinned bottom rows', () => {
-    const host = makeHost();
-    const columns: ColumnDef<Row>[] = [
-      { id: 'name', field: 'name', headerName: 'Name', width: 160 },
-      { id: 'value', field: 'value', headerName: 'Value', width: 160 },
-    ];
-    const data = Array.from({ length: 10 }, (_, row) => ({
-      name: row,
-      value: row,
-    })) as Row[];
-
-    const grid = createGrid<Row>({
-      columns,
-      data,
-      pinned: { bottom: [{ name: 999, value: 999 } as Row] },
-      rowHeight: 40,
-      headerHeight: 40,
-      scrollbar: { mode: 'floating' },
-    });
-
-    grid.mount(host);
-
-    const viewport = host.querySelector('.bg-grid__viewport') as HTMLElement;
-    const scrollbar = host.querySelector('.bg-grid__scroll') as HTMLElement;
-    const cells = host.querySelector('.bg-grid__cells') as HTMLElement;
-    const pinnedBottom = host.querySelector('.bg-grid__pinned-bottom') as HTMLElement;
-    setClientSize(viewport, 400, 200);
-    setClientSize(scrollbar, 400, 200);
-    grid.refresh();
-
-    scrollbar.scrollTop = 288;
-    scrollbar.dispatchEvent(new Event('scroll'));
-
-    expect(scrollbar.scrollTop).toBe(288);
-    expect(cells.style.transform).toBe('translate3d(0px, -288px, 0)');
-    expect(pinnedBottom.style.bottom).toBe('0px');
-
-    grid.unmount();
-  });
 });
