@@ -383,6 +383,93 @@ describe('clipboard native text selection', () => {
     grid.unmount();
   });
 
+  it('maps fill-handle drag coordinates through transformed grid scale', () => {
+    const host = makeHost();
+    const onCellChange = vi.fn();
+    const grid = createGrid<Row>({
+      columns: [
+        { id: 'name', field: 'name', headerName: 'Name', width: 120 },
+        {
+          id: 'amount',
+          field: 'amount',
+          headerName: 'Amount',
+          width: 120,
+          editable: (row) => row.editable === true,
+        },
+      ],
+      data: [
+        { name: 'Alpha', amount: 1, editable: true },
+        { name: 'Beta', amount: 2, editable: false },
+        { name: 'Gamma', amount: 3, editable: true },
+        { name: 'Delta', amount: 4, editable: true },
+      ],
+      selection: { mode: 'range', fillHandle: true },
+      rowHeight: 40,
+      onCellChange,
+    });
+
+    grid.mount(host);
+    grid.refresh();
+    grid.setSelection({
+      active: { rowIndex: 0, colIndex: 1 },
+      ranges: [{ startRow: 0, endRow: 0, startCol: 1, endCol: 1 }],
+    });
+
+    const overlay = host.querySelector('.bg-selection-overlay') as HTMLElement;
+    Object.defineProperty(overlay, 'offsetWidth', { configurable: true, value: 240 });
+    Object.defineProperty(overlay, 'offsetHeight', { configurable: true, value: 160 });
+    overlay.getBoundingClientRect = () =>
+      ({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: 192,
+        bottom: 128,
+        width: 192,
+        height: 128,
+        toJSON: () => undefined,
+      }) as DOMRect;
+
+    const handle = host.querySelector('.bg-fill-handle') as HTMLElement;
+    expect(handle).not.toBeNull();
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      clientX: 192,
+      clientY: 32,
+      pointerId: 11,
+    }));
+    document.dispatchEvent(new PointerEvent('pointermove', {
+      bubbles: true,
+      button: 0,
+      clientX: 192,
+      clientY: 116,
+      pointerId: 11,
+    }));
+    document.dispatchEvent(new PointerEvent('pointerup', {
+      bubbles: true,
+      button: 0,
+      clientX: 192,
+      clientY: 116,
+      pointerId: 11,
+    }));
+
+    const data = grid.getState().data;
+    expect(data[0]?.amount).toBe(1);
+    expect(data[1]?.amount).toBe(2);
+    expect(data[2]?.amount).toBe(1);
+    expect(data[3]?.amount).toBe(1);
+    expect(onCellChange).toHaveBeenCalledTimes(1);
+    expect(onCellChange.mock.calls[0]?.[0]).toMatchObject([
+      { rowIndex: 2, columnId: 'amount', oldValue: 3, newValue: 1 },
+      { rowIndex: 3, columnId: 'amount', oldValue: 4, newValue: 1 },
+    ]);
+
+    grid.unmount();
+  });
+
   it('applies multi-cell paste as one batched cell change', async () => {
     const host = makeHost();
     const onPaste = vi.fn();

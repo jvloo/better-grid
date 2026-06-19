@@ -289,9 +289,17 @@ export class SelectionLayer {
     this.overlay.appendChild(preview);
 
     const overlayRect = this.overlay.getBoundingClientRect();
+    const overlayScaleX =
+      this.overlay.offsetWidth > 0 && overlayRect.width > 0 ? overlayRect.width / this.overlay.offsetWidth : 1;
+    const overlayScaleY =
+      this.overlay.offsetHeight > 0 && overlayRect.height > 0 ? overlayRect.height / this.overlay.offsetHeight : 1;
+    const normalizeX = (clientX: number): number =>
+      overlayScaleX > 0 ? (clientX - overlayRect.left) / overlayScaleX : clientX - overlayRect.left;
+    const normalizeY = (clientY: number): number =>
+      overlayScaleY > 0 ? (clientY - overlayRect.top) / overlayScaleY : clientY - overlayRect.top;
 
     const findRow = (clientY: number): number => {
-      const y = clientY - overlayRect.top;
+      const y = normalizeY(clientY);
       for (let r = 0; r < rowCount; r++) {
         if (rowOffsets[r]! <= y && y < rowOffsets[r + 1]!) return r;
       }
@@ -299,7 +307,7 @@ export class SelectionLayer {
     };
 
     const findCol = (clientX: number): number => {
-      const x = clientX - overlayRect.left;
+      const x = normalizeX(clientX);
       for (let c = 0; c < colCount; c++) {
         if (colOffsets[c]! <= x && x < colOffsets[c + 1]!) return c;
       }
