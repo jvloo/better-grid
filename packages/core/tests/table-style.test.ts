@@ -245,7 +245,7 @@ describe('floating scrollbar layout', () => {
     grid.refresh();
 
     expect(sizer.style.width).toBe('728px');
-    expect(sizer.style.height).toBe('840px');
+    expect(sizer.style.height).toBe('848px');
 
     grid.unmount();
 
