@@ -273,6 +273,7 @@ export class SelectionLayer {
     const startX = startEvent.clientX;
     const startY = startEvent.clientY;
 
+    let axis: 'none' | 'vertical' | 'horizontal' = 'none';
     let direction: 'none' | 'down' | 'up' | 'right' | 'left' = 'none';
     let targetRow = sourceRange.endRow;
     let targetCol = sourceRange.endCol;
@@ -352,23 +353,36 @@ export class SelectionLayer {
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
 
-      // Lock direction based on dominant axis (once threshold reached)
-      if (direction === 'none' && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+      // Lock axis based on dominant movement, but allow direction to reverse
+      // before release when the pointer crosses the source range.
+      if (axis === 'none' && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
         if (Math.abs(dy) >= Math.abs(dx)) {
-          direction = dy > 0 ? 'down' : 'up';
+          axis = 'vertical';
         } else {
-          direction = dx > 0 ? 'right' : 'left';
+          axis = 'horizontal';
         }
       }
 
-      if (direction === 'down' || direction === 'up') {
+      if (axis === 'vertical') {
         targetRow = findRow(e.clientY);
-        if (direction === 'down') targetRow = Math.max(targetRow, sourceRange.endRow);
-        if (direction === 'up') targetRow = Math.min(targetRow, sourceRange.startRow);
-      } else if (direction === 'right' || direction === 'left') {
+        if (targetRow > sourceRange.endRow) {
+          direction = 'down';
+        } else if (targetRow < sourceRange.startRow) {
+          direction = 'up';
+        } else {
+          direction = 'none';
+          targetRow = sourceRange.endRow;
+        }
+      } else if (axis === 'horizontal') {
         targetCol = findCol(e.clientX);
-        if (direction === 'right') targetCol = Math.max(targetCol, sourceRange.endCol);
-        if (direction === 'left') targetCol = Math.min(targetCol, sourceRange.startCol);
+        if (targetCol > sourceRange.endCol) {
+          direction = 'right';
+        } else if (targetCol < sourceRange.startCol) {
+          direction = 'left';
+        } else {
+          direction = 'none';
+          targetCol = sourceRange.endCol;
+        }
       }
 
       updatePreview();

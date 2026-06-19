@@ -470,6 +470,71 @@ describe('clipboard native text selection', () => {
     grid.unmount();
   });
 
+  it('lets fill-handle drag reverse direction before release', () => {
+    const host = makeHost();
+    const onCellChange = vi.fn();
+    const grid = createGrid<{ c0: number; c1: number; c2: number; c3: number }>({
+      columns: [
+        { id: 'c0', field: 'c0', headerName: 'C0', width: 80, editable: true },
+        { id: 'c1', field: 'c1', headerName: 'C1', width: 80, editable: true },
+        { id: 'c2', field: 'c2', headerName: 'C2', width: 80, editable: true },
+        { id: 'c3', field: 'c3', headerName: 'C3', width: 80, editable: true },
+      ],
+      data: [{ c0: 10, c1: 20, c2: 30, c3: 40 }],
+      selection: { mode: 'range', fillHandle: true },
+      rowHeight: 40,
+      onCellChange,
+    });
+
+    grid.mount(host);
+    grid.refresh();
+    grid.setSelection({
+      active: { rowIndex: 0, colIndex: 1 },
+      ranges: [{ startRow: 0, endRow: 0, startCol: 1, endCol: 1 }],
+    });
+
+    const handle = host.querySelector('.bg-fill-handle') as HTMLElement;
+    expect(handle).not.toBeNull();
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      clientX: 160,
+      clientY: 40,
+      pointerId: 12,
+    }));
+    document.dispatchEvent(new PointerEvent('pointermove', {
+      bubbles: true,
+      button: 0,
+      clientX: 20,
+      clientY: 20,
+      pointerId: 12,
+    }));
+    document.dispatchEvent(new PointerEvent('pointermove', {
+      bubbles: true,
+      button: 0,
+      clientX: 300,
+      clientY: 20,
+      pointerId: 12,
+    }));
+    document.dispatchEvent(new PointerEvent('pointerup', {
+      bubbles: true,
+      button: 0,
+      clientX: 300,
+      clientY: 20,
+      pointerId: 12,
+    }));
+
+    expect(grid.getState().data[0]).toEqual({ c0: 10, c1: 20, c2: 20, c3: 20 });
+    expect(onCellChange).toHaveBeenCalledTimes(1);
+    expect(onCellChange.mock.calls[0]?.[0]).toMatchObject([
+      { rowIndex: 0, columnId: 'c2', oldValue: 30, newValue: 20 },
+      { rowIndex: 0, columnId: 'c3', oldValue: 40, newValue: 20 },
+    ]);
+
+    grid.unmount();
+  });
+
   it('applies multi-cell paste as one batched cell change', async () => {
     const host = makeHost();
     const onPaste = vi.fn();
