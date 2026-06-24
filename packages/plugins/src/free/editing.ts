@@ -1803,7 +1803,10 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
           const inputWrap = document.createElement('div');
           inputWrap.className = 'bg-select-compound-input-wrap';
           inputWrap.style.width = `${cfg.width ?? 60}px`;
-          inputWrap.addEventListener('pointerdown', (event) => event.stopPropagation());
+          const stopCompoundInputEvent = (event: Event) => event.stopPropagation();
+          inputWrap.addEventListener('pointerdown', stopCompoundInputEvent);
+          inputWrap.addEventListener('mousedown', stopCompoundInputEvent);
+          inputWrap.addEventListener('click', stopCompoundInputEvent);
           const prefix = resolveSelectInputPrefix(cfg, context.row);
           const suffix = resolveSelectInputSuffix(cfg, context.row);
           inputWrap.style.position = 'relative';
@@ -1826,19 +1829,29 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
             input.inputMode = 'decimal';
           }
           input.value = String(getCompoundInputRawValue(column, context));
-          input.addEventListener('pointerdown', (event) => event.stopPropagation());
-          input.addEventListener('change', () => {
+          let lastCommittedCompoundValue = context.value;
+          const commitCompoundInput = () => {
             const inputValue = coerceCompoundInputValue(input.value, cfg, context.row);
             input.value = String(inputValue);
-            commitDisplaySelectValue(
-              context,
-              buildSelectWithInputValue(column, context, selectedValue, inputValue),
-            );
-          });
+            const next = buildSelectWithInputValue(column, context, selectedValue, inputValue);
+            if (next === lastCommittedCompoundValue) return;
+            lastCommittedCompoundValue = next;
+            commitDisplaySelectValue(context, next);
+          };
+          input.addEventListener('pointerdown', stopCompoundInputEvent);
+          input.addEventListener('mousedown', stopCompoundInputEvent);
+          input.addEventListener('click', stopCompoundInputEvent);
+          input.addEventListener('change', commitCompoundInput);
+          input.addEventListener('blur', commitCompoundInput);
           input.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
+              event.preventDefault();
+              event.stopPropagation();
+              commitCompoundInput();
               input.blur();
             } else if (event.key === 'Escape') {
+              event.preventDefault();
+              event.stopPropagation();
               input.value = String(getCompoundInputRawValue(column, context));
               input.blur();
             }
