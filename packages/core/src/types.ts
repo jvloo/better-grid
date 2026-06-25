@@ -38,6 +38,22 @@ export interface Selection {
   ranges: CellRange[];
 }
 
+export interface FillHandlePredicateContext<TData = unknown> {
+  row: TData;
+  column: NormalizedColumnDef<TData>;
+  rowIndex: number;
+  colIndex: number;
+  value: unknown;
+}
+
+export type FillHandlePredicate<TData = unknown> = (
+  context: FillHandlePredicateContext<TData>,
+) => boolean;
+
+export type CellSelectionPredicate<TData = unknown> = (
+  context: FillHandlePredicateContext<TData>,
+) => boolean;
+
 // ---------------------------------------------------------------------------
 // Scroll & Viewport
 // ---------------------------------------------------------------------------
@@ -189,6 +205,18 @@ export interface ColumnDef<TData = unknown> {
   // Cell rendering
   cellType?: CellType;
   cellRenderer?: CellRenderer<TData>;
+  /**
+   * Number of columns this cell should span when rendered in pinned top/bottom rows.
+   * Covered pinned cells are skipped by the native pinned-row renderer. Defaults to 1.
+   */
+  pinnedColSpan?:
+    | number
+    | ((ctx: {
+        row: TData;
+        rowIndex: number;
+        column: ColumnDef<TData>;
+        colIndex: number;
+      }) => number | undefined);
 
   // Editing
   editable?: boolean | ((row: TData, column: ColumnDef<TData>) => boolean);
@@ -265,7 +293,13 @@ export type SelectionOptions =
   | false
   | { mode: 'cell' }
   | { mode: 'row' }
-  | { mode: 'range'; multiRange?: boolean; fillHandle?: boolean };
+  | {
+      mode: 'range';
+      multiRange?: boolean;
+      fillHandle?: boolean;
+      fillHandlePredicate?: FillHandlePredicate;
+      cellSelectionPredicate?: CellSelectionPredicate;
+    };
 
 // ---------------------------------------------------------------------------
 // Virtualization Options

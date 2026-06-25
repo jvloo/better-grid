@@ -34,6 +34,9 @@ export type {
   // Selection
   Selection,
   SelectionOptions,
+  CellSelectionPredicate,
+  FillHandlePredicate,
+  FillHandlePredicateContext,
   // Scroll & Viewport
   ScrollState,
   VirtualRange,

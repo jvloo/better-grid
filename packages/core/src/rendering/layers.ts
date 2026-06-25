@@ -12,6 +12,11 @@ export interface FillDragResult {
   targetRange: CellRange;
 }
 
+export interface SelectionLayerRenderOptions {
+  readonlyColumns?: Set<number>;
+  canShowFillHandle?: (range: CellRange) => boolean;
+}
+
 export class SelectionLayer {
   private container: HTMLElement;
   private overlay: HTMLElement;
@@ -62,7 +67,19 @@ export class SelectionLayer {
     this.lastRenderHash = null;
   }
 
-  render(selection: Selection, measurements: LayoutMeasurements, readonlyColumns?: Set<number>): void {
+  render(
+    selection: Selection,
+    measurements: LayoutMeasurements,
+    options: SelectionLayerRenderOptions = {},
+  ): void {
+    const { readonlyColumns, canShowFillHandle } = options;
+    const lastRange = selection.ranges[selection.ranges.length - 1];
+    const fillHandleVisible =
+      !!lastRange &&
+      this.fillHandleEnabled &&
+      !this.isEditing &&
+      this.isFillHandleAllowed(lastRange, readonlyColumns, canShowFillHandle);
+
     // Change-detection: hash everything that affects output. If unchanged, skip.
     // Render previously tore down + recreated all range borders + the fill
     // handle on every frame, even when nothing changed (e.g. scroll-driven
@@ -79,7 +96,7 @@ export class SelectionLayer {
     const ro = measurements.rowOffsets;
     const co = measurements.colOffsets;
     hash += `|${ro.length}:${ro[ro.length - 1] ?? 0}|${co.length}:${co[co.length - 1] ?? 0}`;
-    hash += `|fh=${this.fillHandleEnabled ? 1 : 0}|ed=${this.isEditing ? 1 : 0}`;
+    hash += `|fh=${this.fillHandleEnabled ? 1 : 0}|ed=${this.isEditing ? 1 : 0}|fhv=${fillHandleVisible ? 1 : 0}`;
     if (readonlyColumns && readonlyColumns.size > 0) {
       // Order-independent: cheap sum over a typically-small set.
       let ros = 0;
@@ -105,21 +122,16 @@ export class SelectionLayer {
     for (const range of selection.ranges) {
       const isSingleCell = range.startRow === range.endRow && range.startCol === range.endCol;
 
-      // Skip single-cell ranges ONLY when there's just one range
-      // (handled by .bg-cell--active CSS). With multi-range (Ctrl+click),
-      // non-active single-cell ranges need visible highlights.
-      if (isSingleCell && !hasMultipleRanges) {
-        continue;
-      }
-
       // Skip the active cell's range in multi-range — it already has .bg-cell--active outline
       const isActiveRange = isSingleCell && selection.active &&
         range.startRow === selection.active.rowIndex &&
         range.startCol === selection.active.colIndex;
-      if (isActiveRange) continue;
+      if (isActiveRange && hasMultipleRanges) continue;
 
       const border = document.createElement('div');
-      border.className = 'bg-selection-range';
+      border.className = isSingleCell
+        ? 'bg-selection-range bg-selection-range--single'
+        : 'bg-selection-range';
       const top = measurements.rowOffsets[range.startRow]!;
       const left = measurements.colOffsets[range.startCol]!;
       const bottom = measurements.rowOffsets[range.endRow + 1]!;
@@ -138,15 +150,7 @@ export class SelectionLayer {
 
     // Fill handle at bottom-right corner of last range (or active cell)
     // Skip if all columns in the range are readonly
-    if (!this.fillHandleEnabled) return;
-    const lastRange = selection.ranges[selection.ranges.length - 1];
-    if (lastRange && readonlyColumns && readonlyColumns.size > 0) {
-      let allReadonly = true;
-      for (let c = lastRange.startCol; c <= lastRange.endCol; c++) {
-        if (!readonlyColumns.has(c)) { allReadonly = false; break; }
-      }
-      if (allReadonly) return;
-    }
+    if (!fillHandleVisible || !lastRange) return;
     if (lastRange && measurements.rowOffsets && measurements.colOffsets) {
       const bottom = measurements.rowOffsets[lastRange.endRow + 1];
       const right = measurements.colOffsets[lastRange.endCol + 1];
@@ -154,8 +158,8 @@ export class SelectionLayer {
         const handle = document.createElement('div');
         handle.className = 'bg-fill-handle';
         handle.style.position = 'absolute';
-        handle.style.width = '7px';
-        handle.style.height = '7px';
+        handle.style.width = '6px';
+        handle.style.height = '6px';
         handle.style.background = 'var(--bg-active-border, #1a73e8)';
         handle.style.border = '1px solid #fff';
         handle.style.borderRadius = '1px';
@@ -167,10 +171,7 @@ export class SelectionLayer {
         // to this.container means the handle inherits the container's translate3d
         // and follows the cells on scroll automatically — no scroll listener
         // needed and no cached offset to invalidate.
-        handle.style.transform = `translate3d(${right - 4}px, ${bottom - 4}px, 0)`;
-
-        // Hide when editing
-        if (this.isEditing) handle.style.display = 'none';
+        handle.style.transform = `translate3d(${right - 3}px, ${bottom - 3}px, 0)`;
 
         // Drag-to-fill
         handle.addEventListener('pointerdown', (e) => {
@@ -183,6 +184,24 @@ export class SelectionLayer {
         this.fillHandle = handle;
       }
     }
+  }
+
+  private isFillHandleAllowed(
+    range: CellRange,
+    readonlyColumns?: Set<number>,
+    canShowFillHandle?: (range: CellRange) => boolean,
+  ): boolean {
+    if (readonlyColumns && readonlyColumns.size > 0) {
+      let allReadonly = true;
+      for (let c = range.startCol; c <= range.endCol; c++) {
+        if (!readonlyColumns.has(c)) {
+          allReadonly = false;
+          break;
+        }
+      }
+      if (allReadonly) return false;
+    }
+    return canShowFillHandle ? canShowFillHandle(range) : true;
   }
 
   private startFillDrag(

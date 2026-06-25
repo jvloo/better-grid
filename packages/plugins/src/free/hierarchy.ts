@@ -171,10 +171,16 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
 
             const wrappedRenderer: CellRenderer = (container: HTMLElement, context: CellRenderContext) => {
               const info = getHierarchyInfo(context);
+              const renderText = (target: HTMLElement, value: unknown, className = 'bg-cell__text'): void => {
+                const span = document.createElement('span');
+                span.className = className;
+                span.textContent = value != null ? String(value) : '';
+                target.replaceChildren(span);
+              };
 
               if (!info || container.classList.contains('bg-cell--pinned')) {
                 if (originalRenderer) return originalRenderer(container, context);
-                container.textContent = context.value != null ? String(context.value) : '';
+                renderText(container, context.value);
                 return;
               }
 
@@ -222,9 +228,10 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
                 container.appendChild(contentWrapper);
                 return originalRenderer(contentWrapper, context);
               } else {
-                container.appendChild(
-                  document.createTextNode(context.value != null ? String(context.value) : ''),
-                );
+                const contentWrapper = document.createElement('span');
+                contentWrapper.className = 'bg-hierarchy-content bg-cell__text';
+                contentWrapper.textContent = context.value != null ? String(context.value) : '';
+                container.appendChild(contentWrapper);
               }
             };
 
@@ -255,7 +262,10 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
 
               if (!info || container.classList.contains('bg-cell--pinned')) {
                 if (originalToggleRenderer) return originalToggleRenderer(container, context);
-                container.textContent = context.value != null ? String(context.value) : '';
+                const span = document.createElement('span');
+                span.className = 'bg-cell__text';
+                span.textContent = context.value != null ? String(context.value) : '';
+                container.replaceChildren(span);
                 return;
               }
 

@@ -257,6 +257,96 @@ export function createGrid<
     return state.hierarchyState.visibleRows[visibleIndex] ?? visibleIndex;
   }
 
+  function isCellSelectableForSelection(rowIndex: number, colIndex: number): boolean {
+    if (!normalizedSelection.cellSelectionPredicate) return true;
+    const state = store.getState();
+    const column = state.columns[colIndex];
+    if (!column) return false;
+    const row = state.data[visibleToDataIndex(rowIndex)];
+    if (!row) return false;
+    return normalizedSelection.cellSelectionPredicate({
+      row,
+      column: column as NormalizedColumnDef<unknown>,
+      rowIndex,
+      colIndex,
+      value: getCellValue(row, column),
+    });
+  }
+
+  function isNativeTextSelectableCell(rowIndex: number, colIndex: number): boolean {
+    return (
+      normalizedSelection.mode !== 'off' &&
+      !!normalizedSelection.cellSelectionPredicate &&
+      !isCellSelectableForSelection(rowIndex, colIndex)
+    );
+  }
+
+  function isCellEditableForFill(rowIndex: number, colIndex: number): boolean {
+    const state = store.getState();
+    const column = state.columns[colIndex];
+    if (!column) return false;
+    const row = state.data[visibleToDataIndex(rowIndex)];
+    if (!row) return false;
+    if (column.editable === false) return false;
+    if (typeof column.editable === 'function' && !column.editable(row, column)) return false;
+    if (normalizedSelection.fillHandlePredicate) {
+      return normalizedSelection.fillHandlePredicate({
+        row,
+        column: column as NormalizedColumnDef<unknown>,
+        rowIndex,
+        colIndex,
+        value: getCellValue(row, column),
+      });
+    }
+    return true;
+  }
+
+  function isRangeEditableForFill(range: { startRow: number; endRow: number; startCol: number; endCol: number }): boolean {
+    for (let r = range.startRow; r <= range.endRow; r++) {
+      for (let c = range.startCol; c <= range.endCol; c++) {
+        if (!isCellEditableForFill(r, c)) return false;
+      }
+    }
+    return true;
+  }
+
+  function isSameCell(a: CellPosition, b: CellPosition): boolean {
+    return a.rowIndex === b.rowIndex && a.colIndex === b.colIndex;
+  }
+
+  function navigateSelectableCell(
+    active: CellPosition,
+    direction: ReturnType<typeof getNavigationDirection>,
+    bounds: Parameters<typeof navigateCell>[2],
+  ): CellPosition | null {
+    if (!direction) return null;
+    let current = active;
+    const maxSteps = Math.max(1, bounds.rowCount * bounds.colCount);
+    for (let step = 0; step < maxSteps; step++) {
+      const next = navigateCell(current, direction, bounds);
+      if (isSameCell(next, current)) return null;
+      if (isCellSelectableForSelection(next.rowIndex, next.colIndex)) return next;
+      current = next;
+    }
+    return null;
+  }
+
+  function navigateSelectableTab(
+    active: CellPosition,
+    forward: boolean,
+    bounds: Parameters<typeof navigateTab>[2],
+  ): CellPosition | null {
+    let current = active;
+    const maxSteps = Math.max(1, bounds.rowCount * bounds.colCount);
+    for (let step = 0; step < maxSteps; step++) {
+      const next = navigateTab(current, forward, bounds);
+      if (isSameCell(next, active)) return null;
+      if (isCellSelectableForSelection(next.rowIndex, next.colIndex)) return next;
+      current = next;
+    }
+    return null;
+  }
+
   /** Sync aria-rowcount/aria-colcount on the grid container. */
   function updateAriaCounts(): void {
     if (!container) return;
@@ -443,7 +533,7 @@ export function createGrid<
       0, // no frozen col handling in main pipeline
       0,
       state.frozen.top,
-      { force: forceBodyRender },
+      { force: forceBodyRender, isNativeTextSelectable: isNativeTextSelectableCell },
     );
 
     // Render frozen columns into separate overlay (outside scroll container)
@@ -462,7 +552,7 @@ export function createGrid<
         frozenCols, // apply last-frozen-col class
         0,
         state.frozen.top,
-        { force: forceBodyRender },
+        { force: forceBodyRender, isNativeTextSelectable: isNativeTextSelectableCell },
       );
 
       // Update frozen overlay width and clip scroll container
@@ -632,7 +722,10 @@ export function createGrid<
     }
 
     // Render selection layer (readonly cols are cached on ColumnManager, rebuilt on setColumns)
-    selectionLayer?.render(state.selection, measurements, columnManager.getReadonlyColumns());
+    selectionLayer?.render(state.selection, measurements, {
+      readonlyColumns: columnManager.getReadonlyColumns(),
+      canShowFillHandle: isRangeEditableForFill,
+    });
 
     emitter.emit('render', visibleRange);
   }
@@ -832,6 +925,19 @@ export function createGrid<
     const selectionMode = normalizedSelection.mode;
     if (selectionMode === 'off') return;
 
+    if (!isCellSelectableForSelection(cell.rowIndex, cell.colIndex)) {
+      const currentSelection = store.getState().selection;
+      if (currentSelection.active || currentSelection.ranges.length > 0) {
+        const clearedSelection = createEmptySelection();
+        store.setSelection(clearedSelection);
+        emitter.emit('selection:change', clearedSelection);
+        scheduleRender();
+      }
+      return;
+    }
+
+    container?.focus({ preventScroll: true });
+
     const isCtrlHeld = event.ctrlKey || event.metaKey;
     const allowRange = selectionMode === 'range';
     const allowMultiRange = allowRange && normalizedSelection.multiRange;
@@ -967,16 +1073,18 @@ export function createGrid<
         // Shift+arrow: extend range (range mode only)
         const lastRange = state.selection.ranges[state.selection.ranges.length - 1];
         if (lastRange) {
-          const end = navigateCell(
+          const end = navigateSelectableCell(
             { rowIndex: lastRange.endRow, colIndex: lastRange.endCol },
             direction,
             bounds,
           );
+          if (!end) return;
           const newSelection = extendSelection(state.selection, end);
           store.setSelection(newSelection);
         }
       } else {
-        const newActive = navigateCell(state.selection.active, direction, bounds);
+        const newActive = navigateSelectableCell(state.selection.active, direction, bounds);
+        if (!newActive) return;
         store.setSelection(createCellSelection(newActive));
         scrollCellIntoView(newActive);
       }
@@ -988,7 +1096,8 @@ export function createGrid<
     // Tab
     if (event.key === 'Tab') {
       event.preventDefault();
-      const newActive = navigateTab(state.selection.active, !event.shiftKey, bounds);
+      const newActive = navigateSelectableTab(state.selection.active, !event.shiftKey, bounds);
+      if (!newActive) return;
       store.setSelection(createCellSelection(newActive));
       scrollCellIntoView(newActive);
       emitter.emit('key:tab', state.selection.active, event.shiftKey ? 'backward' : 'forward');

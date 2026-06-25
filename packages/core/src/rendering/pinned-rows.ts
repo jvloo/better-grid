@@ -12,6 +12,7 @@ import type { NormalizedColumnDef } from '../columns/manager';
 import type { LayoutMeasurements } from '../virtualization/engine';
 import type { RenderingPipeline } from './pipeline';
 import { getCellValue, snapToDevicePixel } from '../utils';
+import { normalizeCellTextNodes, renderCellText } from './cell-text';
 
 export interface PinnedRowRendererDeps<TData = unknown> {
   /** Shared cell-type registry (for custom cellRenderer lookup) */
@@ -124,9 +125,15 @@ export function createPinnedRowRenderer<TData = unknown>(
       const top = rowIdx * rowH;
 
       for (let col = colStart; col < colEnd; col++) {
+        if (isCoveredByPriorPinnedSpan(rowData, rowIdx, col, columns)) {
+          continue;
+        }
+
         const column = columns[col]!;
         const left = snapToDevicePixel(measurements.colOffsets[col]!);
-        const width = snapToDevicePixel(measurements.colOffsets[col + 1]!) - left;
+        const colSpan = Math.max(1, Math.floor(getPinnedColSpan(rowData, rowIdx, column, col)));
+        const endCol = Math.min(col + colSpan, colEnd, columns.length);
+        const width = snapToDevicePixel(measurements.colOffsets[endCol]!) - left;
 
         const cell = document.createElement('div');
         let className = 'bg-cell bg-cell--pinned';
@@ -139,6 +146,10 @@ export function createPinnedRowRenderer<TData = unknown>(
         cell.className = className;
         cell.setAttribute('role', 'gridcell');
         cell.setAttribute('aria-colindex', String(col + 1));
+        if (colSpan > 1) {
+          cell.setAttribute('aria-colspan', String(colSpan));
+          cell.className += ' bg-cell--span';
+        }
         cell.style.position = 'absolute';
         cell.style.transform = `translate3d(${left}px, ${snapToDevicePixel(top)}px, 0)`;
         cell.style.width = `${width}px`;
@@ -173,10 +184,11 @@ export function createPinnedRowRenderer<TData = unknown>(
         } else if (column.cellType && deps.rendering.getCellType(column.cellType)) {
           deps.rendering.getCellType(column.cellType)!.render(cell, context as CellRenderContext);
         } else if (column.valueFormatter) {
-          cell.textContent = column.valueFormatter(value, rowData as never);
+          renderCellText(cell, column.valueFormatter(value, rowData as never));
         } else {
-          cell.textContent = value != null ? String(value) : '';
+          renderCellText(cell, value != null ? String(value) : '');
         }
+        normalizeCellTextNodes(cell);
 
         // Apply conditional cellStyle / cellClass
         if (column.cellStyle) {
@@ -194,4 +206,34 @@ export function createPinnedRowRenderer<TData = unknown>(
   }
 
   return { render };
+}
+
+function getPinnedColSpan<TData>(
+  row: TData,
+  rowIndex: number,
+  column: NormalizedColumnDef<TData>,
+  colIndex: number,
+): number {
+  const span = column.pinnedColSpan;
+  if (typeof span === 'function') {
+    return span({ row, rowIndex, column, colIndex }) ?? 1;
+  }
+  return span ?? 1;
+}
+
+function isCoveredByPriorPinnedSpan<TData>(
+  row: TData,
+  rowIndex: number,
+  colIndex: number,
+  columns: readonly NormalizedColumnDef<TData>[],
+): boolean {
+  for (let priorCol = 0; priorCol < colIndex; priorCol += 1) {
+    const priorColumn = columns[priorCol];
+    if (!priorColumn) continue;
+    const span = Math.max(1, Math.floor(getPinnedColSpan(row, rowIndex, priorColumn, priorCol)));
+    if (priorCol + span > colIndex) {
+      return true;
+    }
+  }
+  return false;
 }

@@ -362,6 +362,11 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               background: transparent;
               color: transparent;
             }
+            .bg-cell-editor::selection,
+            .bg-cell-editor-float > .bg-cell-editor::selection {
+              background: var(--bg-editor-selection-bg, Highlight);
+              color: var(--bg-editor-selection-color, HighlightText);
+            }
             .bg-cell--input-editable .bg-input-box--has-adornment {
               position: relative;
             }
@@ -457,13 +462,20 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
               right: 6px;
             }
             .bg-cell--input-editable .bg-input-box__value {
-              display: block;
-              align-items: center;
+              display: inline-block;
+              max-width: 100%;
               min-width: 0;
-              width: 100%;
+              width: auto;
               padding: 0 var(--bg-input-suffix-space, 0px) 0 var(--bg-input-prefix-space, 0px);
               box-sizing: border-box;
-              text-align: inherit;
+              text-align: center;
+              vertical-align: top;
+            }
+            .bg-cell--align-left.bg-cell--input-editable .bg-input-box__value {
+              text-align: left;
+            }
+            .bg-cell--align-right.bg-cell--input-editable .bg-input-box__value {
+              text-align: right;
             }
             .bg-cell--input-editable .bg-input-box__prefix,
             .bg-cell--input-editable .bg-input-box__suffix,
@@ -685,10 +697,16 @@ export function editing(options?: EditingOptions): GridPlugin<'editing', Editing
                   box.appendChild(suffixSpan);
                 }
               } else if (text) {
-                box.textContent = text;
+                const valueSpan = document.createElement('span');
+                valueSpan.className = 'bg-input-box__value';
+                valueSpan.textContent = text;
+                box.appendChild(valueSpan);
                 if (isPlaceholderText) box.classList.add('bg-input-box--placeholder');
               } else if (placeholder) {
-                box.textContent = placeholder;
+                const valueSpan = document.createElement('span');
+                valueSpan.className = 'bg-input-box__value';
+                valueSpan.textContent = placeholder;
+                box.appendChild(valueSpan);
                 box.classList.add('bg-input-box--placeholder');
               }
             };

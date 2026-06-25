@@ -293,6 +293,34 @@ body.bg-grid-resizing .bg-resize-handle:active {
   z-index: 1;
 }
 
+.bg-cell__text {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+  line-height: var(--bg-cell-text-line-height, normal);
+  user-select: inherit;
+  -webkit-user-select: inherit;
+}
+
+.bg-cell > :where(span, div, p):not(.bg-input-box):not(.bg-select-compound):not(.bg-select-compound-input-wrap):not(.bg-cell__text) {
+  display: inline-block;
+  max-width: 100%;
+  line-height: var(--bg-cell-text-line-height, normal) !important;
+  vertical-align: middle;
+}
+
+.bg-cell > :where(span, div, p):not(.bg-input-box):not(.bg-select-compound):not(.bg-select-compound-input-wrap):not(.bg-cell__text)
+  :where(span, div, p):not(.bg-input-box):not(.bg-input-box__value):not(.bg-input-box__prefix):not(.bg-input-box__suffix):not(.bg-input-box__unit) {
+  line-height: inherit !important;
+}
+
+.bg-hierarchy-content.bg-cell__text {
+  min-width: 0;
+}
+
 .bg-cell--selected {
   background: var(--bg-selection-bg, rgba(33, 133, 208, 0.08));
 }
@@ -303,6 +331,12 @@ body.bg-grid-resizing .bg-resize-handle:active {
    with the keyboard. Header cells get text but stay default-cursor since
    they're chrome, not data. */
 .bg-grid--text-selectable .bg-cell {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.bg-cell--native-text-selectable {
   user-select: text;
   -webkit-user-select: text;
   cursor: text;
@@ -448,8 +482,17 @@ body.bg-grid-resizing .bg-header-cell {
 }
 
 .bg-selection-range {
-  background: var(--bg-selection-range-bg, rgba(33, 133, 208, 0.1));
-  border: 1px solid var(--bg-selection-range-border, rgba(33, 133, 208, 0.4));
+  background: var(--bg-selection-range-bg, transparent);
+  border: 2px solid var(--bg-selection-range-border, var(--bg-active-border, #1a73e8));
+}
+
+.bg-selection-range--single {
+  background: var(--bg-selection-single-bg, transparent);
+  border: 2px solid var(--bg-active-border, #1a73e8);
+}
+
+.bg-fill-handle {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
 }
 
 /* ---------------------------------------------------------------------------
