@@ -25,7 +25,6 @@ export interface SelectionLayerViewState {
 }
 
 export class SelectionLayer {
-  private container: HTMLElement;
   private overlay: HTMLElement;
   private rangeLayer: HTMLElement;
   private handleLayer: HTMLElement;
@@ -42,7 +41,6 @@ export class SelectionLayer {
   private lastRenderHash: string | null = null;
 
   constructor(container: HTMLElement, rangeRoot?: HTMLElement, handleRoot?: HTMLElement) {
-    this.container = container;
     this.overlay = document.createElement('div');
     this.overlay.className = 'bg-selection-overlay';
     this.overlay.style.position = 'absolute';

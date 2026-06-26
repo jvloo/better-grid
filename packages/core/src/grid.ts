@@ -120,6 +120,8 @@ export function createGrid<
   let floatingHThumb: HTMLElement | null = null;
   let floatingVTrack: HTMLElement | null = null;
   let floatingVThumb: HTMLElement | null = null;
+  let freezeClipHTrack: HTMLElement | null = null;
+  let freezeClipHThumb: HTMLElement | null = null;
   let headerContainer: HTMLElement | null = null;
   let cellContainer: HTMLElement | null = null;
   let frozenColOverlay: HTMLElement | null = null;
@@ -134,6 +136,8 @@ export function createGrid<
   let freezeClipIndicator: HTMLElement | null = null;
   /** Current clip width in pixels. null = no clip active (full frozen width). */
   let freezeClipWidth: number | null = null;
+  /** Horizontal pan inside the clipped frozen-left overlay. */
+  let freezeClipScrollLeft = 0;
   let freezeClipInitialApplied = false;
   let pendingScrollRestore: ScrollState | null = null;
   let resizeObserver: ResizeObserver | null = null;
@@ -428,6 +432,8 @@ export function createGrid<
 
     const shouldRenderBody = opts.bodyDirty !== false || rangeChanged;
     if (!shouldRenderBody) {
+      clampFreezeClipScroll(measurements, state);
+      applyFrozenOverlayTransforms(state.scrollTop);
       return;
     }
 
@@ -476,6 +482,18 @@ export function createGrid<
       // Update frozen overlay width and clip scroll container
       const frozenWidth = measurements.colOffsets[frozenCols]!;
       frozenColOverlay!.style.width = `${frozenWidth}px`;
+      frozenHeaderOverlay!.style.width = `${frozenWidth}px`;
+      frozenHeaderOverlay!.style.right = 'auto';
+      frozenCellOverlay.style.width = `${frozenWidth}px`;
+      frozenCellOverlay.style.right = 'auto';
+      if (frozenPinnedTopContainer) {
+        frozenPinnedTopContainer.style.width = `${frozenWidth}px`;
+        frozenPinnedTopContainer.style.right = 'auto';
+      }
+      if (frozenPinnedBottomContainer) {
+        frozenPinnedBottomContainer.style.width = `${frozenWidth}px`;
+        frozenPinnedBottomContainer.style.right = 'auto';
+      }
       // When content is shorter than viewport, constrain height so shadow
       // doesn't extend past data. Otherwise let CSS bottom handle it.
       const contentHeight = measurements.totalHeight + headerHeight + pinnedTopH + pinnedBottomH;
@@ -496,6 +514,7 @@ export function createGrid<
 
       if (freezeClipWidth === null) {
         // No clip active — handle sits at the frozen boundary
+        freezeClipScrollLeft = 0;
         freezeClipHandle.style.left = `${fullFrozenWidth}px`;
         frozenColOverlay.style.width = `${fullFrozenWidth}px`;
       } else {
@@ -503,6 +522,7 @@ export function createGrid<
         const clampedWidth = clamp(freezeClipWidth, 0, fullFrozenWidth);
         frozenColOverlay.style.width = `${clampedWidth}px`;
         freezeClipHandle.style.left = `${clampedWidth}px`;
+        clampFreezeClipScroll(measurements, state);
       }
       // Re-apply scroll transforms with updated clip offset
       const scrollState = store.getState();
@@ -513,6 +533,7 @@ export function createGrid<
       if (headerContainer) {
         headerContainer.style.transform = `translate3d(${-scrollState.scrollLeft - clipOffset}px, 0, 0)`;
       }
+      applyFrozenOverlayTransforms(scrollState.scrollTop);
       freezeClipHandle.style.height = `${handleHeight}px`;
 
       // Visual hint: show a subtle clipped-edge indicator
@@ -734,12 +755,28 @@ export function createGrid<
     const multiplier = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1;
     const dy = e.deltaY * multiplier;
     const dx = e.deltaX * multiplier;
+    const target = e.target as Element | null;
+    const isFrozenTarget = !!target?.closest('.bg-grid__frozen-overlay');
     // Shift+scroll → horizontal scroll (standard UX convention)
+    let nextWheelTop = 0;
+    let nextWheelLeft = 0;
     if (e.shiftKey && dx === 0) {
-      pendingWheelLeft += dy;
+      nextWheelLeft = dy;
     } else {
-      pendingWheelTop += dy;
-      pendingWheelLeft += dx;
+      nextWheelTop = dy;
+      nextWheelLeft = dx;
+    }
+
+    if (isFrozenTarget && nextWheelLeft !== 0) {
+      const consumed = setFreezeClipScrollLeft(freezeClipScrollLeft + nextWheelLeft);
+      nextWheelLeft -= consumed;
+      if (Math.abs(nextWheelLeft) < 0.5) nextWheelLeft = 0;
+    }
+
+    pendingWheelTop += nextWheelTop;
+    pendingWheelLeft += nextWheelLeft;
+    if (pendingWheelTop === 0 && pendingWheelLeft === 0) {
+      return;
     }
     if (wheelFrame === null) {
       wheelFrame = requestAnimationFrame(flushPendingWheel);
@@ -755,6 +792,60 @@ export function createGrid<
     return Math.max(0, fullFrozenWidth - clamp(freezeClipWidth, 0, fullFrozenWidth));
   }
 
+  function getFreezeClipScrollMax(
+    measurements = virtualization.getMeasurements(),
+    state = store.getState(),
+  ): number {
+    if (freezeClipWidth === null) return 0;
+    const fullFrozenWidth = measurements.colOffsets[state.frozen.left] ?? 0;
+    const visibleFrozenWidth = clamp(freezeClipWidth, 0, fullFrozenWidth);
+    return Math.max(0, fullFrozenWidth - visibleFrozenWidth);
+  }
+
+  function clampFreezeClipScroll(
+    measurements = virtualization.getMeasurements(),
+    state = store.getState(),
+  ): boolean {
+    const next = clamp(freezeClipScrollLeft, 0, getFreezeClipScrollMax(measurements, state));
+    if (next === freezeClipScrollLeft) return false;
+    freezeClipScrollLeft = next;
+    return true;
+  }
+
+  function applyFrozenOverlayTransforms(scrollTop: number): void {
+    const frozenX = -snapToDevicePixel(freezeClipScrollLeft);
+    if (frozenHeaderOverlay) {
+      frozenHeaderOverlay.style.transform = `translate3d(${frozenX}px, 0, 0)`;
+    }
+    if (frozenCellOverlay) {
+      frozenCellOverlay.style.transform = `translate3d(${frozenX}px, ${-snapToDevicePixel(scrollTop)}px, 0)`;
+    }
+    if (frozenPinnedTopContainer) {
+      frozenPinnedTopContainer.style.transform = `translate3d(${frozenX}px, 0, 0)`;
+    }
+    if (frozenPinnedBottomContainer) {
+      frozenPinnedBottomContainer.style.transform = `translate3d(${frozenX}px, 0, 0)`;
+    }
+  }
+
+  function setFreezeClipScrollLeft(scrollLeft: number): number {
+    const previous = freezeClipScrollLeft;
+    freezeClipScrollLeft = clamp(scrollLeft, 0, getFreezeClipScrollMax());
+    if (freezeClipScrollLeft !== previous) {
+      applyFrozenOverlayTransforms(store.getState().scrollTop);
+      updateFreezeClipScrollbar();
+      selectionLayer?.invalidateLayout();
+      renderSelectionLayer(
+        store.getState(),
+        virtualization.getMeasurements(),
+        getPinnedTopHeight(),
+        getPinnedBottomHeight(),
+        getFreezeClipOffset(),
+      );
+    }
+    return freezeClipScrollLeft - previous;
+  }
+
   function getVisibleFrozenLeftWidth(measurements: LayoutMeasurements, state: GridState<TData>): number {
     const fullFrozenWidth = measurements.colOffsets[state.frozen.left] ?? 0;
     return freezeClipWidth !== null ? Math.min(freezeClipWidth, fullFrozenWidth) : fullFrozenWidth;
@@ -768,9 +859,7 @@ export function createGrid<
     if (headerContainer) {
       headerContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
     }
-    if (frozenCellOverlay) {
-      frozenCellOverlay.style.transform = `translate3d(0, ${-snapToDevicePixel(scrollTop)}px, 0)`;
-    }
+    applyFrozenOverlayTransforms(scrollTop);
     if (pinnedTopContainer) {
       pinnedTopContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
     }
@@ -1205,6 +1294,7 @@ export function createGrid<
 
   function scrollCellIntoView(cell: CellPosition): void {
     const measurements = virtualization.getMeasurements();
+    const state = store.getState();
     scrollCellIntoViewUI({
       cell,
       fakeScrollbar,
@@ -1212,8 +1302,23 @@ export function createGrid<
       colOffsets: measurements.colOffsets,
       rowOffsets: measurements.rowOffsets,
       headerHeight,
-      frozenLeftColumns: store.getState().frozen.left,
+      frozenLeftColumns: state.frozen.left,
     });
+
+    if (freezeClipWidth !== null && cell.colIndex < state.frozen.left) {
+      const fullFrozenWidth = measurements.colOffsets[state.frozen.left] ?? 0;
+      const visibleFrozenWidth = clamp(freezeClipWidth, 0, fullFrozenWidth);
+      const cellLeft = measurements.colOffsets[cell.colIndex] ?? 0;
+      const cellRight = measurements.colOffsets[cell.colIndex + 1] ?? cellLeft;
+      const viewLeft = freezeClipScrollLeft;
+      const viewRight = viewLeft + visibleFrozenWidth;
+
+      if (cellLeft < viewLeft) {
+        setFreezeClipScrollLeft(cellLeft);
+      } else if (cellRight > viewRight) {
+        setFreezeClipScrollLeft(cellRight - visibleFrozenWidth);
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1329,6 +1434,12 @@ export function createGrid<
       minVisibleColumns: freezeClipConfig.minVisible,
       setClipWidth: (width) => {
         freezeClipWidth = width;
+        if (width === null) {
+          freezeClipScrollLeft = 0;
+        } else {
+          clampFreezeClipScroll(measurements, state);
+        }
+        applyFloatingScrollbarOffsets();
         scheduleRender();
       },
       onComplete: (finalWidth, fullFrozenWidth) => {
@@ -1340,6 +1451,7 @@ export function createGrid<
   function restoreAllFrozenColumns(): void {
     if (freezeClipWidth !== null) {
       freezeClipWidth = null;
+      freezeClipScrollLeft = 0;
       scheduleRender();
       const measurements = virtualization.getMeasurements();
       const state = store.getState();
@@ -1479,6 +1591,7 @@ export function createGrid<
       floatingVTrack.style.bottom = `${bottom + scrollbarSize + bottomEdgeInset}px`;
       floatingVTrack.style.right = `${right}px`;
     }
+    updateFreezeClipScrollbar();
     floatingScrollbarMetricsDirty = true;
     updateFloatingScrollbarThumbs(true);
   }
@@ -1544,6 +1657,38 @@ export function createGrid<
         vMaxScroll > 0 && vMaxTravel > 0 ? (fakeScrollbar.scrollTop / vMaxScroll) * vMaxTravel : 0;
       floatingVThumb.style.transform = `translate3d(0, ${snapToDevicePixel(offset)}px, 0)`;
     }
+    updateFreezeClipScrollbar();
+  }
+
+  function updateFreezeClipScrollbar(): void {
+    if (!isFloatingScrollbar || !freezeClipHTrack || !freezeClipHThumb || !fakeScrollbar) return;
+
+    const measurements = virtualization.getMeasurements();
+    const state = store.getState();
+    const fullFrozenWidth = measurements.colOffsets[state.frozen.left] ?? 0;
+    const visibleFrozenWidth =
+      freezeClipWidth !== null ? clamp(freezeClipWidth, 0, fullFrozenWidth) : fullFrozenWidth;
+    const maxScroll = getFreezeClipScrollMax(measurements, state);
+    const hasScrollableClip = maxScroll > 0 && visibleFrozenWidth > 0;
+    const bottom = resolveScrollbarOffset('verticalOffsetBottom');
+    const bottomEdgeInset = getFloatingScrollbarBottomInset();
+
+    freezeClipHTrack.style.left = '0px';
+    freezeClipHTrack.style.width = `${visibleFrozenWidth}px`;
+    freezeClipHTrack.style.bottom = `${bottom + bottomEdgeInset}px`;
+    freezeClipHTrack.style.visibility = hasScrollableClip ? 'visible' : 'hidden';
+
+    const trackWidth = freezeClipHTrack.clientWidth || visibleFrozenWidth;
+    const thumbWidth =
+      hasScrollableClip && trackWidth > 0
+        ? clamp(Math.round((visibleFrozenWidth / fullFrozenWidth) * trackWidth), 20, trackWidth)
+        : trackWidth;
+    const maxTravel = Math.max(0, trackWidth - thumbWidth);
+    const offset =
+      hasScrollableClip && maxTravel > 0 ? (freezeClipScrollLeft / maxScroll) * maxTravel : 0;
+
+    freezeClipHThumb.style.width = `${thumbWidth}px`;
+    freezeClipHThumb.style.transform = `translate3d(${snapToDevicePixel(offset)}px, 0, 0)`;
   }
 
   function bindFloatingThumbDrag(
@@ -1585,6 +1730,49 @@ export function createGrid<
         const nextScroll = clamp(scrollStart + scrollDelta, 0, maxScroll);
         if (isHorizontal) fakeScrollbar!.scrollLeft = nextScroll;
         else fakeScrollbar!.scrollTop = nextScroll;
+      };
+      const onPointerUp = (upEvent: PointerEvent): void => {
+        track.releasePointerCapture(upEvent.pointerId);
+        track.removeEventListener('pointermove', onPointerMove);
+        track.removeEventListener('pointerup', onPointerUp);
+        track.removeEventListener('pointercancel', onPointerUp);
+      };
+
+      track.addEventListener('pointermove', onPointerMove);
+      track.addEventListener('pointerup', onPointerUp);
+      track.addEventListener('pointercancel', onPointerUp);
+    });
+  }
+
+  function bindFreezeClipThumbDrag(track: HTMLElement, thumb: HTMLElement): void {
+    track.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
+      const trackRect = track.getBoundingClientRect();
+      const thumbRect = thumb.getBoundingClientRect();
+      const trackLength = trackRect.width;
+      const thumbLength = thumbRect.width;
+      const maxTravel = Math.max(0, trackLength - thumbLength);
+      const maxScroll = getFreezeClipScrollMax();
+      if (maxTravel <= 0 || maxScroll <= 0) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      track.setPointerCapture(event.pointerId);
+
+      const clientStart = event.clientX;
+      let scrollStart = freezeClipScrollLeft;
+
+      if (event.target !== thumb) {
+        const nextThumbOffset = clamp(clientStart - trackRect.left - thumbLength / 2, 0, maxTravel);
+        scrollStart = (nextThumbOffset / maxTravel) * maxScroll;
+        setFreezeClipScrollLeft(scrollStart);
+      }
+
+      const onPointerMove = (moveEvent: PointerEvent): void => {
+        moveEvent.preventDefault();
+        const delta = moveEvent.clientX - clientStart;
+        const scrollDelta = (delta / maxTravel) * maxScroll;
+        setFreezeClipScrollLeft(scrollStart + scrollDelta);
       };
       const onPointerUp = (upEvent: PointerEvent): void => {
         track.releasePointerCapture(upEvent.pointerId);
@@ -1940,6 +2128,17 @@ export function createGrid<
         floatingVTrack.appendChild(floatingVThumb);
         container.appendChild(floatingVTrack);
 
+        if (frozenLeftCols > 0 && freezeClipConfig.enabled) {
+          freezeClipHTrack = document.createElement('div');
+          freezeClipHTrack.className = 'bg-grid__freeze-clip-h-track';
+          freezeClipHTrack.style.height = trackSize;
+          freezeClipHThumb = document.createElement('div');
+          freezeClipHThumb.className = 'bg-grid__freeze-clip-h-thumb bg-grid__float-h-thumb';
+          freezeClipHTrack.appendChild(freezeClipHThumb);
+          container.appendChild(freezeClipHTrack);
+          bindFreezeClipThumbDrag(freezeClipHTrack, freezeClipHThumb);
+        }
+
         applyFloatingScrollbarOffsets();
         bindFloatingThumbDrag(floatingHTrack, floatingHThumb, 'horizontal');
         bindFloatingThumbDrag(floatingVTrack, floatingVThumb, 'vertical');
@@ -2205,6 +2404,8 @@ export function createGrid<
       floatingHThumb = null;
       floatingVTrack = null;
       floatingVThumb = null;
+      freezeClipHTrack = null;
+      freezeClipHThumb = null;
       headerContainer = null;
       cellContainer = null;
       frozenColOverlay = null;
@@ -2218,6 +2419,7 @@ export function createGrid<
       freezeClipIndicator = null;
       selectionLayer = null;
       resizeObserver = null;
+      freezeClipScrollLeft = 0;
       mounted = false;
       headerRenderer = null;
 
@@ -2452,6 +2654,7 @@ export function createGrid<
       if (freezeClipWidth !== null) {
         freezeClipWidth = null;
       }
+      freezeClipScrollLeft = 0;
       freezeClipInitialApplied = false;
       invalidateHeaders();
       recomputeMeasurements();
@@ -2481,6 +2684,7 @@ export function createGrid<
       if (freezeClipWidth !== null) {
         freezeClipWidth = null;
       }
+      freezeClipScrollLeft = 0;
       freezeClipInitialApplied = false;
       invalidateHeaders();
       recomputeMeasurements();
@@ -2513,12 +2717,15 @@ export function createGrid<
     setFreezeClipWidth(width: number | null): void {
       if (width === null) {
         freezeClipWidth = null;
+        freezeClipScrollLeft = 0;
       } else {
         const measurements = virtualization.getMeasurements();
         const state = store.getState();
         const fullWidth = measurements.colOffsets[state.frozen.left]!;
         freezeClipWidth = clamp(width, 0, fullWidth);
+        clampFreezeClipScroll(measurements, state);
       }
+      applyFloatingScrollbarOffsets();
       scheduleRender();
     },
 

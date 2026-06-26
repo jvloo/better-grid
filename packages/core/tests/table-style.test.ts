@@ -124,16 +124,16 @@ describe('table-style CSS rules', () => {
     expect(cssSource).not.toMatch(/\.bg-grid__float-v-track::-webkit-scrollbar-button/);
 
     const floatingThumbRule = cssSource.match(
-      /\.bg-grid__float-h-thumb,\s*\.bg-grid__float-v-thumb\s*\{([^}]*)\}/,
+      /\.bg-grid__float-h-thumb,\s*\.bg-grid__float-v-thumb,\s*\.bg-grid__freeze-clip-h-thumb\s*\{([^}]*)\}/,
     );
     expect(floatingThumbRule?.[1]).toMatch(/background:\s*var\(--bg-scrollbar-thumb,\s*#c1c1c1\)/);
     expect(floatingThumbRule?.[1]).toMatch(/border-radius:\s*4px/);
 
-    expect(cssSource).toMatch(/\.bg-grid__float-h-thumb\s*\{\s*height:\s*8px/);
+    expect(cssSource).toMatch(/\.bg-grid__float-h-thumb,\s*\.bg-grid__freeze-clip-h-thumb\s*\{\s*height:\s*8px/);
     expect(cssSource).toMatch(/\.bg-grid__float-v-thumb\s*\{\s*width:\s*8px/);
 
     const floatingTrackRule = cssSource.match(
-      /\.bg-grid__float-h-track,\s*\.bg-grid__float-v-track\s*\{([^}]*)\}/,
+      /\.bg-grid__float-h-track,\s*\.bg-grid__float-v-track,\s*\.bg-grid__freeze-clip-h-track\s*\{([^}]*)\}/,
     );
     expect(floatingTrackRule?.[1]).toMatch(/overflow:\s*hidden/);
 

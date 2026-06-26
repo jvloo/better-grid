@@ -70,7 +70,8 @@
    scroll containers. Native WebKit/Windows scrollbar buttons are therefore
    never rendered in floating mode. */
 .bg-grid__float-h-track,
-.bg-grid__float-v-track {
+.bg-grid__float-v-track,
+.bg-grid__freeze-clip-h-track {
   position: absolute;
   z-index: 11;
   pointer-events: auto;
@@ -80,7 +81,8 @@
   touch-action: none;
 }
 
-.bg-grid__float-h-track {
+.bg-grid__float-h-track,
+.bg-grid__freeze-clip-h-track {
   cursor: default;
 }
 
@@ -89,7 +91,8 @@
 }
 
 .bg-grid__float-h-thumb,
-.bg-grid__float-v-thumb {
+.bg-grid__float-v-thumb,
+.bg-grid__freeze-clip-h-thumb {
   position: absolute;
   left: 0;
   top: 0;
@@ -99,7 +102,8 @@
   will-change: transform;
 }
 
-.bg-grid__float-h-thumb {
+.bg-grid__float-h-thumb,
+.bg-grid__freeze-clip-h-thumb {
   height: 8px;
   cursor: default;
 }
@@ -110,7 +114,8 @@
 }
 
 .bg-grid__float-h-thumb:hover,
-.bg-grid__float-v-thumb:hover {
+.bg-grid__float-v-thumb:hover,
+.bg-grid__freeze-clip-h-thumb:hover {
   background: var(--bg-scrollbar-thumb-hover, #a0a0a0);
 }
 
