@@ -144,6 +144,26 @@ describe('table-style CSS rules', () => {
     expect(gridSource).toContain("floatingHThumb.className = 'bg-grid__float-h-thumb'");
     expect(gridSource).toContain("floatingVThumb.className = 'bg-grid__float-v-thumb'");
   });
+
+  test('resize and freeze-clip handles are centered on their logical boundary', () => {
+    const resizeHandleRule = cssSource.match(/\.bg-resize-handle\s*\{([^}]*)\}/);
+    expect(resizeHandleRule?.[1]).toMatch(/right:\s*-4px/);
+    expect(resizeHandleRule?.[1]).toMatch(/width:\s*8px/);
+
+    const freezeClipHandleRule = cssSource.match(/\.bg-freeze-clip-handle\s*\{([^}]*)\}/);
+    expect(freezeClipHandleRule?.[1]).toMatch(/margin-left:\s*-4px/);
+    expect(freezeClipHandleRule?.[1]).toMatch(/width:\s*8px/);
+  });
+
+  test('frozen overlay does not block non-frozen controls', () => {
+    const frozenOverlayRule = cssSource.match(/\.bg-grid__frozen-overlay\s*\{([^}]*)\}/);
+    expect(frozenOverlayRule?.[1]).toMatch(/pointer-events:\s*none/);
+
+    const frozenCellRule = cssSource.match(
+      /\.bg-grid__frozen-overlay \.bg-cell,\s*\.bg-grid__frozen-overlay \.bg-header-cell\s*\{([^}]*)\}/,
+    );
+    expect(frozenCellRule?.[1]).toMatch(/pointer-events:\s*auto/);
+  });
 });
 
 describe('floating scrollbar layout', () => {

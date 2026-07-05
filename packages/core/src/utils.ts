@@ -46,6 +46,21 @@ export function clamp(v: number, lo: number, hi: number): number {
 }
 
 /**
+ * Convert browser client-space X deltas into the element's layout pixel space.
+ *
+ * This matters when the grid is inside a transformed parent, for example
+ * `transform: scale(0.8)`: pointer events report scaled client pixels, while
+ * column widths and frozen-column offsets remain unscaled layout pixels.
+ */
+export function getClientToLayoutScaleX(el: HTMLElement): number {
+  const rect = el.getBoundingClientRect();
+  if (rect.width <= 0) return 1;
+  const layoutWidth = el.clientWidth || el.offsetWidth || rect.width;
+  const scale = layoutWidth / rect.width;
+  return Number.isFinite(scale) && scale > 0 ? scale : 1;
+}
+
+/**
  * Parse a numeric string by stripping non-numeric characters (keeping digits,
  * `.` and `-`). Returns `undefined` for non-finite results (`NaN`, `±Infinity`).
  *

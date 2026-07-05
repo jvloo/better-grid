@@ -51,7 +51,7 @@ import { createHeaderRenderer, type HeaderRenderer } from './rendering/headers';
 import { createPinnedRowRenderer, getPinnedRowsHeight } from './rendering/pinned-rows';
 import { buildHierarchyState, buildInitialExpandedSet } from './hierarchy/build';
 
-import { clamp, getCellValue, snapToDevicePixel } from './utils';
+import { clamp, getCellValue, getClientToLayoutScaleX, snapToDevicePixel } from './utils';
 
 // Minimal ambient `process` declaration so bundlers can statically dead-code
 // eliminate dev-mode warnings when consumers build with NODE_ENV=production.
@@ -1330,9 +1330,12 @@ export function createGrid<
     const showResizeTooltip = tooltipConfig.enabled && tooltipConfig.columnResize;
     const startWidth = columnManager.getWidth(colIndex);
     const containerRect = container?.getBoundingClientRect();
+    const clientToLayoutScaleX = container ? getClientToLayoutScaleX(container) : 1;
+    const startBoundaryX =
+      containerRect ? (startEvent.clientX - containerRect.left) * clientToLayoutScaleX : 0;
     const maxWidth = column.maxWidth ?? options.columnDefaults?.maxWidth;
     const boundaryMaxWidth = containerRect
-      ? startWidth + Math.max(0, containerRect.right - 4 - startEvent.clientX)
+      ? startWidth + Math.max(0, (containerRect.right - 4 - startEvent.clientX) * clientToLayoutScaleX)
       : undefined;
     const effectiveMaxWidth =
       boundaryMaxWidth == null
@@ -1348,19 +1351,19 @@ export function createGrid<
     }
     const updateResizePreview = (width: number) => {
       if (!resizePreview || !container) return;
-      const rect = container.getBoundingClientRect();
-      const clientX = clamp(
-        startEvent.clientX + (width - startWidth),
-        rect.left + 4,
-        rect.right - 4,
+      const layoutX = clamp(
+        startBoundaryX + (width - startWidth),
+        4,
+        Math.max(4, container.clientWidth - 4),
       );
-      resizePreview.style.transform = `translate3d(${snapToDevicePixel(clientX - rect.left - 4)}px, 0, 0)`;
+      resizePreview.style.transform = `translate3d(${snapToDevicePixel(layoutX - 4)}px, 0, 0)`;
     };
     startColumnResizeDrag({
       startEvent,
       startWidth,
       minWidth: column.minWidth ?? options.columnDefaults?.minWidth,
       maxWidth: effectiveMaxWidth,
+      clientToLayoutScaleX,
       liveUpdate: false,
       onUpdate: (width) => instance.setColumnWidth(column.id, width),
       onPreview: (width) => updateResizePreview(width),
@@ -1432,6 +1435,7 @@ export function createGrid<
       colOffsets: measurements.colOffsets,
       frozenLeftColumns: state.frozen.left,
       minVisibleColumns: freezeClipConfig.minVisible,
+      clientToLayoutScaleX: getClientToLayoutScaleX(container!),
       setClipWidth: (width) => {
         freezeClipWidth = width;
         if (width === null) {

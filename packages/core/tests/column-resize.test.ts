@@ -63,6 +63,24 @@ describe('startColumnResize', () => {
     expect(onUpdate).toHaveBeenNthCalledWith(2, 250);
   });
 
+  it('converts scaled client deltas back to layout width deltas', () => {
+    const onUpdate = vi.fn();
+    const onPreview = vi.fn();
+    startColumnResize({
+      startEvent: pointerEvent('pointerdown', 100),
+      startWidth: 200,
+      clientToLayoutScaleX: 1.25,
+      onUpdate,
+      onPreview,
+    });
+
+    firePointerMove(140); // client delta +40 -> layout delta +50
+    flushRaf();
+
+    expect(onPreview).toHaveBeenLastCalledWith(250, 140, 0);
+    expect(onUpdate).toHaveBeenCalledWith(250);
+  });
+
   it('clamps width to minWidth when dragging left past the minimum', () => {
     const onUpdate = vi.fn();
     startColumnResize({

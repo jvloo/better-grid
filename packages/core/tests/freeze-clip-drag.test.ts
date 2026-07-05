@@ -1,9 +1,19 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startFreezeClipDrag } from '../src/ui/freeze-clip-drag';
+
+let originalRaf: typeof requestAnimationFrame;
+let originalCancelRaf: typeof cancelAnimationFrame;
+let rafCallbacks: Array<FrameRequestCallback | null> = [];
 
 function pointerEvent(type: string, clientX: number): PointerEvent {
   const ev = new PointerEvent(type, { clientX, bubbles: true, cancelable: true });
   return ev;
+}
+
+function flushRaf(): void {
+  const pending = rafCallbacks;
+  rafCallbacks = [];
+  pending.forEach((cb) => cb?.(0));
 }
 
 function makeContainerRect(left = 0): DOMRect {
@@ -11,8 +21,23 @@ function makeContainerRect(left = 0): DOMRect {
 }
 
 describe('startFreezeClipDrag', () => {
+  beforeEach(() => {
+    rafCallbacks = [];
+    originalRaf = globalThis.requestAnimationFrame;
+    originalCancelRaf = globalThis.cancelAnimationFrame;
+    globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      rafCallbacks.push(cb);
+      return rafCallbacks.length;
+    }) as typeof requestAnimationFrame;
+    globalThis.cancelAnimationFrame = ((id: number) => {
+      rafCallbacks[id - 1] = null;
+    }) as typeof cancelAnimationFrame;
+  });
+
   afterEach(() => {
     document.dispatchEvent(pointerEvent('pointerup', 0));
+    globalThis.requestAnimationFrame = originalRaf;
+    globalThis.cancelAnimationFrame = originalCancelRaf;
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
   });
@@ -33,7 +58,48 @@ describe('startFreezeClipDrag', () => {
     });
 
     document.dispatchEvent(pointerEvent('pointermove', 150));
+    flushRaf();
     expect(setClipWidth).toHaveBeenLastCalledWith(150);
+  });
+
+  it('converts scaled client coordinates back to layout clip width', () => {
+    const setClipWidth = vi.fn();
+    startFreezeClipDrag({
+      startEvent: pointerEvent('pointerdown', 240),
+      containerRect: makeContainerRect(),
+      colOffsets: [0, 100, 200, 300],
+      frozenLeftColumns: 3,
+      minVisibleColumns: 1,
+      clientToLayoutScaleX: 1.25,
+      setClipWidth,
+      onComplete: () => {},
+    });
+
+    document.dispatchEvent(pointerEvent('pointermove', 160)); // client x 160 -> layout x 200
+    flushRaf();
+    expect(setClipWidth).toHaveBeenLastCalledWith(200);
+  });
+
+  it('coalesces pointermove clip updates to one animation frame', () => {
+    const setClipWidth = vi.fn();
+    startFreezeClipDrag({
+      startEvent: pointerEvent('pointerdown', 300),
+      containerRect: makeContainerRect(),
+      colOffsets: [0, 100, 200, 300],
+      frozenLeftColumns: 3,
+      minVisibleColumns: 1,
+      setClipWidth,
+      onComplete: () => {},
+    });
+
+    document.dispatchEvent(pointerEvent('pointermove', 140));
+    document.dispatchEvent(pointerEvent('pointermove', 150));
+    document.dispatchEvent(pointerEvent('pointermove', 160));
+
+    expect(setClipWidth).not.toHaveBeenCalled();
+    flushRaf();
+    expect(setClipWidth).toHaveBeenCalledTimes(1);
+    expect(setClipWidth).toHaveBeenLastCalledWith(160);
   });
 
   it('clamps to minVisibleColumns width when dragged too far left', () => {
@@ -49,6 +115,7 @@ describe('startFreezeClipDrag', () => {
     });
 
     document.dispatchEvent(pointerEvent('pointermove', 50)); // would be 50, clamps to 200
+    flushRaf();
     expect(setClipWidth).toHaveBeenLastCalledWith(200);
   });
 
@@ -65,6 +132,7 @@ describe('startFreezeClipDrag', () => {
     });
 
     document.dispatchEvent(pointerEvent('pointermove', 295)); // 5px from full
+    flushRaf();
     expect(setClipWidth).toHaveBeenLastCalledWith(null);
   });
 

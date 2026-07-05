@@ -15,6 +15,11 @@ export interface StartColumnResizeOptions {
   minWidth?: number;
   /** Maximum allowed width, in pixels (defaults to no maximum if undefined) */
   maxWidth?: number;
+  /**
+   * Multiplier from browser client pixels to grid layout pixels. Use values
+   * greater than 1 when an ancestor scales the grid down with CSS transforms.
+   */
+  clientToLayoutScaleX?: number;
   /** Called with the new width on each pointermove */
   onUpdate: (width: number) => void;
   /**
@@ -52,6 +57,7 @@ export function startColumnResize({
   startWidth,
   minWidth = DEFAULT_MIN_WIDTH,
   maxWidth = DEFAULT_MAX_WIDTH,
+  clientToLayoutScaleX = 1,
   onUpdate,
   liveUpdate = true,
   onPreview,
@@ -60,6 +66,10 @@ export function startColumnResize({
   onComplete,
 }: StartColumnResizeOptions): void {
   const startX = startEvent.clientX;
+  const scaleX =
+    Number.isFinite(clientToLayoutScaleX) && clientToLayoutScaleX > 0
+      ? clientToLayoutScaleX
+      : 1;
   const lowerBound = Math.max(0, minWidth);
   const upperBound = Math.max(lowerBound, maxWidth);
   const clampWidth = (width: number) => Math.max(lowerBound, Math.min(upperBound, width));
@@ -101,7 +111,7 @@ export function startColumnResize({
   };
 
   const onPointerMove = (e: PointerEvent) => {
-    const delta = e.clientX - startX;
+    const delta = (e.clientX - startX) * scaleX;
     lastWidth = clampWidth(startWidth + delta);
     lastClientX = e.clientX;
     lastClientY = e.clientY;

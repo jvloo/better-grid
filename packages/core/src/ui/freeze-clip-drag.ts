@@ -18,6 +18,11 @@ export interface StartFreezeClipDragOptions {
   frozenLeftColumns: number;
   /** Minimum number of frozen columns that must remain visible */
   minVisibleColumns: number;
+  /**
+   * Multiplier from browser client pixels to grid layout pixels. Use values
+   * greater than 1 when an ancestor scales the grid down with CSS transforms.
+   */
+  clientToLayoutScaleX?: number;
   /** Update the clip width (null = no clip / fully restored) */
   setClipWidth: (width: number | null) => void;
   /** Called on pointerup with (finalWidth, fullFrozenWidth) */
@@ -30,6 +35,7 @@ export function startFreezeClipDrag({
   colOffsets,
   frozenLeftColumns,
   minVisibleColumns,
+  clientToLayoutScaleX = 1,
   setClipWidth,
   onComplete,
 }: StartFreezeClipDragOptions): void {
@@ -39,22 +45,45 @@ export function startFreezeClipDrag({
   const fullFrozenWidth = colOffsets[frozenLeftColumns] ?? 0;
   const minCols = Math.min(minVisibleColumns, frozenLeftColumns);
   const minWidth = minCols > 0 ? (colOffsets[minCols] ?? 0) : 0;
+  const scaleX =
+    Number.isFinite(clientToLayoutScaleX) && clientToLayoutScaleX > 0
+      ? clientToLayoutScaleX
+      : 1;
   let latestWidth: number | null = null;
+  let hasLatestWidth = false;
+  let rafId: number | null = null;
+
+  const flushClipWidth = () => {
+    rafId = null;
+    if (!hasLatestWidth) return;
+    setClipWidth(latestWidth);
+  };
+
+  const scheduleClipWidth = () => {
+    if (rafId === null) {
+      rafId = requestAnimationFrame(flushClipWidth);
+    }
+  };
 
   const onPointerMove = (e: PointerEvent) => {
-    const currentX = e.clientX - containerRect.left;
+    const currentX = (e.clientX - containerRect.left) * scaleX;
     const clampedWidth = Math.max(minWidth, Math.min(fullFrozenWidth, currentX));
     if (clampedWidth >= fullFrozenWidth - SNAP_BACK_THRESHOLD) {
       latestWidth = null;
     } else {
       latestWidth = clampedWidth;
     }
-    setClipWidth(latestWidth);
+    hasLatestWidth = true;
+    scheduleClipWidth();
   };
 
   const onPointerUp = () => {
     document.removeEventListener('pointermove', onPointerMove);
     document.removeEventListener('pointerup', onPointerUp);
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      flushClipWidth();
+    }
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
     onComplete(latestWidth ?? fullFrozenWidth, fullFrozenWidth);
