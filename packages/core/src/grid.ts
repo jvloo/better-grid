@@ -506,50 +506,7 @@ export function createGrid<
       }
     }
 
-    // Freeze clip: constrain frozen overlay width when clip is active
-    if (freezeClipHandle && frozenColOverlay) {
-      const fullFrozenWidth = measurements.colOffsets[frozenCols]!;
-      const clipContentHeight = measurements.totalHeight + headerHeight;
-      const handleHeight = Math.min(clipContentHeight, viewport!.clientHeight);
-
-      if (freezeClipWidth === null) {
-        // No clip active — handle sits at the frozen boundary
-        freezeClipScrollLeft = 0;
-        freezeClipHandle.style.left = `${fullFrozenWidth}px`;
-        frozenColOverlay.style.width = `${fullFrozenWidth}px`;
-      } else {
-        // Clip active — constrain overlay width, position handle at clip edge
-        const clampedWidth = clamp(freezeClipWidth, 0, fullFrozenWidth);
-        frozenColOverlay.style.width = `${clampedWidth}px`;
-        freezeClipHandle.style.left = `${clampedWidth}px`;
-        clampFreezeClipScroll(measurements, state);
-      }
-      // Re-apply scroll transforms with updated clip offset
-      const scrollState = store.getState();
-      const clipOffset = getFreezeClipOffset();
-      if (cellContainer) {
-        cellContainer.style.transform = `translate3d(${-scrollState.scrollLeft - clipOffset}px, ${-scrollState.scrollTop}px, 0)`;
-      }
-      if (headerContainer) {
-        headerContainer.style.transform = `translate3d(${-scrollState.scrollLeft - clipOffset}px, 0, 0)`;
-      }
-      applyFrozenOverlayTransforms(scrollState.scrollTop);
-      freezeClipHandle.style.height = `${handleHeight}px`;
-
-      // Visual hint: show a subtle clipped-edge indicator
-      if (freezeClipIndicator) {
-        const isClipped = freezeClipWidth !== null && freezeClipWidth < fullFrozenWidth;
-        if (isClipped) {
-          const clampedWidth = clamp(freezeClipWidth!, 0, fullFrozenWidth);
-          freezeClipIndicator.style.display = '';
-          freezeClipIndicator.style.left = `${clampedWidth}px`;
-          freezeClipIndicator.style.top = '0';
-          freezeClipIndicator.style.height = `${handleHeight}px`;
-        } else {
-          freezeClipIndicator.style.display = 'none';
-        }
-      }
-    }
+    applyFreezeClipVisuals(measurements, state);
 
     const pinnedStartCol = Math.max(visibleRange.startCol, frozenCols);
     const pinnedEndCol = visibleRange.endCol;
@@ -866,6 +823,51 @@ export function createGrid<
     if (pinnedBottomContainer) {
       pinnedBottomContainer.style.transform = `translate3d(${-scrollLeft - clipOffset}px, 0, 0)`;
     }
+  }
+
+  function applyFreezeClipVisuals(measurements: LayoutMeasurements, state: GridState<TData>): void {
+    if (!freezeClipHandle || !frozenColOverlay || !viewport) return;
+
+    const frozenCols = state.frozen.left;
+    const fullFrozenWidth = measurements.colOffsets[frozenCols] ?? 0;
+    const clipContentHeight = measurements.totalHeight + headerHeight;
+    const handleHeight = Math.min(clipContentHeight, viewport.clientHeight);
+    const visibleFrozenWidth =
+      freezeClipWidth === null ? fullFrozenWidth : clamp(freezeClipWidth, 0, fullFrozenWidth);
+
+    if (freezeClipWidth === null) {
+      freezeClipScrollLeft = 0;
+    } else {
+      clampFreezeClipScroll(measurements, state);
+    }
+
+    freezeClipHandle.style.left = `${visibleFrozenWidth}px`;
+    freezeClipHandle.style.height = `${handleHeight}px`;
+    frozenColOverlay.style.width = `${visibleFrozenWidth}px`;
+
+    const scrollState = store.getState();
+    applyScrollTransforms(scrollState.scrollTop, scrollState.scrollLeft);
+
+    if (freezeClipIndicator) {
+      const isClipped = freezeClipWidth !== null && visibleFrozenWidth < fullFrozenWidth;
+      if (isClipped) {
+        freezeClipIndicator.style.display = '';
+        freezeClipIndicator.style.left = `${visibleFrozenWidth}px`;
+        freezeClipIndicator.style.top = '0';
+        freezeClipIndicator.style.height = `${handleHeight}px`;
+      } else {
+        freezeClipIndicator.style.display = 'none';
+      }
+    }
+
+    updateFreezeClipScrollbar();
+    renderSelectionLayer(
+      scrollState,
+      measurements,
+      getPinnedTopHeight(),
+      getPinnedBottomHeight(),
+      getFreezeClipOffset(),
+    );
   }
 
   function setScrollPosition(
@@ -1444,9 +1446,10 @@ export function createGrid<
           clampFreezeClipScroll(measurements, state);
         }
         applyFloatingScrollbarOffsets();
-        scheduleRender();
+        applyFreezeClipVisuals(measurements, store.getState());
       },
       onComplete: (finalWidth, fullFrozenWidth) => {
+        scheduleRender();
         emitter.emit('frozen:clip', finalWidth, fullFrozenWidth);
       },
     });
