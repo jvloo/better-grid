@@ -1,6 +1,6 @@
 {
   "name": "@better-grid/react",
-  "version": "1.0.61",
+  "version": "1.0.62",
   "description": "React adapter for Better Grid",
   "license": "MIT",
   "type": "module",
@@ -41,8 +41,8 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "@better-grid/core": "1.0.59",
-    "@better-grid/plugins": "1.0.66"
+    "@better-grid/core": "1.0.60",
+    "@better-grid/plugins": "1.0.67"
   },
   "peerDependencies": {
     "react": ">=18.0.0",

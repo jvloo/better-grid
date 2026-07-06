@@ -146,9 +146,13 @@ describe('table-style CSS rules', () => {
   });
 
   test('resize and freeze-clip handles are centered on their logical boundary', () => {
+    const headerCellRule = cssSource.match(/\.bg-header-cell\s*\{([^}]*)\}/);
+    expect(headerCellRule?.[1]).toMatch(/overflow:\s*visible/);
+
     const resizeHandleRule = cssSource.match(/\.bg-resize-handle\s*\{([^}]*)\}/);
     expect(resizeHandleRule?.[1]).toMatch(/right:\s*-4px/);
     expect(resizeHandleRule?.[1]).toMatch(/width:\s*8px/);
+    expect(resizeHandleRule?.[1]).toMatch(/z-index:\s*20/);
 
     const freezeClipHandleRule = cssSource.match(/\.bg-freeze-clip-handle\s*\{([^}]*)\}/);
     expect(freezeClipHandleRule?.[1]).toMatch(/margin-left:\s*-4px/);
