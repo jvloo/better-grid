@@ -88,6 +88,10 @@ function resetAppliedStyles(el: HTMLElement): void {
   (el as StyledElement).__bgAppliedStyleKeys = undefined;
 }
 
+function hideRecycledElement(el: HTMLElement): void {
+  el.style.setProperty('display', 'none', 'important');
+}
+
 export class RenderingPipeline<TData = unknown> {
   private cellPool = new Map<number, HTMLElement>();
   private cleanupFns = new Map<number, () => void>();
@@ -145,11 +149,13 @@ export class RenderingPipeline<TData = unknown> {
     frozenTopRows = 0,
     opts: { force?: boolean } = {},
   ): void {
+    const renderStartRow = Math.min(startRow, data.length);
+    const renderEndRow = Math.min(endRow, data.length);
     const visibleKeys = this.visibleKeys;
     visibleKeys.clear();
 
     // Phase 1: Collect cells to visible set, identify which are new
-    for (let row = startRow; row < endRow; row++) {
+    for (let row = renderStartRow; row < renderEndRow; row++) {
       for (let col = startCol; col < endCol; col++) {
         visibleKeys.add(cellKey(row, col));
       }
@@ -163,18 +169,19 @@ export class RenderingPipeline<TData = unknown> {
       const visibleRowBgs = this.visibleRowBgs;
       visibleRowBgs.clear();
       const totalWidth = measurements.colOffsets[measurements.colOffsets.length - 1] ?? 0;
-      for (let row = startRow; row < endRow; row++) {
+      for (let row = renderStartRow; row < renderEndRow; row++) {
         visibleRowBgs.add(row);
       }
       // Recycle invisible row bgs
       for (const [row, el] of this.rowBgPool) {
         if (!visibleRowBgs.has(row)) {
+          hideRecycledElement(el);
           this.rowBgRecyclePool.push(el);
           this.rowBgPool.delete(row);
         }
       }
       // Render visible row bgs, reusing recycled elements
-      for (let row = startRow; row < endRow; row++) {
+      for (let row = renderStartRow; row < renderEndRow; row++) {
         let strip = this.rowBgPool.get(row);
         if (!strip) {
           strip = this.rowBgRecyclePool.pop();
@@ -215,13 +222,14 @@ export class RenderingPipeline<TData = unknown> {
         this.cleanupFns.delete(key);
         this.cellMeta.delete(key);
         this.frozenCells.delete(key);
+        hideRecycledElement(element);
         this.recyclePool.push(element);
         this.cellPool.delete(key);
       }
     }
 
     // Phase 3: Render visible cells, reusing recycled elements
-    for (let row = startRow; row < endRow; row++) {
+    for (let row = renderStartRow; row < renderEndRow; row++) {
       for (let col = startCol; col < endCol; col++) {
         const key = cellKey(row, col);
 
@@ -414,7 +422,7 @@ export class RenderingPipeline<TData = unknown> {
     while (this.recyclePool.length > cellCap) {
       this.recyclePool.pop()!.remove();
     }
-    const visibleRows = Math.max(0, endRow - startRow);
+    const visibleRows = Math.max(0, renderEndRow - renderStartRow);
     const rowBgCap = Math.ceil(visibleRows * 1.5);
     while (this.rowBgRecyclePool.length > rowBgCap) {
       this.rowBgRecyclePool.pop()!.remove();
