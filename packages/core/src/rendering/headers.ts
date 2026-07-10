@@ -6,7 +6,7 @@
 // deps so it can be tested in isolation with mocked DOM + mock callbacks.
 // ============================================================================
 
-import type { ColumnDef, HeaderRow, GridState } from '../types';
+import type { ColumnDef, HeaderCell, HeaderRow, GridState } from '../types';
 import type { LayoutMeasurements } from '../virtualization/engine';
 import type { Tooltip } from '../ui/tooltip';
 import { snapToDevicePixel } from '../utils';
@@ -46,6 +46,12 @@ export interface HeaderRendererDeps {
 export interface HeaderRenderer<TData = unknown> {
   /** Render headers for the given state + measurements. Idempotent when not invalidated. */
   render(state: GridState<TData>, measurements: LayoutMeasurements): void;
+  /** Replace the active header layout without rebuilding the grid instance. */
+  setLayout(
+    headerRows: readonly HeaderRow[] | undefined,
+    headerHeight: number,
+    singleHeaderRowHeight: number,
+  ): void;
   /** Mark headers as dirty — next render() will rebuild them */
   invalidate(): void;
 }
@@ -66,6 +72,8 @@ interface HeaderCellOpts {
   align?: 'left' | 'center' | 'right';
   /** Number of data columns this cell spans (for aria-colspan). Defaults to 1. */
   colSpan?: number;
+  headerCell?: HeaderCell;
+  headerRowIndex?: number;
 }
 
 export function createHeaderRenderer<TData = unknown>(
@@ -73,6 +81,9 @@ export function createHeaderRenderer<TData = unknown>(
 ): HeaderRenderer<TData> {
   let rendered = false;
   let tooltipDelegationAttached = false;
+  let currentHeaderRows = deps.headerRows;
+  let currentHeaderHeight = deps.headerHeight;
+  let currentSingleHeaderRowHeight = deps.singleHeaderRowHeight;
 
   // Delegated tooltip handlers — attached once per renderer lifetime on the
   // header container(s), replacing N per-cell mouseenter/mouseleave pairs.
@@ -140,7 +151,7 @@ export function createHeaderRenderer<TData = unknown>(
     deps.headerContainer.innerHTML = '';
     if (deps.frozenHeaderOverlay) deps.frozenHeaderOverlay.innerHTML = '';
 
-    if (deps.headerRows && deps.headerRows.length > 0) {
+    if (currentHeaderRows && currentHeaderRows.length > 0) {
       renderMultiHeaders(state, measurements);
     } else {
       renderSingleHeaders(state, measurements);
@@ -149,6 +160,17 @@ export function createHeaderRenderer<TData = unknown>(
 
   function invalidate(): void {
     rendered = false;
+  }
+
+  function setLayout(
+    headerRows: readonly HeaderRow[] | undefined,
+    headerHeight: number,
+    singleHeaderRowHeight: number,
+  ): void {
+    currentHeaderRows = headerRows;
+    currentHeaderHeight = headerHeight;
+    currentSingleHeaderRowHeight = singleHeaderRowHeight;
+    invalidate();
   }
 
   function renderSingleHeaders(state: GridState<TData>, measurements: LayoutMeasurements): void {
@@ -163,7 +185,7 @@ export function createHeaderRenderer<TData = unknown>(
         left,
         top: 0,
         width,
-        height: deps.headerHeight,
+        height: currentHeaderHeight,
         content: column.headerName,
         colIndex: col,
         isFrozen,
@@ -186,11 +208,11 @@ export function createHeaderRenderer<TData = unknown>(
   }
 
   function renderMultiHeaders(state: GridState<TData>, measurements: LayoutMeasurements): void {
-    const headerRows = deps.headerRows!;
+    const headerRows = currentHeaderRows!;
     let topOffset = 0;
     const totalRows = headerRows.length;
     const getHeaderRowHeight = (rowIdx: number): number =>
-      headerRows[rowIdx]?.height ?? deps.singleHeaderRowHeight;
+      headerRows[rowIdx]?.height ?? currentSingleHeaderRowHeight;
     const getHeaderSpanHeight = (rowIdx: number, rowSpan: number): number => {
       let height = 0;
       const endRow = Math.min(totalRows, rowIdx + rowSpan);
@@ -306,6 +328,8 @@ export function createHeaderRenderer<TData = unknown>(
             resizeColIndex: frozenLastCol,
             resizeHandleTop: groupSpanEndCols.has(frozenLastCol) ? -topOffset : undefined,
             colSpan: frozenCols - colIndex,
+            headerCell: cell,
+            headerRowIndex: rowIdx,
           });
           if (span > 1) frozenEl.classList.add('bg-header-cell--span');
           if (!reachesLastRow) frozenEl.classList.add('bg-header-cell--group');
@@ -364,6 +388,8 @@ export function createHeaderRenderer<TData = unknown>(
             resizeHandleTop: reachesLastRow && groupSpanEndCols.has(lastColInSpan) ? -topOffset : undefined,
             colSpan: span,
             align,
+            headerCell: cell,
+            headerRowIndex: rowIdx,
           });
 
           if (span > 1) {
@@ -421,6 +447,15 @@ export function createHeaderRenderer<TData = unknown>(
     if (opts.align) textSpan.style.textAlign = opts.align;
     textSpan.textContent = opts.content;
     cell.appendChild(textSpan);
+
+    if (opts.headerCell?.headerRenderer) {
+      textSpan.replaceChildren();
+      opts.headerCell.headerRenderer(textSpan, {
+        headerCell: opts.headerCell,
+        rowIndex: opts.headerRowIndex ?? 0,
+        columnIndex: opts.colIndex,
+      });
+    }
 
     // Tooltip on hover (when text is clipped) is handled via a single pair of
     // delegated mouseover/mouseout listeners on the header container(s).
@@ -532,5 +567,5 @@ export function createHeaderRenderer<TData = unknown>(
     }
   }
 
-  return { render, invalidate };
+  return { render, setLayout, invalidate };
 }

@@ -374,6 +374,49 @@ describe('createHeaderRenderer', () => {
     expect(groupLabel).toBe('Group');
   });
 
+  it('renders custom multi-row header content without replacing native resize wiring', () => {
+    const headerRenderer = vi.fn((container: HTMLElement) => {
+      const button = document.createElement('button');
+      button.textContent = 'Hide';
+      container.appendChild(button);
+    });
+    const headerRows: HeaderRow[] = [
+      {
+        id: 'groups',
+        cells: [
+          { id: 'group', content: 'Group', colSpan: 2, headerRenderer },
+        ],
+      },
+      {
+        id: 'columns',
+        cells: [
+          { id: 'h-a', content: 'A', columnId: 'a' },
+          { id: 'h-b', content: 'B', columnId: 'b' },
+        ],
+      },
+    ];
+    const { headerContainer } = setup(
+      [
+        { id: 'a', headerName: 'A', resizable: true } as ColumnDef,
+        { id: 'b', headerName: 'B', resizable: true } as ColumnDef,
+      ],
+      {},
+      headerRows,
+    );
+
+    const group = headerContainer.querySelector<HTMLElement>('.bg-header-cell--group');
+    expect(group?.querySelector('button')?.textContent).toBe('Hide');
+    expect(headerRenderer).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ rowIndex: 0, columnIndex: 0 }),
+    );
+
+    const leaf = Array.from(headerContainer.querySelectorAll<HTMLElement>('.bg-header-cell'))
+      .find((cell) => cell.dataset.col === '1' && !cell.classList.contains('bg-header-cell--group'));
+    expect(leaf?.querySelector('.bg-resize-handle')).not.toBeNull();
+    expect(leaf?.querySelector('.bg-header-cell__text .bg-resize-handle')).toBeNull();
+  });
+
   it('sizes row-spanned headers to the sum of variable header row heights', () => {
     const headerRows: HeaderRow[] = [
       {

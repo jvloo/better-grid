@@ -98,6 +98,10 @@ export function useGrid<TData = unknown, TContext = unknown>(
     grid.setColumns(options.columns);
   }, [grid, options.columns]);
 
+  useEffect(() => {
+    grid.setHeaderLayout(options.headers, options.headerHeight);
+  }, [grid, options.headerHeight, options.headers]);
+
   const pinnedTopRows = options.pinned?.top;
   const pinnedBottomRows = options.pinned?.bottom;
 

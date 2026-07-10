@@ -242,6 +242,15 @@ export interface HeaderCell {
   id: string;
   columnId?: string;
   content: string;
+  /**
+   * DOM mutator for custom multi-row header content. Receives the label area,
+   * leaving Better Grid's resize, sort, filter, and accessibility wiring on
+   * the outer header cell intact.
+   */
+  headerRenderer?: (
+    container: HTMLElement,
+    ctx: { headerCell: HeaderCell; rowIndex: number; columnIndex: number },
+  ) => void;
   colSpan?: number;
   rowSpan?: number;
 }
@@ -685,6 +694,8 @@ export interface GridInstance<
 
   getColumns(): NormalizedColumnDef<TData>[];
   setColumns(columns: ColumnDef<TData>[]): void;
+  /** Replace the multi-row header layout and optional fallback row height at runtime. */
+  setHeaderLayout(headers: HeaderRow[] | undefined, headerHeight?: number): void;
   setColumnWidth(columnId: string, width: number): void;
   /** Toggle a column's hidden state at runtime. */
   setColumnHidden(columnId: string, hide: boolean): void;

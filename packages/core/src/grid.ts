@@ -17,6 +17,7 @@ import type {
   PluginContext,
   HierarchyConfig,
   CellChange,
+  HeaderRow,
 } from './types';
 import { EventEmitter } from './events/emitter';
 import { StateStore } from './state/store';
@@ -154,9 +155,9 @@ export function createGrid<
     vMaxTravel: 0,
   };
 
-  const singleHeaderRowHeight = options.headerHeight ?? DEFAULT_HEADER_HEIGHT;
-  const headerRows = options.headers;
-  const headerHeight = headerRows
+  let singleHeaderRowHeight = options.headerHeight ?? DEFAULT_HEADER_HEIGHT;
+  let headerRows = options.headers;
+  let headerHeight = headerRows
     ? headerRows.reduce((sum, row) => sum + (row.height ?? singleHeaderRowHeight), 0)
     : singleHeaderRowHeight;
 
@@ -1288,6 +1289,19 @@ export function createGrid<
 
   function renderHeaders(state: GridState<TData>, measurements: LayoutMeasurements): void {
     headerRenderer?.render(state, measurements);
+  }
+
+  function syncHeaderLayoutDom(): void {
+    const pinnedTopH = getPinnedTopHeight();
+    if (headerContainer) headerContainer.style.height = `${headerHeight}px`;
+    if (pinnedTopContainer?.parentElement) {
+      pinnedTopContainer.parentElement.style.top = `${headerHeight}px`;
+    }
+    if (cellContainer) cellContainer.style.top = `${headerHeight + pinnedTopH}px`;
+    if (frozenHeaderOverlay) frozenHeaderOverlay.style.height = `${headerHeight}px`;
+    if (frozenPinnedTopContainer) frozenPinnedTopContainer.style.top = `${headerHeight}px`;
+    if (frozenCellOverlay) frozenCellOverlay.style.top = `${headerHeight + pinnedTopH}px`;
+    applyFloatingScrollbarOffsets();
   }
 
   // ---------------------------------------------------------------------------
@@ -2666,6 +2680,18 @@ export function createGrid<
       invalidateHeaders();
       recomputeMeasurements();
       updateAriaCounts();
+      scheduleRender();
+    },
+
+    setHeaderLayout(headers: HeaderRow[] | undefined, nextHeaderHeight?: number): void {
+      headerRows = headers;
+      singleHeaderRowHeight = nextHeaderHeight ?? singleHeaderRowHeight;
+      headerHeight = headerRows
+        ? headerRows.reduce((sum, row) => sum + (row.height ?? singleHeaderRowHeight), 0)
+        : singleHeaderRowHeight;
+      headerRenderer?.setLayout(headerRows, headerHeight, singleHeaderRowHeight);
+      syncHeaderLayoutDom();
+      recomputeMeasurements();
       scheduleRender();
     },
 
