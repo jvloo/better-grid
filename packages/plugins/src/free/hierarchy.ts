@@ -99,6 +99,8 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
           arrow.setAttribute('role', 'button');
           arrow.setAttribute('aria-label', isExpanded ? 'Collapse row' : 'Expand row');
           arrow.style.display = 'inline-flex';
+          arrow.style.alignItems = 'center';
+          arrow.style.justifyContent = 'center';
           arrow.style.transition = 'transform 0.3s ease-out';
           arrow.style.cursor = 'pointer';
           arrow.style.userSelect = 'none';
@@ -132,7 +134,9 @@ export function hierarchy(options?: HierarchyOptions): GridPlugin<'hierarchy', H
           toggle.style.cursor = 'pointer';
           toggle.style.marginRight = '6px';
           toggle.style.userSelect = 'none';
-          toggle.style.display = 'inline-block';
+          toggle.style.display = 'inline-flex';
+          toggle.style.alignItems = 'center';
+          toggle.style.justifyContent = 'center';
           toggle.style.width = '12px';
           toggle.style.textAlign = 'center';
           let currentExpanded = isExpanded;

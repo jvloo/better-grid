@@ -73,6 +73,9 @@ describe('hierarchy — cellRenderer wrap survives setColumns()', () => {
     const toggles = host.querySelectorAll('.bg-hierarchy-toggle');
     // At least one parent row with a toggle must be rendered
     expect(toggles.length).toBeGreaterThan(0);
+    const toggle = toggles[0] as HTMLElement;
+    expect(toggle.style.alignItems).toBe('center');
+    expect(toggle.style.justifyContent).toBe('center');
     grid.unmount();
   });
 

@@ -385,6 +385,7 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions',
           btn.style.width = triggerSizePx;
           btn.style.height = triggerSizePx;
           btn.style.minWidth = triggerSizePx;
+          btn.style.margin = 'auto';
           btn.style.lineHeight = '0';
           btn.style.boxSizing = 'border-box';
           btn.style.borderRadius = '4px';

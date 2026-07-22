@@ -73,6 +73,7 @@ describe('rowActions — accessibility', () => {
     expect(trigger!.tagName.toLowerCase()).toBe('button');
     expect(trigger!.getAttribute('aria-haspopup')).toBe('menu');
     expect(trigger!.getAttribute('aria-label')).toBeTruthy();
+    expect(trigger!.style.margin).toBe('auto');
 
     grid.unmount();
   });

@@ -131,7 +131,7 @@ importers:
         specifier: 1.0.65
         version: link:../core
       '@better-grid/plugins':
-        specifier: 1.0.72
+        specifier: 1.0.73
         version: link:../plugins
     devDependencies:
       '@types/react':
