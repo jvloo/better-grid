@@ -2034,6 +2034,10 @@ export function createGrid<
       if (isFloatingScrollbar) fakeScrollbar.classList.add('bg-grid__scroll--floating');
       fakeScrollbar.style.position = 'absolute';
       if (isFloatingScrollbar) {
+        // This hidden scroll-state holder is not an interactive control. Modern
+        // Chromium makes overflow containers keyboard-focusable by default,
+        // which can expose the browser focus ring after leaving a cell editor.
+        fakeScrollbar.tabIndex = -1;
         // Resolved at every layout pass — see applyFloatingScrollbarOffsets().
         fakeScrollbar.style.top = `${resolveScrollbarOffset('verticalOffsetTop')}px`;
         fakeScrollbar.style.left = `${resolveScrollbarOffset('horizontalOffsetLeft')}px`;

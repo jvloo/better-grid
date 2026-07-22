@@ -195,8 +195,10 @@ describe('floating scrollbar layout', () => {
 
     const hTrack = host.querySelector<HTMLElement>('.bg-grid__float-h-track');
     const vTrack = host.querySelector<HTMLElement>('.bg-grid__float-v-track');
+    const scrollbar = host.querySelector<HTMLElement>('.bg-grid__scroll');
     expect(hTrack).not.toBeNull();
     expect(vTrack).not.toBeNull();
+    expect(scrollbar?.tabIndex).toBe(-1);
     expect(hTrack!.style.left).toBe('110px');
     expect(hTrack!.style.bottom).toBe('1px');
     expect(vTrack!.style.bottom).toBe('9px');
@@ -390,6 +392,22 @@ describe('floating scrollbar layout', () => {
   test('fixed scrollbar keeps the frozen overlay gutter branch', () => {
     expect(gridSource).toContain("frozenColOverlay!.style.bottom = isFloatingScrollbar ? '0' : 'var(--bg-scrollbar-size, 10px)'");
     expect(gridSource).toContain("frozenColOverlay.style.bottom = isFloatingScrollbar ? '0' : 'var(--bg-scrollbar-size, 10px)'");
+  });
+
+  test('fixed scrollbar remains keyboard-focusable by browser convention', () => {
+    const host = makeHost();
+    const grid = createGrid({
+      columns: [{ id: 'a', field: 'a' as never, width: 100 }],
+      data: [{ a: 'A' }],
+      scrollbar: { mode: 'fixed' },
+    });
+
+    grid.mount(host);
+
+    const scrollbar = host.querySelector<HTMLElement>('.bg-grid__scroll');
+    expect(scrollbar?.hasAttribute('tabindex')).toBe(false);
+
+    grid.unmount();
   });
 
   test('selection range sits behind pinned rows while fill handle remains unclipped', () => {
