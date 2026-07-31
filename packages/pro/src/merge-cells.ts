@@ -65,20 +65,40 @@ export function mergeCells(options?: MergeCellsOptions): GridPlugin<'mergeCells'
         const container = ctx.grid.getContainer();
         if (!container || merges.size === 0) return;
 
+        const hierarchyState = ctx.grid.getState().hierarchyState;
+        const visibleRowByDataIndex = hierarchyState
+          ? new Map(hierarchyState.visibleRows.map((dataIndex, visibleIndex) => [dataIndex, visibleIndex]))
+          : null;
+        const getVisibleRow = (dataRow: number): number =>
+          visibleRowByDataIndex?.get(dataRow) ?? (visibleRowByDataIndex ? -1 : dataRow);
+
         // Build a quick lookup of rendered cells by row:col
         const cellMap = new Map<string, HTMLElement>();
         const allCells = container.querySelectorAll<HTMLElement>('.bg-cell[data-row][data-col]');
         for (const el of allCells) {
+          const wasMerged = el.classList.contains('bg-cell--merged');
+          const wasHidden = el.classList.contains('bg-cell--merge-hidden');
+          el.classList.remove('bg-cell--merged', 'bg-cell--merge-hidden');
+          if (wasHidden) el.style.display = '';
+          if (wasMerged) {
+            el.style.zIndex = '';
+            el.style.lineHeight = '';
+          }
           const key = `${el.dataset.row}:${el.dataset.col}`;
           cellMap.set(key, el);
         }
 
-        // Process merges
-        for (const [originKey, merge] of merges) {
+        // Merge definitions use stable data row indices. Hierarchy rendering
+        // uses visible row positions, which shift whenever a group collapses.
+        for (const merge of merges.values()) {
           const rs = merge.rowSpan ?? 1;
           const cs = merge.colSpan ?? 1;
           if (rs <= 1 && cs <= 1) continue;
 
+          const visibleOriginRow = getVisibleRow(merge.row);
+          if (visibleOriginRow < 0) continue;
+
+          const originKey = k(visibleOriginRow, merge.col);
           const originEl = cellMap.get(originKey);
           if (!originEl) continue; // Origin not in viewport
 
@@ -105,7 +125,9 @@ export function mergeCells(options?: MergeCellsOptions): GridPlugin<'mergeCells'
           let expandedHeight = originHeight;
           if (rs > 1) {
             for (let r = 1; r < rs; r++) {
-              const coveredEl = cellMap.get(k(merge.row + r, merge.col));
+              const visibleCoveredRow = getVisibleRow(merge.row + r);
+              if (visibleCoveredRow < 0) continue;
+              const coveredEl = cellMap.get(k(visibleCoveredRow, merge.col));
               if (coveredEl) {
                 expandedHeight += parseFloat(coveredEl.style.height) || 0;
               }
@@ -121,9 +143,11 @@ export function mergeCells(options?: MergeCellsOptions): GridPlugin<'mergeCells'
 
           // Hide covered cells
           for (let r = 0; r < rs; r++) {
+            const visibleCoveredRow = getVisibleRow(merge.row + r);
+            if (visibleCoveredRow < 0) continue;
             for (let c = 0; c < cs; c++) {
               if (r === 0 && c === 0) continue;
-              const coveredEl = cellMap.get(k(merge.row + r, merge.col + c));
+              const coveredEl = cellMap.get(k(visibleCoveredRow, merge.col + c));
               if (coveredEl) {
                 coveredEl.style.display = 'none';
                 coveredEl.classList.add('bg-cell--merge-hidden');

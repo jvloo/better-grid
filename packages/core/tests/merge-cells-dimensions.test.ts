@@ -109,3 +109,47 @@ describe('mergeCells — dimensions match the plain sum of spanned cells', () =>
     grid.unmount();
   });
 });
+
+describe('mergeCells — hierarchy row mapping', () => {
+  it('keeps merges attached to their data rows when an earlier parent collapses', () => {
+    interface HierarchyRow extends Row {
+      id: string;
+      parentId: string | null;
+    }
+
+    const hierarchyData: HierarchyRow[] = [
+      { id: 'parent-1', parentId: null, a: 'Parent 1', b: '', c: '' },
+      { id: 'child-1', parentId: 'parent-1', a: 'Child 1', b: '', c: '' },
+      { id: 'parent-2', parentId: null, a: 'Parent 2', b: '', c: '' },
+      { id: 'child-2', parentId: 'parent-2', a: 'Child 2', b: '', c: '' },
+    ];
+
+    const host = makeHost();
+    const grid = createGrid<HierarchyRow>({
+      columns,
+      data: hierarchyData,
+      hierarchy: {
+        getRowId: row => row.id,
+        getParentId: row => row.parentId,
+        defaultExpanded: true,
+      },
+      plugins: [
+        mergeCells({
+          cells: [
+            { row: 0, col: 0, colSpan: 2 },
+            { row: 2, col: 0, colSpan: 2 },
+          ],
+        }),
+      ],
+    });
+    grid.mount(host);
+    grid.toggleRow('parent-1');
+    grid.refresh();
+
+    const secondParent = host.querySelector<HTMLElement>('.bg-cell--merged[data-row="1"][data-col="0"]');
+    expect(secondParent?.textContent).toBe('Parent 2');
+    expect(parseFloat(secondParent!.style.width)).toBe(220);
+    expect(host.querySelector('.bg-cell--merged[data-row="2"][data-col="0"]')?.textContent).not.toBe('Child 2');
+    grid.unmount();
+  });
+});
