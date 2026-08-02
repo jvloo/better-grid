@@ -108,7 +108,7 @@ importers:
   packages/plugins:
     dependencies:
       '@better-grid/core':
-        specifier: 1.0.65
+        specifier: 1.0.66
         version: link:../core
     devDependencies:
       tsup:
@@ -118,7 +118,7 @@ importers:
   packages/pro:
     dependencies:
       '@better-grid/core':
-        specifier: 1.0.65
+        specifier: 1.0.66
         version: link:../core
     devDependencies:
       tsup:
@@ -128,10 +128,10 @@ importers:
   packages/react:
     dependencies:
       '@better-grid/core':
-        specifier: 1.0.65
+        specifier: 1.0.66
         version: link:../core
       '@better-grid/plugins':
-        specifier: 1.0.73
+        specifier: 1.0.74
         version: link:../plugins
     devDependencies:
       '@types/react':

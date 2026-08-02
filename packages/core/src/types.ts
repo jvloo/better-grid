@@ -694,6 +694,8 @@ export interface GridInstance<
 
   getColumns(): NormalizedColumnDef<TData>[];
   setColumns(columns: ColumnDef<TData>[]): void;
+  /** Update the number of visible columns frozen on the left at runtime. */
+  setFrozenLeftColumns(count: number): void;
   /** Replace the multi-row header layout and optional fallback row height at runtime. */
   setHeaderLayout(headers: HeaderRow[] | undefined, headerHeight?: number): void;
   setColumnWidth(columnId: string, width: number): void;

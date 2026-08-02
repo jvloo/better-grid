@@ -2687,6 +2687,23 @@ export function createGrid<
       scheduleRender();
     },
 
+    setFrozenLeftColumns(count: number): void {
+      const state = store.getState();
+      const nextCount = clamp(Math.floor(count), 0, columnManager.getColumns().length);
+      if (state.frozen.left === nextCount) return;
+
+      store.update('frozen', () => ({
+        frozen: { ...state.frozen, left: nextCount },
+      }));
+      freezeClipWidth = null;
+      freezeClipScrollLeft = 0;
+      freezeClipInitialApplied = false;
+      invalidateHeaders();
+      recomputeMeasurements();
+      applyFloatingScrollbarOffsets();
+      scheduleRender();
+    },
+
     setHeaderLayout(headers: HeaderRow[] | undefined, nextHeaderHeight?: number): void {
       headerRows = headers;
       singleHeaderRowHeight = nextHeaderHeight ?? singleHeaderRowHeight;

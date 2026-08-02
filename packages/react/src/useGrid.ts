@@ -98,6 +98,12 @@ export function useGrid<TData = unknown, TContext = unknown>(
     grid.setColumns(options.columns);
   }, [grid, options.columns]);
 
+  const frozenLeftColumns = options.frozen?.left ?? 0;
+
+  useEffect(() => {
+    grid.setFrozenLeftColumns(frozenLeftColumns);
+  }, [frozenLeftColumns, grid]);
+
   useEffect(() => {
     grid.setHeaderLayout(options.headers, options.headerHeight);
   }, [grid, options.headerHeight, options.headers]);

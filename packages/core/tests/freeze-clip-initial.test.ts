@@ -208,4 +208,30 @@ describe('frozen.clip.initialVisible', () => {
 
     grid.unmount();
   });
+
+  it('updates the frozen-left boundary at runtime', () => {
+    const host = makeHost();
+    const grid = createGrid({
+      columns: [
+        { id: 'a', field: 'a' as never, headerName: 'A', width: 100 },
+        { id: 'b', field: 'b' as never, headerName: 'B', width: 100 },
+        { id: 'c', field: 'c' as never, headerName: 'C', width: 100 },
+        { id: 'd', field: 'd' as never, headerName: 'D', width: 100 },
+      ],
+      data: [{ a: 1, b: 2, c: 3, d: 4 }],
+      frozen: { left: 4, clip: { minVisible: 1 } },
+    });
+
+    grid.mount(host);
+
+    expect(grid.getState().frozen.left).toBe(4);
+    expect(host.querySelectorAll('.bg-header-cell--frozen-left')).toHaveLength(4);
+
+    grid.setFrozenLeftColumns(2);
+
+    expect(grid.getState().frozen.left).toBe(2);
+    expect(host.querySelectorAll('.bg-header-cell--frozen-left')).toHaveLength(2);
+
+    grid.unmount();
+  });
 });
