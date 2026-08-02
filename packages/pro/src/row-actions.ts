@@ -345,20 +345,20 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions',
           // operate on the wrong row. Skip wrapping entirely — original renderer
           // (if any) still runs so any background/label is preserved.
           if (context.isPinned) {
-            if (originalRenderer) originalRenderer(container, context);
-            return;
+            return originalRenderer?.(container, context);
           }
 
           const row = context.row;
           const actions = options.getActions(row, context.rowIndex);
 
           // Run original renderer first (for background etc.)
-          if (originalRenderer) {
-            originalRenderer(container, context);
-          }
+          const originalCleanup = originalRenderer?.(container, context);
 
-          if (!actions || actions.length === 0) return;
+          if (!actions || actions.length === 0) return originalCleanup;
 
+          // The trigger replaces the original content. Release renderer-owned
+          // resources now instead of retaining detached portals until recycle.
+          originalCleanup?.();
           // Clear any content from original renderer, keep styles
           container.textContent = '';
           container.style.display = 'flex';
@@ -413,6 +413,10 @@ export function rowActions(options: RowActionsOptions): GridPlugin<'rowActions',
           });
 
           container.appendChild(btn);
+          return () => {
+            if (openTrigger === btn) closeMenu();
+            btn.remove();
+          };
         };
 
         store.update('columns', () => ({ columns: [...cols] }));
