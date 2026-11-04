@@ -44,6 +44,11 @@ function makeHost(): HTMLElement {
   return host;
 }
 
+function setClientSize(el: HTMLElement, width: number, height: number): void {
+  Object.defineProperty(el, 'clientWidth', { configurable: true, value: width });
+  Object.defineProperty(el, 'clientHeight', { configurable: true, value: height });
+}
+
 const columns: ColumnDef<Row>[] = [
   { id: 'name', field: 'name', headerName: 'Name', width: 200 },
   { id: 'actions', field: 'id', headerName: 'Actions', width: 80 },
@@ -147,6 +152,51 @@ describe('rowActions — cellRenderer wrap survives setColumns()', () => {
     const allTriggers = host.querySelectorAll('.bg-row-actions-trigger');
     expect(allTriggers.length).toBe(3);
 
+    grid.unmount();
+  });
+
+  it('removes the action trigger when its recycled cell renders another column', () => {
+    const host = makeHost();
+    const scrollingData = Array.from({ length: 30 }, (_, index) => ({
+      id: index + 1,
+      name: `Row ${index + 1}`,
+    }));
+    const scrollingColumns: ColumnDef<Row>[] = [
+      { id: 'actions', field: 'id', headerName: '', width: 50 },
+      {
+        id: 'total',
+        field: 'name',
+        headerName: 'Total',
+        width: 100,
+        cellRenderer: (container, context) => {
+          const value = document.createElement('span');
+          value.textContent = String(context.value ?? '');
+          container.appendChild(value);
+          return () => value.remove();
+        },
+      },
+    ];
+    const grid = createGrid<Row>({
+      columns: scrollingColumns,
+      data: scrollingData,
+      frozen: { left: 2 },
+      plugins: [makePlugin()],
+      rowHeight: 40,
+      headerHeight: 40,
+      virtualization: { overscanRows: 0, overscanColumns: 0 },
+    });
+
+    grid.mount(host);
+    const viewport = host.querySelector('.bg-grid__viewport') as HTMLElement;
+    const scrollbar = host.querySelector('.bg-grid__scroll') as HTMLElement;
+    setClientSize(viewport, 400, 120);
+    setClientSize(scrollbar, 400, 120);
+    grid.refresh();
+
+    scrollbar.scrollTop = 240;
+    scrollbar.dispatchEvent(new Event('scroll'));
+
+    expect(host.querySelector('.bg-cell[data-col="1"] .bg-row-actions-trigger')).toBeNull();
     grid.unmount();
   });
 });
